@@ -1,6 +1,6 @@
-# Wikipédia to PDF
+# Wikipedia2Book
 
-Wikipédia to PDF est un projet d'application web qui permettra de composer un livre PDF imprimable à partir d'articles Wikipédia. L'utilisateur pourra choisir les articles, explorer les liens associés, organiser le contenu et configurer la mise en page avant l'export.
+Wikipédia to Book est un projet d'application web qui permettra de composer un livre PDF imprimable à partir d'articles Wikipédia. L'utilisateur pourra choisir les articles, explorer les liens associés, organiser le contenu et configurer la mise en page avant l'export.
 
 ## Fonctionnalités prévues
 
