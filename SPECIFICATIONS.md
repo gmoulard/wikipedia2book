@@ -1,4 +1,4 @@
-# Wikipédia to PDF — Spécifications fonctionnelles et techniques
+# Wikipedia2Book — Spécifications fonctionnelles et techniques
 
 Version : 1.0 Statut : Document de référence Format : Markdown (`.md`)
 
