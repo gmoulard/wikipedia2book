@@ -6,7 +6,7 @@ Version : 1.0 Statut : Document de référence Format : Markdown (`.md`)
 
 ### 1.1 Objectif
 
-Wikipédia to PDF est un logiciel permettant de créer un livre au format PDF imprimable à partir d'articles de Wikipédia.
+Wikipedia2Book est un logiciel permettant de créer un livre au format PDF imprimable à partir d'articles de Wikipédia.
 
 L'utilisateur peut sélectionner plusieurs articles principaux, explorer les articles qui leur sont liés, choisir précisément les contenus à intégrer, organiser les articles et générer un document PDF structuré.
 
@@ -665,7 +665,7 @@ La version initiale sera considérée comme fonctionnelle si les points suivants
 ## 19\. Structure cible du projet
 
 ```text
-wikipedia-to-pdf/
+Wikipedia2Book/
 │
 ├── app/
 │   ├── main.py
@@ -722,4 +722,4 @@ Les évolutions pourront notamment concerner :
 
 Toute évolution devra préserver les principes fondamentaux du projet, notamment le contrôle de l'utilisateur sur la sélection des articles.
 
-Fin du document — Wikipédia to PDF, spécifications version 1.0.
+Fin du document — Wikipedia2Book, spécifications version 1.0.
