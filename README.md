@@ -24,14 +24,27 @@ Les détails fonctionnels et techniques sont décrits dans [SPECIFICATIONS.md](S
 
 ## État du projet
 
-Le dépôt contient actuellement les spécifications et le `Dockerfile`. L'application, `requirements.txt` et `docker-compose.yml` restent à créer. Le conteneur ne peut donc pas encore être construit ni lancé. Le `Dockerfile` attend un module ASGI `app.main:app` et un fichier `requirements.txt` à la racine.
+Le dépôt contient les premiers modules du backend FastAPI, le `Dockerfile` et `requirements.txt`. L'interface web et `docker-compose.yml` restent à créer. L'API fournit déjà la gestion des projets, la recherche et l'ajout d'articles, l'exploration des liens, la sélection et la génération PDF.
 
-## Démarrage prévu
+## Démarrer l'API
 
-Une fois l'application et le fichier Compose ajoutés, le lancement visé est :
+Avec Python 3.12 et les dépendances système nécessaires à WeasyPrint installées :
 
 ```bash
-docker compose up -d --build
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
 ```
 
-L'interface sera alors accessible à l'adresse indiquée par la configuration Compose, prévue par défaut sur `http://localhost:8000`. Le fichier Compose devra monter les données des projets dans un volume persistant pour les conserver après l'arrêt des conteneurs.
+La documentation interactive de l'API est disponible sur `http://localhost:8000/docs`.
+
+Le conteneur peut être lancé directement, avec des volumes nommés pour conserver projets et PDF :
+
+```bash
+docker build -t wikipedia2book .
+docker run --rm -p 8000:8000 \
+	-v wikipedia2book-data:/app/data \
+	-v wikipedia2book-output:/app/output \
+	wikipedia2book
+```
