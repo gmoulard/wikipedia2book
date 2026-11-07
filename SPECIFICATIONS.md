@@ -1,10 +1,8 @@
-Voici le contenu du fichier `SPECIFICATIONS.md` pour le projet Wikipédia to PDF, au format Markdown.
-
-### Wikipédia to PDF — Spécifications fonctionnelles et techniques
+# Wikipédia to PDF — Spécifications fonctionnelles et techniques
 
 Version : 1.0 Statut : Document de référence Format : Markdown (`.md`)
 
-### 1\. Présentation du projet
+## 1\. Présentation du projet
 
 ### 1.1 Objectif
 
@@ -30,7 +28,7 @@ Le logiciel doit fonctionner sur toutes les plateformes grâce à une architectu
 
 * Le PDF produit doit être adapté à l'impression.
 
-### 2\. Gestion des projets
+## 2\. Gestion des projets
 
 Le logiciel doit permettre de créer et gérer plusieurs projets indépendants.
 
@@ -66,7 +64,7 @@ Chaque projet contient notamment :
 
 Le stockage doit être persistant, y compris après l'arrêt du conteneur Docker.
 
-### 3\. Gestion des articles principaux
+## 3\. Gestion des articles principaux
 
 ### 3.1 Ajout des articles
 
@@ -102,7 +100,7 @@ Pour chaque article, le logiciel doit récupérer :
 
 L'utilisateur doit pouvoir supprimer un article principal sans supprimer les autres.
 
-### 4\. Exploration des articles liés
+## 4\. Exploration des articles liés
 
 ### 4.1 Principe
 
@@ -155,7 +153,7 @@ L'utilisateur doit pouvoir limiter :
 
 * Les catégories d'articles, si une fonctionnalité de filtrage est disponible.
 
-### 5\. Sélection des articles
+## 5\. Sélection des articles
 
 Cette fonctionnalité est essentielle.
 
@@ -185,7 +183,7 @@ Fonctionnalités attendues :
 
 La sélection doit être conservée lors de la sauvegarde du projet.
 
-### 6\. Organisation du livre
+## 6\. Organisation du livre
 
 L'utilisateur doit pouvoir organiser les articles sélectionnés avant la génération du PDF.
 
@@ -207,7 +205,7 @@ Fonctionnalités :
 
 Un article peut être déplacé librement dans la structure du livre.
 
-### 7\. Récupération du contenu Wikipédia
+## 7\. Récupération du contenu Wikipédia
 
 Pour chaque article retenu, le logiciel doit récupérer autant que possible :
 
@@ -235,7 +233,7 @@ Le rendu doit respecter autant que possible la structure et la hiérarchie du co
 
 Les éléments impossibles à reproduire doivent être traités proprement et ne doivent pas provoquer l'échec de la génération du livre.
 
-### 8\. Gestion des références et citations
+## 8\. Gestion des références et citations
 
 La conservation des références est obligatoire.
 
@@ -253,7 +251,7 @@ Les URL des sources doivent être conservées lorsqu'elles sont disponibles.
 
 Le logiciel ne doit jamais supprimer silencieusement les références d'un article.
 
-### 9\. Gestion des images et des médias
+## 9\. Gestion des images et des médias
 
 ### 9.1 Récupération
 
@@ -293,7 +291,7 @@ Les images doivent être intégrées dans le PDF avec :
 
 Si une image ne peut pas être récupérée, le logiciel doit gérer proprement son absence.
 
-### 10\. Paramétrage du format du livre
+## 10\. Paramétrage du format du livre
 
 Le format du document doit être entièrement configurable.
 
@@ -345,7 +343,7 @@ L'utilisateur doit pouvoir régler indépendamment :
 
 Une option de marge supplémentaire pour la reliure peut être prévue.
 
-### 11\. Mise en page du livre
+## 11\. Mise en page du livre
 
 Le PDF doit être structuré comme un véritable livre.
 
@@ -391,7 +389,7 @@ La mise en page doit garantir :
 
 Aucune fonctionnalité de prévisualisation n'est nécessaire dans la première version.
 
-### 12\. Génération du PDF
+## 12\. Génération du PDF
 
 ### 12.1 Fonctionnement
 
@@ -451,7 +449,7 @@ Les erreurs possibles comprennent :
 
 * Espace disque insuffisant.
 
-### 13\. Interface utilisateur
+## 13\. Interface utilisateur
 
 L'application doit proposer une interface web simple et intuitive.
 
@@ -475,7 +473,7 @@ L'application doit proposer une interface web simple et intuitive.
 
 L'interface doit être utilisable sur ordinateur, tablette et smartphone.
 
-### 14\. Architecture technique
+## 14\. Architecture technique
 
 ### 14.1 Technologies
 
@@ -556,7 +554,7 @@ Le logiciel doit intégrer les précautions suivantes :
 
 Les URL externes ne doivent pas être exécutées comme du code.
 
-### 16\. Respect des licences Wikipédia
+## 16\. Respect des licences Wikipédia
 
 Le logiciel doit respecter les licences applicables aux contenus récupérés.
 
@@ -578,7 +576,7 @@ Les images et médias doivent faire l'objet d'une vérification de licence indé
 
 Le logiciel ne doit pas présenter le PDF généré comme une publication officielle de Wikipédia.
 
-### 17\. Critères d'acceptation
+## 17\. Critères d'acceptation
 
 La version initiale sera considérée comme fonctionnelle si les points suivants sont validés :
 
@@ -622,7 +620,7 @@ La version initiale sera considérée comme fonctionnelle si les points suivants
 
 * Persistance des projets après redémarrage Docker.
 
-### 18\. Découpage prévisionnel
+## 18\. Découpage prévisionnel
 
 ### Version 1 — Socle fonctionnel
 
@@ -664,7 +662,7 @@ La version initiale sera considérée comme fonctionnelle si les points suivants
 
 * Amélioration de la gestion des licences et crédits.
 
-### 19\. Structure cible du projet
+## 19\. Structure cible du projet
 
 ```text
 wikipedia-to-pdf/
@@ -700,7 +698,7 @@ wikipedia-to-pdf/
 └── DEMANDES_EVOLUTION.md
 ```
 
-### 20\. Évolutivité
+## 20\. Évolutivité
 
 Le logiciel doit être conçu de manière modulaire afin de permettre l'ajout ultérieur de fonctionnalités.
 
