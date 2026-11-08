@@ -49,4 +49,6 @@ docker run --rm -p 8000:8000 \
 	wikipedia2book
 ```
 
-test it : https://wikipedia2book-production.up.railway.app/
+test it : 
+[Docc
+](https://wikipedia2book-production.up.railway.app/docs)
