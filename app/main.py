@@ -4,6 +4,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query, Response, status
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.article_parser import extract_article_content
 from app.book_builder import build_book_html
@@ -26,6 +27,13 @@ from app.wikipedia_api import MediaWikiClient, MediaWikiError, parse_article_url
 app = FastAPI(title="Wikipedia2Book", version="0.1.0")
 store = JsonProjectStore(os.getenv("WIKIPEDIA2BOOK_DATA_DIR", "data/projects"))
 output_directory = Path(os.getenv("WIKIPEDIA2BOOK_OUTPUT_DIR", "output"))
+static_directory = Path(__file__).parent / "static"
+app.mount("/static", StaticFiles(directory=static_directory), name="static")
+
+
+@app.get("/", include_in_schema=False)
+def web_app() -> FileResponse:
+    return FileResponse(static_directory / "index.html", media_type="text/html")
 
 
 def _get_project(project_id: str) -> Project:
@@ -74,7 +82,8 @@ def update_project(project_id: str, payload: ProjectUpdate) -> Project:
         changes["name"] = changes["name"].strip()
     if "description" in changes:
         changes["description"] = changes["description"].strip()
-    return _save(project.model_copy(update=changes))
+    updated = Project.model_validate(project.model_dump() | changes)
+    return _save(updated)
 
 
 @app.delete("/api/projects/{project_id}", status_code=status.HTTP_204_NO_CONTENT)

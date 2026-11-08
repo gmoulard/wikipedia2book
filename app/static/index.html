@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f7f5">
+  <title>Wikipedia2Book · Atelier éditorial</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Literata:opsz,wght@7..72,500;7..72,600;7..72,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Navigation des projets">
+      <a class="brand" href="/" aria-label="Wikipedia2Book, accueil">
+        <span class="brand-mark" aria-hidden="true"><span></span><span></span></span>
+        <span>WIKIPEDIA<span class="brand-light">2BOOK</span></span>
+      </a>
+      <div class="sidebar-label">ESPACE DE TRAVAIL</div>
+      <div class="project-nav-heading">
+        <span>Mes projets</span>
+        <button class="icon-button" id="newProjectButton" type="button" title="Créer un projet" aria-label="Créer un projet">+</button>
+      </div>
+      <nav id="projectList" class="project-list" aria-label="Projets"></nav>
+      <div class="sidebar-footer">
+        <span class="connection-dot" id="connectionDot"></span>
+        <span id="connectionStatus">Connexion à l’API…</span>
+      </div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <div class="breadcrumb"><span>ATELIER ÉDITORIAL</span><span class="breadcrumb-slash">/</span><span id="breadcrumbProject">NOUVEAU PROJET</span></div>
+        <div class="topbar-actions">
+          <span class="save-state" id="saveState">Tout est enregistré</span>
+          <button class="button button-dark" id="topExportButton" type="button" disabled><span aria-hidden="true">↓</span> Générer le PDF</button>
+        </div>
+      </header>
+
+      <section id="welcomeView" class="welcome-view" hidden>
+        <div class="welcome-kicker"><span class="kicker-line"></span> WIKIPEDIA2BOOK</div>
+        <h1>Un livre commence<br>par une <em>curiosité.</em></h1>
+        <p>Rassemblez des articles, composez votre sélection et éditez un livre prêt à imprimer.</p>
+        <button class="button button-dark" id="welcomeNewProject" type="button">Créer mon premier projet <span aria-hidden="true">→</span></button>
+        <div class="welcome-index">01 <span>COLLECTER</span><i></i> 02 <span>COMPOSER</span><i></i> 03 <span>IMPRIMER</span></div>
+      </section>
+
+      <div id="projectWorkspace" class="project-workspace" hidden>
+        <section class="project-heading">
+          <div class="project-heading-main">
+            <div class="eyebrow"><span class="eyebrow-dot"></span> PROJET DE LIVRE</div>
+            <label class="visually-hidden" for="projectName">Nom du projet</label>
+            <input id="projectName" class="project-title-input" maxlength="120" placeholder="Sans titre" autocomplete="off">
+            <label class="visually-hidden" for="projectDescription">Description du projet</label>
+            <input id="projectDescription" class="project-description-input" maxlength="2000" placeholder="Une note sur ce que vous souhaitez explorer…" autocomplete="off">
+          </div>
+          <div class="project-heading-actions"><button class="button button-outline" id="exportConfigButton" type="button">Exporter .json</button><button class="icon-button danger-icon" id="deleteProjectButton" type="button" title="Supprimer ce projet" aria-label="Supprimer ce projet">×</button></div>
+        </section>
+
+        <nav class="workflow-tabs" aria-label="Étapes du projet">
+          <button class="workflow-tab active" type="button" data-view="sources"><span class="tab-number">01</span> Sources <span class="tab-count" id="sourceCount">0</span></button>
+          <button class="workflow-tab" type="button" data-view="organization"><span class="tab-number">02</span> Organisation <span class="tab-count" id="selectedCount">0</span></button>
+          <button class="workflow-tab" type="button" data-view="book"><span class="tab-number">03</span> Édition</button>
+        </nav>
+
+        <section class="view-panel" id="sourcesPanel" data-panel="sources">
+          <div class="section-intro">
+            <div><div class="eyebrow">COLLECTE</div><h2>Construire la bibliothèque</h2></div>
+            <p>Ajoutez vos articles principaux. Les suggestions découvertes restent à valider avant d’entrer dans le livre.</p>
+          </div>
+          <div class="source-tools">
+            <div class="source-entry">
+              <div class="entry-tabs" role="group" aria-label="Méthode d’ajout">
+                <button class="entry-tab active" type="button" data-source-mode="search">Rechercher</button>
+                <button class="entry-tab" type="button" data-source-mode="url">URL Wikipédia</button>
+              </div>
+              <form id="articleForm" class="article-form">
+                <label class="visually-hidden" for="articleQuery">Titre ou recherche Wikipédia</label>
+                <input id="articleQuery" type="search" placeholder="Rechercher un article…" autocomplete="off" required>
+                <label class="visually-hidden" for="articleLanguage">Langue de Wikipédia</label>
+                <select id="articleLanguage" aria-label="Langue de Wikipédia">
+                  <option value="fr">FR</option><option value="en">EN</option><option value="de">DE</option><option value="es">ES</option><option value="it">IT</option><option value="pt">PT</option><option value="nl">NL</option>
+                </select>
+                <button class="button button-teal" id="addArticleButton" type="submit">Ajouter <span aria-hidden="true">+</span></button>
+              </form>
+              <div id="searchResults" class="search-results" hidden></div>
+              <p class="field-hint" id="entryHint">Saisissez quelques mots pour rechercher dans Wikipédia.</p>
+            </div>
+            <form id="exploreForm" class="explore-box">
+              <div class="explore-head"><span class="explore-icon" aria-hidden="true">↗</span><div><strong>Explorer les liens</strong><small>Proposer des articles liés</small></div></div>
+              <label for="exploreDepth">Profondeur</label>
+              <select id="exploreDepth"><option value="1">1 · liens directs</option><option value="2">2 · deuxième niveau</option><option value="3">3 · troisième niveau</option><option value="0">0 · désactivée</option></select>
+              <label for="exploreLimit">Maximum d’articles</label>
+              <div class="explore-submit"><input id="exploreLimit" type="number" min="1" max="200" value="30"><button class="button button-outline" type="submit">Explorer</button></div>
+            </form>
+          </div>
+          <div class="article-columns">
+            <section class="article-section">
+              <div class="list-heading"><div><span class="eyebrow">VOTRE SÉLECTION DE DÉPART</span><h3>Articles principaux <span id="mainArticleCount" class="count-inline">0</span></h3></div><span class="list-note">Inclus par défaut</span></div>
+              <div id="mainArticles" class="article-list"></div>
+            </section>
+            <section class="article-section discovered-section">
+              <div class="list-heading"><div><span class="eyebrow">À EXAMINER</span><h3>Articles découverts <span id="discoveredArticleCount" class="count-inline">0</span></h3></div><button id="selectDiscoveredButton" class="text-button" type="button" disabled>Tout sélectionner</button></div>
+              <div class="discovery-filters">
+                <label class="filter-search"><span aria-hidden="true">⌕</span><input id="articleFilter" type="search" placeholder="Filtrer par titre…"></label>
+                <select id="originFilter" aria-label="Filtrer par origine"><option value="">Toutes les origines</option></select>
+                <select id="depthFilter" aria-label="Filtrer par profondeur"><option value="">Tous niveaux</option><option value="1">Niveau 1</option><option value="2">Niveau 2</option><option value="3">Niveau 3</option></select>
+              </div>
+              <div class="bulk-actions"><button id="selectVisibleButton" class="text-button" type="button" disabled>Sélectionner les visibles</button><button id="deselectAllButton" class="text-button" type="button" disabled>Tout désélectionner</button></div>
+              <div id="discoveredArticles" class="article-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view-panel" id="organizationPanel" data-panel="organization" hidden>
+          <div class="section-intro">
+            <div><div class="eyebrow">COMPOSITION</div><h2>Donner un ordre aux idées</h2></div>
+            <p>Réorganisez les articles retenus et rassemblez-les en chapitres. Seuls les articles cochés seront exportés.</p>
+          </div>
+          <div class="organization-toolbar"><div class="selection-summary"><span class="selection-number" id="organizationCount">0</span><span>articles retenus pour le livre</span></div><button class="button button-outline" id="addChapterButton" type="button">Créer un chapitre <span aria-hidden="true">+</span></button></div>
+          <div id="organizationList" class="organization-list"></div>
+        </section>
+
+        <section class="view-panel" id="bookPanel" data-panel="book" hidden>
+          <div class="section-intro">
+            <div><div class="eyebrow">FABRICATION</div><h2>Préparer le livre</h2></div>
+            <p>Réglez la page et les éléments éditoriaux. Le PDF conservera les références extraites des articles.</p>
+          </div>
+          <div class="edition-layout">
+            <section class="settings-section">
+              <div class="settings-heading"><span class="settings-index">A</span><div><h3>Identité du livre</h3><p>Les informations de couverture et d’ouverture</p></div></div>
+              <div class="form-grid">
+                <label class="field field-wide">Titre du livre<input id="bookTitle" type="text" placeholder="Reprend le nom du projet"></label>
+                <label class="field field-wide">Sous-titre<input id="bookSubtitle" type="text" placeholder="Facultatif"></label>
+                <label class="field field-wide">Auteur ou éditeur<input id="bookAuthor" type="text" placeholder="Facultatif"></label>
+                <label class="field field-wide">Introduction<textarea id="bookIntroduction" rows="4" placeholder="Quelques mots pour ouvrir le livre…"></textarea></label>
+                <label class="field field-wide">Conclusion<textarea id="bookConclusion" rows="4" placeholder="Quelques mots pour refermer le livre…"></textarea></label>
+              </div>
+            </section>
+            <section class="settings-section">
+              <div class="settings-heading"><span class="settings-index">B</span><div><h3>Format d’impression</h3><p>Format, orientation et marges en millimètres</p></div></div>
+              <div class="form-grid settings-grid">
+                <label class="field">Format papier<select id="pageFormat"><option>A5</option><option>A4</option><option>A6</option><option>A3</option><option>A2</option><option>A1</option><option>A0</option><option>Letter</option><option>Legal</option><option value="custom">Personnalisé</option></select></label>
+                <fieldset class="field orientation-field"><legend>Orientation</legend><div class="segmented-control"><label><input type="radio" name="orientation" value="portrait"><span>Portrait</span></label><label><input type="radio" name="orientation" value="landscape"><span>Paysage</span></label></div></fieldset>
+                <div id="customDimensions" class="custom-dimensions field-wide" hidden><label class="field">Largeur (mm)<input id="customWidth" type="number" min="50" max="1000" value="148"></label><label class="field">Hauteur (mm)<input id="customHeight" type="number" min="50" max="1000" value="210"></label></div>
+                <label class="field">Marge supérieure (mm)<input id="marginTop" type="number" min="0" max="100" value="18"></label>
+                <label class="field">Marge inférieure (mm)<input id="marginBottom" type="number" min="0" max="100" value="18"></label>
+                <label class="field">Marge intérieure (mm)<input id="marginInside" type="number" min="0" max="100" value="18"></label>
+                <label class="field">Marge extérieure (mm)<input id="marginOutside" type="number" min="0" max="100" value="16"></label>
+                <label class="field field-wide">Marge de reliure (mm)<input id="marginBinding" type="number" min="0" max="40" value="0"></label>
+              </div>
+            </section>
+          </div>
+          <div class="edition-footer"><p><span class="info-mark">i</span> Les références extraites et les liens vers les sources sont inclus dans le PDF.</p><button class="button button-dark button-large" id="exportButton" type="button"><span aria-hidden="true">↓</span> Générer et télécharger le PDF</button></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <dialog id="projectDialog" class="project-dialog">
+    <form id="createProjectForm" method="dialog">
+      <div class="dialog-kicker">NOUVEAU PROJET</div><h2>Quelle histoire explorer ?</h2>
+      <label class="field">Nom du projet<input id="newProjectName" type="text" maxlength="120" placeholder="Ex. Les volcans du Pacifique" required></label>
+      <label class="field">Description <span class="optional">(facultatif)</span><textarea id="newProjectDescription" rows="3" maxlength="2000" placeholder="Le fil conducteur de ce livre…"></textarea></label>
+      <div class="dialog-actions"><button class="button button-quiet" id="cancelProjectButton" type="button">Annuler</button><button class="button button-teal" type="submit">Créer le projet <span aria-hidden="true">→</span></button></div>
+    </form>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

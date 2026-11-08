@@ -24,9 +24,9 @@ Les détails fonctionnels et techniques sont décrits dans [SPECIFICATIONS.md](S
 
 ## État du projet
 
-Le dépôt contient les premiers modules du backend FastAPI, le `Dockerfile` et `requirements.txt`. L'interface web et `docker-compose.yml` restent à créer. L'API fournit déjà la gestion des projets, la recherche et l'ajout d'articles, l'exploration des liens, la sélection et la génération PDF.
+Le dépôt contient le backend FastAPI et une interface web d'atelier éditorial. Elle permet de gérer les projets, rechercher ou ajouter des articles, explorer les liens Wikipédia, contrôler la sélection, organiser les chapitres et régler la mise en page du PDF. Les projets et leurs réglages sont enregistrés dans le stockage JSON persistant.
 
-## Démarrer l'API
+## Démarrer l'application
 
 Avec Python 3.12 et les dépendances système nécessaires à WeasyPrint installées :
 
@@ -37,7 +37,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-La documentation interactive de l'API est disponible sur `http://localhost:8000/docs`.
+L'interface web est disponible sur `http://localhost:8000` et la documentation interactive de l'API sur `http://localhost:8000/docs`.
 
 Le conteneur peut être lancé directement, avec des volumes nommés pour conserver projets et PDF :
 
@@ -49,6 +49,6 @@ docker run --rm -p 8000:8000 \
 	wikipedia2book
 ```
 
-test it : 
-[Docc
-](https://wikipedia2book-production.up.railway.app/docs)
+L'application est accessible sur `http://localhost:8000`.
+
+La documentation de l'API en production est disponible sur [Railway](https://wikipedia2book-production.up.railway.app/docs).
