@@ -5,9 +5,8 @@ const state = {
   activeView: 'sources',
   sourceMode: 'search',
   searchTimer: null,
-  saveTimer: null,
   toastTimer: null,
-  pendingPatch: {},
+  isDirty: false,
 };
 
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -54,10 +53,6 @@ function setSaveState(value) {
   $('#saveState').textContent = value;
 }
 
-function projectPath(suffix = '') {
-  return `/api/projects/${encodeURIComponent(state.project.id)}${suffix}`;
-}
-
 function activeArticles() {
   if (!state.project) return [];
   return [...state.project.main_articles, ...state.project.discovered_articles];
@@ -67,8 +62,21 @@ function selectedArticles() {
   return activeArticles().filter((article) => article.selected);
 }
 
+function articleKey(article) {
+  return article.page_id !== null && article.page_id !== undefined
+    ? `${article.language}:${article.page_id}`
+    : `${article.language}:title:${article.title.toLowerCase()}`;
+}
+
+function sameArticle(left, right) {
+  if (left.language !== right.language) return false;
+  if (left.page_id != null && right.page_id != null) return left.page_id === right.page_id;
+  return left.title.toLocaleLowerCase() === right.title.toLocaleLowerCase();
+}
+
 function normalizeProject(project) {
   return {
+    main_articles: [], discovered_articles: [],
     book_title: '', book_subtitle: '', book_author: '', introduction: '', conclusion: '',
     page_format: 'A5', custom_width_mm: 148, custom_height_mm: 210, orientation: 'portrait',
     margin_top_mm: 18, margin_bottom_mm: 18, margin_inside_mm: 18, margin_outside_mm: 16,
@@ -78,6 +86,7 @@ function normalizeProject(project) {
 
 function renderProjects() {
   const list = $('#projectList');
+  $('#saveWorkspaceButton').disabled = state.projects.length === 0;
   list.innerHTML = state.projects.map((project) => `
     <button class="project-link${state.project?.id === project.id ? ' active' : ''}" type="button" data-project-id="${escapeHtml(project.id)}" title="${escapeHtml(project.name)}">
       <span class="project-glyph" aria-hidden="true">${escapeHtml((project.name || 'W').trim().slice(0, 1).toUpperCase())}</span>
@@ -144,7 +153,7 @@ function renderArticles() {
 }
 
 function articleCard(article, isMain) {
-  const key = `${article.language}:${article.page_id}`;
+  const key = articleKey(article);
   const meta = [article.language.toUpperCase(), article.depth ? `Niveau ${article.depth}` : 'Principal', article.origin_title ? `Depuis ${article.origin_title}` : ''].filter(Boolean);
   const summary = article.summary ? `<p class="article-summary">${escapeHtml(article.summary.slice(0, 290))}${article.summary.length > 290 ? '…' : ''}</p>` : '';
   return `<article class="article-card${article.selected ? ' selected' : ''}" data-article-key="${escapeHtml(key)}">
@@ -161,12 +170,12 @@ function emptyList(title, description) {
 
 function orderedSelectedArticles() {
   const selected = selectedArticles();
-  const byKey = new Map(selected.map((article) => [`${article.language}:${article.page_id}`, article]));
+  const byKey = new Map(selected.map((article) => [articleKey(article), article]));
   const order = state.project.article_order || [];
   const ordered = order.map((key) => byKey.get(key)).filter(Boolean);
-  const seen = new Set(ordered.map((article) => `${article.language}:${article.page_id}`));
+  const seen = new Set(ordered.map(articleKey));
   selected.forEach((article) => {
-    const key = `${article.language}:${article.page_id}`;
+    const key = articleKey(article);
     if (!seen.has(key)) ordered.push(article);
   });
   return ordered;
@@ -184,7 +193,7 @@ function renderOrganization() {
   const chapterByArticle = new Map();
   (project.chapters || []).forEach((chapter) => chapter.article_keys.forEach((key) => chapterByArticle.set(key, chapter.id)));
   articles.forEach((article) => {
-    const key = `${article.language}:${article.page_id}`;
+    const key = articleKey(article);
     const group = groups.find((candidate) => candidate.id === (chapterByArticle.get(key) || '')) || groups[0];
     group.articles.push(article);
   });
@@ -198,8 +207,8 @@ function renderOrganization() {
 }
 
 function organizationArticle(article, articles, chapters) {
-  const key = `${article.language}:${article.page_id}`;
-  const index = articles.findIndex((item) => `${item.language}:${item.page_id}` === key);
+  const key = articleKey(article);
+  const index = articles.findIndex((item) => articleKey(item) === key);
   const chapter = chapters.find((item) => item.article_keys.includes(key));
   return `<div class="org-article" data-article-key="${escapeHtml(key)}">
     <div class="order-controls"><button type="button" data-move="up" aria-label="Monter ${escapeHtml(article.title)}" ${index === 0 ? 'disabled' : ''}>↑</button><button type="button" data-move="down" aria-label="Descendre ${escapeHtml(article.title)}" ${index === articles.length - 1 ? 'disabled' : ''}>↓</button></div>
@@ -228,74 +237,47 @@ function renderBookSettings() {
 
 function setProject(project) {
   state.project = normalizeProject(project);
-  state.pendingPatch = {};
+  const projectIndex = state.projects.findIndex((item) => item.id === state.project.id);
+  if (projectIndex >= 0) state.projects[projectIndex] = state.project;
   renderWorkspace();
+  renderProjects();
   setView(state.activeView);
 }
 
-async function openProject(projectId) {
-  try {
-    setSaveState('Ouverture…');
-    const project = await getJson(`/api/projects/${encodeURIComponent(projectId)}`);
-    setProject(project);
-    setSaveState('Tout est enregistré');
-  } catch (error) {
-    setSaveState('Erreur de chargement');
-    showToast(error.message, true);
-  }
+function openProject(projectId) {
+  const project = state.projects.find((item) => item.id === projectId);
+  if (!project) return;
+  setProject(project);
+  setSaveState(state.isDirty ? 'Modifications à enregistrer' : 'JSON chargé en mémoire');
 }
 
 function queueSave(patch) {
   if (!state.project) return;
-  Object.assign(state.pendingPatch, patch);
-  setSaveState('Modifications en cours…');
-  clearTimeout(state.saveTimer);
-  state.saveTimer = setTimeout(savePending, 450);
-}
-
-async function savePending() {
-  if (!state.project || !Object.keys(state.pendingPatch).length) return;
-  const patch = state.pendingPatch;
-  state.pendingPatch = {};
-  try {
-    const updated = await getJson(projectPath(), { method: 'PATCH', body: JSON.stringify(patch) });
-    state.project = normalizeProject({ ...state.project, ...updated });
-    const projectIndex = state.projects.findIndex((project) => project.id === updated.id);
-    if (projectIndex >= 0) state.projects[projectIndex] = { ...state.projects[projectIndex], ...updated };
-    renderProjects();
-    $('#breadcrumbProject').textContent = state.project.name.toLocaleUpperCase('fr');
-    setSaveState('Tout est enregistré');
-  } catch (error) {
-    Object.assign(state.pendingPatch, patch);
-    setSaveState('Échec de l’enregistrement');
-    showToast(`Enregistrement impossible : ${error.message}`, true);
-  }
-}
-
-async function flushSave() {
-  clearTimeout(state.saveTimer);
-  await savePending();
-}
-
-async function refreshProject() {
-  if (!state.project) return;
-  const project = await getJson(projectPath());
-  setProject(project);
+  Object.assign(state.project, patch);
+  state.project.updated_at = new Date().toISOString();
+  state.isDirty = true;
+  setSaveState('Modifications à enregistrer en JSON');
+  const projectIndex = state.projects.findIndex((item) => item.id === state.project.id);
+  if (projectIndex >= 0) state.projects[projectIndex] = state.project;
 }
 
 async function loadProjects() {
   try {
-    state.projects = await getJson('/api/projects');
+    await getJson('/health');
     $('#connectionDot').classList.add('online');
     $('#connectionStatus').textContent = 'API connectée';
+    state.projects = [];
+    state.project = null;
     renderProjects();
-    if (state.projects.length) await openProject(state.projects[0].id);
-    else renderWorkspace();
+    renderWorkspace();
   } catch (error) {
     $('#connectionDot').classList.add('offline');
     $('#connectionStatus').textContent = 'API indisponible';
+    state.projects = [];
+    state.project = null;
+    renderProjects();
     renderWorkspace();
-    showToast(`Impossible de joindre l’API : ${error.message}`, true);
+    showToast(`L’API est indisponible : ${error.message}. Vous pouvez tout de même importer un fichier JSON.`, true);
   }
 }
 
@@ -310,31 +292,33 @@ async function createProject(event) {
   event.preventDefault();
   const form = event.currentTarget;
   if (!form.reportValidity()) return;
-  try {
-    const project = await getJson('/api/projects', {
-      method: 'POST',
-      body: JSON.stringify({ name: $('#newProjectName').value.trim(), description: $('#newProjectDescription').value.trim() }),
-    });
-    $('#projectDialog').close();
-    state.projects.unshift(project);
-    renderProjects();
-    setProject(project);
-    setView('sources');
-    showToast('Projet créé. Vous pouvez ajouter votre premier article.');
-  } catch (error) { showToast(error.message, true); }
+  const now = new Date().toISOString();
+  const project = normalizeProject({
+    id: crypto.randomUUID(),
+    name: $('#newProjectName').value.trim(),
+    description: $('#newProjectDescription').value.trim(),
+    created_at: now,
+    updated_at: now,
+  });
+  $('#projectDialog').close();
+  state.projects.unshift(project);
+  state.isDirty = true;
+  setProject(project);
+  setView('sources');
+  setSaveState('Projet à enregistrer en JSON');
+  showToast('Projet créé dans la session. Téléchargez le JSON pour le conserver.');
 }
 
-async function deleteProject() {
+function deleteProject() {
   if (!state.project || !window.confirm(`Supprimer « ${state.project.name} » et tous ses réglages ?`)) return;
-  try {
-    await request(projectPath(), { method: 'DELETE' });
-    state.projects = state.projects.filter((project) => project.id !== state.project.id);
-    state.project = null;
-    renderProjects();
-    renderWorkspace();
-    showToast('Projet supprimé.');
-    if (state.projects.length) await openProject(state.projects[0].id);
-  } catch (error) { showToast(error.message, true); }
+  state.projects = state.projects.filter((project) => project.id !== state.project.id);
+  state.project = null;
+  state.isDirty = true;
+  renderProjects();
+  renderWorkspace();
+  if (state.projects.length) openProject(state.projects[0].id);
+  setSaveState('Modifications à enregistrer en JSON');
+  showToast('Projet retiré de la session.');
 }
 
 async function addArticle(source) {
@@ -343,14 +327,48 @@ async function addArticle(source) {
   button.disabled = true;
   button.textContent = 'Ajout…';
   try {
-    const updated = await getJson(projectPath('/articles'), { method: 'POST', body: JSON.stringify(source) });
-    setProject(updated);
+    const article = await getJson('/api/articles', { method: 'POST', body: JSON.stringify(source) });
+    if (activeArticles().some((item) => sameArticle(item, article))) {
+      throw new Error('Cet article est déjà dans le projet.');
+    }
+    article.selected = true;
+    state.project.main_articles.push(article);
+    queueSave({ main_articles: state.project.main_articles });
+    renderWorkspace();
     $('#articleQuery').value = '';
     $('#searchResults').hidden = true;
     $('#entryHint').textContent = 'Article ajouté aux articles principaux.';
     showToast('Article principal ajouté.');
   } catch (error) { showToast(error.message, true); }
   finally { button.disabled = false; button.innerHTML = 'Ajouter <span aria-hidden="true">+</span>'; }
+}
+
+async function importWikipediaBook(url) {
+  if (!state.project) return;
+  const button = $('#addArticleButton');
+  button.disabled = true;
+  button.textContent = 'Import…';
+  try {
+    const articles = await getJson('/api/books/import', {
+      method: 'POST',
+      body: JSON.stringify({ url }),
+    });
+    const newArticles = articles.filter((article) => !activeArticles().some((existing) => sameArticle(existing, article)));
+    if (!newArticles.length) {
+      throw new Error('Toutes les pages de ce livre sont déjà dans le projet.');
+    }
+    state.project.main_articles.push(...newArticles);
+    queueSave({ main_articles: state.project.main_articles });
+    renderWorkspace();
+    $('#articleQuery').value = '';
+    $('#entryHint').textContent = `${newArticles.length} pages ajoutées depuis le livre Wikipédia.`;
+    showToast(`${newArticles.length} pages ajoutées à la sélection. Leur contenu sera téléchargé à l’export PDF.`);
+  } catch (error) {
+    showToast(`Import du livre impossible : ${error.message}`, true);
+  } finally {
+    button.disabled = false;
+    button.innerHTML = 'Ajouter <span aria-hidden="true">+</span>';
+  }
 }
 
 async function searchArticles(query) {
@@ -368,8 +386,8 @@ async function searchArticles(query) {
       const items = await getJson(`/api/search?${params}`);
       if ($('#articleQuery').value.trim() !== query.trim()) return;
       results.innerHTML = items.length ? items.map((item) => `
-        <button class="search-result" type="button" data-add-title="${escapeHtml(item.title)}">
-          <span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.snippet || 'Article Wikipédia')}${item.snippet ? ' · ' : ''}</small></span><span class="search-add" aria-hidden="true">+</span>
+        <button class="search-result" type="button" data-add-title="${escapeHtml(item.title)}" data-page-id="${item.page_id}">
+          <span><strong>${escapeHtml(item.title)}</strong><small>Article Wikipédia · ${escapeHtml($('#articleLanguage').value.toUpperCase())}</small></span><span class="search-add" aria-hidden="true">+</span>
         </button>`).join('') : '<div class="search-result"><span><strong>Aucun résultat</strong><small>Essayez un autre terme de recherche.</small></span></div>';
     } catch (error) {
       results.innerHTML = `<div class="search-result"><span><strong>Recherche indisponible</strong><small>${escapeHtml(error.message)}</small></span></div>`;
@@ -387,57 +405,67 @@ async function exploreArticles(event) {
   button.disabled = true;
   button.textContent = 'Exploration…';
   try {
-    const updated = await getJson(projectPath('/explore'), {
+    const updated = await getJson('/api/explore', {
       method: 'POST',
-      body: JSON.stringify({ max_depth: Number($('#exploreDepth').value), max_articles: Number($('#exploreLimit').value) }),
+      body: JSON.stringify({
+        project: state.project,
+        max_depth: Number($('#exploreDepth').value),
+        max_articles: Number($('#exploreLimit').value),
+      }),
     });
     setProject(updated);
+    state.isDirty = true;
+    setSaveState('Exploration à enregistrer en JSON');
     showToast(`${updated.discovered_articles.length} article${updated.discovered_articles.length === 1 ? '' : 's'} complémentaire${updated.discovered_articles.length === 1 ? '' : 's'} proposé${updated.discovered_articles.length === 1 ? '' : 's'}.`);
   } catch (error) { showToast(error.message, true); }
   finally { button.disabled = false; button.textContent = 'Explorer'; }
 }
 
-async function saveSelection() {
-  const keys = selectedArticles().map((article) => `${article.language}:${article.page_id}`);
-  const updated = await getJson(projectPath('/selection'), { method: 'PUT', body: JSON.stringify({ article_keys: keys }) });
-  setProject(updated);
-}
-
-async function toggleArticle(card, selected) {
+function toggleArticle(card, selected) {
   const key = card.dataset.articleKey;
   activeArticles().forEach((article) => {
-    if (`${article.language}:${article.page_id}` === key) article.selected = selected;
+    if (articleKey(article) === key) article.selected = selected;
   });
+  queueSave({ main_articles: state.project.main_articles, discovered_articles: state.project.discovered_articles });
   renderWorkspace();
-  try { await saveSelection(); } catch (error) { showToast(error.message, true); await refreshProject(); }
 }
 
-async function setMultipleSelection(articles, selected) {
-  const keys = new Set(articles.map((article) => `${article.language}:${article.page_id}`));
+function setMultipleSelection(articles, selected) {
+  const keys = new Set(articles.map(articleKey));
   activeArticles().forEach((article) => {
-    if (keys.has(`${article.language}:${article.page_id}`)) article.selected = selected;
+    if (keys.has(articleKey(article))) article.selected = selected;
   });
+  queueSave({ main_articles: state.project.main_articles, discovered_articles: state.project.discovered_articles });
   renderWorkspace();
-  try { await saveSelection(); } catch (error) { showToast(error.message, true); await refreshProject(); }
 }
 
-async function removeArticle(card) {
-  const [language, pageId] = card.dataset.articleKey.split(':');
-  try {
-    const updated = await getJson(projectPath(`/articles/${encodeURIComponent(language)}/${encodeURIComponent(pageId)}`), { method: 'DELETE' });
-    setProject(updated);
-    showToast('Article retiré du projet.');
-  } catch (error) { showToast(error.message, true); }
+function removeArticle(card) {
+  const key = card.dataset.articleKey;
+  state.project.main_articles = state.project.main_articles.filter((article) => articleKey(article) !== key);
+  state.project.discovered_articles = state.project.discovered_articles.filter((article) => articleKey(article) !== key);
+  state.project.article_order = state.project.article_order.filter((articleKey) => articleKey !== key);
+  state.project.chapters = state.project.chapters.map((chapter) => ({
+    ...chapter,
+    article_keys: chapter.article_keys.filter((articleKey) => articleKey !== key),
+  }));
+  queueSave({
+    main_articles: state.project.main_articles,
+    discovered_articles: state.project.discovered_articles,
+    article_order: state.project.article_order,
+    chapters: state.project.chapters,
+  });
+  renderWorkspace();
+  showToast('Article retiré de la session.');
 }
 
 function updateArticleOrder(key, direction) {
   const articles = orderedSelectedArticles();
-  const currentIndex = articles.findIndex((article) => `${article.language}:${article.page_id}` === key);
+  const currentIndex = articles.findIndex((article) => articleKey(article) === key);
   const nextIndex = currentIndex + (direction === 'up' ? -1 : 1);
   if (currentIndex < 0 || nextIndex < 0 || nextIndex >= articles.length) return;
   [articles[currentIndex], articles[nextIndex]] = [articles[nextIndex], articles[currentIndex]];
-  queueSave({ article_order: articles.map((article) => `${article.language}:${article.page_id}`) });
-  state.project.article_order = articles.map((article) => `${article.language}:${article.page_id}`);
+  queueSave({ article_order: articles.map(articleKey) });
+  state.project.article_order = articles.map(articleKey);
   renderOrganization();
 }
 
@@ -494,12 +522,14 @@ async function exportPdf() {
     showToast('Sélectionnez au moins un article avant de générer le PDF.', true);
     return;
   }
-  await flushSave();
   const buttons = [$('#exportButton'), $('#topExportButton')].filter(Boolean);
   buttons.forEach((button) => { button.disabled = true; });
   setSaveState('Génération du PDF…');
   try {
-    const response = await request(projectPath('/pdf'), { method: 'POST' });
+    const response = await request('/api/pdf', {
+      method: 'POST',
+      body: JSON.stringify(state.project),
+    });
     const blob = await response.blob();
     const objectUrl = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -509,7 +539,7 @@ async function exportPdf() {
     anchor.click();
     anchor.remove();
     URL.revokeObjectURL(objectUrl);
-    setSaveState('Tout est enregistré');
+    setSaveState(state.isDirty ? 'JSON à télécharger' : 'JSON chargé en mémoire');
     showToast('Votre PDF est prêt.');
   } catch (error) {
     setSaveState('Erreur de génération');
@@ -519,44 +549,105 @@ async function exportPdf() {
   }
 }
 
-function exportProjectConfig() {
-  if (!state.project) return;
-  const blob = new Blob([JSON.stringify(state.project, null, 2)], { type: 'application/json' });
+function exportWorkspace() {
+  if (!state.projects.length) return;
+  const workspace = {
+    format: 'wikipedia2book-workspace',
+    version: 1,
+    saved_at: new Date().toISOString(),
+    projects: state.projects,
+  };
+  const blob = new Blob([JSON.stringify(workspace, null, 2)], { type: 'application/json' });
   const objectUrl = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = objectUrl;
-  anchor.download = `${state.project.name.replace(/[^a-z0-9-_ ]/gi, '').trim().replace(/\s+/g, '-') || 'projet'}.json`;
+  anchor.download = 'wikipedia2book-workspace.json';
+  document.body.append(anchor);
   anchor.click();
+  anchor.remove();
   URL.revokeObjectURL(objectUrl);
+  state.isDirty = false;
+  setSaveState('JSON téléchargé');
+  showToast('Fichier JSON téléchargé sur votre appareil.');
+}
+
+function readWorkspace(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (payload && payload.format === 'wikipedia2book-workspace') {
+    if (payload.version !== 1 || !Array.isArray(payload.projects)) {
+      throw new Error('Version ou structure du fichier JSON non prise en charge.');
+    }
+    return payload.projects;
+  }
+  if (payload && typeof payload === 'object' && payload.id && payload.name) return [payload];
+  throw new Error('Ce fichier ne contient pas de projet Wikipedia2Book valide.');
+}
+
+async function importWorkspace(file) {
+  if (state.isDirty && !window.confirm('Les modifications non téléchargées seront remplacées. Continuer ?')) return;
+  try {
+    const payload = JSON.parse(await file.text());
+    const projects = readWorkspace(payload);
+    if (projects.some((project) => !project || typeof project.id !== 'string' || typeof project.name !== 'string' || !project.name.trim())) {
+      throw new Error('Un projet du fichier est invalide ou sans nom.');
+    }
+    if (projects.some((project) => !Array.isArray(project.main_articles || []) || !Array.isArray(project.discovered_articles || []))) {
+      throw new Error('Les listes d’articles du fichier sont invalides.');
+    }
+    state.projects = projects.map(normalizeProject);
+    state.project = state.projects[0] || null;
+    state.isDirty = false;
+    renderProjects();
+    renderWorkspace();
+    if (state.project) setView('sources');
+    setSaveState('JSON importé en mémoire');
+    showToast(`${state.projects.length} projet${state.projects.length === 1 ? '' : 's'} importé${state.projects.length === 1 ? '' : 's'}.`);
+  } catch (error) {
+    showToast(`Import JSON impossible : ${error.message}`, true);
+  } finally {
+    $('#workspaceFileInput').value = '';
+  }
 }
 
 document.addEventListener('click', async (event) => {
   const projectButton = event.target.closest('[data-project-id]');
   if (projectButton) { await openProject(projectButton.dataset.projectId); return; }
   const viewButton = event.target.closest('[data-view]');
-  if (viewButton) { await flushSave(); setView(viewButton.dataset.view); return; }
+  if (viewButton) { setView(viewButton.dataset.view); return; }
   const modeButton = event.target.closest('[data-source-mode]');
   if (modeButton) {
     state.sourceMode = modeButton.dataset.sourceMode;
     $$('.entry-tab').forEach((tab) => tab.classList.toggle('active', tab === modeButton));
-    $('#articleQuery').placeholder = state.sourceMode === 'url' ? 'https://fr.wikipedia.org/wiki/…' : 'Rechercher un article…';
-    $('#entryHint').textContent = state.sourceMode === 'url' ? 'Collez une URL HTTPS pointant vers un article Wikipédia.' : 'Saisissez quelques mots pour rechercher dans Wikipédia.';
+    $('#articleQuery').placeholder = state.sourceMode === 'book'
+      ? 'https://fr.wikipedia.org/wiki/Utilisateur:…/Livres/…'
+      : state.sourceMode === 'url' ? 'https://fr.wikipedia.org/wiki/…' : 'Rechercher un article…';
+    $('#entryHint').textContent = state.sourceMode === 'book'
+      ? 'Collez l’URL d’une page de livre Wikipédia pour importer ses liens d’articles.'
+      : state.sourceMode === 'url' ? 'Collez une URL HTTPS pointant vers un article Wikipédia.' : 'Saisissez quelques mots pour rechercher dans Wikipédia.';
     $('#searchResults').hidden = true;
     $('#articleQuery').value = '';
     return;
   }
   const result = event.target.closest('[data-add-title]');
-  if (result) { await addArticle({ title: result.dataset.addTitle, language: $('#articleLanguage').value }); return; }
+  if (result) {
+    await addArticle({
+      title: result.dataset.addTitle,
+      language: $('#articleLanguage').value,
+      page_id: Number(result.dataset.pageId),
+    });
+    return;
+  }
   if (event.target.closest('#newProjectButton, #welcomeNewProject')) { openProjectDialog(); return; }
   if (event.target.closest('#selectDiscoveredButton')) { await setMultipleSelection(state.project.discovered_articles, true); return; }
   if (event.target.closest('#selectVisibleButton')) {
-    const visible = $$('#discoveredArticles .article-card').map((card) => card.dataset.articleKey);
-    await setMultipleSelection(state.project.discovered_articles.filter((article) => visible.includes(`${article.language}:${article.page_id}`)), true); return;
+    const visible = new Set($$('#discoveredArticles .article-card').map((card) => card.dataset.articleKey));
+    setMultipleSelection(state.project.discovered_articles.filter((article) => visible.has(articleKey(article))), true); return;
   }
   if (event.target.closest('#deselectAllButton')) { await setMultipleSelection(activeArticles(), false); return; }
   if (event.target.closest('#addChapterButton')) { addChapter(); return; }
   if (event.target.closest('#deleteProjectButton')) { await deleteProject(); return; }
-  if (event.target.closest('#exportConfigButton')) { exportProjectConfig(); return; }
+  if (event.target.closest('#importWorkspaceButton')) { $('#workspaceFileInput').click(); return; }
+  if (event.target.closest('#saveWorkspaceButton')) { exportWorkspace(); return; }
   if (event.target.closest('#topExportButton, #exportButton')) { await exportPdf(); return; }
   if (event.target.closest('#cancelProjectButton')) { $('#projectDialog').close(); return; }
   const articleCardElement = event.target.closest('.article-card');
@@ -647,19 +738,20 @@ $('#articleForm').addEventListener('submit', async (event) => {
   event.preventDefault();
   const value = $('#articleQuery').value.trim();
   if (!value) return;
-  if (state.sourceMode === 'url') await addArticle({ url: value, language: $('#articleLanguage').value });
+  if (state.sourceMode === 'book') await importWikipediaBook(value);
+  else if (state.sourceMode === 'url') await addArticle({ url: value, language: $('#articleLanguage').value });
   else await addArticle({ title: value, language: $('#articleLanguage').value });
 });
 $('#exploreForm').addEventListener('submit', exploreArticles);
 $('#createProjectForm').addEventListener('submit', createProject);
-window.addEventListener('beforeunload', () => {
-  if (state.project && Object.keys(state.pendingPatch).length) {
-    fetch(projectPath(), {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(state.pendingPatch),
-      keepalive: true,
-    });
+$('#workspaceFileInput').addEventListener('change', async (event) => {
+  const file = event.target.files?.[0];
+  if (file) await importWorkspace(file);
+});
+window.addEventListener('beforeunload', (event) => {
+  if (state.isDirty) {
+    event.preventDefault();
+    event.returnValue = '';
   }
 });
 

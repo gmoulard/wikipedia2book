@@ -10,7 +10,7 @@ def utc_now() -> datetime:
 
 
 class Article(BaseModel):
-    page_id: int
+    page_id: int | None = Field(default=None, ge=1)
     title: str
     language: str
     url: str
@@ -24,7 +24,9 @@ class Article(BaseModel):
 
     @property
     def key(self) -> str:
-        return f"{self.language}:{self.page_id}"
+        if self.page_id is not None:
+            return f"{self.language}:{self.page_id}"
+        return f"{self.language}:title:{self.title.lower()}"
 
 
 class BookChapter(BaseModel):
@@ -59,36 +61,12 @@ class Project(BaseModel):
     updated_at: datetime = Field(default_factory=utc_now)
 
 
-class ProjectCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=120)
-    description: str = Field(default="", max_length=2000)
-
-
-class ProjectUpdate(BaseModel):
-    name: str | None = Field(default=None, min_length=1, max_length=120)
-    description: str | None = Field(default=None, max_length=2000)
-    book_title: str | None = Field(default=None, max_length=200)
-    book_subtitle: str | None = Field(default=None, max_length=300)
-    book_author: str | None = Field(default=None, max_length=200)
-    introduction: str | None = Field(default=None, max_length=20000)
-    conclusion: str | None = Field(default=None, max_length=20000)
-    page_format: Literal["A0", "A1", "A2", "A3", "A4", "A5", "A6", "Letter", "Legal", "custom"] | None = None
-    custom_width_mm: float | None = Field(default=None, ge=50, le=1000)
-    custom_height_mm: float | None = Field(default=None, ge=50, le=1000)
-    orientation: Literal["portrait", "landscape"] | None = None
-    margin_top_mm: float | None = Field(default=None, ge=0, le=100)
-    margin_bottom_mm: float | None = Field(default=None, ge=0, le=100)
-    margin_inside_mm: float | None = Field(default=None, ge=0, le=100)
-    margin_outside_mm: float | None = Field(default=None, ge=0, le=100)
-    margin_binding_mm: float | None = Field(default=None, ge=0, le=40)
-    article_order: list[str] | None = None
-    chapters: list[BookChapter] | None = None
-
-
 class ArticleRequest(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=300)
     url: str | None = Field(default=None, max_length=2048)
     language: str = Field(default="fr", pattern=r"^[a-z0-9-]{2,12}$")
+    page_id: int | None = Field(default=None, ge=1)
+    summary: str = Field(default="", max_length=1000)
 
     @model_validator(mode="after")
     def require_one_source(self):
@@ -97,9 +75,17 @@ class ArticleRequest(BaseModel):
         return self
 
 
+class BookImportRequest(BaseModel):
+    url: str = Field(min_length=1, max_length=2048)
+
+
 class ExploreRequest(BaseModel):
     max_depth: int = Field(default=1, ge=0, le=3)
     max_articles: int = Field(default=30, ge=1, le=200)
+
+
+class ProjectExplorationRequest(ExploreRequest):
+    project: Project
 
 
 class SelectionRequest(BaseModel):

@@ -1,32 +1,38 @@
-import os
-from datetime import timezone
+from io import BytesIO
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query, Response, status
+from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pypdf import PdfWriter
 
-from app.article_parser import extract_article_content
-from app.book_builder import build_book_html
+from app.book_builder import (
+    build_book_html,
+    build_chapter_page_html,
+    build_conclusion_page_html,
+    ordered_article_groups,
+)
 from app.explorer import discover_related_articles
 from app.models import (
     Article,
     ArticleRequest,
-    ExploreRequest,
+    BookImportRequest,
     Project,
-    ProjectCreate,
-    ProjectUpdate,
-    SelectionRequest,
+    ProjectExplorationRequest,
     utc_now,
 )
 from app.pdf_generator import generate_pdf
-from app.storage import JsonProjectStore
-from app.wikipedia_api import MediaWikiClient, MediaWikiError, parse_article_url
+from app.wikipedia_api import (
+    MediaWikiClient,
+    MediaWikiError,
+    MediaWikiPageNotFound,
+    article_url,
+    parse_article_url,
+    validate_language,
+)
 
 
 app = FastAPI(title="Wikipedia2Book", version="0.1.0")
-store = JsonProjectStore(os.getenv("WIKIPEDIA2BOOK_DATA_DIR", "data/projects"))
-output_directory = Path(os.getenv("WIKIPEDIA2BOOK_OUTPUT_DIR", "output"))
 static_directory = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=static_directory), name="static")
 
@@ -36,61 +42,17 @@ def web_app() -> FileResponse:
     return FileResponse(static_directory / "index.html", media_type="text/html")
 
 
-def _get_project(project_id: str) -> Project:
-    project = store.get(project_id)
-    if project is None:
-        raise HTTPException(status_code=404, detail="Projet introuvable.")
-    return project
-
-
-def _save(project: Project) -> Project:
-    project.updated_at = utc_now()
-    return store.save(project)
-
-
 def _mediawiki_error(error: Exception) -> HTTPException:
     if isinstance(error, ValueError):
         return HTTPException(status_code=422, detail=str(error))
+    if isinstance(error, MediaWikiPageNotFound):
+        return HTTPException(status_code=404, detail=str(error))
     return HTTPException(status_code=502, detail=str(error))
 
 
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
-
-
-@app.get("/api/projects", response_model=list[Project])
-def list_projects() -> list[Project]:
-    return store.list()
-
-
-@app.post("/api/projects", response_model=Project, status_code=status.HTTP_201_CREATED)
-def create_project(payload: ProjectCreate) -> Project:
-    return store.save(Project(name=payload.name.strip(), description=payload.description.strip()))
-
-
-@app.get("/api/projects/{project_id}", response_model=Project)
-def get_project(project_id: str) -> Project:
-    return _get_project(project_id)
-
-
-@app.patch("/api/projects/{project_id}", response_model=Project)
-def update_project(project_id: str, payload: ProjectUpdate) -> Project:
-    project = _get_project(project_id)
-    changes = payload.model_dump(exclude_unset=True)
-    if "name" in changes:
-        changes["name"] = changes["name"].strip()
-    if "description" in changes:
-        changes["description"] = changes["description"].strip()
-    updated = Project.model_validate(project.model_dump() | changes)
-    return _save(updated)
-
-
-@app.delete("/api/projects/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_project(project_id: str) -> Response:
-    if not store.delete(project_id):
-        raise HTTPException(status_code=404, detail="Projet introuvable.")
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @app.get("/api/search")
@@ -106,42 +68,55 @@ async def search_articles(
         raise _mediawiki_error(error) from error
 
 
-@app.post("/api/projects/{project_id}/articles", response_model=Project, status_code=status.HTTP_201_CREATED)
-async def add_main_article(project_id: str, payload: ArticleRequest) -> Project:
-    project = _get_project(project_id)
+@app.post("/api/articles", response_model=Article, status_code=201)
+def add_article_reference(payload: ArticleRequest) -> Article:
     try:
         language, title = (
             parse_article_url(payload.url) if payload.url else (payload.language, payload.title)
         )
+        language = validate_language(language)
+        title = title.strip()
+        if not title:
+            raise ValueError("Le titre de l’article ne peut pas être vide.")
+    except ValueError as error:
+        raise _mediawiki_error(error) from error
+    return Article(
+        page_id=payload.page_id,
+        title=title,
+        language=language,
+        url=payload.url or article_url(language, title),
+        summary=payload.summary,
+        selected=True,
+    )
+
+
+@app.post("/api/books/import", response_model=list[Article])
+async def import_wikipedia_book(payload: BookImportRequest) -> list[Article]:
+    try:
+        language, title = parse_article_url(payload.url)
         async with MediaWikiClient() as client:
-            article = await client.get_article(title, language)
+            titles = await client.get_book_links(title, language, limit=200)
     except (MediaWikiError, ValueError) as error:
         raise _mediawiki_error(error) from error
-
-    if any(item.key == article.key for item in project.main_articles):
-        raise HTTPException(status_code=409, detail="Cet article principal est déjà dans le projet.")
-    article.selected = True
-    article.content_html, article.references_html = extract_article_content(
-        article.content_html, article.language
-    )
-    project.main_articles.append(article)
-    return _save(project)
-
-
-@app.delete("/api/projects/{project_id}/articles/{language}/{page_id}", response_model=Project)
-def remove_article(project_id: str, language: str, page_id: int) -> Project:
-    project = _get_project(project_id)
-    key = f"{language}:{page_id}"
-    project.main_articles = [article for article in project.main_articles if article.key != key]
-    project.discovered_articles = [
-        article for article in project.discovered_articles if article.key != key
+    if not titles:
+        raise HTTPException(
+            status_code=422,
+            detail="Cette page de livre ne contient aucun lien vers des articles Wikipédia.",
+        )
+    return [
+        Article(
+            title=article_title,
+            language=language,
+            url=article_url(language, article_title),
+            selected=True,
+        )
+        for article_title in titles
     ]
-    return _save(project)
 
 
-@app.post("/api/projects/{project_id}/explore", response_model=Project)
-async def explore_project(project_id: str, payload: ExploreRequest) -> Project:
-    project = _get_project(project_id)
+@app.post("/api/explore", response_model=Project)
+async def explore_project(payload: ProjectExplorationRequest) -> Project:
+    project = payload.project
     if not project.main_articles or payload.max_depth == 0:
         return project
     try:
@@ -154,21 +129,12 @@ async def explore_project(project_id: str, payload: ExploreRequest) -> Project:
 
     known = {article.key for article in project.main_articles + project.discovered_articles}
     project.discovered_articles.extend(article for article in discovered if article.key not in known)
-    return _save(project)
+    project.updated_at = utc_now()
+    return project
 
 
-@app.put("/api/projects/{project_id}/selection", response_model=Project)
-def update_selection(project_id: str, payload: SelectionRequest) -> Project:
-    project = _get_project(project_id)
-    selected_keys = set(payload.article_keys)
-    for article in project.main_articles + project.discovered_articles:
-        article.selected = article.key in selected_keys
-    return _save(project)
-
-
-@app.post("/api/projects/{project_id}/pdf")
-async def create_pdf(project_id: str) -> FileResponse:
-    project = _get_project(project_id)
+@app.post("/api/pdf")
+async def create_pdf(project: Project) -> Response:
     selected = [
         article
         for article in project.main_articles + project.discovered_articles
@@ -178,30 +144,62 @@ async def create_pdf(project_id: str) -> FileResponse:
         raise HTTPException(status_code=400, detail="Sélectionnez au moins un article avant l’export.")
 
     try:
-        async with MediaWikiClient() as client:
-            for index, article in enumerate(selected):
-                if not article.content_html:
-                    fresh_article = await client.get_article(article.title, article.language)
-                    article.content_html = fresh_article.content_html
-                    article.summary = fresh_article.summary
-                    article.url = fresh_article.url
-                    article.last_modified = fresh_article.last_modified
-                article.content_html, article.references_html = extract_article_content(
-                    article.content_html, article.language
-                )
-                selected[index] = article
-    except (MediaWikiError, ValueError) as error:
-        raise _mediawiki_error(error) from error
+        groups = ordered_article_groups(project, selected)
+        writer = PdfWriter()
+        streams: list[BytesIO] = []
 
-    try:
-        pdf_data = generate_pdf(build_book_html(project, selected))
-        output_directory.mkdir(parents=True, exist_ok=True)
-        pdf_path = output_directory / f"Wikipedia2Book-{project.id}.pdf"
-        pdf_path.write_bytes(pdf_data)
+        def append_pdf(pdf_data: bytes) -> int:
+            stream = BytesIO(pdf_data)
+            streams.append(stream)
+            page_number = len(writer.pages)
+            writer.append(stream)
+            return page_number
+
+        front_matter = generate_pdf(
+            build_book_html(
+                project,
+                selected,
+                include_articles=False,
+                include_conclusion=False,
+            )
+        )
+        root_outline = writer.add_outline_item(
+            project.book_title or project.name,
+            append_pdf(front_matter),
+        )
+
+        async with MediaWikiClient() as client:
+            for chapter_title, articles in groups:
+                chapter_outline = root_outline
+                if chapter_title:
+                    chapter_page = generate_pdf(build_chapter_page_html(project, chapter_title))
+                    chapter_outline = writer.add_outline_item(
+                        chapter_title,
+                        append_pdf(chapter_page),
+                        parent=root_outline,
+                    )
+                for article in articles:
+                    article_pdf = await client.get_article_pdf(article.title, article.language)
+                    article_page = append_pdf(article_pdf)
+                    writer.add_outline_item(article.title, article_page, parent=chapter_outline)
+
+        if project.conclusion:
+            conclusion_page = generate_pdf(build_conclusion_page_html(project))
+            writer.add_outline_item(
+                "Conclusion",
+                append_pdf(conclusion_page),
+                parent=root_outline,
+            )
+
+        output = BytesIO()
+        writer.write(output)
+        pdf_data = output.getvalue()
     except Exception as error:
+        if isinstance(error, MediaWikiError):
+            raise _mediawiki_error(error) from error
         raise HTTPException(status_code=500, detail="La génération du PDF a échoué.") from error
-    return FileResponse(
-        pdf_path,
+    return Response(
+        content=pdf_data,
         media_type="application/pdf",
-        filename=pdf_path.name,
+        headers={"Content-Disposition": f'attachment; filename="Wikipedia2Book-{project.id}.pdf"'},
     )

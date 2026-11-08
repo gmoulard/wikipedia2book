@@ -1,7 +1,7 @@
 import asyncio
 
 from app.models import Article
-from app.wikipedia_api import MediaWikiClient
+from app.wikipedia_api import MediaWikiClient, article_url
 
 
 async def discover_related_articles(
@@ -32,28 +32,20 @@ async def discover_related_articles(
             if len(discovered) + len(candidates) >= max_articles:
                 break
 
-        by_language: dict[str, list[tuple[str, str]]] = {}
-        for (language, _), candidate in candidates.items():
-            by_language.setdefault(language, []).append(candidate)
-
-        for language, language_candidates in by_language.items():
-            fetched = await client.get_articles_by_titles(
-                [title for title, _ in language_candidates], language
+        for (language, normalized_title), (title, origin_title) in candidates.items():
+            seen.add((language, normalized_title))
+            article = Article(
+                title=title,
+                language=language,
+                url=article_url(language, title),
+                origin_title=origin_title,
+                depth=depth,
+                selected=False,
             )
-            by_title = {article.title.casefold(): article for article in fetched}
-            for requested_title, origin_title in language_candidates:
-                key = (language, requested_title.casefold())
-                seen.add(key)
-                article = by_title.get(requested_title.casefold())
-                if article is None:
-                    continue
-                article.origin_title = origin_title
-                article.depth = depth
-                article.selected = False
-                discovered.append(article)
-                next_frontier.append((language, article.title, origin_title, depth))
-                if len(discovered) >= max_articles:
-                    return discovered
+            discovered.append(article)
+            next_frontier.append((language, article.title, origin_title, depth))
+            if len(discovered) >= max_articles:
+                return discovered
         frontier = next_frontier
         if not frontier:
             break

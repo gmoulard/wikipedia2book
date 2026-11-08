@@ -38,11 +38,11 @@ Fonctionnalités attendues :
 
 * Nommer et décrire un projet.
 
-* Enregistrer automatiquement les modifications.
+* Conserver les modifications en mémoire dans le navigateur pendant la session.
 
-* Sauvegarder un projet.
+* Télécharger explicitement l'espace de travail sous forme de fichier JSON.
 
-* Ouvrir un projet existant.
+* Importer un fichier JSON local contenant un ou plusieurs projets.
 
 * Supprimer un projet.
 
@@ -62,7 +62,7 @@ Chaque projet contient notamment :
 
 * Les paramètres d'exportation.
 
-Le stockage doit être persistant, y compris après l'arrêt du conteneur Docker.
+Le serveur ne doit pas persister les projets sur son disque. Le navigateur conserve les projets en mémoire et échange leur structure JSON avec l'API pour les opérations qui nécessitent le serveur. La persistance est à la charge de l'utilisateur, via le téléchargement puis l'import manuel d'un fichier JSON.
 
 ## 3\. Gestion des articles principaux
 
@@ -77,6 +77,10 @@ L'ajout peut se faire à partir :
 * D'un titre d'article.
 
 * D'une recherche sur Wikipédia.
+
+* De l'URL d'une page de livre Wikipédia contenant la liste des pages à imprimer.
+
+Les articles importés depuis une page de livre sont ajoutés à la sélection. Seuls leurs titres et leurs URL sont chargés à ce stade; leur PDF complet est téléchargé au moment de la génération.
 
 Exemple :
 
@@ -207,31 +211,9 @@ Un article peut être déplacé librement dans la structure du livre.
 
 ## 7\. Récupération du contenu Wikipédia
 
-Pour chaque article retenu, le logiciel doit récupérer autant que possible :
+L'ajout et l'exploration ne doivent pas télécharger le contenu complet des pages. Au moment de générer le PDF, chaque article sélectionné doit être récupéré via l'endpoint PDF officiel de Wikimedia (`/api/rest_v1/page/pdf/{titre}`), équivalent à la fonction « Télécharger comme PDF » de Wikipédia.
 
-* Le titre.
-
-* Les sous-titres.
-
-* Les paragraphes.
-
-* Les listes à puces.
-
-* Les listes numérotées.
-
-* Les tableaux.
-
-* Les images.
-
-* Les légendes.
-
-* Les références et notes.
-
-* Les liens internes et externes pertinents.
-
-Le rendu doit respecter autant que possible la structure et la hiérarchie du contenu original.
-
-Les éléments impossibles à reproduire doivent être traités proprement et ne doivent pas provoquer l'échec de la génération du livre.
+Le PDF officiel de chaque article doit être conservé intégralement, avec son contenu, sa structure, ses images et ses références. Les PDFs sont assemblés dans l'ordre du livre sans reconstruire ni tronquer le corps des articles.
 
 ## 8\. Gestion des références et citations
 
@@ -401,15 +383,15 @@ Le logiciel doit :
 
 * Vérifier les articles sélectionnés.
 
-* Récupérer les contenus nécessaires.
+* Télécharger, uniquement à cette étape, le PDF officiel complet de chaque article sélectionné.
 
-* Préparer les images et médias.
+* Préparer le frontispice et les pages de chapitre.
 
-* Construire la structure du livre.
+* Assembler en mémoire les PDFs Wikipédia dans l'ordre du livre et ajouter les signets de navigation.
 
 * Générer la table des matières.
 
-* Appliquer les paramètres de mise en page.
+* Appliquer les paramètres de mise en page aux pages générées par l'application; les pages d'articles conservent le format de leur PDF Wikipédia.
 
 * Générer le PDF.
 
@@ -425,7 +407,7 @@ Le PDF doit être :
 
 * Structuré.
 
-* Conforme au format choisi.
+* Les articles complets sont ceux fournis par Wikipédia; le format personnalisé s'applique aux pages générées par l'application.
 
 * Compatible avec les lecteurs PDF courants.
 
@@ -483,8 +465,8 @@ L'interface doit être utilisable sur ordinateur, tablette et smartphone.
 | Backend          | FastAPI                  |
 | Interface        | HTML, CSS, JavaScript    |
 | API Wikipédia    | MediaWiki API            |
-| Stockage         | SQLite ou JSON           |
-| Génération PDF   | WeasyPrint ou équivalent |
+| Échange de projets | JSON navigateur-serveur |
+| Génération PDF   | PDF officiel Wikimedia, WeasyPrint et pypdf |
 | Conteneurisation | Docker                   |
 | Orchestration    | Docker Compose           |
 
@@ -501,6 +483,8 @@ Le logiciel doit utiliser les interfaces officielles de MediaWiki pour :
 * Explorer les liens internes.
 
 * Récupérer les contenus.
+
+* Télécharger les PDFs complets des pages sélectionnées au moment de l'export.
 
 * Récupérer les informations relatives aux médias.
 
@@ -528,7 +512,7 @@ docker compose up -d --build
 
 L'application doit être accessible depuis un navigateur web.
 
-Les données des projets doivent être stockées dans un volume Docker persistant.
+Le serveur ne stocke aucun projet ni PDF sur disque. Le navigateur doit permettre de télécharger et d'importer un fichier JSON contenant les projets et leurs structures complètes.
 
 ### 15\. Sécurité et robustesse
 
@@ -618,7 +602,7 @@ La version initiale sera considérée comme fonctionnelle si les points suivants
 
 * Téléchargement du PDF.
 
-* Persistance des projets après redémarrage Docker.
+* Export puis import des projets via un fichier JSON local.
 
 ## 18\. Découpage prévisionnel
 

@@ -34,7 +34,10 @@
       <header class="topbar">
         <div class="breadcrumb"><span>ATELIER ÉDITORIAL</span><span class="breadcrumb-slash">/</span><span id="breadcrumbProject">NOUVEAU PROJET</span></div>
         <div class="topbar-actions">
-          <span class="save-state" id="saveState">Tout est enregistré</span>
+          <span class="save-state" id="saveState">Aucun fichier chargé</span>
+          <input id="workspaceFileInput" type="file" accept=".json,application/json" hidden>
+          <button class="icon-button" id="importWorkspaceButton" type="button" title="Importer un fichier JSON" aria-label="Importer un fichier JSON">↑</button>
+          <button class="icon-button" id="saveWorkspaceButton" type="button" title="Télécharger les projets en JSON" aria-label="Télécharger les projets en JSON" disabled>↓</button>
           <button class="button button-dark" id="topExportButton" type="button" disabled><span aria-hidden="true">↓</span> Générer le PDF</button>
         </div>
       </header>
@@ -56,7 +59,7 @@
             <label class="visually-hidden" for="projectDescription">Description du projet</label>
             <input id="projectDescription" class="project-description-input" maxlength="2000" placeholder="Une note sur ce que vous souhaitez explorer…" autocomplete="off">
           </div>
-          <div class="project-heading-actions"><button class="button button-outline" id="exportConfigButton" type="button">Exporter .json</button><button class="icon-button danger-icon" id="deleteProjectButton" type="button" title="Supprimer ce projet" aria-label="Supprimer ce projet">×</button></div>
+          <button class="icon-button danger-icon" id="deleteProjectButton" type="button" title="Retirer ce projet de la session" aria-label="Retirer ce projet de la session">×</button>
         </section>
 
         <nav class="workflow-tabs" aria-label="Étapes du projet">
@@ -75,6 +78,7 @@
               <div class="entry-tabs" role="group" aria-label="Méthode d’ajout">
                 <button class="entry-tab active" type="button" data-source-mode="search">Rechercher</button>
                 <button class="entry-tab" type="button" data-source-mode="url">URL Wikipédia</button>
+                <button class="entry-tab" type="button" data-source-mode="book">Livre Wikipédia</button>
               </div>
               <form id="articleForm" class="article-form">
                 <label class="visually-hidden" for="articleQuery">Titre ou recherche Wikipédia</label>
@@ -126,7 +130,7 @@
         <section class="view-panel" id="bookPanel" data-panel="book" hidden>
           <div class="section-intro">
             <div><div class="eyebrow">FABRICATION</div><h2>Préparer le livre</h2></div>
-            <p>Réglez la page et les éléments éditoriaux. Le PDF conservera les références extraites des articles.</p>
+            <p>Les articles complets sont téléchargés via la fonction PDF de Wikipédia au moment de l’export.</p>
           </div>
           <div class="edition-layout">
             <section class="settings-section">
@@ -153,7 +157,7 @@
               </div>
             </section>
           </div>
-          <div class="edition-footer"><p><span class="info-mark">i</span> Les références extraites et les liens vers les sources sont inclus dans le PDF.</p><button class="button button-dark button-large" id="exportButton" type="button"><span aria-hidden="true">↓</span> Générer et télécharger le PDF</button></div>
+          <div class="edition-footer"><p><span class="info-mark">i</span> Les pages des articles gardent la mise en page du PDF Wikipédia original.</p><button class="button button-dark button-large" id="exportButton" type="button"><span aria-hidden="true">↓</span> Générer et télécharger le PDF</button></div>
         </section>
       </div>
     </main>

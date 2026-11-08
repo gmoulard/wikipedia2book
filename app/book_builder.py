@@ -12,7 +12,7 @@ _PAGE_SIZES = {
 }
 
 
-def build_book_html(project: Project, articles: list[Article]) -> str:
+def ordered_article_groups(project: Project, articles: list[Article]) -> list[tuple[str, list[Article]]]:
     by_key = {article.key: article for article in articles}
     ordered = [by_key[key] for key in project.article_order if key in by_key]
     used_keys = {article.key for article in ordered}
@@ -31,19 +31,45 @@ def build_book_html(project: Project, articles: list[Article]) -> str:
         unassigned = [article for article in ordered if article.key not in assigned]
         if unassigned:
             groups.append(("Sans chapitre", unassigned))
+    return groups
+
+
+def _page_layout(project: Project) -> tuple[float, float, float, float, float, float]:
+    page_width, page_height = _PAGE_SIZES.get(
+        project.page_format, (project.custom_width_mm, project.custom_height_mm)
+    )
+    if project.page_format == "custom":
+        page_width, page_height = project.custom_width_mm, project.custom_height_mm
+    if project.orientation == "landscape":
+        page_width, page_height = page_height, page_width
+    inner = project.margin_inside_mm + project.margin_binding_mm
+    return page_width, page_height, project.margin_top_mm, project.margin_bottom_mm, inner, project.margin_outside_mm
+
+
+def build_book_html(
+    project: Project,
+    articles: list[Article],
+    *,
+    include_articles: bool = True,
+    include_conclusion: bool = True,
+) -> str:
+    groups = ordered_article_groups(project, articles)
 
     sections: list[str] = []
     contents: list[str] = []
     index = 0
     for chapter_title, chapter_articles in groups:
         links: list[str] = []
-        if chapter_title:
+        if include_articles and chapter_title:
             sections.append(f'<section class="chapter"><h2>{escape(chapter_title)}</h2>')
         for article in chapter_articles:
             index += 1
             anchor = f"article-{index}"
             title = escape(article.title)
-            links.append(f'<li><a href="#{anchor}">{title}</a></li>')
+            link = f'<a href="#{anchor}">{title}</a>' if include_articles else title
+            links.append(f"<li>{link}</li>")
+            if not include_articles:
+                continue
             body = sanitize_html(
                 article.content_html or f"<p>{escape(article.summary)}</p>", article.language
             )
@@ -62,19 +88,12 @@ def build_book_html(project: Project, articles: list[Article]) -> str:
             contents.append(
                 f'<li><span>{escape(chapter_title)}</span><ol>{"".join(links)}</ol></li>'
             )
-            sections.append("</section>")
+            if include_articles:
+                sections.append("</section>")
         else:
             contents.extend(links)
 
-    page_width, page_height = _PAGE_SIZES.get(
-        project.page_format, (project.custom_width_mm, project.custom_height_mm)
-    )
-    if project.page_format == "custom":
-        page_width, page_height = project.custom_width_mm, project.custom_height_mm
-    if project.orientation == "landscape":
-        page_width, page_height = page_height, page_width
-    inner = project.margin_inside_mm + project.margin_binding_mm
-    outer = project.margin_outside_mm
+    page_width, page_height, margin_top, margin_bottom, inner, outer = _page_layout(project)
     book_title = escape(project.book_title or project.name)
     subtitle = f'<p class="subtitle">{escape(project.book_subtitle)}</p>' if project.book_subtitle else ""
     author = f'<p class="author">{escape(project.book_author)}</p>' if project.book_author else ""
@@ -86,7 +105,7 @@ def build_book_html(project: Project, articles: list[Article]) -> str:
     )
     conclusion = (
         f'<section class="closing"><h2>Conclusion</h2><p>{conclusion_text}</p></section>'
-        if project.conclusion else ""
+        if project.conclusion and include_conclusion else ""
     )
     description = escape(project.description)
     return f"""<!doctype html>
@@ -95,7 +114,7 @@ def build_book_html(project: Project, articles: list[Article]) -> str:
     <meta charset="utf-8">
 <title>{book_title}</title>
     <style>
-@page {{ size: {page_width:g}mm {page_height:g}mm; margin: {project.margin_top_mm:g}mm {outer:g}mm {project.margin_bottom_mm:g}mm {inner:g}mm; }}
+@page {{ size: {page_width:g}mm {page_height:g}mm; margin: {margin_top:g}mm {outer:g}mm {margin_bottom:g}mm {inner:g}mm; }}
 @page :left {{ margin-left: {inner:g}mm; margin-right: {outer:g}mm; }}
 @page :right {{ margin-left: {outer:g}mm; margin-right: {inner:g}mm; }}
     body {{ color: #202020; font: 10pt serif; line-height: 1.5; }}
@@ -132,3 +151,30 @@ nav ol ol {{ margin: 2pt 0 5pt; }}
 {conclusion}
     </body>
     </html>"""
+
+
+def build_chapter_page_html(project: Project, title: str) -> str:
+    page_width, page_height, margin_top, margin_bottom, inner, outer = _page_layout(project)
+    return f"""<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><style>
+@page {{ size: {page_width:g}mm {page_height:g}mm; margin: {margin_top:g}mm {outer:g}mm {margin_bottom:g}mm {inner:g}mm; }}
+@page :left {{ margin-left: {inner:g}mm; margin-right: {outer:g}mm; }}
+@page :right {{ margin-left: {outer:g}mm; margin-right: {inner:g}mm; }}
+body {{ color: #202020; font: 11pt serif; }}
+main {{ display: flex; min-height: 75vh; flex-direction: column; justify-content: center; }}
+p {{ color: #167465; font: bold 9pt sans-serif; letter-spacing: 1pt; }}
+h1 {{ font-size: 30pt; }}
+</style></head><body><main><p>CHAPITRE</p><h1>{escape(title)}</h1></main></body></html>"""
+
+
+def build_conclusion_page_html(project: Project) -> str:
+    page_width, page_height, margin_top, margin_bottom, inner, outer = _page_layout(project)
+    conclusion = escape(project.conclusion).replace("\n", "<br>")
+    return f"""<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><style>
+@page {{ size: {page_width:g}mm {page_height:g}mm; margin: {margin_top:g}mm {outer:g}mm {margin_bottom:g}mm {inner:g}mm; }}
+@page :left {{ margin-left: {inner:g}mm; margin-right: {outer:g}mm; }}
+@page :right {{ margin-left: {outer:g}mm; margin-right: {inner:g}mm; }}
+body {{ color: #202020; font: 11pt serif; line-height: 1.6; }}
+h1 {{ font-size: 22pt; }}
+</style></head><body><h1>Conclusion</h1><p>{conclusion}</p></body></html>"""

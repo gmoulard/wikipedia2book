@@ -1,5 +1,5 @@
 import re
-from urllib.parse import parse_qs, unquote, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse
 
 import httpx
 from bs4 import BeautifulSoup
@@ -15,11 +15,21 @@ class MediaWikiError(Exception):
     pass
 
 
+class MediaWikiPageNotFound(MediaWikiError):
+    pass
+
+
 def validate_language(language: str) -> str:
     normalized = language.lower()
     if not _LANGUAGE_RE.fullmatch(normalized):
         raise ValueError("Code de langue Wikipédia invalide.")
     return normalized
+
+
+def article_url(language: str, title: str) -> str:
+    language = validate_language(language)
+    slug = quote(title.replace(" ", "_"), safe="()!$&'*,;=:@")
+    return f"https://{language}.wikipedia.org/wiki/{slug}"
 
 
 def parse_article_url(url: str) -> tuple[str, str]:
@@ -95,47 +105,20 @@ class MediaWikiClient:
             for item in items
         ]
 
-    async def get_article(self, title: str, language: str = "fr") -> Article:
-        articles = await self.get_articles_by_titles([title], language)
-        if not articles:
-            raise MediaWikiError("Article Wikipédia introuvable.")
-        return articles[0]
-
-    async def get_articles_by_titles(self, titles: list[str], language: str = "fr") -> list[Article]:
+    async def get_article_pdf(self, title: str, language: str = "fr") -> bytes:
         language = validate_language(language)
-        articles: list[Article] = []
-        for start in range(0, len(titles), 50):
-            batch = titles[start : start + 50]
-            result = await self._get(
-                language,
-                {
-                    "prop": "extracts|info|revisions",
-                    "inprop": "url",
-                    "exchars": 30000,
-                    "explaintext": 0,
-                    "rvprop": "timestamp",
-                    "rvlimit": 1,
-                    "redirects": 1,
-                    "titles": "|".join(batch),
-                },
-            )
-            for page in result.get("query", {}).get("pages", []):
-                if page.get("missing") or "pageid" not in page:
-                    continue
-                revisions = page.get("revisions", [])
-                articles.append(
-                    Article(
-                        page_id=page["pageid"],
-                        title=page["title"],
-                        language=language,
-                        url=page.get("fullurl")
-                        or f"https://{language}.wikipedia.org/wiki/{page['title'].replace(' ', '_')}",
-                        summary=BeautifulSoup(page.get("extract", ""), "html.parser").get_text(" ", strip=True)[:1000],
-                        last_modified=revisions[0].get("timestamp") if revisions else None,
-                        content_html=page.get("extract", ""),
-                    )
-                )
-        return articles
+        if self._client is None:
+            raise RuntimeError("MediaWikiClient doit être utilisé dans un bloc async with.")
+        page_path = quote(title.replace(" ", "_"), safe="")
+        url = f"https://{language}.wikipedia.org/api/rest_v1/page/pdf/{page_path}"
+        try:
+            response = await self._client.get(url, timeout=120)
+            response.raise_for_status()
+        except httpx.HTTPError as error:
+            raise MediaWikiError(f"Impossible de télécharger le PDF Wikipédia pour « {title} ».") from error
+        if response.content[:5] != b"%PDF-":
+            raise MediaWikiError(f"Wikipédia n’a pas renvoyé un PDF valide pour « {title} ».")
+        return response.content
 
     async def get_links(self, title: str, language: str = "fr", limit: int = 100) -> list[str]:
         result = await self._get(
@@ -149,3 +132,46 @@ class MediaWikiClient:
         )
         pages = result.get("query", {}).get("pages", [])
         return [link["title"] for page in pages for link in page.get("links", [])]
+
+    async def get_book_links(
+        self, title: str, language: str = "fr", limit: int = 200
+    ) -> list[str]:
+        language = validate_language(language)
+        remaining = min(max(limit, 1), 500)
+        params = {
+            "prop": "info|links",
+            "titles": title,
+            "inprop": "url",
+            "plnamespace": 0,
+            "pllimit": min(remaining, 500),
+        }
+        links: list[str] = []
+        seen: set[str] = set()
+        first_page = True
+
+        while remaining:
+            result = await self._get(language, params)
+            pages = result.get("query", {}).get("pages", [])
+            if first_page and (not pages or pages[0].get("missing")):
+                raise MediaWikiPageNotFound(
+                    f"La page de livre Wikipédia « {title} » est introuvable."
+                )
+            first_page = False
+            for page in pages:
+                for link in page.get("links", []):
+                    link_title = link.get("title", "")
+                    normalized = link_title.casefold()
+                    if link_title and normalized not in seen:
+                        links.append(link_title)
+                        seen.add(normalized)
+                        remaining -= 1
+                        if remaining == 0:
+                            break
+                if remaining == 0:
+                    break
+            continuation = result.get("continue")
+            if not continuation or remaining == 0:
+                break
+            params.update(continuation)
+            params["pllimit"] = min(remaining, 500)
+        return links
