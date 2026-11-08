@@ -69,7 +69,7 @@ function normalizeProject(project) {
   return {
     main_articles: [], discovered_articles: [],
     book_title: '', book_subtitle: '', book_author: '', introduction: '', conclusion: '',
-    page_format: 'A5', custom_width_mm: 148, custom_height_mm: 210, orientation: 'portrait',
+    page_format: 'A4', custom_width_mm: 148, custom_height_mm: 210, orientation: 'portrait',
     margin_top_mm: 18, margin_bottom_mm: 18, margin_inside_mm: 18, margin_outside_mm: 16,
     margin_binding_mm: 0, article_order: [], chapters: [], toc_position: 'start', page_numbers: false, ...project,
   };
@@ -354,7 +354,10 @@ async function loadProjects() {
     $('#appVersion').textContent = `v\u00a0${parts.join('\u00a0\u00b7\u00a0')}`;
     $('#appVersion').title = v.commit;
   } catch { /* version non critique */ }
+  const now = new Date().toISOString();
+  state.project = normalizeProject({ id: crypto.randomUUID(), name: 'Nouveau projet', created_at: now, updated_at: now });
   renderWorkspace();
+  setView('sources');
 }
 
 function openProjectDialog() {

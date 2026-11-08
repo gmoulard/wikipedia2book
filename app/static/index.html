@@ -29,15 +29,7 @@
     </header>
 
     <main class="main-area">
-      <section id="welcomeView" class="welcome-view" hidden>
-        <div class="welcome-kicker"><span class="kicker-line"></span> WIKIPEDIA2BOOK</div>
-        <h1>Un livre commence<br>par une <em>curiosité.</em></h1>
-        <p>Rassemblez des articles, composez votre sélection et éditez un livre prêt à imprimer.</p>
-        <button class="button button-dark" id="welcomeNewProject" type="button">Créer mon premier projet <span aria-hidden="true">→</span></button>
-        <div class="welcome-index">01 <span>COLLECTER</span><i></i> 02 <span>COMPOSER</span><i></i> 03 <span>IMPRIMER</span></div>
-      </section>
-
-      <div id="projectWorkspace" class="project-workspace" hidden>
+      <div id="projectWorkspace" class="project-workspace">
         <section class="project-heading">
           <div class="project-heading-main">
             <div class="eyebrow"><span class="eyebrow-dot"></span> PROJET DE LIVRE</div>
@@ -132,7 +124,7 @@
             <section class="settings-section">
               <div class="settings-heading"><span class="settings-index">B</span><div><h3>Format d'impression</h3><p>Format, orientation et marges en millimètres</p></div></div>
               <div class="form-grid settings-grid">
-                <label class="field">Format papier<select id="pageFormat"><option>A5</option><option>A4</option><option>A6</option><option>A3</option><option>A2</option><option>A1</option><option>A0</option><option>Letter</option><option>Legal</option><option value="custom">Personnalisé</option></select></label>
+                <label class="field">Format papier<select id="pageFormat"><option>A5</option><option selected>A4</option><option>A6</option><option>A3</option><option>A2</option><option>A1</option><option>A0</option><option>Letter</option><option>Legal</option><option value="custom">Personnalisé</option></select></label>
                 <fieldset class="field orientation-field"><legend>Orientation</legend><div class="segmented-control"><label><input type="radio" name="orientation" value="portrait"><span>Portrait</span></label><label><input type="radio" name="orientation" value="landscape"><span>Paysage</span></label></div></fieldset>
                 <div id="customDimensions" class="custom-dimensions field-wide" hidden><label class="field">Largeur (mm)<input id="customWidth" type="number" min="50" max="1000" value="148"></label><label class="field">Hauteur (mm)<input id="customHeight" type="number" min="50" max="1000" value="210"></label></div>
                 <label class="field">Marge supérieure (mm)<input id="marginTop" type="number" min="0" max="100" value="18"></label>
@@ -159,14 +151,6 @@
     </footer>
   </div>
 
-  <dialog id="projectDialog" class="project-dialog">
-    <form id="createProjectForm" method="dialog">
-      <div class="dialog-kicker">NOUVEAU PROJET</div><h2>Quelle histoire explorer ?</h2>
-      <label class="field">Nom du projet<input id="newProjectName" type="text" maxlength="120" placeholder="Ex. Les volcans du Pacifique" required></label>
-      <label class="field">Description <span class="optional">(facultatif)</span><textarea id="newProjectDescription" rows="3" maxlength="2000" placeholder="Le fil conducteur de ce livre…"></textarea></label>
-      <div class="dialog-actions"><button class="button button-quiet" id="cancelProjectButton" type="button">Annuler</button><button class="button button-teal" type="submit">Créer le projet <span aria-hidden="true">→</span></button></div>
-    </form>
-  </dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 </body>
 </html>

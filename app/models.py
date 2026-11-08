@@ -46,7 +46,7 @@ class Project(BaseModel):
     book_author: str = Field(default="", max_length=200)
     introduction: str = Field(default="", max_length=20000)
     conclusion: str = Field(default="", max_length=20000)
-    page_format: Literal["A0", "A1", "A2", "A3", "A4", "A5", "A6", "Letter", "Legal", "custom"] = "A5"
+    page_format: Literal["A0", "A1", "A2", "A3", "A4", "A5", "A6", "Letter", "Legal", "custom"] = "A4"
     custom_width_mm: float = Field(default=148, ge=50, le=1000)
     custom_height_mm: float = Field(default=210, ge=50, le=1000)
     orientation: Literal["portrait", "landscape"] = "portrait"
