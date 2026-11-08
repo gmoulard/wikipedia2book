@@ -71,7 +71,7 @@ function normalizeProject(project) {
     book_title: '', book_subtitle: '', book_author: '', introduction: '', conclusion: '',
     page_format: 'A5', custom_width_mm: 148, custom_height_mm: 210, orientation: 'portrait',
     margin_top_mm: 18, margin_bottom_mm: 18, margin_inside_mm: 18, margin_outside_mm: 16,
-    margin_binding_mm: 0, article_order: [], chapters: [], toc_position: 'start', ...project,
+    margin_binding_mm: 0, article_order: [], chapters: [], toc_position: 'start', page_numbers: false, ...project,
   };
 }
 
@@ -320,6 +320,7 @@ function renderBookSettings() {
   const orientation = $(`input[name="orientation"][value="${project.orientation || 'portrait'}"]`);
   if (orientation) orientation.checked = true;
   $('#customDimensions').hidden = project.page_format !== 'custom';
+  $('#pageNumbers').checked = project.page_numbers || false;
 }
 
 function setProject(project) {
@@ -654,6 +655,7 @@ document.addEventListener('change', async (event) => {
   if (event.target.matches('#articleLanguage')) { if ($('#articleQuery').value.trim().length >= 2) searchArticles($('#articleQuery').value); return; }
   if (event.target.matches('#originFilter, #depthFilter')) { renderArticles(); return; }
   if (event.target.matches('input[name="orientation"]')) { const layout = collectLayoutSettings(); Object.assign(state.project, layout); queueSave(layout); return; }
+  if (event.target.matches('#pageNumbers')) { queueSave({ page_numbers: event.target.checked }); return; }
   const textSettings = { bookTitle: 'book_title', bookSubtitle: 'book_subtitle', bookAuthor: 'book_author', bookIntroduction: 'introduction', bookConclusion: 'conclusion' };
   if (textSettings[event.target.id]) patchSetting(event.target.id, textSettings[event.target.id]);
   const numericSettings = { customWidth: 'custom_width_mm', customHeight: 'custom_height_mm', marginTop: 'margin_top_mm', marginBottom: 'margin_bottom_mm', marginInside: 'margin_inside_mm', marginOutside: 'margin_outside_mm', marginBinding: 'margin_binding_mm' };

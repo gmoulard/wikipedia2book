@@ -108,6 +108,12 @@ def build_book_html(
         if project.conclusion and include_conclusion else ""
     )
     description = escape(project.description)
+    page_numbers_css = ""
+    if project.page_numbers:
+        page_numbers_css = (
+            f"@page {{ @bottom-center {{ content: counter(page); font: 8pt serif; color: #555; }} }}"
+            f"@page :first {{ @bottom-center {{ content: none; }} }}"
+        )
     return f"""<!doctype html>
     <html lang="fr">
     <head>
@@ -141,6 +147,7 @@ nav ol ol {{ margin: 2pt 0 5pt; }}
 .chapter .article h3 {{ page-break-before: auto; }}
 .references, .source {{ font-size: 8pt; }}
 .closing {{ page-break-before: always; }}
+{page_numbers_css}
     </style>
     </head>
     <body>
