@@ -214,5 +214,5 @@ async def create_pdf(project: Project) -> Response:
     return Response(
         content=pdf_data,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="Wikipedia2Book-{project.id}.pdf"'},
+        headers={"Content-Disposition": f'attachment; filename="{project.book_title or project.name}.pdf"'},
     )

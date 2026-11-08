@@ -2,7 +2,7 @@ const API = '';
 const state = {
   project: null,
   activeView: 'sources',
-  sourceMode: 'search',
+  sourceMode: 'book',
   searchTimer: null,
   toastTimer: null,
   isDirty: false,
@@ -551,7 +551,7 @@ async function exportPdf() {
     const objectUrl = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = objectUrl;
-    anchor.download = `Wikipedia2Book-${(state.project.book_title || state.project.name).replace(/[^a-z0-9-_ ]/gi, '').trim().replace(/\s+/g, '-') || 'livre'}.pdf`;
+    anchor.download = `${(state.project.book_title || state.project.name).replace(/[^a-z0-9-_ ]/gi, '').trim().replace(/\s+/g, '-') || 'livre'}.pdf`;
     document.body.append(anchor);
     anchor.click();
     anchor.remove();
@@ -618,14 +618,16 @@ document.addEventListener('click', async (event) => {
   if (modeButton) {
     state.sourceMode = modeButton.dataset.sourceMode;
     $$('.entry-tab').forEach((tab) => tab.classList.toggle('active', tab === modeButton));
-    $('#articleQuery').placeholder = state.sourceMode === 'book'
-      ? 'https://fr.wikipedia.org/wiki/Utilisateur:\u2026/Livres/\u2026'
-      : state.sourceMode === 'url' ? 'https://fr.wikipedia.org/wiki/\u2026' : 'Rechercher un article\u2026';
-    $('#entryHint').textContent = state.sourceMode === 'book'
-      ? 'Collez l\u2019URL d\u2019une page de livre Wikip\u00e9dia pour importer ses liens d\u2019articles.'
-      : state.sourceMode === 'url' ? 'Collez une URL HTTPS pointant vers un article Wikip\u00e9dia.' : 'Saisissez quelques mots pour rechercher dans Wikip\u00e9dia.';
+    const defaults = {
+      book:   { placeholder: 'https://fr.wikipedia.org/wiki/Utilisateur:…/Livres/…',                        hint: 'Collez l’URL d’une page de livre Wikipédia pour importer ses liens d’articles.', value: 'https://fr.wikipedia.org/wiki/Utilisateur:474D6F756C617264/Livres/Les_%C3%A9paves_de_la_rade_de_Saint-Pierre_suite_a_l%27%C3%A9ruption_de_la_montagne_Pel%C3%A9e_en_1902' },
+      url:    { placeholder: 'https://fr.wikipedia.org/wiki/…',                                              hint: 'Collez une URL HTTPS pointant vers un article Wikipédia.',                                    value: 'https://fr.wikipedia.org/wiki/%C3%89paves_de_la_rade_de_Saint-Pierre' },
+      search: { placeholder: 'Rechercher un article…',                                                       hint: 'Saisissez quelques mots pour rechercher dans Wikipédia.',                                    value: 'Épaves de la rade de Saint-Pierre' },
+    };
+    const d = defaults[state.sourceMode];
+    $('#articleQuery').placeholder = d.placeholder;
+    $('#articleQuery').value = d.value;
+    $('#entryHint').textContent = d.hint;
     $('#searchResults').hidden = true;
-    $('#articleQuery').value = '';
     return;
   }
   const result = event.target.closest('[data-add-title]');
