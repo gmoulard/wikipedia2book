@@ -109,18 +109,17 @@ def build_book_html(
     )
     description = escape(project.description)
     page_numbers_css = ""
+    bottom_center = ""
     if project.page_numbers:
-        page_numbers_css = (
-            f"@page {{ @bottom-center {{ content: counter(page); font: 8pt serif; color: #555; }} }}"
-            f"@page :first {{ @bottom-center {{ content: none; }} }}"
-        )
+        bottom_center = "@bottom-center { content: counter(page); font: 8pt serif; color: #555; }"
     return f"""<!doctype html>
     <html lang="fr">
     <head>
     <meta charset="utf-8">
 <title>{book_title}</title>
     <style>
-@page {{ size: {page_width:g}mm {page_height:g}mm; margin: {margin_top:g}mm {outer:g}mm {margin_bottom:g}mm {inner:g}mm; }}
+@page {{ size: {page_width:g}mm {page_height:g}mm; margin: {margin_top:g}mm {outer:g}mm {margin_bottom:g}mm {inner:g}mm; {bottom_center} }}
+@page :first {{ @bottom-center {{ content: none; }} }}
 @page :left {{ margin-left: {inner:g}mm; margin-right: {outer:g}mm; }}
 @page :right {{ margin-left: {outer:g}mm; margin-right: {inner:g}mm; }}
     body {{ color: #202020; font: 10pt serif; line-height: 1.5; }}
@@ -147,7 +146,6 @@ nav ol ol {{ margin: 2pt 0 5pt; }}
 .chapter .article h3 {{ page-break-before: auto; }}
 .references, .source {{ font-size: 8pt; }}
 .closing {{ page-break-before: always; }}
-{page_numbers_css}
     </style>
     </head>
     <body>
