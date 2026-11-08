@@ -60,12 +60,12 @@ def health() -> dict[str, str]:
 def version() -> dict[str, str]:
     try:
         commit = subprocess.check_output(
-            ["git", "log", "-1", "--format=%H|%h|%ci"], text=True, stderr=subprocess.DEVNULL
+            ["git", "log", "-1", "--format=%H|%h|%ci|%an"], text=True, stderr=subprocess.DEVNULL
         ).strip()
-        full, short, date = commit.split("|")
-        return {"commit": full, "short": short, "date": date}
+        full, short, date, author = commit.split("|")
+        return {"commit": full, "short": short, "date": date, "author": author}
     except Exception:
-        return {"commit": "unknown", "short": "unknown", "date": ""}
+        return {"commit": "unknown", "short": "unknown", "date": "", "author": ""}
 
 
 @app.get("/api/search")
