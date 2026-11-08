@@ -1,3 +1,4 @@
+import subprocess
 from io import BytesIO
 from pathlib import Path
 
@@ -53,6 +54,18 @@ def _mediawiki_error(error: Exception) -> HTTPException:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/api/version")
+def version() -> dict[str, str]:
+    try:
+        commit = subprocess.check_output(
+            ["git", "log", "-1", "--format=%H|%h|%ci"], text=True, stderr=subprocess.DEVNULL
+        ).strip()
+        full, short, date = commit.split("|")
+        return {"commit": full, "short": short, "date": date}
+    except Exception:
+        return {"commit": "unknown", "short": "unknown", "date": ""}
 
 
 @app.get("/api/search")

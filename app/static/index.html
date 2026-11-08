@@ -13,35 +13,22 @@
 </head>
 <body>
   <div class="app-shell">
-    <aside class="sidebar" aria-label="Navigation des projets">
+    <header class="topbar">
       <a class="brand" href="/" aria-label="Wikipedia2Book, accueil">
         <span class="brand-mark" aria-hidden="true"><span></span><span></span></span>
         <span>WIKIPEDIA<span class="brand-light">2BOOK</span></span>
       </a>
-      <div class="sidebar-label">ESPACE DE TRAVAIL</div>
-      <div class="project-nav-heading">
-        <span>Mes projets</span>
-        <button class="icon-button" id="newProjectButton" type="button" title="Créer un projet" aria-label="Créer un projet">+</button>
+      <div class="breadcrumb"><span>ATELIER ÉDITORIAL</span><span class="breadcrumb-slash">/</span><span id="breadcrumbProject">NOUVEAU PROJET</span></div>
+      <div class="topbar-actions">
+        <span class="save-state" id="saveState">Aucun fichier chargé</span>
+        <input id="workspaceFileInput" type="file" accept=".json,application/json" hidden>
+        <button class="icon-button" id="importWorkspaceButton" type="button" title="Importer un fichier JSON" aria-label="Importer un fichier JSON">↑</button>
+        <button class="icon-button" id="saveWorkspaceButton" type="button" title="Télécharger le projet en JSON" aria-label="Télécharger le projet en JSON" disabled>↓</button>
+        <button class="button button-dark" id="topExportButton" type="button" disabled><span aria-hidden="true">↓</span> Générer le PDF</button>
       </div>
-      <nav id="projectList" class="project-list" aria-label="Projets"></nav>
-      <div class="sidebar-footer">
-        <span class="connection-dot" id="connectionDot"></span>
-        <span id="connectionStatus">Connexion à l’API…</span>
-      </div>
-    </aside>
+    </header>
 
     <main class="main-area">
-      <header class="topbar">
-        <div class="breadcrumb"><span>ATELIER ÉDITORIAL</span><span class="breadcrumb-slash">/</span><span id="breadcrumbProject">NOUVEAU PROJET</span></div>
-        <div class="topbar-actions">
-          <span class="save-state" id="saveState">Aucun fichier chargé</span>
-          <input id="workspaceFileInput" type="file" accept=".json,application/json" hidden>
-          <button class="icon-button" id="importWorkspaceButton" type="button" title="Importer un fichier JSON" aria-label="Importer un fichier JSON">↑</button>
-          <button class="icon-button" id="saveWorkspaceButton" type="button" title="Télécharger les projets en JSON" aria-label="Télécharger les projets en JSON" disabled>↓</button>
-          <button class="button button-dark" id="topExportButton" type="button" disabled><span aria-hidden="true">↓</span> Générer le PDF</button>
-        </div>
-      </header>
-
       <section id="welcomeView" class="welcome-view" hidden>
         <div class="welcome-kicker"><span class="kicker-line"></span> WIKIPEDIA2BOOK</div>
         <h1>Un livre commence<br>par une <em>curiosité.</em></h1>
@@ -59,7 +46,6 @@
             <label class="visually-hidden" for="projectDescription">Description du projet</label>
             <input id="projectDescription" class="project-description-input" maxlength="2000" placeholder="Une note sur ce que vous souhaitez explorer…" autocomplete="off">
           </div>
-          <button class="icon-button danger-icon" id="deleteProjectButton" type="button" title="Retirer ce projet de la session" aria-label="Retirer ce projet de la session">×</button>
         </section>
 
         <nav class="workflow-tabs" aria-label="Étapes du projet">
@@ -71,11 +57,11 @@
         <section class="view-panel" id="sourcesPanel" data-panel="sources">
           <div class="section-intro">
             <div><div class="eyebrow">COLLECTE</div><h2>Construire la bibliothèque</h2></div>
-            <p>Ajoutez vos articles principaux. Les suggestions découvertes restent à valider avant d’entrer dans le livre.</p>
+            <p>Ajoutez vos articles principaux. Les suggestions découvertes restent à valider avant d'entrer dans le livre.</p>
           </div>
           <div class="source-tools">
             <div class="source-entry">
-              <div class="entry-tabs" role="group" aria-label="Méthode d’ajout">
+              <div class="entry-tabs" role="group" aria-label="Méthode d'ajout">
                 <button class="entry-tab active" type="button" data-source-mode="search">Rechercher</button>
                 <button class="entry-tab" type="button" data-source-mode="url">URL Wikipédia</button>
                 <button class="entry-tab" type="button" data-source-mode="book">Livre Wikipédia</button>
@@ -96,7 +82,7 @@
               <div class="explore-head"><span class="explore-icon" aria-hidden="true">↗</span><div><strong>Explorer les liens</strong><small>Proposer des articles liés</small></div></div>
               <label for="exploreDepth">Profondeur</label>
               <select id="exploreDepth"><option value="1">1 · liens directs</option><option value="2">2 · deuxième niveau</option><option value="3">3 · troisième niveau</option><option value="0">0 · désactivée</option></select>
-              <label for="exploreLimit">Maximum d’articles</label>
+              <label for="exploreLimit">Maximum d'articles</label>
               <div class="explore-submit"><input id="exploreLimit" type="number" min="1" max="200" value="30"><button class="button button-outline" type="submit">Explorer</button></div>
             </form>
           </div>
@@ -121,7 +107,7 @@
         <section class="view-panel" id="organizationPanel" data-panel="organization" hidden>
           <div class="section-intro">
             <div><div class="eyebrow">COMPOSITION</div><h2>Donner un ordre aux idées</h2></div>
-            <p>Réorganisez les articles retenus et rassemblez-les en chapitres. Seuls les articles cochés seront exportés.</p>
+            <p>Glissez-déposez les éléments pour les réorganiser. La table des matières peut être placée au début ou à la fin.</p>
           </div>
           <div class="organization-toolbar"><div class="selection-summary"><span class="selection-number" id="organizationCount">0</span><span>articles retenus pour le livre</span></div><button class="button button-outline" id="addChapterButton" type="button">Créer un chapitre <span aria-hidden="true">+</span></button></div>
           <div id="organizationList" class="organization-list"></div>
@@ -130,11 +116,11 @@
         <section class="view-panel" id="bookPanel" data-panel="book" hidden>
           <div class="section-intro">
             <div><div class="eyebrow">FABRICATION</div><h2>Préparer le livre</h2></div>
-            <p>Les articles complets sont téléchargés via la fonction PDF de Wikipédia au moment de l’export.</p>
+            <p>Les articles complets sont téléchargés via la fonction PDF de Wikipédia au moment de l'export.</p>
           </div>
           <div class="edition-layout">
             <section class="settings-section">
-              <div class="settings-heading"><span class="settings-index">A</span><div><h3>Identité du livre</h3><p>Les informations de couverture et d’ouverture</p></div></div>
+              <div class="settings-heading"><span class="settings-index">A</span><div><h3>Identité du livre</h3><p>Les informations de couverture et d'ouverture</p></div></div>
               <div class="form-grid">
                 <label class="field field-wide">Titre du livre<input id="bookTitle" type="text" placeholder="Reprend le nom du projet"></label>
                 <label class="field field-wide">Sous-titre<input id="bookSubtitle" type="text" placeholder="Facultatif"></label>
@@ -144,7 +130,7 @@
               </div>
             </section>
             <section class="settings-section">
-              <div class="settings-heading"><span class="settings-index">B</span><div><h3>Format d’impression</h3><p>Format, orientation et marges en millimètres</p></div></div>
+              <div class="settings-heading"><span class="settings-index">B</span><div><h3>Format d'impression</h3><p>Format, orientation et marges en millimètres</p></div></div>
               <div class="form-grid settings-grid">
                 <label class="field">Format papier<select id="pageFormat"><option>A5</option><option>A4</option><option>A6</option><option>A3</option><option>A2</option><option>A1</option><option>A0</option><option>Letter</option><option>Legal</option><option value="custom">Personnalisé</option></select></label>
                 <fieldset class="field orientation-field"><legend>Orientation</legend><div class="segmented-control"><label><input type="radio" name="orientation" value="portrait"><span>Portrait</span></label><label><input type="radio" name="orientation" value="landscape"><span>Paysage</span></label></div></fieldset>
@@ -161,6 +147,15 @@
         </section>
       </div>
     </main>
+
+    <footer class="app-footer">
+      <span class="footer-brand">WIKIPEDIA<span class="brand-light">2BOOK</span></span>
+      <span class="footer-sep">·</span>
+      <span class="connection-dot" id="connectionDot"></span>
+      <span id="connectionStatus">Connexion à l'API…</span>
+      <span class="footer-sep footer-push">·</span>
+      <span id="appVersion" class="footer-version">v…</span>
+    </footer>
   </div>
 
   <dialog id="projectDialog" class="project-dialog">
