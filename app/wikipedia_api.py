@@ -8,7 +8,7 @@ from app.models import Article
 
 
 _LANGUAGE_RE = re.compile(r"^[a-z0-9-]{2,12}$")
-_USER_AGENT = "Wikipedia2Book/0.1 (MediaWiki API client)"
+_USER_AGENT = "Wikipedia2Book/0.1 (https://github.com/gmoulard/wikipedia2book; MediaWiki API client)"
 
 
 class MediaWikiError(Exception):
