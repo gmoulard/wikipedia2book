@@ -30,7 +30,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .app-shell { display: flex; flex-direction: column; min-height: 100vh; }
 .brand { display: flex; align-items: center; gap: 11px; padding: 0 10px; color: var(--ink); font-size: 11px; font-weight: 700; letter-spacing: 1.1px; text-decoration: none; }
 .brand-light { margin-left: 3px; color: var(--teal); font-weight: 500; }
-.brand-logo { width: 28px; height: 28px; object-fit: contain; flex: 0 0 auto; }
+.brand-logo { width: 28px; height: 28px; max-width: 28px; max-height: 28px; object-fit: contain; flex: 0 0 auto; display: block; }
 .eyebrow, .welcome-kicker, .dialog-kicker { color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: 1.2px; }
 .icon-button { display: inline-grid; width: 30px; height: 30px; flex: 0 0 auto; place-items: center; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: var(--ink-soft); cursor: pointer; font-size: 19px; line-height: 1; transition: background .16s ease, border-color .16s ease, color .16s ease; }
 .icon-button:hover { border-color: var(--teal); background: var(--teal-pale); color: var(--teal-dark); }
