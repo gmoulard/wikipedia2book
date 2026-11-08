@@ -33,6 +33,9 @@ Le logiciel doit fonctionner sur toutes les plateformes grâce à une architectu
 Le logiciel doit permettre de créer et gérer plusieurs projets indépendants.
 
 Fonctionnalités attendues :
+| Version | Statut | Format |
+| --- | --- | --- |
+| 1.0 | Document de référence | Markdown (`.md`) |
 
 * Créer un nouveau projet.
 
