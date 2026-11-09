@@ -348,7 +348,7 @@ async function loadProjects() {
   try {
     const v = await getJson('/api/version');
     const date = v.date ? v.date.slice(0, 10) : '';
-    const parts = [v.short, date, v.author].filter(Boolean);
+    const parts = [v.version, v.short, date, v.author].filter(Boolean);
     $('#appVersion').textContent = `v\u00a0${parts.join('\u00a0\u00b7\u00a0')}`;
     $('#appVersion').title = v.commit;
   } catch { /* version non critique */ }

@@ -33,7 +33,7 @@ from app.wikipedia_api import (
 )
 
 
-app = FastAPI(title="Wikipedia2Book", version="0.2.1")
+app = FastAPI(title="Wikipedia2Book", version="0.3.0")
 static_directory = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=static_directory), name="static")
 
@@ -63,13 +63,14 @@ def version() -> dict[str, str]:
             ["git", "log", "-1", "--format=%H|%h|%ci|%an"], text=True, stderr=subprocess.DEVNULL
         ).strip()
         full, short, date, author = commit.split("|")
-        return {"commit": full, "short": short, "date": date, "author": author}
+        return {"version": app.version, "commit": full, "short": short, "date": date, "author": author}
     except Exception:
         import os
         full = (os.environ.get("GIT_COMMIT")
                 or os.environ.get("RAILWAY_GIT_COMMIT_SHA")
                 or "unknown")
         return {
+            "version": app.version,
             "commit": full,
             "short": full[:7],
             "date": os.environ.get("GIT_DATE", ""),
