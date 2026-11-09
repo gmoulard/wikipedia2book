@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Literata:opsz,wght@7..72,500;7..72,600;7..72,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/i18n.js" defer></script>
   <script src="/static/app.js" defer></script>
 </head>
 <body>
@@ -18,13 +19,17 @@
         <img class="brand-logo" src="/static/Wikipedia2bookLogo.png" width="28" height="28" alt="" aria-hidden="true">
         <span>WIKIPEDIA<span class="brand-light">2BOOK</span></span>
       </a>
-      <div class="breadcrumb"><span>ATELIER ÉDITORIAL</span><span class="breadcrumb-slash">/</span><span id="breadcrumbProject">NOUVEAU PROJET</span></div>
+      <div class="breadcrumb"><span data-i18n="topbar.eyebrow">ATELIER ÉDITORIAL</span><span class="breadcrumb-slash">/</span><span id="breadcrumbProject" data-i18n="topbar.newProject">NOUVEAU PROJET</span></div>
       <div class="topbar-actions">
-        <span class="save-state" id="saveState">Aucun fichier chargé</span>
+        <span class="save-state" id="saveState" data-i18n="topbar.noFile">Aucun fichier chargé</span>
+        <label class="visually-hidden" for="languageSelect">Language / Langue / 语言 / Lingua / Sprache</label>
+        <select id="languageSelect" class="language-select" aria-label="Language / Langue / 语言 / Lingua / Sprache">
+          <option value="fr">FR</option><option value="en">EN</option><option value="zh">中文</option><option value="it">IT</option><option value="de">DE</option>
+        </select>
         <input id="workspaceFileInput" type="file" accept=".json,application/json" hidden>
-        <button class="icon-button" id="importWorkspaceButton" type="button" title="Importer un fichier JSON" aria-label="Importer un fichier JSON">↑</button>
-        <button class="icon-button" id="saveWorkspaceButton" type="button" title="Télécharger le projet en JSON" aria-label="Télécharger le projet en JSON" disabled>↓</button>
-        <button class="button button-dark" id="topExportButton" type="button"><span aria-hidden="true">↓</span> Générer le PDF</button>
+        <button class="icon-button" id="importWorkspaceButton" type="button" data-i18n-title="topbar.importJson" data-i18n-aria-label="topbar.importJson" title="Importer un fichier JSON" aria-label="Importer un fichier JSON">↑</button>
+        <button class="icon-button" id="saveWorkspaceButton" type="button" data-i18n-title="topbar.saveJson" data-i18n-aria-label="topbar.saveJson" title="Télécharger le livre en JSON" aria-label="Télécharger le livre en JSON" disabled>↓</button>
+        <button class="button button-dark" id="topExportButton" type="button"><span aria-hidden="true">↓</span> <span data-i18n="topbar.generatePdf">Générer le PDF</span></button>
       </div>
     </header>
 
@@ -32,65 +37,65 @@
       <div id="projectWorkspace" class="project-workspace">
         <section class="project-heading">
           <div class="project-heading-main">
-            <div class="eyebrow"><span class="eyebrow-dot"></span> PROJET DE LIVRE</div>
-            <label class="visually-hidden" for="projectName">Nom du projet</label>
-            <input id="projectName" class="project-title-input" maxlength="120" placeholder="Sans titre" autocomplete="off">
-            <label class="visually-hidden" for="projectDescription">Description du projet</label>
-            <input id="projectDescription" class="project-description-input" maxlength="2000" placeholder="Une note sur ce que vous souhaitez explorer…" autocomplete="off">
+            <div class="eyebrow"><span class="eyebrow-dot"></span> <span data-i18n="heading.eyebrow">PROJET DE LIVRE</span></div>
+            <label class="visually-hidden" for="projectName" data-i18n="heading.nameLabel">Nom du projet</label>
+            <input id="projectName" class="project-title-input" maxlength="120" placeholder="Sans titre" data-i18n-placeholder="heading.namePlaceholder" autocomplete="off">
+            <label class="visually-hidden" for="projectDescription" data-i18n="heading.descLabel">Description du projet</label>
+            <input id="projectDescription" class="project-description-input" maxlength="2000" placeholder="Une note sur ce que vous souhaitez explorer…" data-i18n-placeholder="heading.descPlaceholder" autocomplete="off">
           </div>
         </section>
 
-        <nav class="workflow-tabs" aria-label="Étapes du projet">
-          <button class="workflow-tab active" type="button" data-view="sources"><span class="tab-number">01</span> Sources <span class="tab-count" id="sourceCount">0</span></button>
-          <button class="workflow-tab" type="button" data-view="organization"><span class="tab-number">02</span> Organisation <span class="tab-count" id="selectedCount">0</span></button>
-          <button class="workflow-tab" type="button" data-view="book"><span class="tab-number">03</span> Édition</button>
+        <nav class="workflow-tabs" aria-label="Étapes du projet" data-i18n-aria-label="tabs.ariaLabel">
+          <button class="workflow-tab active" type="button" data-view="sources"><span class="tab-number">01</span> <span data-i18n="tabs.sources">Sources</span> <span class="tab-count" id="sourceCount">0</span></button>
+          <button class="workflow-tab" type="button" data-view="organization"><span class="tab-number">02</span> <span data-i18n="tabs.organization">Organisation</span> <span class="tab-count" id="selectedCount">0</span></button>
+          <button class="workflow-tab" type="button" data-view="book"><span class="tab-number">03</span> <span data-i18n="tabs.edition">Édition</span></button>
         </nav>
 
         <section class="view-panel" id="sourcesPanel" data-panel="sources">
           <div class="section-intro">
-            <div><div class="eyebrow">COLLECTE</div><h2>Construire le livre</h2></div>
-            <p>Ajoutez vos articles principaux. Les suggestions découvertes restent à valider avant d'entrer dans le livre.</p>
+            <div><div class="eyebrow" data-i18n="sources.eyebrow">COLLECTE</div><h2 data-i18n="sources.title">Construire le livre</h2></div>
+            <p data-i18n="sources.intro">Ajoutez vos articles principaux. Les suggestions découvertes restent à valider avant d'entrer dans le livre.</p>
           </div>
           <div class="source-tools">
             <div class="source-entry">
-              <div class="entry-tabs" role="group" aria-label="Méthode d'ajout">
-                <button class="entry-tab active" type="button" data-source-mode="book">Livre Wikipédia</button>
-                <button class="entry-tab" type="button" data-source-mode="url">URL Wikipédia</button>
-                <button class="entry-tab" type="button" data-source-mode="search">Rechercher</button>
+              <div class="entry-tabs" role="group" aria-label="Méthode d'ajout" data-i18n-aria-label="sources.methodAria">
+                <button class="entry-tab active" type="button" data-source-mode="book" data-i18n="sources.modeBook">Livre Wikipédia</button>
+                <button class="entry-tab" type="button" data-source-mode="url" data-i18n="sources.modeUrl">URL Wikipédia</button>
+                <button class="entry-tab" type="button" data-source-mode="search" data-i18n="sources.modeSearch">Rechercher</button>
               </div>
               <form id="articleForm" class="article-form">
-                <label class="visually-hidden" for="articleQuery">Titre ou recherche Wikipédia</label>
+                <label class="visually-hidden" for="articleQuery" data-i18n="sources.queryLabel">Titre ou recherche Wikipédia</label>
                 <input id="articleQuery" type="search" placeholder="https://fr.wikipedia.org/wiki/Utilisateur:…/Livres/…" autocomplete="off">
-                <label class="visually-hidden" for="articleLanguage">Langue de Wikipédia</label>
-                <select id="articleLanguage" aria-label="Langue de Wikipédia">
+                <label class="visually-hidden" for="articleLanguage" data-i18n="sources.wikiLangAria">Langue de Wikipédia</label>
+                <select id="articleLanguage" aria-label="Langue de Wikipédia" data-i18n-aria-label="sources.wikiLangAria">
                   <option value="fr">FR</option><option value="en">EN</option><option value="de">DE</option><option value="es">ES</option><option value="it">IT</option><option value="pt">PT</option><option value="nl">NL</option>
                 </select>
-                <button class="button button-teal" id="addArticleButton" type="submit">Ajouter <span aria-hidden="true">+</span></button>
+                <button class="button button-teal" id="addArticleButton" type="submit"><span data-i18n="sources.addButton">Ajouter</span> <span aria-hidden="true">+</span></button>
               </form>
               <div id="searchResults" class="search-results" hidden></div>
-              <p class="field-hint" id="entryHint">Collez l'URL d'une page de livre Wikipédia pour importer ses liens d'articles.</p>
+              <p class="field-hint" id="entryHint" data-i18n="sources.hintBook">Collez l'URL d'une page de livre Wikipédia pour importer ses liens d'articles.</p>
             </div>
             <form id="exploreForm" class="explore-box">
-              <div class="explore-head"><span class="explore-icon" aria-hidden="true">↗</span><div><strong>Explorer les liens</strong><small>Proposer des articles liés</small></div></div>
-              <label for="exploreDepth">Profondeur</label>
-              <select id="exploreDepth"><option value="1">1 · liens directs</option><option value="2">2 · deuxième niveau</option><option value="3">3 · troisième niveau</option><option value="0">0 · désactivée</option></select>
-              <label for="exploreLimit">Maximum d'articles</label>
-              <div class="explore-submit"><input id="exploreLimit" type="number" min="1" max="200" value="30"><button class="button button-outline" type="submit">Explorer</button></div>
+              <div class="explore-head"><span class="explore-icon" aria-hidden="true">↗</span><div><strong data-i18n="explore.title">Explorer les liens</strong><small data-i18n="explore.subtitle">Proposer des articles liés</small></div></div>
+              <label for="exploreDepth" data-i18n="explore.depthLabel">Profondeur</label>
+              <select id="exploreDepth"><option value="1" data-i18n="explore.depth1">1 · liens directs</option><option value="2" data-i18n="explore.depth2">2 · deuxième niveau</option><option value="3" data-i18n="explore.depth3">3 · troisième niveau</option><option value="0" data-i18n="explore.depth0">0 · désactivée</option></select>
+              <label for="exploreLimit" data-i18n="explore.maxLabel">Maximum d'articles</label>
+              <div class="explore-submit"><input id="exploreLimit" type="number" min="1" max="200" value="30"><button class="button button-outline" type="submit" data-i18n="explore.button">Explorer</button></div>
             </form>
           </div>
           <div class="article-columns">
             <section class="article-section">
-              <div class="list-heading"><div><span class="eyebrow">VOTRE SÉLECTION DE DÉPART</span><h3>Articles principaux <span id="mainArticleCount" class="count-inline">0</span></h3></div><span class="list-note">Inclus par défaut</span></div>
+              <div class="list-heading"><div><span class="eyebrow" data-i18n="main.eyebrow">VOTRE SÉLECTION DE DÉPART</span><h3><span data-i18n="main.title">Articles principaux</span> <span id="mainArticleCount" class="count-inline">0</span></h3></div><span class="list-note" data-i18n="main.note">Inclus par défaut</span></div>
               <div id="mainArticles" class="article-list"></div>
             </section>
             <section class="article-section discovered-section">
-              <div class="list-heading"><div><span class="eyebrow">À EXAMINER</span><h3>Articles découverts <span id="discoveredArticleCount" class="count-inline">0</span></h3></div><button id="selectDiscoveredButton" class="text-button" type="button" disabled>Tout sélectionner</button></div>
+              <div class="list-heading"><div><span class="eyebrow" data-i18n="discovered.eyebrow">À EXAMINER</span><h3><span data-i18n="discovered.title">Articles découverts</span> <span id="discoveredArticleCount" class="count-inline">0</span></h3></div><button id="selectDiscoveredButton" class="text-button" type="button" disabled data-i18n="discovered.selectAll">Tout sélectionner</button></div>
               <div class="discovery-filters">
-                <label class="filter-search"><span aria-hidden="true">⌕</span><input id="articleFilter" type="search" placeholder="Filtrer par titre…"></label>
-                <select id="originFilter" aria-label="Filtrer par origine"><option value="">Toutes les origines</option></select>
-                <select id="depthFilter" aria-label="Filtrer par profondeur"><option value="">Tous niveaux</option><option value="1">Niveau 1</option><option value="2">Niveau 2</option><option value="3">Niveau 3</option></select>
+                <label class="filter-search"><span aria-hidden="true">⌕</span><input id="articleFilter" type="search" placeholder="Filtrer par titre…" data-i18n-placeholder="discovered.filterPlaceholder"></label>
+                <select id="originFilter" aria-label="Filtrer par origine" data-i18n-aria-label="discovered.originAria"><option value="" data-i18n="discovered.allOrigins">Toutes les origines</option></select>
+                <select id="depthFilter" aria-label="Filtrer par profondeur" data-i18n-aria-label="discovered.depthAria"><option value="" data-i18n="discovered.allLevels">Tous niveaux</option><option value="1" data-i18n="discovered.level1">Niveau 1</option><option value="2" data-i18n="discovered.level2">Niveau 2</option><option value="3" data-i18n="discovered.level3">Niveau 3</option></select>
               </div>
-              <div class="bulk-actions"><button id="selectVisibleButton" class="text-button" type="button" disabled>Sélectionner les visibles</button><button id="deselectAllButton" class="text-button" type="button" disabled>Tout désélectionner</button></div>
+              <div class="bulk-actions"><button id="selectVisibleButton" class="text-button" type="button" disabled data-i18n="discovered.selectVisible">Sélectionner les visibles</button><button id="deselectAllButton" class="text-button" type="button" disabled data-i18n="discovered.deselectAll">Tout désélectionner</button></div>
               <div id="discoveredArticles" class="article-list"></div>
             </section>
           </div>
@@ -98,14 +103,14 @@
 
         <section class="view-panel" id="organizationPanel" data-panel="organization" hidden>
           <div class="section-intro">
-            <div><div class="eyebrow">COMPOSITION</div><h2>Donner un ordre aux idées</h2></div>
-            <p>Glissez-déposez les éléments pour les réorganiser. La table des matières peut être placée au début ou à la fin.</p>
+            <div><div class="eyebrow" data-i18n="org.eyebrow">COMPOSITION</div><h2 data-i18n="org.title">Donner un ordre aux idées</h2></div>
+            <p data-i18n="org.intro">Glissez-déposez les éléments pour les réorganiser. La table des matières peut être placée au début ou à la fin.</p>
           </div>
-          <div class="organization-toolbar"><div class="selection-summary"><span class="selection-number" id="organizationCount">0</span><span>articles retenus pour le livre</span></div><button class="button button-outline" id="addChapterButton" type="button">Créer un chapitre <span aria-hidden="true">+</span></button></div>
+          <div class="organization-toolbar"><div class="selection-summary"><span class="selection-number" id="organizationCount">0</span><span data-i18n="org.countLabel">articles retenus pour le livre</span></div><button class="button button-outline" id="addChapterButton" type="button"><span data-i18n="org.addChapter">Créer un chapitre</span> <span aria-hidden="true">+</span></button></div>
           <div class="upload-box">
-            <div class="explore-head"><span class="explore-icon" aria-hidden="true">📎</span><div><strong>Importer un document</strong><small>Image ou PDF, intégré comme un article du livre</small></div></div>
+            <div class="explore-head"><span class="explore-icon" aria-hidden="true">📎</span><div><strong data-i18n="org.uploadTitle">Importer un document</strong><small data-i18n="org.uploadSubtitle">Image ou PDF, intégré comme un article du livre</small></div></div>
             <input id="documentFileInput" type="file" accept="image/*,application/pdf" multiple hidden>
-            <button class="button button-outline" id="uploadDocumentButton" type="button">Choisir un fichier <span aria-hidden="true">+</span></button>
+            <button class="button button-outline" id="uploadDocumentButton" type="button"><span data-i18n="org.chooseFile">Choisir un fichier</span> <span aria-hidden="true">+</span></button>
             <div id="uploadedDocumentsList" class="uploaded-documents-list"></div>
           </div>
           <div id="organizationList" class="organization-list"></div>
@@ -113,36 +118,36 @@
 
         <section class="view-panel" id="bookPanel" data-panel="book" hidden>
           <div class="section-intro">
-            <div><div class="eyebrow">FABRICATION</div><h2>Préparer le livre</h2></div>
-            <p>Les articles complets sont téléchargés via la fonction PDF de Wikipédia au moment de l'export.</p>
+            <div><div class="eyebrow" data-i18n="edition.eyebrow">FABRICATION</div><h2 data-i18n="edition.title">Préparer le livre</h2></div>
+            <p data-i18n="edition.intro">Les articles complets sont téléchargés via la fonction PDF de Wikipédia au moment de l'export.</p>
           </div>
           <div class="edition-layout">
             <section class="settings-section">
-              <div class="settings-heading"><span class="settings-index">A</span><div><h3>Identité du livre</h3><p>Les informations de couverture et d'ouverture</p></div></div>
+              <div class="settings-heading"><span class="settings-index">A</span><div><h3 data-i18n="edition.identityTitle">Identité du livre</h3><p data-i18n="edition.identitySubtitle">Les informations de couverture et d'ouverture</p></div></div>
               <div class="form-grid">
-                <label class="field field-wide">Titre du livre<input id="bookTitle" type="text" placeholder="Reprend le nom du projet"></label>
-                <label class="field field-wide">Sous-titre<input id="bookSubtitle" type="text" placeholder="Facultatif"></label>
-                <label class="field field-wide">Auteur ou éditeur<input id="bookAuthor" type="text" placeholder="Facultatif"></label>
-                <label class="field field-wide">Introduction<textarea id="bookIntroduction" rows="4" placeholder="Quelques mots pour ouvrir le livre…"></textarea></label>
-                <label class="field field-wide">Conclusion<textarea id="bookConclusion" rows="4" placeholder="Quelques mots pour refermer le livre…"></textarea></label>
+                <label class="field field-wide"><span data-i18n="edition.bookTitleLabel">Titre du livre</span><input id="bookTitle" type="text" placeholder="Reprend le nom du projet" data-i18n-placeholder="edition.bookTitlePlaceholder"></label>
+                <label class="field field-wide"><span data-i18n="edition.subtitleLabel">Sous-titre</span><input id="bookSubtitle" type="text" placeholder="Facultatif" data-i18n-placeholder="common.optional"></label>
+                <label class="field field-wide"><span data-i18n="edition.authorLabel">Auteur ou éditeur</span><input id="bookAuthor" type="text" placeholder="Facultatif" data-i18n-placeholder="common.optional"></label>
+                <label class="field field-wide"><span data-i18n="edition.introLabel">Introduction</span><textarea id="bookIntroduction" rows="4" placeholder="Quelques mots pour ouvrir le livre…" data-i18n-placeholder="edition.introPlaceholder"></textarea></label>
+                <label class="field field-wide"><span data-i18n="edition.conclusionLabel">Conclusion</span><textarea id="bookConclusion" rows="4" placeholder="Quelques mots pour refermer le livre…" data-i18n-placeholder="edition.conclusionPlaceholder"></textarea></label>
               </div>
             </section>
             <section class="settings-section">
-              <div class="settings-heading"><span class="settings-index">B</span><div><h3>Format d'impression</h3><p>Format, orientation et marges en millimètres</p></div></div>
+              <div class="settings-heading"><span class="settings-index">B</span><div><h3 data-i18n="edition.formatTitle">Format d'impression</h3><p data-i18n="edition.formatSubtitle">Format, orientation et marges en millimètres</p></div></div>
               <div class="form-grid settings-grid">
-                <label class="field">Format papier<select id="pageFormat"><option>A5</option><option selected>A4</option><option>A6</option><option>A3</option><option>A2</option><option>A1</option><option>A0</option><option>Letter</option><option>Legal</option><option value="custom">Personnalisé</option></select></label>
-                <fieldset class="field orientation-field"><legend>Orientation</legend><div class="segmented-control"><label><input type="radio" name="orientation" value="portrait"><span>Portrait</span></label><label><input type="radio" name="orientation" value="landscape"><span>Paysage</span></label></div></fieldset>
-                <div id="customDimensions" class="custom-dimensions field-wide" hidden><label class="field">Largeur (mm)<input id="customWidth" type="number" min="50" max="1000" value="148"></label><label class="field">Hauteur (mm)<input id="customHeight" type="number" min="50" max="1000" value="210"></label></div>
-                <label class="field">Marge supérieure (mm)<input id="marginTop" type="number" min="0" max="100" value="18"></label>
-                <label class="field">Marge inférieure (mm)<input id="marginBottom" type="number" min="0" max="100" value="18"></label>
-                <label class="field">Marge intérieure (mm)<input id="marginInside" type="number" min="0" max="100" value="18"></label>
-                <label class="field">Marge extérieure (mm)<input id="marginOutside" type="number" min="0" max="100" value="16"></label>
-                <label class="field field-wide">Marge de reliure (mm)<input id="marginBinding" type="number" min="0" max="40" value="0"></label>
-                <label class="field field-wide checkbox-field"><input id="pageNumbers" type="checkbox" checked> Numéroter les pages</label>
+                <label class="field"><span data-i18n="edition.paperFormatLabel">Format papier</span><select id="pageFormat"><option>A5</option><option selected>A4</option><option>A6</option><option>A3</option><option>A2</option><option>A1</option><option>A0</option><option>Letter</option><option>Legal</option><option value="custom" data-i18n="edition.customOption">Personnalisé</option></select></label>
+                <fieldset class="field orientation-field"><legend data-i18n="edition.orientationLegend">Orientation</legend><div class="segmented-control"><label><input type="radio" name="orientation" value="portrait"><span data-i18n="edition.portrait">Portrait</span></label><label><input type="radio" name="orientation" value="landscape"><span data-i18n="edition.landscape">Paysage</span></label></div></fieldset>
+                <div id="customDimensions" class="custom-dimensions field-wide" hidden><label class="field"><span data-i18n="edition.widthLabel">Largeur (mm)</span><input id="customWidth" type="number" min="50" max="1000" value="148"></label><label class="field"><span data-i18n="edition.heightLabel">Hauteur (mm)</span><input id="customHeight" type="number" min="50" max="1000" value="210"></label></div>
+                <label class="field"><span data-i18n="edition.marginTop">Marge supérieure (mm)</span><input id="marginTop" type="number" min="0" max="100" value="18"></label>
+                <label class="field"><span data-i18n="edition.marginBottom">Marge inférieure (mm)</span><input id="marginBottom" type="number" min="0" max="100" value="18"></label>
+                <label class="field"><span data-i18n="edition.marginInside">Marge intérieure (mm)</span><input id="marginInside" type="number" min="0" max="100" value="18"></label>
+                <label class="field"><span data-i18n="edition.marginOutside">Marge extérieure (mm)</span><input id="marginOutside" type="number" min="0" max="100" value="16"></label>
+                <label class="field field-wide"><span data-i18n="edition.marginBinding">Marge de reliure (mm)</span><input id="marginBinding" type="number" min="0" max="40" value="0"></label>
+                <label class="field field-wide checkbox-field"><input id="pageNumbers" type="checkbox" checked> <span data-i18n="edition.pageNumbers">Numéroter les pages</span></label>
               </div>
             </section>
           </div>
-          <div class="edition-footer"><p><span class="info-mark">i</span> Les pages des articles gardent la mise en page du PDF Wikipédia original.</p><button class="button button-dark button-large" id="exportButton" type="button"><span aria-hidden="true">↓</span> Générer et télécharger le PDF</button></div>
+          <div class="edition-footer"><p><span class="info-mark">i</span> <span data-i18n="edition.footerNote">Toutes les pages (articles et documents compris) sont adaptées au format du livre.</span></p><button class="button button-dark button-large" id="exportButton" type="button"><span aria-hidden="true">↓</span> <span data-i18n="edition.generateButton">Générer et télécharger le PDF</span></button></div>
         </section>
       </div>
     </main>
@@ -151,7 +156,7 @@
       <img class="footer-logo" src="/static/Wikipedia2bookLogo.png" alt="Wikipedia2Book">
       <span class="footer-sep">·</span>
       <span class="connection-dot" id="connectionDot"></span>
-      <span id="connectionStatus">Connexion à l'API…</span>
+      <span id="connectionStatus" data-i18n="footer.connecting">Connexion à l'API…</span>
       <span class="footer-sep footer-push">·</span>
       <span id="appVersion" class="footer-version">v…</span>
     </footer>

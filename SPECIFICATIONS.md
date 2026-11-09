@@ -377,6 +377,12 @@ Une barre supérieure permet à tout moment d'importer ou d'exporter le livre en
 
 L'interface est utilisable sur ordinateur, tablette et smartphone, et respecte le thème clair/sombre du système.
 
+### 12.1 Langues de l'interface
+
+L'interface (libellés, boutons, messages) est disponible en français, anglais, chinois, italien et allemand, via un sélecteur dans la barre supérieure. La langue choisie est mémorisée dans le navigateur (elle n'est pas enregistrée dans le livre ni dans l'export JSON) et détectée automatiquement à la première visite à partir de la langue du navigateur, avec repli sur le français.
+
+Cette langue d'interface est indépendante de la langue des articles Wikipédia (section 3), qui reste un réglage séparé par article. Elle ne s'applique pas non plus au contenu du PDF généré (couverture, table des matières, pages de chapitre), qui reste en français, ni aux messages d'erreur renvoyés par le serveur.
+
 ## 13\. Architecture technique
 
 ### 13.1 Technologies
@@ -388,6 +394,7 @@ L'interface est utilisable sur ordinateur, tablette et smartphone, et respecte l
 | Client HTTP       | httpx (appels à l'API MediaWiki et à l'endpoint PDF)          |
 | Analyse HTML      | BeautifulSoup4 (extraits de recherche)                        |
 | Interface         | HTML, CSS, JavaScript (page unique, sans framework)           |
+| Internationalisation | Dictionnaire JavaScript interne (`i18n.js`), FR/EN/ZH/IT/DE, sans dépendance externe |
 | API Wikipédia     | API MediaWiki (`action=query`) + endpoint REST `page/pdf`     |
 | Échange du livre  | JSON navigateur ↔ API                                         |
 | Génération PDF    | PDF officiel Wikimedia (articles) + WeasyPrint (couverture, chapitres, conclusion) + pypdf (fusion, signets, lecture du nombre de pages) + reportlab (numéros de page, conversion d'une image importée en page PDF) |
@@ -500,6 +507,8 @@ La version actuelle est considérée comme fonctionnelle si les points suivants 
 
 * Export puis import du livre via un fichier JSON local, nommé d'après le titre du livre.
 
+* Changement de la langue de l'interface (français, anglais, chinois, italien, allemand) sans rechargement de la page.
+
 ## 17\. Structure du projet
 
 ```text
@@ -518,13 +527,15 @@ Wikipedia2Book/
 │       ├── index.html
 │       ├── styles.css
 │       ├── app.js
+│       ├── i18n.js
 │       └── Wikipedia2bookLogo.png
 │
 ├── tests/
 │   ├── test_syntax.py
 │   ├── test_pdf_generation.py
 │   ├── test_uploaded_documents.py
-│   └── test_wikipedia_api.py
+│   ├── test_wikipedia_api.py
+│   └── test_i18n.py
 │
 ├── Dockerfile
 ├── docker-build.sh
@@ -572,5 +583,6 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 0.4.0   | 2026-11-09 | Numérotation continue de toutes les pages du PDF généré (y compris les pages d'articles, via une superposition reportlab/pypdf) et affichage du numéro de page de chaque chapitre/article dans la table des matières. Ajout de `tests/test_pdf_generation.py`. |
 | 0.5.0   | 2026-11-09 | Import d'une page de livre Wikipédia : conservation de l'ordre réel des articles (lecture du wikitexte) au lieu de l'ordre alphabétique renvoyé par l'API. Agrandissement du champ de titre du livre (correction d'un bug de mise en page qui ne laissait voir qu'environ 26 caractères). Nouvelle fonctionnalité : import d'images ou de PDF comme documents intégrés au livre (section 6.1), conservés en base64 dans l'état du livre et l'export JSON. |
 | 0.6.0   | 2026-11-09 | Le bouton « Générer le PDF » n'est plus jamais désactivé. Toutes les pages du PDF généré (y compris les articles et documents importés) sont désormais recomposées sur le format et l'orientation choisis pour le livre (section 10.1) — ce qui fiabilise aussi la numérotation des pages, activée par défaut. Le fichier JSON de sauvegarde est nommé d'après le titre du livre. Le message d'import d'un livre Wikipédia pointe vers l'aide Wikipédia correspondante. |
+| 0.7.0   | 2026-11-09 | Interface multilingue : français, anglais, chinois, italien, allemand, via un sélecteur dans la barre supérieure (`app/static/i18n.js`, section 12.1). Langue détectée automatiquement et mémorisée dans le navigateur. Ajout de `tests/test_i18n.py` (parité des clés et des paramètres `{...}` entre les 5 langues). |
 
 Fin du document — Wikipedia2Book, spécifications version 1.1.

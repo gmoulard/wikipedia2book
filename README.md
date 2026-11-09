@@ -12,6 +12,7 @@ Wikipedia2Book est une application web qui permet de composer directement un liv
 - Organisation des articles en chapitres, réordonnables par glisser-déposer, et configuration du format du livre.
 - Import d'images ou de PDF personnels, intégrés au livre comme des articles.
 - Génération d'un livre en assemblant les PDFs complets officiels téléchargés depuis Wikipédia, avec signets de navigation et numérotation continue des pages (table des matières incluse).
+- Interface disponible en français, anglais, chinois, italien et allemand.
 
 ## Architecture
 
@@ -53,5 +54,9 @@ Le script `docker-build.sh` injecte automatiquement le commit, la date et l'aute
 L'application est accessible sur `http://localhost:8000`.
 
 
-Le déployement  [Railway](https://wikipedia2book-production.up.railway.app/).
+Le déployement  
+
+Prod--wikipedia2book--wkvpbnfj6h4v.code.run
+[app.northflank.com](Prod--wikipedia2book--wkvpbnfj6h4v.code.run).
+[Railway](https://wikipedia2book-production.up.railway.app/).
 La documentation de l'API en production est disponible sur [Railway](https://wikipedia2book-production.up.railway.app/docs).

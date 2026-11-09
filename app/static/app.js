@@ -21,7 +21,7 @@ async function request(path, options = {}) {
     headers: { ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...options.headers },
   });
   if (!response.ok) {
-    let message = `Erreur ${response.status}`;
+    let message = t('common.httpError', { status: response.status });
     try { const p = await response.json(); message = p.detail || message; } catch { /* not json */ }
     throw new Error(message);
   }
@@ -44,6 +44,8 @@ function showToast(message, isError = false) {
 }
 
 function setSaveState(value) { $('#saveState').textContent = value; }
+
+function lang() { return state_i18n.lang; }
 
 function activeArticles() {
   if (!state.project) return [];
@@ -81,7 +83,7 @@ function renderWorkspace() {
   const hasProject = Boolean(state.project);
   $('#projectWorkspace').hidden = !hasProject;
   $('#saveWorkspaceButton').disabled = !hasProject;
-  $('#breadcrumbProject').textContent = hasProject ? state.project.name.toLocaleUpperCase('fr') : 'NOUVEAU PROJET';
+  $('#breadcrumbProject').textContent = hasProject ? state.project.name.toLocaleUpperCase(lang()) : t('topbar.newProject');
   if (!hasProject) return;
   const nameInput = $('#projectName');
   const descInput = $('#projectDescription');
@@ -108,26 +110,26 @@ function renderArticles() {
   $('#discoveredArticleCount').textContent = project.discovered_articles.length;
   $('#mainArticles').innerHTML = project.main_articles.length
     ? project.main_articles.map((a) => articleCard(a, true)).join('')
-    : emptyList('Aucun article principal', 'Recherchez un article ou ajoutez une URL Wikipédia.');
+    : emptyList(t('main.emptyTitle'), t('main.emptyDesc'));
 
-  const origins = [...new Set(project.discovered_articles.map((a) => a.origin_title).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr'));
+  const origins = [...new Set(project.discovered_articles.map((a) => a.origin_title).filter(Boolean))].sort((a, b) => a.localeCompare(b, lang()));
   const originSelect = $('#originFilter');
   const selectedOrigin = originSelect.value;
-  originSelect.innerHTML = '<option value="">Toutes les origines</option>' + origins.map((o) => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('');
+  originSelect.innerHTML = `<option value="">${escapeHtml(t('discovered.allOrigins'))}</option>` + origins.map((o) => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('');
   originSelect.value = origins.includes(selectedOrigin) ? selectedOrigin : '';
 
-  const titleFilter = $('#articleFilter').value.trim().toLocaleLowerCase('fr');
+  const titleFilter = $('#articleFilter').value.trim().toLocaleLowerCase(lang());
   const originFilter = originSelect.value;
   const depthFilter = $('#depthFilter').value;
   const visible = project.discovered_articles.filter((a) =>
-    (!titleFilter || a.title.toLocaleLowerCase('fr').includes(titleFilter))
+    (!titleFilter || a.title.toLocaleLowerCase(lang()).includes(titleFilter))
     && (!originFilter || a.origin_title === originFilter)
     && (!depthFilter || String(a.depth) === depthFilter)
   );
   $('#discoveredArticles').innerHTML = visible.length
     ? visible.map((a) => articleCard(a, false)).join('')
-    : emptyList(project.discovered_articles.length ? 'Aucun résultat' : 'Pas encore de suggestions',
-        project.discovered_articles.length ? 'Modifiez vos filtres.' : 'L\u2019exploration proposera des articles, sans les ajouter automatiquement au livre.');
+    : emptyList(project.discovered_articles.length ? t('sources.noResultsTitle') : t('discovered.noSuggestionsTitle'),
+        project.discovered_articles.length ? t('discovered.noResultsDesc') : t('discovered.noSuggestionsDesc'));
   const hasDiscovered = project.discovered_articles.length > 0;
   $('#selectDiscoveredButton').disabled = !hasDiscovered;
   $('#selectVisibleButton').disabled = visible.length === 0;
@@ -136,13 +138,13 @@ function renderArticles() {
 
 function articleCard(article, isMain) {
   const key = articleKey(article);
-  const meta = [article.language.toUpperCase(), article.depth ? `Niveau ${article.depth}` : 'Principal', article.origin_title ? `Depuis ${article.origin_title}` : ''].filter(Boolean);
+  const meta = [article.language.toUpperCase(), article.depth ? t('discovered.level', { n: article.depth }) : t('meta.main'), article.origin_title ? t('meta.from', { origin: article.origin_title }) : ''].filter(Boolean);
   const summary = article.summary ? `<p class="article-summary">${escapeHtml(article.summary.slice(0, 290))}${article.summary.length > 290 ? '\u2026' : ''}</p>` : '';
   return `<article class="article-card${article.selected ? ' selected' : ''}" data-article-key="${escapeHtml(key)}">
     <div class="article-card-top">
-      <input class="article-check" type="checkbox" aria-label="${article.selected ? 'D\u00e9s\u00e9lectionner' : 'S\u00e9lectionner'} ${escapeHtml(article.title)}" ${article.selected ? 'checked' : ''}>
+      <input class="article-check" type="checkbox" aria-label="${article.selected ? escapeHtml(t('meta.deselect')) : escapeHtml(t('meta.select'))} ${escapeHtml(article.title)}" ${article.selected ? 'checked' : ''}>
       <div class="article-title-wrap"><a class="article-title" href="${escapeHtml(article.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(article.title)}</a><div class="article-meta">${meta.map((m) => `<span>${escapeHtml(m)}</span>`).join('')}</div></div>
-      ${isMain ? '<button class="remove-article" type="button" title="Retirer cet article" aria-label="Retirer cet article">\u00d7</button>' : ''}
+      ${isMain ? `<button class="remove-article" type="button" title="${escapeHtml(t('meta.removeArticle'))}" aria-label="${escapeHtml(t('meta.removeArticle'))}">\u00d7</button>` : ''}
     </div>${summary}</article>`;
 }
 
@@ -168,7 +170,7 @@ function buildOrgSlots() {
   (project.chapters || []).forEach((ch) => ch.article_keys.forEach((k) => chapterByArticle.set(k, ch.id)));
 
   // group articles by chapter
-  const groups = [{ id: '', title: 'Sans chapitre', articles: [] }, ...(project.chapters || []).map((ch) => ({ ...ch, articles: [] }))];
+  const groups = [{ id: '', title: t('org.noChapterOption'), articles: [] }, ...(project.chapters || []).map((ch) => ({ ...ch, articles: [] }))];
   articles.forEach((a) => {
     const k = articleKey(a);
     const g = groups.find((g) => g.id === (chapterByArticle.get(k) || '')) || groups[0];
@@ -193,7 +195,7 @@ function renderOrganization() {
   $('#organizationCount').textContent = articles.length;
 
   if (!articles.length) {
-    $('#organizationList').innerHTML = '<div class="org-empty">Aucun article retenu pour l\u2019instant.<br>Revenez \u00e0 l\u2019\u00e9tape Sources et cochez les articles \u00e0 inclure.</div>';
+    $('#organizationList').innerHTML = `<div class="org-empty">${escapeHtml(t('org.emptyListLine1'))}<br>${escapeHtml(t('org.emptyListLine2'))}</div>`;
     return;
   }
 
@@ -203,7 +205,7 @@ function renderOrganization() {
       return `<div class="org-row org-toc" draggable="true" data-slot-type="toc" data-slot-index="${idx}">
         <span class="drag-handle" aria-hidden="true">\u2630</span>
         <span class="toc-icon" aria-hidden="true">\u2261</span>
-        <div><div class="org-article-title">Table des mati\u00e8res</div><div class="org-article-origin">Position : ${slot === slots[0] ? 'D\u00e9but du livre' : 'Fin du livre'}</div></div>
+        <div><div class="org-article-title">${escapeHtml(t('org.toc'))}</div><div class="org-article-origin">${escapeHtml(t('org.tocPositionLabel', { position: slot === slots[0] ? t('org.tocStart') : t('org.tocEnd') }))}</div></div>
       </div>`;
     }
     if (slot.type === 'chapter') {
@@ -213,8 +215,8 @@ function renderOrganization() {
       return `<div class="org-row org-chapter-row" draggable="true" data-slot-type="chapter" data-slot-index="${idx}" data-chapter-id="${escapeHtml(ch.id)}">
         <span class="drag-handle" aria-hidden="true">\u2630</span>
         <span class="chapter-letter">${letter}</span>
-        <input class="chapter-name" aria-label="Titre du chapitre" value="${escapeHtml(ch.title)}" maxlength="120">
-        <button class="chapter-remove" type="button" title="Supprimer le chapitre">Supprimer</button>
+        <input class="chapter-name" aria-label="${escapeHtml(t('org.chapterNameAria'))}" value="${escapeHtml(ch.title)}" maxlength="120">
+        <button class="chapter-remove" type="button" title="${escapeHtml(t('org.removeChapterTitle'))}">${escapeHtml(t('org.removeChapter'))}</button>
       </div>`;
     }
     // article (or document import\u00e9, int\u00e9gr\u00e9 comme un article)
@@ -224,15 +226,15 @@ function renderOrganization() {
     const chapter = chapters.find((c) => c.article_keys.includes(k));
     const isDoc = Boolean(a.kind);
     const origin = isDoc
-      ? (a.kind === 'pdf' ? 'Document PDF import\u00e9' : 'Image import\u00e9e')
-      : (a.origin_title ? `D\u00e9couvert depuis ${a.origin_title}` : `Article principal \u00b7 ${a.language.toUpperCase()}`);
+      ? (a.kind === 'pdf' ? t('org.docPdf') : t('org.docImage'))
+      : (a.origin_title ? t('org.discoveredFrom', { origin: a.origin_title }) : t('org.mainArticleOrigin', { lang: a.language.toUpperCase() }));
     const openHref = isDoc ? `data:${a.mime_type};base64,${a.data_base64}` : a.url;
-    const openTitle = isDoc ? 'Ouvrir le document' : 'Ouvrir sur Wikip\u00e9dia';
+    const openTitle = isDoc ? t('org.openDocument') : t('org.openWikipedia');
     return `<div class="org-row org-article" draggable="true" data-slot-type="article" data-slot-index="${idx}" data-article-key="${escapeHtml(k)}">
       <span class="drag-handle" aria-hidden="true">\u2630</span>
       <div><div class="org-article-title">${escapeHtml(a.title)}</div><div class="org-article-origin">${escapeHtml(origin)}</div></div>
-      <select class="chapter-select" aria-label="Chapitre de ${escapeHtml(a.title)}"><option value="" ${!chapter ? 'selected' : ''}>Sans chapitre</option>${chapters.map((c) => `<option value="${escapeHtml(c.id)}" ${chapter?.id === c.id ? 'selected' : ''}>${escapeHtml(c.title)}</option>`).join('')}</select>
-      <a class="article-title org-open" href="${escapeHtml(openHref)}" target="_blank" rel="noopener noreferrer" title="${openTitle}" aria-label="${openTitle}\u00a0: ${escapeHtml(a.title)}">\u2197</a>
+      <select class="chapter-select" aria-label="${escapeHtml(t('org.chapterSelectAria', { title: a.title }))}"><option value="" ${!chapter ? 'selected' : ''}>${escapeHtml(t('org.noChapterOption'))}</option>${chapters.map((c) => `<option value="${escapeHtml(c.id)}" ${chapter?.id === c.id ? 'selected' : ''}>${escapeHtml(c.title)}</option>`).join('')}</select>
+      <a class="article-title org-open" href="${escapeHtml(openHref)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(openTitle)}" aria-label="${escapeHtml(openTitle)}\u00a0: ${escapeHtml(a.title)}">\u2197</a>
     </div>`;
   }).join('');
 
@@ -341,18 +343,21 @@ function queueSave(patch) {
   Object.assign(state.project, patch);
   state.project.updated_at = new Date().toISOString();
   state.isDirty = true;
-  setSaveState('Modifications \u00e0 enregistrer en JSON');
+  setSaveState(t('save.pendingChanges'));
 }
 
 async function loadProjects() {
+  document.documentElement.lang = lang();
+  $('#languageSelect').value = lang();
+  applyTranslations();
   try {
     await getJson('/health');
     $('#connectionDot').classList.add('online');
-    $('#connectionStatus').textContent = 'API connect\u00e9e';
+    $('#connectionStatus').textContent = t('footer.apiConnected');
   } catch (error) {
     $('#connectionDot').classList.add('offline');
-    $('#connectionStatus').textContent = 'API indisponible';
-    showToast(`L\u2019API est indisponible\u00a0: ${error.message}. Vous pouvez tout de m\u00eame importer un fichier JSON.`, true);
+    $('#connectionStatus').textContent = t('footer.apiUnavailable');
+    showToast(t('footer.apiUnavailableToast', { error: error.message }), true);
   }
   try {
     const v = await getJson('/api/version');
@@ -362,7 +367,7 @@ async function loadProjects() {
     $('#appVersion').title = v.commit;
   } catch { /* version non critique */ }
   const now = new Date().toISOString();
-  state.project = normalizeProject({ id: crypto.randomUUID(), name: 'Nouveau projet', created_at: now, updated_at: now });
+  state.project = normalizeProject({ id: crypto.randomUUID(), name: t('heading.defaultName'), created_at: now, updated_at: now });
   renderWorkspace();
   setView('sources');
 }
@@ -371,31 +376,31 @@ async function addArticle(source) {
   if (!state.project) return;
   const button = $('#addArticleButton');
   button.disabled = true;
-  button.textContent = 'Ajout\u2026';
+  button.textContent = t('export.addingLabel');
   try {
     const article = await getJson('/api/articles', { method: 'POST', body: JSON.stringify(source) });
-    if (activeArticles().some((item) => sameArticle(item, article))) throw new Error('Cet article est d\u00e9j\u00e0 dans le projet.');
+    if (activeArticles().some((item) => sameArticle(item, article))) throw new Error(t('sources.alreadyInBook'));
     article.selected = true;
     state.project.main_articles.push(article);
     queueSave({ main_articles: state.project.main_articles });
     renderWorkspace();
     $('#articleQuery').value = '';
     $('#searchResults').hidden = true;
-    $('#entryHint').textContent = 'Article ajout\u00e9 aux articles principaux.';
-    showToast('Article principal ajout\u00e9.');
+    $('#entryHint').textContent = t('sources.addedToMain');
+    showToast(t('sources.articleAdded'));
   } catch (error) { showToast(error.message, true); }
-  finally { button.disabled = false; button.innerHTML = 'Ajouter <span aria-hidden="true">+</span>'; }
+  finally { button.disabled = false; button.innerHTML = `${escapeHtml(t('sources.addButton'))} <span aria-hidden="true">+</span>`; }
 }
 
 async function importWikipediaBook(url) {
   if (!state.project) return;
   const button = $('#addArticleButton');
   button.disabled = true;
-  button.textContent = 'Import\u2026';
+  button.textContent = t('export.importingLabel');
   try {
     const articles = await getJson('/api/books/import', { method: 'POST', body: JSON.stringify({ url }) });
     const newArticles = articles.filter((a) => !activeArticles().some((e) => sameArticle(e, a)));
-    if (!newArticles.length) throw new Error('Toutes les pages de ce livre sont d\u00e9j\u00e0 dans le projet.');
+    if (!newArticles.length) throw new Error(t('sources.allBookPagesAlready'));
     state.project.main_articles.push(...newArticles);
     // Extraire le titre du livre depuis l'URL (partie après le dernier /)
     try {
@@ -404,16 +409,17 @@ async function importWikipediaBook(url) {
         state.project.name = bookName;
         state.project.book_title = bookName;
         $('#projectName').value = bookName;
-        $('#breadcrumbProject').textContent = bookName.toLocaleUpperCase('fr');
+        $('#breadcrumbProject').textContent = bookName.toLocaleUpperCase(lang());
       }
     } catch { /* titre non critique */ }
     queueSave({ main_articles: state.project.main_articles, name: state.project.name, book_title: state.project.book_title });
     renderWorkspace();
     $('#articleQuery').value = '';
-    $('#entryHint').innerHTML = `${newArticles.length} pages ajout\u00e9es depuis le <a href="https://fr.wikipedia.org/wiki/Aide:Livres" target="_blank" rel="noopener noreferrer">livre Wikip\u00e9dia</a>.`;
-    showToast(`${newArticles.length} pages ajout\u00e9es \u00e0 la s\u00e9lection.`);
-  } catch (error) { showToast(`Import du livre impossible\u00a0: ${error.message}`, true); }
-  finally { button.disabled = false; button.innerHTML = 'Ajouter <span aria-hidden="true">+</span>'; }
+    const bookLink = `<a href="https://fr.wikipedia.org/wiki/Aide:Livres" target="_blank" rel="noopener noreferrer">${escapeHtml(t('sources.bookLinkText'))}</a>`;
+    $('#entryHint').innerHTML = t('sources.pagesAddedHint', { n: newArticles.length, link: bookLink });
+    showToast(t('sources.pagesAddedToast', { n: newArticles.length }));
+  } catch (error) { showToast(t('sources.bookImportFailed', { error: error.message }), true); }
+  finally { button.disabled = false; button.innerHTML = `${escapeHtml(t('sources.addButton'))} <span aria-hidden="true">+</span>`; }
 }
 
 async function searchArticles(query) {
@@ -422,16 +428,16 @@ async function searchArticles(query) {
   state.searchTimer = setTimeout(async () => {
     const results = $('#searchResults');
     results.hidden = false;
-    results.innerHTML = '<div class="search-result"><span><strong>Recherche en cours\u2026</strong></span></div>';
+    results.innerHTML = `<div class="search-result"><span><strong>${escapeHtml(t('sources.searching'))}</strong></span></div>`;
     try {
       const params = new URLSearchParams({ query: query.trim(), language: $('#articleLanguage').value, limit: '8' });
       const items = await getJson(`/api/search?${params}`);
       if ($('#articleQuery').value.trim() !== query.trim()) return;
       results.innerHTML = items.length
-        ? items.map((item) => `<button class="search-result" type="button" data-add-title="${escapeHtml(item.title)}" data-page-id="${item.page_id}"><span><strong>${escapeHtml(item.title)}</strong><small>Article Wikip\u00e9dia \u00b7 ${escapeHtml($('#articleLanguage').value.toUpperCase())}</small></span><span class="search-add" aria-hidden="true">+</span></button>`).join('')
-        : '<div class="search-result"><span><strong>Aucun r\u00e9sultat</strong><small>Essayez un autre terme de recherche.</small></span></div>';
+        ? items.map((item) => `<button class="search-result" type="button" data-add-title="${escapeHtml(item.title)}" data-page-id="${item.page_id}"><span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(t('sources.wikipediaArticleLabel'))} \u00b7 ${escapeHtml($('#articleLanguage').value.toUpperCase())}</small></span><span class="search-add" aria-hidden="true">+</span></button>`).join('')
+        : `<div class="search-result"><span><strong>${escapeHtml(t('sources.noResultsTitle'))}</strong><small>${escapeHtml(t('sources.noResultsDesc'))}</small></span></div>`;
     } catch (error) {
-      results.innerHTML = `<div class="search-result"><span><strong>Recherche indisponible</strong><small>${escapeHtml(error.message)}</small></span></div>`;
+      results.innerHTML = `<div class="search-result"><span><strong>${escapeHtml(t('sources.searchUnavailable'))}</strong><small>${escapeHtml(error.message)}</small></span></div>`;
     }
   }, 250);
 }
@@ -439,12 +445,12 @@ async function searchArticles(query) {
 async function exploreArticles(event) {
   event.preventDefault();
   if (!state.project || !state.project.main_articles.length) {
-    showToast('Ajoutez au moins un article principal avant de lancer l\u2019exploration.', true);
+    showToast(t('explore.atLeastOne'), true);
     return;
   }
   const button = $('#exploreForm button[type="submit"]');
   button.disabled = true;
-  button.textContent = 'Exploration\u2026';
+  button.textContent = t('explore.loading');
   try {
     const updated = await getJson('/api/explore', {
       method: 'POST',
@@ -452,10 +458,11 @@ async function exploreArticles(event) {
     });
     setProject(updated);
     state.isDirty = true;
-    setSaveState('Exploration \u00e0 enregistrer en JSON');
-    showToast(`${updated.discovered_articles.length} article${updated.discovered_articles.length === 1 ? '' : 's'} compl\u00e9mentaire${updated.discovered_articles.length === 1 ? '' : 's'} propos\u00e9${updated.discovered_articles.length === 1 ? '' : 's'}.`);
+    setSaveState(t('save.pendingChanges'));
+    const n = updated.discovered_articles.length;
+    showToast(n === 1 ? t('explore.result', { n }) : t('explore.resultPlural', { n }));
   } catch (error) { showToast(error.message, true); }
-  finally { button.disabled = false; button.textContent = 'Explorer'; }
+  finally { button.disabled = false; button.textContent = t('explore.button'); }
 }
 
 function toggleArticle(card, selected) {
@@ -480,19 +487,19 @@ function removeArticle(card) {
   state.project.chapters = state.project.chapters.map((ch) => ({ ...ch, article_keys: ch.article_keys.filter((k) => k !== key) }));
   queueSave({ main_articles: state.project.main_articles, discovered_articles: state.project.discovered_articles, article_order: state.project.article_order, chapters: state.project.chapters });
   renderWorkspace();
-  showToast('Article retir\u00e9 de la session.');
+  showToast(t('discovered.removedToast'));
 }
 
 function renderUploadedDocuments() {
   const docs = state.project.uploaded_documents || [];
   $('#uploadedDocumentsList').innerHTML = docs.length
     ? docs.map((d) => `<div class="uploaded-document-row" data-doc-id="${escapeHtml(d.id)}">
-        <input class="doc-check" type="checkbox" ${d.selected ? 'checked' : ''} aria-label="${d.selected ? 'Désélectionner' : 'Sélectionner'} ${escapeHtml(d.title)}">
+        <input class="doc-check" type="checkbox" ${d.selected ? 'checked' : ''} aria-label="${d.selected ? escapeHtml(t('meta.deselect')) : escapeHtml(t('meta.select'))} ${escapeHtml(d.title)}">
         <span class="doc-title">${escapeHtml(d.title)}</span>
-        <span class="doc-kind">${d.kind === 'pdf' ? 'PDF' : 'Image'}</span>
-        <button class="icon-button doc-remove" type="button" title="Retirer ce document" aria-label="Retirer ${escapeHtml(d.title)}">×</button>
+        <span class="doc-kind">${d.kind === 'pdf' ? 'PDF' : escapeHtml(t('common.image'))}</span>
+        <button class="icon-button doc-remove" type="button" title="${escapeHtml(t('org.docRemoveTitle'))}" aria-label="${escapeHtml(t('org.docRemoveTitle'))} : ${escapeHtml(d.title)}">×</button>
       </div>`).join('')
-    : '<p class="field-hint">Aucun document importé pour l’instant.</p>';
+    : `<p class="field-hint">${escapeHtml(t('org.noDocuments'))}</p>`;
 }
 
 async function handleDocumentUpload(files) {
@@ -501,12 +508,12 @@ async function handleDocumentUpload(files) {
   for (const file of files) {
     const isPdf = file.type === 'application/pdf';
     const isImage = file.type.startsWith('image/');
-    if (!isPdf && !isImage) { showToast(`${file.name} : seules les images et les PDF sont acceptés.`, true); continue; }
-    if (file.size > maxBytes) { showToast(`${file.name} : fichier trop volumineux (15 Mo maximum).`, true); continue; }
+    if (!isPdf && !isImage) { showToast(t('org.docAcceptedTypesError', { name: file.name }), true); continue; }
+    if (file.size > maxBytes) { showToast(t('org.docTooLargeError', { name: file.name }), true); continue; }
     const dataUrl = await new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result);
-      reader.onerror = () => reject(new Error('Lecture du fichier impossible.'));
+      reader.onerror = () => reject(new Error(t('org.docReadError')));
       reader.readAsDataURL(file);
     });
     const base64 = dataUrl.split(',')[1] || '';
@@ -519,7 +526,7 @@ async function handleDocumentUpload(files) {
   if (added) {
     queueSave({ uploaded_documents: state.project.uploaded_documents });
     renderWorkspace();
-    showToast(`${added} document${added === 1 ? '' : 's'} ajouté${added === 1 ? '' : 's'} au livre.`);
+    showToast(added === 1 ? t('org.docAddedToast', { n: added }) : t('org.docAddedToastPlural', { n: added }));
   }
 }
 
@@ -536,7 +543,7 @@ function removeUploadedDocument(id) {
   state.project.chapters = state.project.chapters.map((ch) => ({ ...ch, article_keys: ch.article_keys.filter((k) => k !== key) }));
   queueSave({ uploaded_documents: state.project.uploaded_documents, article_order: state.project.article_order, chapters: state.project.chapters });
   renderWorkspace();
-  showToast('Document retiré du livre.');
+  showToast(t('org.docRemovedToast'));
 }
 
 function updateChapterMembership(key, chapterId) {
@@ -549,7 +556,7 @@ function updateChapterMembership(key, chapterId) {
 
 function addChapter() {
   const chapters = [...(state.project.chapters || [])];
-  chapters.push({ id: crypto.randomUUID(), title: `Chapitre ${chapters.length + 1}`, article_keys: [] });
+  chapters.push({ id: crypto.randomUUID(), title: t('org.newChapterTitle', { n: chapters.length + 1 }), article_keys: [] });
   state.project.chapters = chapters;
   queueSave({ chapters });
   renderOrganization();
@@ -588,12 +595,12 @@ function collectLayoutSettings() {
 
 async function exportPdf() {
   if (!state.project || !selectedArticles().length) {
-    showToast('S\u00e9lectionnez au moins un article avant de g\u00e9n\u00e9rer le PDF.', true);
+    showToast(t('export.noSelection'), true);
     return;
   }
   const buttons = [$('#exportButton'), $('#topExportButton')].filter(Boolean);
   buttons.forEach((b) => { b.disabled = true; });
-  setSaveState('G\u00e9n\u00e9ration du PDF\u2026');
+  setSaveState(t('export.generating'));
   try {
     const response = await request('/api/pdf', { method: 'POST', body: JSON.stringify(state.project) });
     const blob = await response.blob();
@@ -605,11 +612,11 @@ async function exportPdf() {
     anchor.click();
     anchor.remove();
     URL.revokeObjectURL(objectUrl);
-    setSaveState(state.isDirty ? 'JSON \u00e0 t\u00e9l\u00e9charger' : 'JSON charg\u00e9 en m\u00e9moire');
-    showToast('Votre PDF est pr\u00eat.');
+    setSaveState(state.isDirty ? t('export.toDownload') : t('export.loadedInMemory'));
+    showToast(t('export.ready'));
   } catch (error) {
-    setSaveState('Erreur de g\u00e9n\u00e9ration');
-    showToast(`La g\u00e9n\u00e9ration du PDF a \u00e9chou\u00e9\u00a0: ${error.message}`, true);
+    setSaveState(t('export.error'));
+    showToast(t('export.failed', { error: error.message }), true);
   } finally {
     buttons.forEach((b) => { b.disabled = false; });
   }
@@ -632,37 +639,45 @@ function exportWorkspace() {
   anchor.remove();
   URL.revokeObjectURL(objectUrl);
   state.isDirty = false;
-  setSaveState('JSON t\u00e9l\u00e9charg\u00e9');
-  showToast('Fichier JSON t\u00e9l\u00e9charg\u00e9 sur votre appareil.');
+  setSaveState(t('export.jsonDownloaded'));
+  showToast(t('export.jsonDownloadedToast'));
 }
 
 function readWorkspace(payload) {
   if (Array.isArray(payload)) return payload;
   if (payload?.format === 'wikipedia2book-workspace') {
-    if (payload.version !== 1 || !Array.isArray(payload.projects)) throw new Error('Version ou structure du fichier JSON non prise en charge.');
+    if (payload.version !== 1 || !Array.isArray(payload.projects)) throw new Error(t('export.unsupportedJsonVersion'));
     return payload.projects;
   }
   if (payload && typeof payload === 'object' && payload.id && payload.name) return [payload];
-  throw new Error('Ce fichier ne contient pas de projet Wikipedia2Book valide.');
+  throw new Error(t('export.invalidJsonFile'));
 }
 
 async function importWorkspace(file) {
-  if (state.isDirty && !window.confirm('Les modifications non t\u00e9l\u00e9charg\u00e9es seront remplac\u00e9es. Continuer\u00a0?')) return;
+  if (state.isDirty && !window.confirm(t('export.confirmReplace'))) return;
   try {
     const payload = JSON.parse(await file.text());
     const projects = readWorkspace(payload);
-    if (projects.some((p) => !p || typeof p.id !== 'string' || typeof p.name !== 'string' || !p.name.trim())) throw new Error('Un projet du fichier est invalide ou sans nom.');
+    if (projects.some((p) => !p || typeof p.id !== 'string' || typeof p.name !== 'string' || !p.name.trim())) throw new Error(t('export.invalidProjectInFile'));
     state.project = normalizeProject(projects[0]);
     state.isDirty = false;
     renderWorkspace();
     setView('sources');
-    setSaveState('JSON import\u00e9 en m\u00e9moire');
-    showToast(`Projet import\u00e9.`);
-  } catch (error) { showToast(`Import JSON impossible\u00a0: ${error.message}`, true); }
+    setSaveState(t('export.jsonImported'));
+    showToast(t('export.bookImported'));
+  } catch (error) { showToast(t('export.jsonImportFailed', { error: error.message }), true); }
   finally { $('#workspaceFileInput').value = ''; }
 }
 
 // ── Event listeners ──────────────────────────────────────────────────────────
+
+function sourceModeDefaults(mode) {
+  return {
+    book:   { placeholder: 'https://fr.wikipedia.org/wiki/Utilisateur:…/Livres/…', hint: t('sources.hintBook'), value: 'https://fr.wikipedia.org/wiki/Utilisateur:474D6F756C617264/Livres/Les_%C3%A9paves_de_la_rade_de_Saint-Pierre_suite_a_l%27%C3%A9ruption_de_la_montagne_Pel%C3%A9e_en_1902' },
+    url:    { placeholder: 'https://fr.wikipedia.org/wiki/…', hint: t('sources.hintUrl'), value: 'https://fr.wikipedia.org/wiki/%C3%89paves_de_la_rade_de_Saint-Pierre' },
+    search: { placeholder: t('sources.placeholderSearch'), hint: t('sources.hintSearch'), value: 'Épaves de la rade de Saint-Pierre' },
+  }[mode];
+}
 
 document.addEventListener('click', async (event) => {
   const viewButton = event.target.closest('[data-view]');
@@ -671,12 +686,7 @@ document.addEventListener('click', async (event) => {
   if (modeButton) {
     state.sourceMode = modeButton.dataset.sourceMode;
     $$('.entry-tab').forEach((tab) => tab.classList.toggle('active', tab === modeButton));
-    const defaults = {
-      book:   { placeholder: 'https://fr.wikipedia.org/wiki/Utilisateur:…/Livres/…', hint: 'Collez l’URL d’une page de livre Wikipédia pour importer ses liens d’articles.', value: 'https://fr.wikipedia.org/wiki/Utilisateur:474D6F756C617264/Livres/Les_%C3%A9paves_de_la_rade_de_Saint-Pierre_suite_a_l%27%C3%A9ruption_de_la_montagne_Pel%C3%A9e_en_1902' },
-      url:    { placeholder: 'https://fr.wikipedia.org/wiki/…', hint: 'Collez une URL HTTPS pointant vers un article Wikipédia.', value: 'https://fr.wikipedia.org/wiki/%C3%89paves_de_la_rade_de_Saint-Pierre' },
-      search: { placeholder: 'Rechercher un article…', hint: 'Saisissez quelques mots pour rechercher dans Wikipédia.', value: 'Épaves de la rade de Saint-Pierre' },
-    };
-    const d = defaults[state.sourceMode];
+    const d = sourceModeDefaults(state.sourceMode);
     $('#articleQuery').placeholder = d.placeholder;
     $('#articleQuery').value = d.value;
     $('#entryHint').textContent = d.hint;
@@ -725,7 +735,7 @@ document.addEventListener('input', (event) => {
   if (event.target.matches('#articleFilter')) renderArticles();
   if (event.target.matches('#projectName')) {
     const value = event.target.value.trim();
-    if (value) { state.project.name = value; queueSave({ name: value }); $('#breadcrumbProject').textContent = value.toLocaleUpperCase('fr'); }
+    if (value) { state.project.name = value; queueSave({ name: value }); $('#breadcrumbProject').textContent = value.toLocaleUpperCase(lang()); }
   }
   if (event.target.matches('#projectDescription')) { state.project.description = event.target.value; queueSave({ description: event.target.value }); }
   const chapterNameEl = event.target.closest('.chapter-name');
@@ -741,7 +751,7 @@ document.addEventListener('input', (event) => {
 $('#articleForm').addEventListener('submit', async (event) => {
   event.preventDefault();
   const value = $('#articleQuery').value.trim();
-  if (!value) { showToast('Saisissez une URL, un titre ou un terme de recherche avant d’ajouter.', true); return; }
+  if (!value) { showToast(t('sources.emptyField'), true); return; }
   if (state.sourceMode === 'book') await importWikipediaBook(value);
   else if (state.sourceMode === 'url') await addArticle({ url: value, language: $('#articleLanguage').value });
   else await addArticle({ title: value, language: $('#articleLanguage').value });
@@ -758,6 +768,13 @@ $('#workspaceFileInput').addEventListener('change', async (event) => {
 });
 window.addEventListener('beforeunload', (event) => {
   if (state.isDirty) { event.preventDefault(); event.returnValue = ''; }
+});
+$('#languageSelect').addEventListener('change', (event) => {
+  setLanguage(event.target.value);
+  const d = sourceModeDefaults(state.sourceMode);
+  $('#articleQuery').placeholder = d.placeholder;
+  if (!$('#articleQuery').value.trim()) $('#entryHint').textContent = d.hint;
+  if (state.project) renderWorkspace();
 });
 
 loadProjects();
