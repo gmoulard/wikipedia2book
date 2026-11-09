@@ -52,4 +52,6 @@ Le script `docker-build.sh` injecte automatiquement le commit, la date et l'aute
 
 L'application est accessible sur `http://localhost:8000`.
 
+
+Le déployement  [Railway](https://wikipedia2book-production.up.railway.app/).
 La documentation de l'API en production est disponible sur [Railway](https://wikipedia2book-production.up.railway.app/docs).
