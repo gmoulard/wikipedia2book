@@ -705,7 +705,7 @@ $('#articleForm').addEventListener('submit', async (event) => {
   else await addArticle({ title: value, language: $('#articleLanguage').value });
 });
 $('#exploreForm').addEventListener('submit', exploreArticles);
-$('#createProjectForm').addEventListener('submit', createProject);
+const cpf = $('#createProjectForm'); if (cpf) cpf.addEventListener('submit', createProject);
 $('#workspaceFileInput').addEventListener('change', async (event) => {
   const file = event.target.files?.[0];
   if (file) await importWorkspace(file);
