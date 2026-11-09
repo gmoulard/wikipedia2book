@@ -1,8 +1,9 @@
 from datetime import date
 from html import escape
 
-from app.models import Article, Project
+from app.models import Article, Project, UploadedDocument
 
+BookItem = Article | UploadedDocument
 
 _PAGE_SIZES = {
     "A0": (841, 1189), "A1": (594, 841), "A2": (420, 594),
@@ -11,23 +12,23 @@ _PAGE_SIZES = {
 }
 
 
-def ordered_article_groups(project: Project, articles: list[Article]) -> list[tuple[str, list[Article]]]:
-    by_key = {article.key: article for article in articles}
+def ordered_article_groups(project: Project, items: list[BookItem]) -> list[tuple[str, list[BookItem]]]:
+    by_key = {item.key: item for item in items}
     ordered = [by_key[key] for key in project.article_order if key in by_key]
-    used_keys = {article.key for article in ordered}
-    ordered.extend(article for article in articles if article.key not in used_keys)
+    used_keys = {item.key for item in ordered}
+    ordered.extend(item for item in items if item.key not in used_keys)
 
-    groups: list[tuple[str, list[Article]]] = []
+    groups: list[tuple[str, list[BookItem]]] = []
     assigned: set[str] = set()
     for chapter in project.chapters:
-        chapter_articles = [article for article in ordered if article.key in chapter.article_keys]
-        assigned.update(article.key for article in chapter_articles)
-        if chapter_articles:
-            groups.append((chapter.title, chapter_articles))
+        chapter_items = [item for item in ordered if item.key in chapter.article_keys]
+        assigned.update(item.key for item in chapter_items)
+        if chapter_items:
+            groups.append((chapter.title, chapter_items))
     if not project.chapters:
         groups = [("", ordered)]
     else:
-        unassigned = [article for article in ordered if article.key not in assigned]
+        unassigned = [item for item in ordered if item.key not in assigned]
         if unassigned:
             groups.append(("Sans chapitre", unassigned))
     return groups
@@ -45,13 +46,18 @@ def _page_layout(project: Project) -> tuple[float, float, float, float, float, f
     return page_width, page_height, project.margin_top_mm, project.margin_bottom_mm, inner, project.margin_outside_mm
 
 
+def page_size_mm(project: Project) -> tuple[float, float]:
+    width, height, *_ = _page_layout(project)
+    return width, height
+
+
 def build_book_html(
     project: Project,
-    articles: list[Article],
+    items: list[BookItem],
     article_pages: dict[str, int] | None = None,
     chapter_pages: list[int | None] | None = None,
 ) -> str:
-    groups = ordered_article_groups(project, articles)
+    groups = ordered_article_groups(project, items)
     article_pages = article_pages or {}
     chapter_pages = chapter_pages or [None] * len(groups)
 
@@ -60,8 +66,8 @@ def build_book_html(
         return f"<li><span>{label}</span>{page_span}</li>"
 
     contents: list[str] = []
-    for index, (chapter_title, chapter_articles) in enumerate(groups):
-        titles = [entry(escape(article.title), article_pages.get(article.key)) for article in chapter_articles]
+    for index, (chapter_title, chapter_items) in enumerate(groups):
+        titles = [entry(escape(item.title), article_pages.get(item.key)) for item in chapter_items]
         if chapter_title:
             chapter_page = chapter_pages[index] if index < len(chapter_pages) else None
             page_span = f'<span class="page-no">{chapter_page}</span>' if chapter_page else ""

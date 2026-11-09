@@ -26,6 +26,19 @@ class Article(BaseModel):
         return f"{self.language}:title:{self.title.lower()}"
 
 
+class UploadedDocument(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid4()))
+    title: str = Field(min_length=1, max_length=300)
+    kind: Literal["image", "pdf"]
+    mime_type: str = Field(min_length=1, max_length=100)
+    data_base64: str = Field(min_length=1, max_length=30_000_000)
+    selected: bool = True
+
+    @property
+    def key(self) -> str:
+        return f"doc:{self.id}"
+
+
 class BookChapter(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()))
     title: str = Field(min_length=1, max_length=120)
@@ -38,6 +51,7 @@ class Project(BaseModel):
     description: str = Field(default="", max_length=2000)
     main_articles: list[Article] = Field(default_factory=list)
     discovered_articles: list[Article] = Field(default_factory=list)
+    uploaded_documents: list[UploadedDocument] = Field(default_factory=list)
     book_title: str = Field(default="", max_length=200)
     book_subtitle: str = Field(default="", max_length=300)
     book_author: str = Field(default="", max_length=200)

@@ -136,42 +136,32 @@ class MediaWikiClient:
     async def get_book_links(
         self, title: str, language: str = "fr", limit: int = 200
     ) -> list[str]:
+        # prop=links (et action=parse&prop=links) renvoient les liens triés par ordre
+        # alphabétique, pas dans l'ordre du livre : on lit le wikitexte brut et on
+        # extrait les [[liens]] dans leur ordre d'apparition.
         language = validate_language(language)
-        remaining = min(max(limit, 1), 500)
-        params = {
-            "prop": "info|links",
-            "titles": title,
-            "inprop": "url",
-            "plnamespace": 0,
-            "pllimit": min(remaining, 500),
-        }
+        limit = min(max(limit, 1), 500)
+        result = await self._get(
+            language,
+            {"prop": "revisions", "titles": title, "rvprop": "content", "rvslots": "main"},
+        )
+        pages = result.get("query", {}).get("pages", [])
+        if not pages or pages[0].get("missing"):
+            raise MediaWikiPageNotFound(f"La page de livre Wikipédia « {title} » est introuvable.")
+        revisions = pages[0].get("revisions", [])
+        content = revisions[0].get("slots", {}).get("main", {}).get("content", "") if revisions else ""
+
         links: list[str] = []
         seen: set[str] = set()
-        first_page = True
-
-        while remaining:
-            result = await self._get(language, params)
-            pages = result.get("query", {}).get("pages", [])
-            if first_page and (not pages or pages[0].get("missing")):
-                raise MediaWikiPageNotFound(
-                    f"La page de livre Wikipédia « {title} » est introuvable."
-                )
-            first_page = False
-            for page in pages:
-                for link in page.get("links", []):
-                    link_title = link.get("title", "")
-                    normalized = link_title.casefold()
-                    if link_title and normalized not in seen:
-                        links.append(link_title)
-                        seen.add(normalized)
-                        remaining -= 1
-                        if remaining == 0:
-                            break
-                if remaining == 0:
-                    break
-            continuation = result.get("continue")
-            if not continuation or remaining == 0:
+        for match in re.finditer(r"\[\[([^\[\]|#]+)", content):
+            link_title = match.group(1).strip().replace("_", " ")
+            if not link_title or ":" in link_title:
+                continue
+            normalized = link_title.casefold()
+            if normalized in seen:
+                continue
+            seen.add(normalized)
+            links.append(link_title)
+            if len(links) >= limit:
                 break
-            params.update(continuation)
-            params["pllimit"] = min(remaining, 500)
         return links

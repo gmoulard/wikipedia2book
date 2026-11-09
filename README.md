@@ -6,11 +6,12 @@ Wikipedia2Book est une application web qui permet de composer directement un liv
 
 - Un livre unique, construit en mémoire dans le navigateur; export/import de son état sous forme de fichier JSON.
 - Ajout d'articles par titre, URL ou recherche; le contenu complet n'est récupéré qu'à la génération.
-- Import de la liste des articles depuis l'URL d'une page de livre Wikipédia.
+- Import de la liste des articles depuis l'URL d'une page de livre Wikipédia, dans leur ordre réel.
 - Exploration des liens internes de Wikipédia avec profondeur et nombre d'articles paramétrables.
 - Sélection manuelle des articles à inclure; les articles découverts ne sont jamais ajoutés automatiquement.
 - Organisation des articles en chapitres, réordonnables par glisser-déposer, et configuration du format du livre.
-- Génération d'un livre en assemblant les PDFs complets officiels téléchargés depuis Wikipédia, avec signets de navigation.
+- Import d'images ou de PDF personnels, intégrés au livre comme des articles.
+- Génération d'un livre en assemblant les PDFs complets officiels téléchargés depuis Wikipédia, avec signets de navigation et numérotation continue des pages (table des matières incluse).
 
 ## Architecture
 
@@ -18,7 +19,7 @@ Wikipedia2Book est une application web qui permet de composer directement un liv
 - HTML, CSS et JavaScript pour l'interface web (page unique, sans framework).
 - API officielle MediaWiki pour la recherche et l'exploration; endpoint PDF officiel pour récupérer les articles complets à l'export.
 - JSON échangé avec l'API, sans persistance sur le serveur.
-- WeasyPrint pour la couverture, les pages de chapitre et la conclusion; pypdf pour fusionner les PDFs en mémoire.
+- WeasyPrint pour la couverture, les pages de chapitre et la conclusion; pypdf pour fusionner les PDFs en mémoire; reportlab pour les numéros de page et la conversion d'images importées en PDF.
 - Docker pour le déploiement.
 
 Les détails fonctionnels et techniques sont décrits dans [SPECIFICATIONS.md](SPECIFICATIONS.md).

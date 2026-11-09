@@ -102,6 +102,12 @@
             <p>Glissez-déposez les éléments pour les réorganiser. La table des matières peut être placée au début ou à la fin.</p>
           </div>
           <div class="organization-toolbar"><div class="selection-summary"><span class="selection-number" id="organizationCount">0</span><span>articles retenus pour le livre</span></div><button class="button button-outline" id="addChapterButton" type="button">Créer un chapitre <span aria-hidden="true">+</span></button></div>
+          <div class="upload-box">
+            <div class="explore-head"><span class="explore-icon" aria-hidden="true">📎</span><div><strong>Importer un document</strong><small>Image ou PDF, intégré comme un article du livre</small></div></div>
+            <input id="documentFileInput" type="file" accept="image/*,application/pdf" multiple hidden>
+            <button class="button button-outline" id="uploadDocumentButton" type="button">Choisir un fichier <span aria-hidden="true">+</span></button>
+            <div id="uploadedDocumentsList" class="uploaded-documents-list"></div>
+          </div>
           <div id="organizationList" class="organization-list"></div>
         </section>
 

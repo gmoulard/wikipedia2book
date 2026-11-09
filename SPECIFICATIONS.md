@@ -68,7 +68,7 @@ L'utilisateur ajoute des articles à son livre par l'un des moyens suivants :
 
 * Recherche dans Wikipédia : des résultats sont proposés au fil de la saisie, à ajouter d'un clic.
 
-* URL d'une page de « livre » Wikipédia listant des articles : tous les articles qu'elle référence sont importés et pré-sélectionnés. Seuls leur titre et leur URL sont chargés à ce stade; leur PDF complet n'est téléchargé qu'au moment de la génération.
+* URL d'une page de « livre » Wikipédia listant des articles : tous les articles qu'elle référence sont importés et pré-sélectionnés, **dans l'ordre où ils apparaissent sur la page de livre** (et non par ordre alphabétique — l'API MediaWiki trie les liens, le logiciel relit donc le wikitexte de la page pour retrouver l'ordre réel). Seuls leur titre et leur URL sont chargés à ce stade; leur PDF complet n'est téléchargé qu'au moment de la génération.
 
 Exemple d'URL d'article :
 
@@ -180,6 +180,20 @@ Fonctionnalités :
 * Activer ou non la numérotation des pages.
 
 Un article peut être déplacé librement dans la structure du livre.
+
+### 6.1 Documents importés (images et PDF)
+
+Dans l'étape Organisation, l'utilisateur peut aussi importer ses propres fichiers (image ou PDF) pour les intégrer au livre comme s'il s'agissait d'articles :
+
+* Formats acceptés : images (`image/*`) et PDF (`application/pdf`); 15 Mo maximum par fichier.
+
+* Un document importé apparaît dans la liste des éléments à organiser au même titre qu'un article : il peut être réordonné, déplacé dans un chapitre, et sa page de départ apparaît dans la table des matières si la numérotation est activée.
+
+* Une image importée est intégrée comme une page entière, centrée et mise à l'échelle au format du livre; un PDF importé est intégré tel quel, page par page.
+
+* Le document peut être désélectionné (exclu du livre sans être supprimé) ou retiré définitivement, indépendamment des autres documents et articles.
+
+* Le contenu du fichier est conservé encodé en base64 dans l'état du livre et dans l'export JSON, afin de pouvoir régénérer le PDF ou reprendre le livre sans avoir à ré-importer le fichier.
 
 ## 7\. Récupération du contenu Wikipédia
 
@@ -293,9 +307,9 @@ Aucune fonctionnalité de prévisualisation n'est proposée actuellement.
 
 Une fois les articles sélectionnés et organisés, l'utilisateur lance la génération du PDF. Le logiciel :
 
-* Vérifie qu'au moins un article est sélectionné; sinon, la génération est refusée.
+* Vérifie qu'au moins un article ou document est sélectionné; sinon, la génération est refusée.
 
-* Télécharge le PDF officiel de chaque article sélectionné.
+* Télécharge le PDF officiel de chaque article sélectionné; décode chaque document importé sélectionné (section 6.1), en convertissant une image en page PDF si besoin.
 
 * Si la numérotation des pages est activée, calcule à l'avance la page de départ de chaque chapitre et de chaque article (section 10.1).
 
@@ -362,7 +376,7 @@ L'interface est utilisable sur ordinateur, tablette et smartphone, et respecte l
 | Interface         | HTML, CSS, JavaScript (page unique, sans framework)           |
 | API Wikipédia     | API MediaWiki (`action=query`) + endpoint REST `page/pdf`     |
 | Échange du livre  | JSON navigateur ↔ API                                         |
-| Génération PDF    | PDF officiel Wikimedia (articles) + WeasyPrint (couverture, chapitres, conclusion) + pypdf (fusion, signets, lecture du nombre de pages) + reportlab (superposition des numéros de page) |
+| Génération PDF    | PDF officiel Wikimedia (articles) + WeasyPrint (couverture, chapitres, conclusion) + pypdf (fusion, signets, lecture du nombre de pages) + reportlab (numéros de page, conversion d'une image importée en page PDF) |
 | Conteneurisation  | Docker                                                        |
 
 ### 13.2 API Wikipédia
@@ -454,6 +468,10 @@ La version actuelle est considérée comme fonctionnelle si les points suivants 
 
 * Réorganisation des articles et création de chapitres.
 
+* Import d'une page de livre Wikipédia en conservant l'ordre réel des articles.
+
+* Import d'images ou de PDF comme documents intégrés au livre, au même titre que des articles.
+
 * Positionnement de la table des matières au début ou à la fin.
 
 * Récupération du PDF officiel de chaque article sélectionné au moment de l'export.
@@ -488,7 +506,9 @@ Wikipedia2Book/
 │
 ├── tests/
 │   ├── test_syntax.py
-│   └── test_pdf_generation.py
+│   ├── test_pdf_generation.py
+│   ├── test_uploaded_documents.py
+│   └── test_wikipedia_api.py
 │
 ├── Dockerfile
 ├── docker-build.sh
@@ -534,5 +554,6 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 0.2.1   | 2026-11-09 | Correction : le bouton « Ajouter » ne réagissait pas quand le champ de saisie était vide (validation HTML silencieuse) — un message d'erreur explicite est affiché à la place. |
 | 0.3.0   | 2026-11-09 | Le numéro de version applicatif est désormais affiché dans le pied de page, en plus du commit git. |
 | 0.4.0   | 2026-11-09 | Numérotation continue de toutes les pages du PDF généré (y compris les pages d'articles, via une superposition reportlab/pypdf) et affichage du numéro de page de chaque chapitre/article dans la table des matières. Ajout de `tests/test_pdf_generation.py`. |
+| 0.5.0   | 2026-11-09 | Import d'une page de livre Wikipédia : conservation de l'ordre réel des articles (lecture du wikitexte) au lieu de l'ordre alphabétique renvoyé par l'API. Agrandissement du champ de titre du livre (correction d'un bug de mise en page qui ne laissait voir qu'environ 26 caractères). Nouvelle fonctionnalité : import d'images ou de PDF comme documents intégrés au livre (section 6.1), conservés en base64 dans l'état du livre et l'export JSON. |
 
 Fin du document — Wikipedia2Book, spécifications version 1.1.

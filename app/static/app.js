@@ -50,9 +50,12 @@ function activeArticles() {
   return [...state.project.main_articles, ...state.project.discovered_articles];
 }
 
-function selectedArticles() { return activeArticles().filter((a) => a.selected); }
+function selectedArticles() {
+  return [...activeArticles(), ...(state.project?.uploaded_documents || [])].filter((a) => a.selected);
+}
 
 function articleKey(article) {
+  if (article.kind) return `doc:${article.id}`;
   return article.page_id != null
     ? `${article.language}:${article.page_id}`
     : `${article.language}:title:${article.title.toLowerCase()}`;
@@ -66,7 +69,7 @@ function sameArticle(a, b) {
 
 function normalizeProject(project) {
   return {
-    main_articles: [], discovered_articles: [],
+    main_articles: [], discovered_articles: [], uploaded_documents: [],
     book_title: '', book_subtitle: '', book_author: '', introduction: '', conclusion: '',
     page_format: 'A4', custom_width_mm: 148, custom_height_mm: 210, orientation: 'portrait',
     margin_top_mm: 18, margin_bottom_mm: 18, margin_inside_mm: 18, margin_outside_mm: 16,
@@ -89,6 +92,7 @@ function renderWorkspace() {
   $('#selectedCount').textContent = selectedArticles().length;
   $('#organizationCount').textContent = selectedArticles().length;
   renderArticles();
+  renderUploadedDocuments();
   renderOrganization();
   renderBookSettings();
 }
@@ -214,16 +218,22 @@ function renderOrganization() {
         <button class="chapter-remove" type="button" title="Supprimer le chapitre">Supprimer</button>
       </div>`;
     }
-    // article
+    // article (or document import\u00e9, int\u00e9gr\u00e9 comme un article)
     const a = slot.article;
     const k = articleKey(a);
     const chapters = project.chapters || [];
     const chapter = chapters.find((c) => c.article_keys.includes(k));
+    const isDoc = Boolean(a.kind);
+    const origin = isDoc
+      ? (a.kind === 'pdf' ? 'Document PDF import\u00e9' : 'Image import\u00e9e')
+      : (a.origin_title ? `D\u00e9couvert depuis ${a.origin_title}` : `Article principal \u00b7 ${a.language.toUpperCase()}`);
+    const openHref = isDoc ? `data:${a.mime_type};base64,${a.data_base64}` : a.url;
+    const openTitle = isDoc ? 'Ouvrir le document' : 'Ouvrir sur Wikip\u00e9dia';
     return `<div class="org-row org-article" draggable="true" data-slot-type="article" data-slot-index="${idx}" data-article-key="${escapeHtml(k)}">
       <span class="drag-handle" aria-hidden="true">\u2630</span>
-      <div><div class="org-article-title">${escapeHtml(a.title)}</div><div class="org-article-origin">${escapeHtml(a.origin_title ? `D\u00e9couvert depuis ${a.origin_title}` : `Article principal \u00b7 ${a.language.toUpperCase()}`)}</div></div>
+      <div><div class="org-article-title">${escapeHtml(a.title)}</div><div class="org-article-origin">${escapeHtml(origin)}</div></div>
       <select class="chapter-select" aria-label="Chapitre de ${escapeHtml(a.title)}"><option value="" ${!chapter ? 'selected' : ''}>Sans chapitre</option>${chapters.map((c) => `<option value="${escapeHtml(c.id)}" ${chapter?.id === c.id ? 'selected' : ''}>${escapeHtml(c.title)}</option>`).join('')}</select>
-      <a class="article-title org-open" href="${escapeHtml(a.url)}" target="_blank" rel="noopener noreferrer" title="Ouvrir sur Wikip\u00e9dia" aria-label="Ouvrir ${escapeHtml(a.title)} sur Wikip\u00e9dia">\u2197</a>
+      <a class="article-title org-open" href="${escapeHtml(openHref)}" target="_blank" rel="noopener noreferrer" title="${openTitle}" aria-label="${openTitle}\u00a0: ${escapeHtml(a.title)}">\u2197</a>
     </div>`;
   }).join('');
 
@@ -474,6 +484,62 @@ function removeArticle(card) {
   showToast('Article retir\u00e9 de la session.');
 }
 
+function renderUploadedDocuments() {
+  const docs = state.project.uploaded_documents || [];
+  $('#uploadedDocumentsList').innerHTML = docs.length
+    ? docs.map((d) => `<div class="uploaded-document-row" data-doc-id="${escapeHtml(d.id)}">
+        <input class="doc-check" type="checkbox" ${d.selected ? 'checked' : ''} aria-label="${d.selected ? 'Désélectionner' : 'Sélectionner'} ${escapeHtml(d.title)}">
+        <span class="doc-title">${escapeHtml(d.title)}</span>
+        <span class="doc-kind">${d.kind === 'pdf' ? 'PDF' : 'Image'}</span>
+        <button class="icon-button doc-remove" type="button" title="Retirer ce document" aria-label="Retirer ${escapeHtml(d.title)}">×</button>
+      </div>`).join('')
+    : '<p class="field-hint">Aucun document importé pour l’instant.</p>';
+}
+
+async function handleDocumentUpload(files) {
+  const maxBytes = 15 * 1024 * 1024;
+  let added = 0;
+  for (const file of files) {
+    const isPdf = file.type === 'application/pdf';
+    const isImage = file.type.startsWith('image/');
+    if (!isPdf && !isImage) { showToast(`${file.name} : seules les images et les PDF sont acceptés.`, true); continue; }
+    if (file.size > maxBytes) { showToast(`${file.name} : fichier trop volumineux (15 Mo maximum).`, true); continue; }
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('Lecture du fichier impossible.'));
+      reader.readAsDataURL(file);
+    });
+    const base64 = dataUrl.split(',')[1] || '';
+    state.project.uploaded_documents = [
+      ...(state.project.uploaded_documents || []),
+      { id: crypto.randomUUID(), title: file.name, kind: isPdf ? 'pdf' : 'image', mime_type: file.type, data_base64: base64, selected: true },
+    ];
+    added += 1;
+  }
+  if (added) {
+    queueSave({ uploaded_documents: state.project.uploaded_documents });
+    renderWorkspace();
+    showToast(`${added} document${added === 1 ? '' : 's'} ajouté${added === 1 ? '' : 's'} au livre.`);
+  }
+}
+
+function toggleUploadedDocument(id, selected) {
+  (state.project.uploaded_documents || []).forEach((d) => { if (d.id === id) d.selected = selected; });
+  queueSave({ uploaded_documents: state.project.uploaded_documents });
+  renderWorkspace();
+}
+
+function removeUploadedDocument(id) {
+  const key = `doc:${id}`;
+  state.project.uploaded_documents = (state.project.uploaded_documents || []).filter((d) => d.id !== id);
+  state.project.article_order = state.project.article_order.filter((k) => k !== key);
+  state.project.chapters = state.project.chapters.map((ch) => ({ ...ch, article_keys: ch.article_keys.filter((k) => k !== key) }));
+  queueSave({ uploaded_documents: state.project.uploaded_documents, article_order: state.project.article_order, chapters: state.project.chapters });
+  renderWorkspace();
+  showToast('Document retiré du livre.');
+}
+
 function updateChapterMembership(key, chapterId) {
   const chapters = (state.project.chapters || []).map((ch) => ({ ...ch, article_keys: ch.article_keys.filter((k) => k !== key) }));
   if (chapterId) chapters.find((ch) => ch.id === chapterId)?.article_keys.push(key);
@@ -623,6 +689,7 @@ document.addEventListener('click', async (event) => {
   }
   if (event.target.closest('#deselectAllButton')) { await setMultipleSelection(activeArticles(), false); return; }
   if (event.target.closest('#addChapterButton')) { addChapter(); return; }
+  if (event.target.closest('#uploadDocumentButton')) { $('#documentFileInput').click(); return; }
   if (event.target.closest('#importWorkspaceButton')) { $('#workspaceFileInput').click(); return; }
   if (event.target.closest('#saveWorkspaceButton')) { exportWorkspace(); return; }
   if (event.target.closest('#topExportButton, #exportButton')) { await exportPdf(); return; }
@@ -630,11 +697,14 @@ document.addEventListener('click', async (event) => {
   if (articleCardEl && event.target.closest('.remove-article')) { await removeArticle(articleCardEl); return; }
   const chapterRow = event.target.closest('.org-chapter-row');
   if (chapterRow && event.target.closest('.chapter-remove')) { removeChapter(chapterRow); return; }
+  const docRow = event.target.closest('.uploaded-document-row');
+  if (docRow && event.target.closest('.doc-remove')) { removeUploadedDocument(docRow.dataset.docId); return; }
   if (!event.target.closest('#articleQuery, #searchResults')) $('#searchResults').hidden = true;
 });
 
 document.addEventListener('change', async (event) => {
   if (event.target.matches('.article-check')) { const card = event.target.closest('.article-card'); await toggleArticle(card, event.target.checked); return; }
+  if (event.target.matches('.doc-check')) { const row = event.target.closest('.uploaded-document-row'); toggleUploadedDocument(row.dataset.docId, event.target.checked); return; }
   if (event.target.matches('.chapter-select')) { const row = event.target.closest('.org-article'); updateChapterMembership(row.dataset.articleKey, event.target.value); return; }
   if (event.target.matches('#articleLanguage')) { if ($('#articleQuery').value.trim().length >= 2) searchArticles($('#articleQuery').value); return; }
   if (event.target.matches('#originFilter, #depthFilter')) { renderArticles(); return; }
@@ -674,6 +744,11 @@ $('#articleForm').addEventListener('submit', async (event) => {
   else await addArticle({ title: value, language: $('#articleLanguage').value });
 });
 $('#exploreForm').addEventListener('submit', exploreArticles);
+$('#documentFileInput').addEventListener('change', async (event) => {
+  const files = [...(event.target.files || [])];
+  event.target.value = '';
+  if (files.length) await handleDocumentUpload(files);
+});
 $('#workspaceFileInput').addEventListener('change', async (event) => {
   const file = event.target.files?.[0];
   if (file) await importWorkspace(file);
