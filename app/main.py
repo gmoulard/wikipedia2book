@@ -65,7 +65,16 @@ def version() -> dict[str, str]:
         full, short, date, author = commit.split("|")
         return {"commit": full, "short": short, "date": date, "author": author}
     except Exception:
-        return {"commit": "unknown", "short": "unknown", "date": "", "author": ""}
+        import os
+        full = (os.environ.get("GIT_COMMIT")
+                or os.environ.get("RAILWAY_GIT_COMMIT_SHA")
+                or "unknown")
+        return {
+            "commit": full,
+            "short": full[:7],
+            "date": os.environ.get("GIT_DATE", ""),
+            "author": os.environ.get("GIT_AUTHOR", ""),
+        }
 
 
 @app.get("/api/search")
