@@ -1,12 +1,18 @@
 :root {
   color-scheme: light dark;
+<<<<<<< HEAD
   --ink: #1d2927;
   --ink-soft: #485754;
   --muted: #78827f;
+=======
+  --ink: CanvasText;
+  --ink-soft: GrayText;
+  --muted: GrayText;
+>>>>>>> 0afe359 (ui: fond et texte utilisent les couleurs systeme du navigateur (Canvas/CanvasText))
   --line: #dfe4e1;
   --line-strong: #cbd4d0;
-  --paper: #fff;
-  --canvas: #f3f6f4;
+  --paper: Canvas;
+  --canvas: Canvas;
   --teal: #167465;
   --teal-dark: #10584e;
   --teal-pale: #e4f2ee;
@@ -17,6 +23,19 @@
   font-family: 'DM Sans', 'Segoe UI', sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --line: #2a3330;
+    --line-strong: #374440;
+    --teal: #2fa88f;
+    --teal-dark: #3dc4a8;
+    --teal-pale: #0e2a24;
+    --coral: #e07a5f;
+    --coral-pale: #2a1510;
+    --gold: #e0b85a;
+    --shadow: 0 16px 40px rgb(0 0 0 / 40%);
+  }
 }
 
 @media (prefers-color-scheme: dark) {

@@ -1,125 +1,104 @@
 # Wikipedia2Book — Spécifications fonctionnelles et techniques
 
-Version : 1.0 Statut : Document de référence Format : Markdown (`.md`)
+Version : 1.1 — Statut : aligné sur l'implémentation actuelle — Format : Markdown (`.md`)
 
-## 1\. Présentation du projet
+## 1\. Présentation de Wikipedia2Book
 
 ### 1.1 Objectif
 
-Wikipedia2Book est un logiciel permettant de créer un livre au format PDF imprimable à partir d'articles de Wikipédia.
+Wikipedia2Book est un logiciel qui permet de créer directement un livre au format PDF imprimable à partir d'articles Wikipédia : il n'y a pas d'étape de création ou de gestion de « projet », l'utilisateur commence immédiatement à construire son livre.
 
-L'utilisateur peut sélectionner plusieurs articles principaux, explorer les articles qui leur sont liés, choisir précisément les contenus à intégrer, organiser les articles et générer un document PDF structuré.
+Dès l'ouverture de l'application, un livre vide est prêt à l'emploi. L'utilisateur ajoute un ou plusieurs articles principaux, explore les articles qui leur sont liés, choisit précisément les contenus à intégrer, organise les articles en chapitres et génère un document PDF structuré.
 
-Le logiciel doit fonctionner sur toutes les plateformes grâce à une architecture Python conteneurisée avec Docker.
+Le logiciel fonctionne sur toutes les plateformes grâce à une architecture Python conteneurisée avec Docker.
 
 ### 1.2 Principes fondamentaux
 
-* Le logiciel ne doit pas être limité à un thème ou à une catégorie d'articles.
+* Le logiciel n'est pas limité à un thème ou à une catégorie d'articles.
 
-* Plusieurs articles principaux peuvent être ajoutés à un même projet.
+* Plusieurs articles principaux peuvent être ajoutés à un même livre.
 
-* L'exploration des liens Wikipédia doit être paramétrable.
+* L'exploration des liens Wikipédia est paramétrable (profondeur, nombre maximal d'articles).
 
-* Aucun article découvert ne doit être ajouté automatiquement au livre.
+* Aucun article découvert n'est ajouté automatiquement au livre.
 
-* L'utilisateur conserve le contrôle total sur la sélection des articles.
+* L'utilisateur garde le contrôle total sur la sélection des articles.
 
-* Le format du livre doit être configurable.
+* Le format du livre est configurable (dimensions, orientation, marges).
 
-* Le PDF produit doit être adapté à l'impression.
+* Le PDF produit est adapté à l'impression.
 
-## 2\. Gestion des projets
+## 2\. Le livre en mémoire et sa sauvegarde
 
-Le logiciel doit permettre de créer et gérer plusieurs projets indépendants.
+Le logiciel ne gère pas de liste de projets : un seul livre est construit à la fois, entièrement en mémoire dans le navigateur.
 
-Fonctionnalités attendues :
-| Version | Statut | Format |
-| --- | --- | --- |
-| 1.0 | Document de référence | Markdown (`.md`) |
+* À l'ouverture de l'application, un livre vide est créé automatiquement; l'utilisateur peut lui donner un nom et une description.
 
-* Créer un nouveau projet.
+* Toutes les modifications (articles, sélection, organisation, mise en page) sont conservées en mémoire dans le navigateur pendant la session, et envoyées à l'API uniquement pour les opérations qui le nécessitent (recherche, exploration, génération du PDF).
 
-* Nommer et décrire un projet.
+* L'utilisateur peut télécharger explicitement l'état du livre sous forme de fichier JSON.
 
-* Conserver les modifications en mémoire dans le navigateur pendant la session.
+* L'utilisateur peut importer un fichier JSON précédemment téléchargé pour reprendre un livre; l'import remplace le livre en cours.
 
-* Télécharger explicitement l'espace de travail sous forme de fichier JSON.
+* Le serveur ne persiste aucun livre ni fichier sur son disque : la persistance est entièrement à la charge de l'utilisateur, via le téléchargement puis l'import manuel du fichier JSON.
 
-* Importer un fichier JSON local contenant un ou plusieurs projets.
-
-* Supprimer un projet.
-
-* Exporter un projet ou sa configuration.
-
-Chaque projet contient notamment :
+Le livre contient notamment :
 
 * Les articles principaux.
 
 * Les articles découverts.
 
-* Les articles sélectionnés.
+* La sélection des articles.
 
-* La structure du livre.
+* La structure du livre (ordre, chapitres, position de la table des matières).
 
 * Les paramètres de mise en page.
 
-* Les paramètres d'exportation.
+* Les informations de couverture (titre, sous-titre, auteur, introduction, conclusion).
 
-Le serveur ne doit pas persister les projets sur son disque. Le navigateur conserve les projets en mémoire et échange leur structure JSON avec l'API pour les opérations qui nécessitent le serveur. La persistance est à la charge de l'utilisateur, via le téléchargement puis l'import manuel d'un fichier JSON.
+## 3\. Ajout des articles
 
-## 3\. Gestion des articles principaux
+### 3.1 Méthodes d'ajout
 
-### 3.1 Ajout des articles
+L'utilisateur ajoute des articles à son livre par l'un des moyens suivants :
 
-L'utilisateur doit pouvoir ajouter plusieurs articles Wikipédia à un projet.
+* URL d'un article Wikipédia.
 
-L'ajout peut se faire à partir :
+* Titre d'article saisi directement.
 
-* D'une URL Wikipédia.
+* Recherche dans Wikipédia : des résultats sont proposés au fil de la saisie, à ajouter d'un clic.
 
-* D'un titre d'article.
+* URL d'une page de « livre » Wikipédia listant des articles : tous les articles qu'elle référence sont importés et pré-sélectionnés. Seuls leur titre et leur URL sont chargés à ce stade; leur PDF complet n'est téléchargé qu'au moment de la génération.
 
-* D'une recherche sur Wikipédia.
-
-* De l'URL d'une page de livre Wikipédia contenant la liste des pages à imprimer.
-
-Les articles importés depuis une page de livre sont ajoutés à la sélection. Seuls leurs titres et leurs URL sont chargés à ce stade; leur PDF complet est téléchargé au moment de la génération.
-
-Exemple :
+Exemple d'URL d'article :
 
 `https://fr.wikipedia.org/wiki/Épaves_de_la_rade_de_Saint-Pierre`
 
-### 3.2 Identification des articles
+### 3.2 Informations conservées par article
 
-Pour chaque article, le logiciel doit récupérer :
+Pour chaque article, le logiciel conserve :
 
 * Le titre.
 
 * L'URL Wikipédia.
 
-* Le résumé.
-
 * La langue.
 
-* L'identifiant de page Wikipédia.
+* Le résumé, lorsqu'il provient d'une recherche (les articles ajoutés par URL, par titre ou importés depuis une page de livre n'ont pas de résumé pré-rempli).
 
-* La date de dernière modification, si disponible.
+* L'identifiant de page Wikipédia, lorsqu'il est connu (résultats de recherche).
 
-L'utilisateur doit pouvoir supprimer un article principal sans supprimer les autres.
+L'utilisateur peut supprimer un article principal sans affecter les autres.
 
 ## 4\. Exploration des articles liés
 
 ### 4.1 Principe
 
-Le logiciel doit explorer les liens internes présents dans les articles principaux afin de proposer des articles complémentaires.
-
-L'exploration doit s'appuyer sur l'API officielle MediaWiki.
+Le logiciel explore les liens internes présents dans les articles principaux afin de proposer des articles complémentaires, en s'appuyant sur l'API officielle MediaWiki (`action=query&prop=links`).
 
 ### 4.2 Profondeur d'exploration
 
-La profondeur doit être paramétrable.
-
-Exemple :
+La profondeur est paramétrable, entre 0 et 3 :
 
 | Profondeur | Comportement                                      |
 | ---------- | ------------------------------------------------- |
@@ -128,161 +107,105 @@ Exemple :
 | 2          | Articles liés aux articles de profondeur 1        |
 | 3          | Articles liés aux articles de profondeur 2        |
 
-La profondeur maximale autorisée doit être configurable afin d'éviter une exploration excessive.
+La profondeur maximale est bornée à 3 niveaux afin d'éviter une exploration excessive.
 
-### 4.3 Gestion des résultats
+### 4.3 Résultats de l'exploration
 
-Pour chaque article découvert, afficher :
+Pour chaque article découvert, le logiciel affiche :
 
 * Son titre.
 
-* Son résumé.
-
 * Son URL.
 
-* Son article d'origine.
+* L'article principal qui a conduit à sa découverte.
 
 * Sa profondeur de découverte.
 
 * Son statut de sélection.
 
-Le logiciel doit éliminer les doublons, notamment lorsqu'un même article est lié depuis plusieurs pages.
+Les doublons sont éliminés automatiquement (comparaison insensible à la casse sur la langue et le titre), y compris lorsqu'un même article est lié depuis plusieurs pages.
 
 ### 4.4 Limites de l'exploration
 
-L'utilisateur doit pouvoir limiter :
+L'utilisateur peut limiter :
 
-* Le nombre maximal d'articles découverts.
+* Le nombre maximal d'articles découverts (entre 1 et 200, 30 par défaut).
 
-* La profondeur maximale.
-
-* Les langues acceptées.
-
-* Les catégories d'articles, si une fonctionnalité de filtrage est disponible.
+* La profondeur maximale (entre 0 et 3, 1 par défaut).
 
 ## 5\. Sélection des articles
 
 Cette fonctionnalité est essentielle.
 
-Aucun article secondaire ne doit être intégré automatiquement au livre.
+Aucun article découvert ne doit être intégré automatiquement au livre.
 
-Le logiciel doit présenter la liste des articles découverts et laisser l'utilisateur choisir exactement ceux qu'il souhaite conserver.
+Le logiciel présente la liste des articles découverts et laisse l'utilisateur choisir exactement ceux qu'il souhaite conserver.
 
-Fonctionnalités attendues :
+Fonctionnalités disponibles :
 
 * Sélection individuelle.
 
 * Désélection individuelle.
 
-* Sélection multiple.
+* Tout sélectionner (parmi les articles découverts).
 
-* Tout sélectionner.
+* Sélectionner les visibles (respecte les filtres actifs).
 
 * Tout désélectionner.
 
-* Recherche par titre.
+* Recherche par titre parmi les articles découverts.
 
 * Filtrage par article d'origine.
 
-* Filtrage par profondeur.
+* Filtrage par profondeur de découverte.
 
-* Affichage des articles déjà sélectionnés.
-
-La sélection doit être conservée lors de la sauvegarde du projet.
+La sélection est conservée avec le reste du livre, en mémoire et dans l'export JSON.
 
 ## 6\. Organisation du livre
 
-L'utilisateur doit pouvoir organiser les articles sélectionnés avant la génération du PDF.
+L'utilisateur organise les articles sélectionnés avant la génération du PDF.
 
 Fonctionnalités :
 
-* Réordonner les articles.
+* Réordonner les articles par glisser-déposer.
 
-* Créer des chapitres.
+* Créer des chapitres et leur donner un titre.
 
-* Déplacer un article d'un chapitre à un autre.
+* Déplacer un article d'un chapitre à un autre, ou hors de tout chapitre, par glisser-déposer.
 
-* Modifier les titres des chapitres.
+* Positionner la table des matières au début ou à la fin du livre, également par glisser-déposer.
 
-* Ajouter une introduction générale.
+* Ajouter une introduction générale et une conclusion.
 
-* Ajouter une conclusion.
-
-* Définir l'ordre de publication.
+* Activer ou non la numérotation des pages.
 
 Un article peut être déplacé librement dans la structure du livre.
 
 ## 7\. Récupération du contenu Wikipédia
 
-L'ajout et l'exploration ne doivent pas télécharger le contenu complet des pages. Au moment de générer le PDF, chaque article sélectionné doit être récupéré via l'endpoint PDF officiel de Wikimedia (`/api/rest_v1/page/pdf/{titre}`), équivalent à la fonction « Télécharger comme PDF » de Wikipédia.
+L'ajout et l'exploration ne téléchargent pas le contenu complet des pages. Au moment de générer le PDF, chaque article sélectionné est récupéré via l'endpoint PDF officiel de Wikimedia (`/api/rest_v1/page/pdf/{titre}`), équivalent à la fonction « Télécharger comme PDF » de Wikipédia.
 
-Le PDF officiel de chaque article doit être conservé intégralement, avec son contenu, sa structure, ses images et ses références. Les PDFs sont assemblés dans l'ordre du livre sans reconstruire ni tronquer le corps des articles.
+Le PDF officiel de chaque article est conservé intégralement, avec son contenu, sa structure, ses images et ses références. Les PDFs sont assemblés dans l'ordre du livre sans reconstruire ni tronquer le corps des articles.
 
-## 8\. Gestion des références et citations
+## 8\. Références, images et licences
 
-La conservation des références est obligatoire.
+Le logiciel ne reconstruit pas le contenu des articles : chaque article sélectionné est intégré sous la forme du PDF officiel généré par Wikipédia. En conséquence :
 
-Le logiciel doit préserver les références présentes dans les articles Wikipédia.
+* Les références et citations restent exactement celles du PDF Wikipédia, avec leur mise en forme d'origine.
 
-Deux modes de présentation peuvent être proposés :
+* Les images et leurs légendes sont celles intégrées par Wikipédia à l'export PDF, avec leur mise en page d'origine.
 
-* Références en notes de bas de page.
+* Les crédits et licences des textes et des images sont ceux imprimés par Wikipédia dans son propre PDF; le logiciel ne les extrait pas et ne les réécrit pas séparément.
 
-* Références regroupées à la fin de chaque article.
+* Si Wikipédia ne peut pas produire de PDF pour un article sélectionné (page introuvable, service indisponible, réponse invalide), la génération du livre échoue dans son ensemble et un message d'erreur explicite est affiché; aucun livre partiel n'est produit.
 
-Les références doivent rester associées au texte auquel elles se rapportent.
+## 9\. Paramétrage du format du livre
 
-Les URL des sources doivent être conservées lorsqu'elles sont disponibles.
+Le format du document est entièrement configurable.
 
-Le logiciel ne doit jamais supprimer silencieusement les références d'un article.
+### 9.1 Formats standards
 
-## 9\. Gestion des images et des médias
-
-### 9.1 Récupération
-
-Le logiciel doit récupérer les images associées aux articles lorsque cela est techniquement possible et autorisé.
-
-Pour chaque image, conserver :
-
-* Le fichier ou son URL.
-
-* La légende.
-
-* Le nom du contributeur.
-
-* La source.
-
-* La licence.
-
-* L'URL de la page de description du média.
-
-### 9.2 Attribution
-
-Les crédits et licences des images doivent être respectés.
-
-Les images ne doivent pas être considérées comme automatiquement couvertes par la licence du texte Wikipédia : chaque média peut avoir sa propre licence.
-
-### 9.3 Mise en page
-
-Les images doivent être intégrées dans le PDF avec :
-
-* Une taille adaptée.
-
-* Un redimensionnement proportionnel.
-
-* Une légende lisible.
-
-* Une attribution lorsque nécessaire.
-
-Si une image ne peut pas être récupérée, le logiciel doit gérer proprement son absence.
-
-## 10\. Paramétrage du format du livre
-
-Le format du document doit être entièrement configurable.
-
-### 10.1 Formats standards
-
-Formats à proposer :
+Formats proposés :
 
 | Format | Dimensions    |
 | ------ | ------------- |
@@ -296,27 +219,27 @@ Formats à proposer :
 | Letter | 216 × 279 mm  |
 | Legal  | 216 × 356 mm  |
 
-Le format A5 doit être proposé par défaut, sans être imposé.
+Le format A4 est proposé par défaut, sans être imposé.
 
-### 10.2 Format personnalisé
+### 9.2 Format personnalisé
 
-L'utilisateur doit pouvoir saisir :
+L'utilisateur peut saisir :
 
 * La largeur en millimètres.
 
 * La hauteur en millimètres.
 
-### 10.3 Orientation
+### 9.3 Orientation
 
-Deux orientations doivent être disponibles :
+Deux orientations sont disponibles :
 
 * Portrait.
 
 * Paysage.
 
-### 10.4 Marges
+### 9.4 Marges
 
-L'utilisateur doit pouvoir régler indépendamment :
+L'utilisateur règle indépendamment :
 
 * La marge supérieure.
 
@@ -326,335 +249,212 @@ L'utilisateur doit pouvoir régler indépendamment :
 
 * La marge extérieure.
 
-Une option de marge supplémentaire pour la reliure peut être prévue.
+* La marge de reliure, en complément de la marge intérieure.
 
-## 11\. Mise en page du livre
+## 10\. Mise en page du livre
 
-Le PDF doit être structuré comme un véritable livre.
+Le PDF est structuré comme un véritable livre.
 
-Éléments possibles :
+Éléments générés par l'application :
 
-* Couverture.
+* Couverture (titre du livre, sous-titre, auteur, note, date de génération).
 
-* Titre du livre.
+* Introduction, si elle a été saisie.
 
-* Sous-titre.
+* Table des matières, groupée par chapitre.
 
-* Auteur ou éditeur.
+* Pages de titre de chapitre, pour chaque chapitre contenant des articles.
 
-* Date de génération.
+* Conclusion, si elle a été saisie.
 
-* Table des matières.
+Les articles eux-mêmes ne sont pas mis en page par l'application : ce sont les pages du PDF officiel Wikipédia, insérées telles quelles.
 
-* Chapitres.
+Point important : les pages générées par l'application (couverture, introduction, table des matières, pages de chapitre, conclusion) suivent le format, l'orientation et les marges configurés; les pages d'articles conservent intégralement la mise en page du PDF Wikipédia d'origine, quel que soit le format choisi pour le reste du livre.
 
-* Articles.
+La navigation dans le PDF final s'appuie sur des signets (une entrée par chapitre et par article), et non sur les liens de la table des matières.
 
-* Pagination.
+Aucune fonctionnalité de prévisualisation n'est proposée actuellement.
 
-* Références.
+## 11\. Génération du PDF
 
-* Crédits et licences.
+### 11.1 Déroulement
 
-La mise en page doit garantir :
+Une fois les articles sélectionnés et organisés, l'utilisateur lance la génération du PDF. Le logiciel :
 
-* Une typographie lisible.
+* Vérifie qu'au moins un article est sélectionné; sinon, la génération est refusée.
 
-* Une hiérarchie claire des titres.
+* Génère la couverture, l'introduction éventuelle et la table des matières, avec un signet racine portant le titre du livre.
 
-* Des paragraphes correctement espacés.
+* Pour chaque chapitre (ou pour l'ensemble des articles s'il n'y a pas de chapitre) : génère une page de titre de chapitre avec son propre signet, puis télécharge le PDF officiel de chaque article sélectionné du chapitre et l'ajoute tel quel, avec un signet par article.
 
-* Des images correctement dimensionnées.
+* Ajoute une page de conclusion avec signet, si une conclusion a été saisie.
 
-* Des tableaux adaptés à la largeur des pages.
+* Fusionne l'ensemble en un seul fichier PDF et le rend accessible au téléchargement, nommé d'après le titre du livre.
 
-* Des sauts de page cohérents.
+### 11.2 Résultat
 
-* Une pagination continue.
+Le PDF produit est :
 
-Aucune fonctionnalité de prévisualisation n'est nécessaire dans la première version.
+* Imprimable et structuré par des signets de navigation.
 
-## 12\. Génération du PDF
+* Conforme au format choisi pour ses pages de couverture, de chapitre et de conclusion.
 
-### 12.1 Fonctionnement
-
-Une fois les articles sélectionnés et organisés, l'utilisateur lance la génération du PDF.
-
-Le logiciel doit :
-
-* Vérifier la configuration du projet.
-
-* Vérifier les articles sélectionnés.
-
-* Télécharger, uniquement à cette étape, le PDF officiel complet de chaque article sélectionné.
-
-* Préparer le frontispice et les pages de chapitre.
-
-* Assembler en mémoire les PDFs Wikipédia dans l'ordre du livre et ajouter les signets de navigation.
-
-* Générer la table des matières.
-
-* Appliquer les paramètres de mise en page aux pages générées par l'application; les pages d'articles conservent le format de leur PDF Wikipédia.
-
-* Générer le PDF.
-
-* Rendre le fichier accessible au téléchargement.
-
-### 12.2 Résultat
-
-Le PDF doit être :
-
-* Imprimable.
-
-* Lisible.
-
-* Structuré.
-
-* Les articles complets sont ceux fournis par Wikipédia; le format personnalisé s'applique aux pages générées par l'application.
+* Fidèle au PDF officiel Wikipédia pour ses pages d'articles.
 
 * Compatible avec les lecteurs PDF courants.
 
-### 12.3 Gestion des erreurs
+### 11.3 Gestion des erreurs
 
-En cas d'échec, le logiciel doit afficher un message explicite.
+En cas d'échec, le logiciel affiche un message explicite. Les erreurs possibles sont :
 
-Les erreurs possibles comprennent :
+* Aucun article sélectionné avant l'export.
 
-* Article introuvable.
+* URL, titre d'article ou code de langue invalide.
 
-* Problème de connexion à Wikipédia.
+* Page de livre ou article introuvable sur Wikipédia.
 
-* Contenu indisponible.
+* Impossible de joindre l'API Wikipédia, ou PDF officiel indisponible/invalide pour un article : la génération échoue dans son ensemble, sans produire de livre partiel.
 
-* Image inaccessible.
+* Échec inattendu pendant l'assemblage du PDF.
 
-* Référence invalide.
+## 12\. Interface utilisateur
 
-* Erreur de génération PDF.
+L'application est une page unique, organisée en trois étapes accessibles par des onglets, sans écran de création ou de gestion de projet :
 
-* Espace disque insuffisant.
+* 01 — Sources : ajout des articles principaux et exploration des liens.
 
-## 13\. Interface utilisateur
+* 02 — Organisation : réorganisation des articles, chapitres, position de la table des matières.
 
-L'application doit proposer une interface web simple et intuitive.
+* 03 — Édition : identité du livre (titre, sous-titre, auteur, introduction, conclusion) et format d'impression.
 
-### Écrans principaux
+Une barre supérieure permet à tout moment d'importer ou d'exporter le livre en JSON et de lancer la génération du PDF.
 
-* Accueil et gestion des projets.
+L'interface est utilisable sur ordinateur, tablette et smartphone, et respecte le thème clair/sombre du système.
 
-* Création et configuration d'un projet.
+## 13\. Architecture technique
 
-* Ajout des articles principaux.
+### 13.1 Technologies
 
-* Exploration des articles liés.
+| Composant        | Technologie utilisée    |
+| ----------------- | ------------------------------------------------------------ |
+| Langage           | Python 3.12                                                   |
+| Backend           | FastAPI + Uvicorn                                             |
+| Client HTTP       | httpx (appels à l'API MediaWiki et à l'endpoint PDF)          |
+| Analyse HTML      | BeautifulSoup4 (extraits de recherche, sanitisation)          |
+| Interface         | HTML, CSS, JavaScript (page unique, sans framework)           |
+| API Wikipédia     | API MediaWiki (`action=query`) + endpoint REST `page/pdf`     |
+| Échange du livre  | JSON navigateur ↔ API                                         |
+| Génération PDF    | PDF officiel Wikimedia (articles) + WeasyPrint (couverture, chapitres, conclusion) + pypdf (fusion et signets) |
+| Conteneurisation  | Docker                                                        |
 
-* Sélection des articles.
+### 13.2 API Wikipédia
 
-* Organisation du livre.
+Le logiciel utilise les interfaces officielles de MediaWiki pour :
 
-* Paramétrage de la mise en page.
+* Rechercher des articles (`action=query&list=search`).
 
-* Génération et téléchargement du PDF.
+* Résoudre les URL d'article et valider les codes de langue.
 
-L'interface doit être utilisable sur ordinateur, tablette et smartphone.
+* Explorer les liens internes (`action=query&prop=links`).
 
-## 14\. Architecture technique
+* Récupérer la liste des articles d'une page de livre (`prop=info|links`, avec pagination `continue`).
 
-### 14.1 Technologies
+* Télécharger le PDF officiel de chaque article sélectionné, au moment de l'export (`/api/rest_v1/page/pdf/{titre}`).
 
-| Composant        | Technologie envisagée    |
-| ---------------- | ------------------------ |
-| Langage          | Python                   |
-| Backend          | FastAPI                  |
-| Interface        | HTML, CSS, JavaScript    |
-| API Wikipédia    | MediaWiki API            |
-| Échange de projets | JSON navigateur-serveur |
-| Génération PDF   | PDF officiel Wikimedia, WeasyPrint et pypdf |
-| Conteneurisation | Docker                   |
-| Orchestration    | Docker Compose           |
+Chaque requête utilise un en-tête `User-Agent` dédié; les délais d'attente sont bornés (20 secondes pour les appels à l'API, 120 secondes pour le téléchargement d'un PDF).
 
-Les technologies peuvent évoluer si une solution plus adaptée est identifiée.
+### 13.3 Docker et déploiement
 
-### 14.2 API Wikipédia
+Le logiciel est livré avec :
 
-Le logiciel doit utiliser les interfaces officielles de MediaWiki pour :
-
-* Rechercher des articles.
-
-* Identifier les pages.
-
-* Explorer les liens internes.
-
-* Récupérer les contenus.
-
-* Télécharger les PDFs complets des pages sélectionnées au moment de l'export.
-
-* Récupérer les informations relatives aux médias.
-
-Les requêtes doivent respecter les règles d'utilisation de Wikipédia et limiter la charge imposée aux serveurs.
-
-### 14.3 Docker
-
-Le logiciel doit être livré avec :
-
-* Un `Dockerfile`.
-
-* Un fichier `docker-compose.yml`.
+* Un `Dockerfile` (image Python 3.12-slim avec les dépendances système de WeasyPrint).
 
 * Un fichier `requirements.txt`.
 
-* Une documentation d'installation.
-
-Le lancement doit être aussi simple que possible.
+* Un script `docker-build.sh` qui construit l'image en y injectant le commit, la date et l'auteur git courants, affichés en pied de page de l'application.
 
 Exemple :
 
 ```bash
-docker compose up -d --build
+sh docker-build.sh
+docker run --rm -p 8000:8000 wikipedia2book
 ```
 
-L'application doit être accessible depuis un navigateur web.
+L'application est alors accessible sur `http://localhost:8000`, avec sa documentation interactive sur `http://localhost:8000/docs`.
 
-Le serveur ne stocke aucun projet ni PDF sur disque. Le navigateur doit permettre de télécharger et d'importer un fichier JSON contenant les projets et leurs structures complètes.
+Le serveur ne stocke aucun livre ni PDF sur disque; tout l'état est conservé dans le navigateur et échangé via JSON.
 
-### 15\. Sécurité et robustesse
+## 14\. Sécurité et robustesse
 
-Le logiciel doit intégrer les précautions suivantes :
+Le logiciel met en œuvre aujourd'hui :
 
-* Validation des URL fournies.
+* La validation stricte des URL fournies (schéma HTTPS, domaine `*.wikipedia.org`, titre présent).
 
-* Vérification des titres d'articles.
+* La validation des codes de langue (expression régulière, 2 à 12 caractères).
 
-* Protection contre les injections.
+* La validation des champs de formulaire (longueurs minimales/maximales, exclusivité titre/URL) au niveau de l'API.
 
-* Gestion des erreurs réseau.
+* La gestion des erreurs réseau vers Wikipédia, traduites en messages explicites côté interface.
 
-* Limitation des requêtes API.
+* Des délais d'attente bornés sur les appels réseau.
 
-* Gestion des délais d'attente.
+* Une sanitisation HTML par liste blanche de balises et d'attributs, disponible pour tout contenu HTML manipulé par l'application.
 
-* Nettoyage des fichiers temporaires.
+Les URL externes ne sont jamais exécutées comme du code.
 
-* Limitation de la taille des téléchargements.
+Points non couverts par l'implémentation actuelle, à considérer pour une version ultérieure : limitation du débit des requêtes vers l'API Wikipédia, journalisation structurée des erreurs, quotas explicites sur la taille des PDFs téléchargés.
 
-* Journalisation des erreurs.
+## 15\. Respect des licences Wikipédia
 
-Les URL externes ne doivent pas être exécutées comme du code.
+Le logiciel doit respecter les licences applicables aux contenus récupérés depuis Wikipédia.
 
-## 16\. Respect des licences Wikipédia
+Les textes Wikipédia sont généralement publiés sous licence Creative Commons Attribution-Partage dans les Mêmes Conditions (CC BY-SA). Chaque article conserve, dans le PDF officiel Wikipédia intégré au livre, les mentions de licence et d'attribution telles que générées par Wikipédia elle-même.
 
-Le logiciel doit respecter les licences applicables aux contenus récupérés.
+Le logiciel :
 
-Les textes Wikipédia sont généralement publiés sous licence Creative Commons Attribution-Partage dans les Mêmes Conditions (CC BY-SA), sous réserve des conditions applicables à chaque contenu.
+* Conserve le lien vers chaque article original.
 
-Le logiciel doit donc prévoir :
+* N'altère pas le contenu, les crédits ni les mentions de licence imprimés par Wikipédia dans son propre PDF.
 
-* L'attribution des auteurs et contributeurs lorsque nécessaire.
+* Ne présente pas le livre généré comme une publication officielle de Wikipédia.
 
-* La mention de la licence applicable.
+Les images et médias intégrés par Wikipédia à son export PDF conservent leurs propres mentions de licence; le logiciel ne les extrait pas séparément et n'effectue pas de vérification de licence indépendante.
 
-* La mention de la source Wikipédia.
+## 16\. Critères d'acceptation
 
-* La conservation des liens vers les articles originaux.
+La version actuelle est considérée comme fonctionnelle si les points suivants sont validés :
 
-* Le respect des obligations de partage à l'identique lorsque celles-ci s'appliquent.
+* Ajout de plusieurs articles principaux (URL, titre, recherche, page de livre Wikipédia).
 
-Les images et médias doivent faire l'objet d'une vérification de licence indépendante.
+* Exploration des liens internes avec profondeur paramétrable.
 
-Le logiciel ne doit pas présenter le PDF généré comme une publication officielle de Wikipédia.
+* Détection des doublons parmi les articles découverts.
 
-## 17\. Critères d'acceptation
+* Affichage des articles découverts avec leurs filtres (origine, profondeur, titre).
 
-La version initiale sera considérée comme fonctionnelle si les points suivants sont validés :
+* Sélection manuelle des articles; aucun ajout automatique d'article découvert.
 
-* Création d'un projet.
+* Réorganisation des articles et création de chapitres.
 
-* Ajout de plusieurs articles principaux.
+* Positionnement de la table des matières au début ou à la fin.
 
-* Exploration des liens internes.
+* Récupération du PDF officiel de chaque article sélectionné au moment de l'export.
 
-* Paramétrage de la profondeur d'exploration.
+* Choix du format papier, de l'orientation et des marges, y compris la marge de reliure.
 
-* Détection des doublons.
+* Génération d'un PDF imprimable avec couverture, table des matières, signets de navigation et pagination optionnelle.
 
-* Affichage des articles découverts.
+* Téléchargement du PDF généré.
 
-* Sélection manuelle des articles.
+* Export puis import du livre via un fichier JSON local.
 
-* Aucun ajout automatique d'article secondaire.
-
-* Réorganisation des articles.
-
-* Création de chapitres.
-
-* Récupération du contenu des articles.
-
-* Conservation des références.
-
-* Récupération des images lorsque possible.
-
-* Conservation des crédits et licences.
-
-* Choix du format papier.
-
-* Choix de l'orientation.
-
-* Paramétrage des marges.
-
-* Génération d'un PDF imprimable.
-
-* Téléchargement du PDF.
-
-* Export puis import des projets via un fichier JSON local.
-
-## 18\. Découpage prévisionnel
-
-### Version 1 — Socle fonctionnel
-
-* Gestion des projets.
-
-* Ajout de plusieurs articles.
-
-* Exploration des liens.
-
-* Paramétrage de la profondeur.
-
-* Sélection manuelle.
-
-* Génération PDF simple.
-
-### Version 2 — Qualité éditoriale
-
-* Organisation en chapitres.
-
-* Table des matières.
-
-* Couverture.
-
-* Pagination.
-
-* Conservation avancée des références.
-
-* Gestion des tableaux et images.
-
-### Version 3 — Personnalisation avancée
-
-* Formats personnalisés.
-
-* Réglages typographiques.
-
-* Paramètres de reliure.
-
-* Personnalisation avancée de la couverture.
-
-* Amélioration de la gestion des licences et crédits.
-
-## 19\. Structure cible du projet
+## 17\. Structure du projet
 
 ```text
 Wikipedia2Book/
 │
 ├── app/
+│   ├── __init__.py
 │   ├── main.py
 │   ├── models.py
 │   ├── wikipedia_api.py
@@ -663,50 +463,41 @@ Wikipedia2Book/
 │   ├── book_builder.py
 │   ├── pdf_generator.py
 │   │
-│   ├── templates/
-│   │   └── index.html
-│   │
 │   └── static/
-│       ├── style.css
-│       └── app.js
-│
-├── data/
-│   └── projects/
-│
-├── output/
-│
-├── tests/
+│       ├── index.html
+│       ├── styles.css
+│       ├── app.js
+│       └── Wikipedia2bookLogo.png
 │
 ├── Dockerfile
-├── docker-compose.yml
+├── docker-build.sh
 ├── requirements.txt
 ├── README.md
-├── SPECIFICATIONS.md
-└── DEMANDES_EVOLUTION.md
+└── SPECIFICATIONS.md
 ```
 
-## 20\. Évolutivité
+## 18\. État d'avancement et évolutions futures
 
-Le logiciel doit être conçu de manière modulaire afin de permettre l'ajout ultérieur de fonctionnalités.
+L'essentiel du socle fonctionnel décrit dans ce document est implémenté : livre unique en mémoire, ajout et exploration des articles, sélection manuelle, organisation en chapitres, formats et marges configurables, génération du PDF avec signets de navigation.
 
-Les évolutions pourront notamment concerner :
+Évolutions envisageables, non implémentées à ce jour :
 
-* L'importation de contenus depuis d'autres encyclopédies.
+* Filtrage de l'exploration par langue ou par catégorie d'article.
 
-* La gestion de plusieurs langues.
+* Extraction indépendante des crédits et licences des images, au-delà de ce qu'intègre le PDF officiel Wikipédia.
 
-* L'amélioration de la qualité éditoriale.
+* Journalisation des erreurs et limitation du débit des requêtes API.
 
-* La personnalisation des styles.
+* Tests automatisés.
 
-* L'export dans d'autres formats.
+* Prévisualisation du livre avant génération.
 
-* La génération de livres volumineux.
+* Importation de contenus depuis d'autres encyclopédies.
 
-* La gestion avancée des licences.
+* Personnalisation avancée de la couverture et des styles typographiques.
 
-* L'ajout d'une interface d'administration.
+* Génération de livres volumineux (regroupement par volumes, par exemple).
 
-Toute évolution devra préserver les principes fondamentaux du projet, notamment le contrôle de l'utilisateur sur la sélection des articles.
+Toute évolution doit préserver les principes fondamentaux du logiciel, notamment le contrôle total de l'utilisateur sur la sélection des articles et l'absence de toute notion de projet.
 
-Fin du document — Wikipedia2Book, spécifications version 1.0.
+Fin du document — Wikipedia2Book, spécifications version 1.1.
