@@ -62,3 +62,13 @@ Au-delà de ce test de syntaxe, reste un angle mort : rien ne vérifie le compor
 - Un virtualenv `.venv/` existe à la racine (ignoré par git) avec `requirements.txt` déjà installé : `.venv/Scripts/python.exe`.
 - `import app.main` échoue nativement sur cette machine Windows : WeasyPrint a besoin des libs GTK/Pango/Cairo (`libgobject-2.0-0`, etc.) que seul le conteneur Docker installe (via `apt-get`, voir `Dockerfile`). Ce n'est pas un bug du code — ne pas essayer de « corriger » ça côté app. Pour vérifier le code qui ne dépend pas de `pdf_generator`/WeasyPrint (`models`, `book_builder`, `wikipedia_api`, `explorer`), importer ces modules directement, ils fonctionnent dans ce `.venv`.
 - Pour tester la génération PDF de bout en bout (WeasyPrint inclus), il faut lancer l'app dans le conteneur Docker (`sh docker-build.sh && docker run --rm -p 8000:8000 wikipedia2book`) et dérouler le flux Sources → Organisation → Édition → export PDF.
+
+### Déboguer un bug frontend (JS/HTML) sans pouvoir lancer le backend localement
+
+Playwright + Chromium headless sont installés dans `.venv` (`pip install playwright && playwright install chromium`, déjà fait une fois sur cette machine). Pour reproduire un bug UI, piloter directement :
+
+- **Le site en production** (`https://wikipedia2book-production.up.railway.app/`) si la correction n'est pas encore locale, ou pour vérifier si un bug reporté vient d'une version déjà corrigée en local mais pas encore déployée (comparer `app/static/app.js` local avec `curl .../static/app.js` déployé).
+- **Une version locale non déployée** : `app/static/` ne peut pas être servi tel quel avec un simple `http.server` (les pages référencent `/static/app.js`, un chemin qui n'existe que parce que FastAPI monte `app/static/` sous `/static` en plus de servir `index.html` à `/`). Reproduire cette structure dans un dossier temporaire (`index.html` à la racine + copie de `app/static/*` dans un sous-dossier `static/`) avant de servir avec `python -m http.server`, sinon `app.js` renvoie 404 et toutes les erreurs observées (`state is not defined`, etc.) sont un artefact du test, pas un vrai bug.
+- Capturer `page.on("console", ...)` et `page.on("pageerror", ...)` systématiquement : un vrai crash JS apparaît là, pas dans le texte visible de la page.
+
+C'est exactement ce qui a permis de confirmer que le bouton « Ajouter » ne causait aucune erreur JS, et que le vrai problème était l'attribut HTML `required` sur un champ resté vide (mode par défaut sans valeur pré-remplie) — aucune boucle de supposition n'aurait été aussi rapide qu'une reproduction réelle.
