@@ -13,7 +13,7 @@ except Exception:
 from reportlab.pdfgen import canvas
 from pypdf import PdfReader, PdfWriter
 
-from app.book_builder import build_book_html
+from app.book_builder import build_toc_html
 from app.models import Article, Project
 from app.pdf_generator import fit_pdf_to_format, stamp_page_numbers
 
@@ -76,13 +76,13 @@ class TableOfContentsPageNumbersTest(unittest.TestCase):
     def test_page_numbers_appear_in_toc_when_provided(self):
         project = Project(name="Test")
         article = Article(title="Chat", language="fr", url="https://fr.wikipedia.org/wiki/Chat", selected=True)
-        html = build_book_html(project, [article], article_pages={article.key: 5})
+        html = build_toc_html(project, [article], article_pages={article.key: 5})
         self.assertIn('<span class="page-no">5</span>', html)
 
     def test_no_page_number_markup_when_not_provided(self):
         project = Project(name="Test")
         article = Article(title="Chat", language="fr", url="https://fr.wikipedia.org/wiki/Chat", selected=True)
-        html = build_book_html(project, [article])
+        html = build_toc_html(project, [article])
         self.assertNotIn('<span class="page-no">', html)
 
 

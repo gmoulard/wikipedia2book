@@ -9,9 +9,10 @@ from fastapi.staticfiles import StaticFiles
 from pypdf import PdfReader, PdfWriter
 
 from app.book_builder import (
-    build_book_html,
     build_chapter_page_html,
     build_conclusion_page_html,
+    build_cover_html,
+    build_toc_html,
     ordered_article_groups,
     page_size_mm,
 )
@@ -36,7 +37,7 @@ from app.wikipedia_api import (
 )
 
 
-app = FastAPI(title="Wikipedia2Book", version="0.8.0")
+app = FastAPI(title="Wikipedia2Book", version="0.9.0")
 static_directory = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=static_directory), name="static")
 
@@ -213,11 +214,14 @@ async def create_pdf(project: Project) -> Response:
                         else document_pdf(item)
                     )
 
+        toc_at_start = project.toc_position != "end"
+
         article_pages: dict[str, int] = {}
         chapter_pages: list[int | None] = [None] * len(groups)
         if project.page_numbers:
-            front_pages = len(PdfReader(BytesIO(generate_pdf(build_book_html(project, selected)))).pages)
-            cursor = front_pages + 1
+            cursor = len(PdfReader(BytesIO(generate_pdf(build_cover_html(project)))).pages) + 1
+            if toc_at_start:
+                cursor += len(PdfReader(BytesIO(generate_pdf(build_toc_html(project, selected)))).pages)
             for index, (chapter_title, items) in enumerate(groups):
                 if chapter_title:
                     chapter_pages[index] = cursor
@@ -226,11 +230,14 @@ async def create_pdf(project: Project) -> Response:
                     article_pages[item.key] = cursor
                     cursor += len(PdfReader(BytesIO(item_pdfs[item.key])).pages)
 
-        front_matter = generate_pdf(build_book_html(project, selected, article_pages, chapter_pages))
+        toc = generate_pdf(build_toc_html(project, selected, article_pages, chapter_pages))
+        cover = generate_pdf(build_cover_html(project))
         root_outline = writer.add_outline_item(
             project.book_title or project.name,
-            append_pdf(front_matter),
+            append_pdf(cover),
         )
+        if toc_at_start:
+            writer.add_outline_item("Table des matières", append_pdf(toc), parent=root_outline)
 
         for chapter_title, items in groups:
             chapter_outline = root_outline
@@ -244,6 +251,9 @@ async def create_pdf(project: Project) -> Response:
             for item in items:
                 item_page = append_pdf(item_pdfs[item.key])
                 writer.add_outline_item(item.title, item_page, parent=chapter_outline)
+
+        if not toc_at_start:
+            writer.add_outline_item("Table des matières", append_pdf(toc), parent=root_outline)
 
         if project.conclusion:
             conclusion_page = generate_pdf(build_conclusion_page_html(project))

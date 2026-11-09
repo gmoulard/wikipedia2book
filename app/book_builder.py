@@ -51,32 +51,7 @@ def page_size_mm(project: Project) -> tuple[float, float]:
     return width, height
 
 
-def build_book_html(
-    project: Project,
-    items: list[BookItem],
-    article_pages: dict[str, int] | None = None,
-    chapter_pages: list[int | None] | None = None,
-) -> str:
-    groups = ordered_article_groups(project, items)
-    article_pages = article_pages or {}
-    chapter_pages = chapter_pages or [None] * len(groups)
-
-    def entry(label: str, page: int | None) -> str:
-        page_span = f'<span class="page-no">{page}</span>' if page else ""
-        return f"<li><span>{label}</span>{page_span}</li>"
-
-    contents: list[str] = []
-    for index, (chapter_title, chapter_items) in enumerate(groups):
-        titles = [entry(escape(item.title), article_pages.get(item.key)) for item in chapter_items]
-        if chapter_title:
-            chapter_page = chapter_pages[index] if index < len(chapter_pages) else None
-            page_span = f'<span class="page-no">{chapter_page}</span>' if chapter_page else ""
-            contents.append(
-                f'<li><span>{escape(chapter_title)}</span>{page_span}<ol>{"".join(titles)}</ol></li>'
-            )
-        else:
-            contents.extend(titles)
-
+def build_cover_html(project: Project) -> str:
     page_width, page_height, margin_top, margin_bottom, inner, outer = _page_layout(project)
     book_title = escape(project.book_title or project.name)
     subtitle = f'<p class="subtitle">{escape(project.book_subtitle)}</p>' if project.book_subtitle else ""
@@ -105,7 +80,53 @@ h2 {{ font-size: 18pt; }}
 .subtitle {{ margin: 0; font-size: 15pt; }}
 .author {{ margin-top: 32pt; color: #555; }}
 .cover-note {{ margin-top: 20pt; color: #555; font-size: 9pt; }}
-.opening, nav {{ page-break-after: always; }}
+.opening {{ page-break-after: always; }}
+    </style>
+    </head>
+    <body>
+<header class="cover"><h1>{book_title}</h1>{subtitle}{author}<p class="cover-note">{description}</p><p class="cover-note">Édition du {date.today().strftime('%d/%m/%Y')}</p></header>
+{introduction}
+    </body>
+    </html>"""
+
+
+def build_toc_html(
+    project: Project,
+    items: list[BookItem],
+    article_pages: dict[str, int] | None = None,
+    chapter_pages: list[int | None] | None = None,
+) -> str:
+    groups = ordered_article_groups(project, items)
+    article_pages = article_pages or {}
+    chapter_pages = chapter_pages or [None] * len(groups)
+
+    def entry(label: str, page: int | None) -> str:
+        page_span = f'<span class="page-no">{page}</span>' if page else ""
+        return f"<li><span>{label}</span>{page_span}</li>"
+
+    contents: list[str] = []
+    for index, (chapter_title, chapter_items) in enumerate(groups):
+        titles = [entry(escape(item.title), article_pages.get(item.key)) for item in chapter_items]
+        if chapter_title:
+            chapter_page = chapter_pages[index] if index < len(chapter_pages) else None
+            page_span = f'<span class="page-no">{chapter_page}</span>' if chapter_page else ""
+            contents.append(
+                f'<li><span>{escape(chapter_title)}</span>{page_span}<ol>{"".join(titles)}</ol></li>'
+            )
+        else:
+            contents.extend(titles)
+
+    page_width, page_height, margin_top, margin_bottom, inner, outer = _page_layout(project)
+    return f"""<!doctype html>
+    <html lang="fr">
+    <head>
+    <meta charset="utf-8">
+    <style>
+@page {{ size: {page_width:g}mm {page_height:g}mm; margin: {margin_top:g}mm {outer:g}mm {margin_bottom:g}mm {inner:g}mm; }}
+@page :left {{ margin-left: {inner:g}mm; margin-right: {outer:g}mm; }}
+@page :right {{ margin-left: {outer:g}mm; margin-right: {inner:g}mm; }}
+    body {{ color: #202020; font: 10pt serif; line-height: 1.5; }}
+    h2 {{ font-size: 18pt; line-height: 1.2; }}
 nav ol {{ padding-left: 18pt; list-style: none; }}
 nav ol ol {{ margin: 2pt 0 5pt; }}
 nav li {{ display: flex; justify-content: space-between; gap: 8pt; }}
@@ -113,8 +134,6 @@ nav li {{ display: flex; justify-content: space-between; gap: 8pt; }}
     </style>
     </head>
     <body>
-<header class="cover"><h1>{book_title}</h1>{subtitle}{author}<p class="cover-note">{description}</p><p class="cover-note">Édition du {date.today().strftime('%d/%m/%Y')}</p></header>
-{introduction}
     <nav><h2>Table des matières</h2><ol>{''.join(contents)}</ol></nav>
     </body>
     </html>"""

@@ -13,7 +13,7 @@ except Exception:
 from PIL import Image
 from pypdf import PdfReader
 
-from app.book_builder import build_book_html, ordered_article_groups
+from app.book_builder import build_toc_html, ordered_article_groups
 from app.models import Article, BookChapter, Project, UploadedDocument
 from app.pdf_generator import image_to_pdf
 
@@ -45,7 +45,7 @@ class MixedBookItemsTest(unittest.TestCase):
         groups = ordered_article_groups(project, [article, document])
         self.assertEqual(groups, [("Chapitre A", [article, document])])
 
-        html = build_book_html(project, [article, document], article_pages={document.key: 7})
+        html = build_toc_html(project, [article, document], article_pages={document.key: 7})
         self.assertIn("Photo.png", html)
         self.assertIn('<span class="page-no">7</span>', html)
 

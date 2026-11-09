@@ -295,7 +295,9 @@ Le PDF est structuré comme un véritable livre.
 
 Le contenu des articles et des documents importés n'est pas mis en page par l'application : ce sont les pages de leur PDF d'origine (officiel Wikipédia, ou document importé). Leur format physique, lui, est systématiquement harmonisé avec le reste du livre — voir section 10.1.
 
-La navigation dans le PDF final s'appuie sur des signets (une entrée par chapitre et par article), et non sur les liens de la table des matières.
+La couverture et la table des matières sont deux sections distinctes dans le PDF final : la position choisie pour la table des matières (section 6, « Début du livre » ou « Fin du livre ») est celle effectivement utilisée à la génération — la couverture reste toujours la première page, la table des matières se place juste après elle, ou juste après le dernier article (avant la conclusion).
+
+La navigation dans le PDF final s'appuie sur des signets (couverture, table des matières, une entrée par chapitre et par article, conclusion), et non sur les liens de la table des matières.
 
 ### 10.1 Format et orientation, appliqués à toutes les pages
 
@@ -317,7 +319,7 @@ Quand elle est activée :
 
 * La table des matières affiche, pour chaque chapitre et chaque article, le numéro de la page où il commence.
 
-* Pour calculer ces numéros avant d'assembler le livre, le logiciel génère la couverture/introduction/table des matières une première fois pour en mesurer la pagination, puis la régénère avec les numéros corrects. Dans de rares cas (livre très dense), l'ajout des numéros dans la table des matières peut légèrement décaler cette pagination d'une page.
+* Pour calculer ces numéros avant d'assembler le livre, le logiciel génère une première fois la couverture et, si elle est placée au début, la table des matières, afin d'en mesurer la pagination; il régénère ensuite la table des matières avec les numéros corrects. Dans de rares cas (livre très dense), l'ajout des numéros dans la table des matières peut légèrement décaler cette pagination d'une page.
 
 Aucune fonctionnalité de prévisualisation n'est proposée actuellement.
 
@@ -335,13 +337,15 @@ Une fois le PDF lancé, le logiciel :
 
 * Si la numérotation des pages est activée, calcule à l'avance la page de départ de chaque chapitre et de chaque article (section 10.2).
 
-* Génère la couverture, l'introduction éventuelle et la table des matières (avec les numéros de page si activés), avec un signet racine portant le titre du livre.
+* Génère la couverture (avec l'introduction éventuelle) et la table des matières (avec les numéros de page si activés) comme deux sections distinctes; la couverture reçoit le signet racine portant le titre du livre.
+
+* Place la table des matières juste après la couverture si sa position est « Début du livre », ou la met de côté pour l'ajouter après le dernier chapitre/article si sa position est « Fin du livre » (section 6).
 
 * Pour chaque chapitre (ou pour l'ensemble des articles s'il n'y a pas de chapitre) : génère une page de titre de chapitre avec son propre signet, puis ajoute le PDF officiel de chaque article du chapitre, avec un signet par article.
 
-* Recompose chaque page ajoutée (couverture, chapitres, articles, documents importés) sur le format et l'orientation choisis pour le livre (section 10.1), avant de l'assembler au document final.
+* Recompose chaque page ajoutée (couverture, table des matières, chapitres, articles, documents importés) sur le format et l'orientation choisis pour le livre (section 10.1), avant de l'assembler au document final.
 
-* Ajoute une page de conclusion avec signet, si une conclusion a été saisie.
+* Ajoute une page de conclusion avec signet, si une conclusion a été saisie — toujours après la table des matières, même quand elle est positionnée en fin de livre.
 
 * Si la numérotation des pages est activée, superpose un numéro de page en bas de chaque page du document assemblé (sauf la couverture).
 
@@ -599,5 +603,6 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 0.6.0   | 2026-11-09 | Le bouton « Générer le PDF » n'est plus jamais désactivé. Toutes les pages du PDF généré (y compris les articles et documents importés) sont désormais recomposées sur le format et l'orientation choisis pour le livre (section 10.1) — ce qui fiabilise aussi la numérotation des pages, activée par défaut. Le fichier JSON de sauvegarde est nommé d'après le titre du livre. Le message d'import d'un livre Wikipédia pointe vers l'aide Wikipédia correspondante. |
 | 0.7.0   | 2026-11-09 | Interface multilingue : français, anglais, chinois, italien, allemand, via un sélecteur dans la barre supérieure (`app/static/i18n.js`, section 12.1). Langue détectée automatiquement et mémorisée dans le navigateur. Ajout de `tests/test_i18n.py` (parité des clés et des paramètres `{...}` entre les 5 langues). |
 | 0.8.0   | 2026-11-09 | Lors de l'ajout du tout premier article principal, le logiciel propose automatiquement (sans écraser une saisie existante) l'introduction du livre à partir du résumé introductif de l'article, et l'auteur à partir du créateur de la page Wikipédia (section 3.3). Nouvel endpoint `/api/articles/intro`. |
+| 0.9.0   | 2026-11-09 | Correction : la position de la table des matières (section 6) n'était jamais appliquée dans le PDF généré, elle se retrouvait toujours au début — la couverture et la table des matières sont désormais deux sections distinctes, assemblées à la position choisie. Correction d'un conflit de fusion Git resté non résolu dans la feuille de style, qui rendait le bouton « Générer le PDF » (et les notifications) illisibles sans survol de la souris dans certaines configurations. |
 
 Fin du document — Wikipedia2Book, spécifications version 1.1.
