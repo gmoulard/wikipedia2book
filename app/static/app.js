@@ -668,7 +668,7 @@ document.addEventListener('input', (event) => {
 $('#articleForm').addEventListener('submit', async (event) => {
   event.preventDefault();
   const value = $('#articleQuery').value.trim();
-  if (!value) return;
+  if (!value) { showToast('Saisissez une URL, un titre ou un terme de recherche avant d’ajouter.', true); return; }
   if (state.sourceMode === 'book') await importWikipediaBook(value);
   else if (state.sourceMode === 'url') await addArticle({ url: value, language: $('#articleLanguage').value });
   else await addArticle({ title: value, language: $('#articleLanguage').value });
