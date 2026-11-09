@@ -340,7 +340,7 @@ L'interface est utilisable sur ordinateur, tablette et smartphone, et respecte l
 | Langage           | Python 3.12                                                   |
 | Backend           | FastAPI + Uvicorn                                             |
 | Client HTTP       | httpx (appels à l'API MediaWiki et à l'endpoint PDF)          |
-| Analyse HTML      | BeautifulSoup4 (extraits de recherche, sanitisation)          |
+| Analyse HTML      | BeautifulSoup4 (extraits de recherche)                        |
 | Interface         | HTML, CSS, JavaScript (page unique, sans framework)           |
 | API Wikipédia     | API MediaWiki (`action=query`) + endpoint REST `page/pdf`     |
 | Échange du livre  | JSON navigateur ↔ API                                         |
@@ -398,7 +398,7 @@ Le logiciel met en œuvre aujourd'hui :
 
 * Des délais d'attente bornés sur les appels réseau.
 
-* Une sanitisation HTML par liste blanche de balises et d'attributs, disponible pour tout contenu HTML manipulé par l'application.
+* Aucun contenu HTML d'article n'est interprété ni réinjecté par l'application : seuls le PDF officiel Wikipédia (binaire) et les champs texte validés par l'API transitent par le serveur.
 
 Les URL externes ne sont jamais exécutées comme du code.
 
@@ -459,7 +459,6 @@ Wikipedia2Book/
 │   ├── models.py
 │   ├── wikipedia_api.py
 │   ├── explorer.py
-│   ├── article_parser.py
 │   ├── book_builder.py
 │   ├── pdf_generator.py
 │   │

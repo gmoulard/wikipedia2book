@@ -15,9 +15,6 @@ class Article(BaseModel):
     language: str
     url: str
     summary: str = ""
-    last_modified: datetime | None = None
-    content_html: str = ""
-    references_html: str = ""
     origin_title: str | None = None
     depth: int = Field(default=0, ge=0)
     selected: bool = False
@@ -81,14 +78,7 @@ class BookImportRequest(BaseModel):
     url: str = Field(min_length=1, max_length=2048)
 
 
-class ExploreRequest(BaseModel):
+class ProjectExplorationRequest(BaseModel):
+    project: Project
     max_depth: int = Field(default=1, ge=0, le=3)
     max_articles: int = Field(default=30, ge=1, le=200)
-
-
-class ProjectExplorationRequest(ExploreRequest):
-    project: Project
-
-
-class SelectionRequest(BaseModel):
-    article_keys: list[str] = Field(default_factory=list)

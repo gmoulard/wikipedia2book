@@ -1,32 +1,31 @@
 # Wikipedia2Book
 
-Wikipedia2Book est un projet d'application web qui permettra de composer un livre PDF imprimable à partir d'articles Wikipédia. L'utilisateur pourra choisir les articles, explorer les liens associés, organiser le contenu et configurer la mise en page avant l'export.
+Wikipedia2Book est une application web qui permet de composer directement un livre PDF imprimable à partir d'articles Wikipédia, sans étape de création de « projet » : un livre est prêt dès l'ouverture de la page. L'utilisateur choisit les articles, explore les liens associés, organise le contenu en chapitres et configure la mise en page avant l'export.
 
-## Fonctionnalités prévues
+## Fonctionnalités
 
-- Créer et gérer plusieurs projets dans la session du navigateur.
-- Importer un fichier JSON existant et télécharger l'espace de travail en JSON.
-- Ajouter plusieurs articles par titre, URL ou recherche; le contenu complet n'est récupéré qu'à la génération.
-- Importer la liste des articles depuis l'URL d'une page de livre Wikipédia.
-- Explorer les liens internes de Wikipédia en réglant la profondeur et les limites.
-- Sélectionner manuellement les articles à inclure; les articles découverts ne sont jamais ajoutés automatiquement.
-- Organiser les articles et configurer le format du livre.
-- Générer un livre en assemblant les PDFs complets officiels téléchargés depuis Wikipédia.
+- Un livre unique, construit en mémoire dans le navigateur; export/import de son état sous forme de fichier JSON.
+- Ajout d'articles par titre, URL ou recherche; le contenu complet n'est récupéré qu'à la génération.
+- Import de la liste des articles depuis l'URL d'une page de livre Wikipédia.
+- Exploration des liens internes de Wikipédia avec profondeur et nombre d'articles paramétrables.
+- Sélection manuelle des articles à inclure; les articles découverts ne sont jamais ajoutés automatiquement.
+- Organisation des articles en chapitres, réordonnables par glisser-déposer, et configuration du format du livre.
+- Génération d'un livre en assemblant les PDFs complets officiels téléchargés depuis Wikipédia, avec signets de navigation.
 
 ## Architecture
 
 - Python et FastAPI pour le backend.
-- HTML, CSS et JavaScript pour l'interface web.
+- HTML, CSS et JavaScript pour l'interface web (page unique, sans framework).
 - API officielle MediaWiki pour la recherche et l'exploration; endpoint PDF officiel pour récupérer les articles complets à l'export.
-- JSON échangé avec l'API, sans persistance des projets sur le serveur.
-- WeasyPrint pour le frontispice et pypdf pour fusionner les PDFs en mémoire.
-- Docker et Docker Compose pour le déploiement.
+- JSON échangé avec l'API, sans persistance sur le serveur.
+- WeasyPrint pour la couverture, les pages de chapitre et la conclusion; pypdf pour fusionner les PDFs en mémoire.
+- Docker pour le déploiement.
 
 Les détails fonctionnels et techniques sont décrits dans [SPECIFICATIONS.md](SPECIFICATIONS.md).
 
 ## État du projet
 
-Le dépôt contient le backend FastAPI et une interface web d'atelier éditorial. Elle permet de gérer les projets en mémoire dans le navigateur, rechercher ou ajouter des références sans télécharger le contenu complet, explorer les liens Wikipédia, contrôler la sélection, organiser les chapitres et régler le frontispice. À la génération, les PDFs complets des articles sélectionnés sont récupérés depuis Wikipédia et fusionnés en mémoire. Le serveur ne conserve pas les projets ni les PDF : l'utilisateur importe et télécharge explicitement un fichier JSON depuis l'interface.
+Le dépôt contient le backend FastAPI et l'interface web correspondante. Elle permet de construire le livre en mémoire dans le navigateur, rechercher ou ajouter des références sans télécharger le contenu complet, explorer les liens Wikipédia, contrôler la sélection, organiser les chapitres et régler la couverture. À la génération, les PDFs complets des articles sélectionnés sont récupérés depuis Wikipédia et fusionnés en mémoire. Le serveur ne conserve ni le livre ni les PDF : l'utilisateur importe et télécharge explicitement un fichier JSON depuis l'interface.
 
 ## Démarrer l'application
 

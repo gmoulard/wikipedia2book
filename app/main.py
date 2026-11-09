@@ -177,14 +177,7 @@ async def create_pdf(project: Project) -> Response:
             writer.append(stream)
             return page_number
 
-        front_matter = generate_pdf(
-            build_book_html(
-                project,
-                selected,
-                include_articles=False,
-                include_conclusion=False,
-            )
-        )
+        front_matter = generate_pdf(build_book_html(project, selected))
         root_outline = writer.add_outline_item(
             project.book_title or project.name,
             append_pdf(front_matter),

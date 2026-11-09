@@ -6,7 +6,6 @@ const state = {
   searchTimer: null,
   toastTimer: null,
   isDirty: false,
-  dragKey: null,
 };
 
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -77,7 +76,6 @@ function normalizeProject(project) {
 
 function renderWorkspace() {
   const hasProject = Boolean(state.project);
-  const wv = $('#welcomeView'); if (wv) wv.hidden = hasProject;
   $('#projectWorkspace').hidden = !hasProject;
   $('#topExportButton').disabled = !hasProject || selectedArticles().length === 0;
   $('#saveWorkspaceButton').disabled = !hasProject;
@@ -360,33 +358,6 @@ async function loadProjects() {
   setView('sources');
 }
 
-function openProjectDialog() {
-  $('#newProjectName').value = '';
-  $('#newProjectDescription').value = '';
-  $('#projectDialog').showModal();
-  $('#newProjectName').focus();
-}
-
-async function createProject(event) {
-  event.preventDefault();
-  const form = event.currentTarget;
-  if (!form.reportValidity()) return;
-  const now = new Date().toISOString();
-  const project = normalizeProject({
-    id: crypto.randomUUID(),
-    name: $('#newProjectName').value.trim(),
-    description: $('#newProjectDescription').value.trim(),
-    created_at: now,
-    updated_at: now,
-  });
-  $('#projectDialog').close();
-  state.isDirty = true;
-  setProject(project);
-  setView('sources');
-  setSaveState('Projet \u00e0 enregistrer en JSON');
-  showToast('Projet cr\u00e9\u00e9 dans la session. T\u00e9l\u00e9chargez le JSON pour le conserver.');
-}
-
 async function addArticle(source) {
   if (!state.project) return;
   const button = $('#addArticleButton');
@@ -645,7 +616,6 @@ document.addEventListener('click', async (event) => {
   }
   const result = event.target.closest('[data-add-title]');
   if (result) { await addArticle({ title: result.dataset.addTitle, language: $('#articleLanguage').value, page_id: Number(result.dataset.pageId) }); return; }
-  if (event.target.closest('#newProjectButton, #welcomeNewProject')) { openProjectDialog(); return; }
   if (event.target.closest('#selectDiscoveredButton')) { await setMultipleSelection(state.project.discovered_articles, true); return; }
   if (event.target.closest('#selectVisibleButton')) {
     const visible = new Set($$('#discoveredArticles .article-card').map((c) => c.dataset.articleKey));
@@ -656,7 +626,6 @@ document.addEventListener('click', async (event) => {
   if (event.target.closest('#importWorkspaceButton')) { $('#workspaceFileInput').click(); return; }
   if (event.target.closest('#saveWorkspaceButton')) { exportWorkspace(); return; }
   if (event.target.closest('#topExportButton, #exportButton')) { await exportPdf(); return; }
-  if (event.target.closest('#cancelProjectButton')) { $('#projectDialog').close(); return; }
   const articleCardEl = event.target.closest('.article-card');
   if (articleCardEl && event.target.closest('.remove-article')) { await removeArticle(articleCardEl); return; }
   const chapterRow = event.target.closest('.org-chapter-row');
@@ -705,7 +674,6 @@ $('#articleForm').addEventListener('submit', async (event) => {
   else await addArticle({ title: value, language: $('#articleLanguage').value });
 });
 $('#exploreForm').addEventListener('submit', exploreArticles);
-const cpf = $('#createProjectForm'); if (cpf) cpf.addEventListener('submit', createProject);
 $('#workspaceFileInput').addEventListener('change', async (event) => {
   const file = event.target.files?.[0];
   if (file) await importWorkspace(file);

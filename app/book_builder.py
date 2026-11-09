@@ -1,7 +1,6 @@
 from datetime import date
 from html import escape
 
-from app.article_parser import sanitize_html
 from app.models import Article, Project
 
 
@@ -46,69 +45,29 @@ def _page_layout(project: Project) -> tuple[float, float, float, float, float, f
     return page_width, page_height, project.margin_top_mm, project.margin_bottom_mm, inner, project.margin_outside_mm
 
 
-def build_book_html(
-    project: Project,
-    articles: list[Article],
-    *,
-    include_articles: bool = True,
-    include_conclusion: bool = True,
-) -> str:
+def build_book_html(project: Project, articles: list[Article]) -> str:
     groups = ordered_article_groups(project, articles)
 
-    sections: list[str] = []
     contents: list[str] = []
-    index = 0
     for chapter_title, chapter_articles in groups:
-        links: list[str] = []
-        if include_articles and chapter_title:
-            sections.append(f'<section class="chapter"><h2>{escape(chapter_title)}</h2>')
-        for article in chapter_articles:
-            index += 1
-            anchor = f"article-{index}"
-            title = escape(article.title)
-            link = f'<a href="#{anchor}">{title}</a>' if include_articles else title
-            links.append(f"<li>{link}</li>")
-            if not include_articles:
-                continue
-            body = sanitize_html(
-                article.content_html or f"<p>{escape(article.summary)}</p>", article.language
-            )
-            references = sanitize_html(article.references_html, article.language)
-            reference_section = (
-                f'<section class="references"><h4>Références</h4>{references}</section>'
-                if references else ""
-            )
-            heading = "h3" if chapter_title else "h2"
-            sections.append(
-                f'<article id="{anchor}" class="article"><{heading}>{title}</{heading}>{body}'
-                f'{reference_section}<p class="source">Source : '
-                f'<a href="{escape(article.url, quote=True)}">{escape(article.url)}</a></p></article>'
-            )
+        titles = [f"<li>{escape(article.title)}</li>" for article in chapter_articles]
         if chapter_title:
             contents.append(
-                f'<li><span>{escape(chapter_title)}</span><ol>{"".join(links)}</ol></li>'
+                f'<li><span>{escape(chapter_title)}</span><ol>{"".join(titles)}</ol></li>'
             )
-            if include_articles:
-                sections.append("</section>")
         else:
-            contents.extend(links)
+            contents.extend(titles)
 
     page_width, page_height, margin_top, margin_bottom, inner, outer = _page_layout(project)
     book_title = escape(project.book_title or project.name)
     subtitle = f'<p class="subtitle">{escape(project.book_subtitle)}</p>' if project.book_subtitle else ""
     author = f'<p class="author">{escape(project.book_author)}</p>' if project.book_author else ""
     introduction_text = escape(project.introduction).replace("\n", "<br>")
-    conclusion_text = escape(project.conclusion).replace("\n", "<br>")
     introduction = (
         f'<section class="opening"><h2>Introduction</h2><p>{introduction_text}</p></section>'
         if project.introduction else ""
     )
-    conclusion = (
-        f'<section class="closing"><h2>Conclusion</h2><p>{conclusion_text}</p></section>'
-        if project.conclusion and include_conclusion else ""
-    )
     description = escape(project.description)
-    page_numbers_css = ""
     bottom_center = ""
     if project.page_numbers:
         bottom_center = "@bottom-center { content: counter(page); font: 8pt serif; color: #555; }"
@@ -123,37 +82,23 @@ def build_book_html(
 @page :left {{ margin-left: {inner:g}mm; margin-right: {outer:g}mm; }}
 @page :right {{ margin-left: {outer:g}mm; margin-right: {inner:g}mm; }}
     body {{ color: #202020; font: 10pt serif; line-height: 1.5; }}
-    h1, h2, h3 {{ line-height: 1.2; }}
+    h1, h2 {{ line-height: 1.2; }}
 h1 {{ font-size: 26pt; }}
 h2 {{ font-size: 18pt; }}
-h3 {{ font-size: 14pt; }}
-h4 {{ font-size: 12pt; }}
-    a {{ color: #245c73; overflow-wrap: anywhere; }}
-    img {{ max-width: 100%; height: auto; }}
-    table {{ border-collapse: collapse; width: 100%; font-size: 8pt; }}
-    th, td {{ border: 0.5pt solid #888; padding: 3pt; }}
 .cover {{ display: flex; min-height: 65vh; flex-direction: column; justify-content: center; page-break-after: always; }}
 .cover h1 {{ max-width: 90%; margin-bottom: 8pt; }}
 .subtitle {{ margin: 0; font-size: 15pt; }}
 .author {{ margin-top: 32pt; color: #555; }}
 .cover-note {{ margin-top: 20pt; color: #555; font-size: 9pt; }}
 .opening, nav {{ page-break-after: always; }}
-nav h2 {{ page-break-before: auto; }}
 nav ol {{ padding-left: 18pt; }}
 nav ol ol {{ margin: 2pt 0 5pt; }}
-.chapter {{ page-break-before: always; }}
-.chapter > h2 {{ margin-bottom: 20pt; }}
-.chapter .article h3 {{ page-break-before: auto; }}
-.references, .source {{ font-size: 8pt; }}
-.closing {{ page-break-before: always; }}
     </style>
     </head>
     <body>
 <header class="cover"><h1>{book_title}</h1>{subtitle}{author}<p class="cover-note">{description}</p><p class="cover-note">Édition du {date.today().strftime('%d/%m/%Y')}</p></header>
 {introduction}
     <nav><h2>Table des matières</h2><ol>{''.join(contents)}</ol></nav>
-    {''.join(sections)}
-{conclusion}
     </body>
     </html>"""
 
