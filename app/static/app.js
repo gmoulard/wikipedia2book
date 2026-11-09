@@ -77,7 +77,7 @@ function normalizeProject(project) {
 
 function renderWorkspace() {
   const hasProject = Boolean(state.project);
-  $('#welcomeView').hidden = hasProject;
+  const wv = $('#welcomeView'); if (wv) wv.hidden = hasProject;
   $('#projectWorkspace').hidden = !hasProject;
   $('#topExportButton').disabled = !hasProject || selectedArticles().length === 0;
   $('#saveWorkspaceButton').disabled = !hasProject;
