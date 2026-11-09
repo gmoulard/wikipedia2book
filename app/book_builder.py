@@ -45,15 +45,28 @@ def _page_layout(project: Project) -> tuple[float, float, float, float, float, f
     return page_width, page_height, project.margin_top_mm, project.margin_bottom_mm, inner, project.margin_outside_mm
 
 
-def build_book_html(project: Project, articles: list[Article]) -> str:
+def build_book_html(
+    project: Project,
+    articles: list[Article],
+    article_pages: dict[str, int] | None = None,
+    chapter_pages: list[int | None] | None = None,
+) -> str:
     groups = ordered_article_groups(project, articles)
+    article_pages = article_pages or {}
+    chapter_pages = chapter_pages or [None] * len(groups)
+
+    def entry(label: str, page: int | None) -> str:
+        page_span = f'<span class="page-no">{page}</span>' if page else ""
+        return f"<li><span>{label}</span>{page_span}</li>"
 
     contents: list[str] = []
-    for chapter_title, chapter_articles in groups:
-        titles = [f"<li>{escape(article.title)}</li>" for article in chapter_articles]
+    for index, (chapter_title, chapter_articles) in enumerate(groups):
+        titles = [entry(escape(article.title), article_pages.get(article.key)) for article in chapter_articles]
         if chapter_title:
+            chapter_page = chapter_pages[index] if index < len(chapter_pages) else None
+            page_span = f'<span class="page-no">{chapter_page}</span>' if chapter_page else ""
             contents.append(
-                f'<li><span>{escape(chapter_title)}</span><ol>{"".join(titles)}</ol></li>'
+                f'<li><span>{escape(chapter_title)}</span>{page_span}<ol>{"".join(titles)}</ol></li>'
             )
         else:
             contents.extend(titles)
@@ -68,17 +81,13 @@ def build_book_html(project: Project, articles: list[Article]) -> str:
         if project.introduction else ""
     )
     description = escape(project.description)
-    bottom_center = ""
-    if project.page_numbers:
-        bottom_center = "@bottom-center { content: counter(page); font: 8pt serif; color: #555; }"
     return f"""<!doctype html>
     <html lang="fr">
     <head>
     <meta charset="utf-8">
 <title>{book_title}</title>
     <style>
-@page {{ size: {page_width:g}mm {page_height:g}mm; margin: {margin_top:g}mm {outer:g}mm {margin_bottom:g}mm {inner:g}mm; {bottom_center} }}
-@page :first {{ @bottom-center {{ content: none; }} }}
+@page {{ size: {page_width:g}mm {page_height:g}mm; margin: {margin_top:g}mm {outer:g}mm {margin_bottom:g}mm {inner:g}mm; }}
 @page :left {{ margin-left: {inner:g}mm; margin-right: {outer:g}mm; }}
 @page :right {{ margin-left: {outer:g}mm; margin-right: {inner:g}mm; }}
     body {{ color: #202020; font: 10pt serif; line-height: 1.5; }}
@@ -91,8 +100,10 @@ h2 {{ font-size: 18pt; }}
 .author {{ margin-top: 32pt; color: #555; }}
 .cover-note {{ margin-top: 20pt; color: #555; font-size: 9pt; }}
 .opening, nav {{ page-break-after: always; }}
-nav ol {{ padding-left: 18pt; }}
+nav ol {{ padding-left: 18pt; list-style: none; }}
 nav ol ol {{ margin: 2pt 0 5pt; }}
+nav li {{ display: flex; justify-content: space-between; gap: 8pt; }}
+.page-no {{ flex: 0 0 auto; color: #555; }}
     </style>
     </head>
     <body>

@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pypdf import PdfWriter
+from pypdf import PdfReader, PdfWriter
 
 from app.book_builder import (
     build_book_html,
@@ -22,7 +22,7 @@ from app.models import (
     ProjectExplorationRequest,
     utc_now,
 )
-from app.pdf_generator import generate_pdf
+from app.pdf_generator import generate_pdf, stamp_page_numbers
 from app.wikipedia_api import (
     MediaWikiClient,
     MediaWikiError,
@@ -33,7 +33,7 @@ from app.wikipedia_api import (
 )
 
 
-app = FastAPI(title="Wikipedia2Book", version="0.3.0")
+app = FastAPI(title="Wikipedia2Book", version="0.4.0")
 static_directory = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=static_directory), name="static")
 
@@ -178,26 +178,44 @@ async def create_pdf(project: Project) -> Response:
             writer.append(stream)
             return page_number
 
-        front_matter = generate_pdf(build_book_html(project, selected))
+        article_pdfs: dict[str, bytes] = {}
+        async with MediaWikiClient() as client:
+            for _, articles in groups:
+                for article in articles:
+                    if article.key not in article_pdfs:
+                        article_pdfs[article.key] = await client.get_article_pdf(article.title, article.language)
+
+        article_pages: dict[str, int] = {}
+        chapter_pages: list[int | None] = [None] * len(groups)
+        if project.page_numbers:
+            front_pages = len(PdfReader(BytesIO(generate_pdf(build_book_html(project, selected)))).pages)
+            cursor = front_pages + 1
+            for index, (chapter_title, articles) in enumerate(groups):
+                if chapter_title:
+                    chapter_pages[index] = cursor
+                    cursor += 1
+                for article in articles:
+                    article_pages[article.key] = cursor
+                    cursor += len(PdfReader(BytesIO(article_pdfs[article.key])).pages)
+
+        front_matter = generate_pdf(build_book_html(project, selected, article_pages, chapter_pages))
         root_outline = writer.add_outline_item(
             project.book_title or project.name,
             append_pdf(front_matter),
         )
 
-        async with MediaWikiClient() as client:
-            for chapter_title, articles in groups:
-                chapter_outline = root_outline
-                if chapter_title:
-                    chapter_page = generate_pdf(build_chapter_page_html(project, chapter_title))
-                    chapter_outline = writer.add_outline_item(
-                        chapter_title,
-                        append_pdf(chapter_page),
-                        parent=root_outline,
-                    )
-                for article in articles:
-                    article_pdf = await client.get_article_pdf(article.title, article.language)
-                    article_page = append_pdf(article_pdf)
-                    writer.add_outline_item(article.title, article_page, parent=chapter_outline)
+        for chapter_title, articles in groups:
+            chapter_outline = root_outline
+            if chapter_title:
+                chapter_page = generate_pdf(build_chapter_page_html(project, chapter_title))
+                chapter_outline = writer.add_outline_item(
+                    chapter_title,
+                    append_pdf(chapter_page),
+                    parent=root_outline,
+                )
+            for article in articles:
+                article_page = append_pdf(article_pdfs[article.key])
+                writer.add_outline_item(article.title, article_page, parent=chapter_outline)
 
         if project.conclusion:
             conclusion_page = generate_pdf(build_conclusion_page_html(project))
@@ -206,6 +224,9 @@ async def create_pdf(project: Project) -> Response:
                 append_pdf(conclusion_page),
                 parent=root_outline,
             )
+
+        if project.page_numbers:
+            stamp_page_numbers(writer)
 
         output = BytesIO()
         writer.write(output)

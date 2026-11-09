@@ -199,6 +199,8 @@ Le logiciel ne reconstruit pas le contenu des articles : chaque article sélecti
 
 * Si Wikipédia ne peut pas produire de PDF pour un article sélectionné (page introuvable, service indisponible, réponse invalide), la génération du livre échoue dans son ensemble et un message d'erreur explicite est affiché; aucun livre partiel n'est produit.
 
+* Seule exception à l'intégrité du PDF officiel : lorsque la numérotation des pages est activée (section 10), un numéro de page est superposé en bas de chaque page, y compris les pages d'articles — sans toucher au contenu, aux crédits ni aux licences imprimés par Wikipédia.
+
 ## 9\. Paramétrage du format du livre
 
 Le format du document est entièrement configurable.
@@ -273,6 +275,16 @@ Point important : les pages générées par l'application (couverture, introduct
 
 La navigation dans le PDF final s'appuie sur des signets (une entrée par chapitre et par article), et non sur les liens de la table des matières.
 
+### 10.1 Numérotation des pages
+
+Quand l'option « Numéroter les pages » est activée (section 6) :
+
+* Toutes les pages du livre affichent un numéro en bas de page, de façon continue — y compris les pages d'articles (PDF officiel Wikipédia), à l'exception de la couverture.
+
+* La table des matières affiche, pour chaque chapitre et chaque article, le numéro de la page où il commence.
+
+* Pour calculer ces numéros avant d'assembler le livre, le logiciel génère la couverture/introduction/table des matières une première fois pour en mesurer la pagination, puis la régénère avec les numéros corrects. Dans de rares cas (livre très dense), l'ajout des numéros dans la table des matières peut légèrement décaler cette pagination d'une page.
+
 Aucune fonctionnalité de prévisualisation n'est proposée actuellement.
 
 ## 11\. Génération du PDF
@@ -283,11 +295,17 @@ Une fois les articles sélectionnés et organisés, l'utilisateur lance la gén�
 
 * Vérifie qu'au moins un article est sélectionné; sinon, la génération est refusée.
 
-* Génère la couverture, l'introduction éventuelle et la table des matières, avec un signet racine portant le titre du livre.
+* Télécharge le PDF officiel de chaque article sélectionné.
 
-* Pour chaque chapitre (ou pour l'ensemble des articles s'il n'y a pas de chapitre) : génère une page de titre de chapitre avec son propre signet, puis télécharge le PDF officiel de chaque article sélectionné du chapitre et l'ajoute tel quel, avec un signet par article.
+* Si la numérotation des pages est activée, calcule à l'avance la page de départ de chaque chapitre et de chaque article (section 10.1).
+
+* Génère la couverture, l'introduction éventuelle et la table des matières (avec les numéros de page si activés), avec un signet racine portant le titre du livre.
+
+* Pour chaque chapitre (ou pour l'ensemble des articles s'il n'y a pas de chapitre) : génère une page de titre de chapitre avec son propre signet, puis ajoute le PDF officiel de chaque article du chapitre, avec un signet par article.
 
 * Ajoute une page de conclusion avec signet, si une conclusion a été saisie.
+
+* Si la numérotation des pages est activée, superpose un numéro de page en bas de chaque page du document assemblé (sauf la couverture).
 
 * Fusionne l'ensemble en un seul fichier PDF et le rend accessible au téléchargement, nommé d'après le titre du livre.
 
@@ -344,7 +362,7 @@ L'interface est utilisable sur ordinateur, tablette et smartphone, et respecte l
 | Interface         | HTML, CSS, JavaScript (page unique, sans framework)           |
 | API Wikipédia     | API MediaWiki (`action=query`) + endpoint REST `page/pdf`     |
 | Échange du livre  | JSON navigateur ↔ API                                         |
-| Génération PDF    | PDF officiel Wikimedia (articles) + WeasyPrint (couverture, chapitres, conclusion) + pypdf (fusion et signets) |
+| Génération PDF    | PDF officiel Wikimedia (articles) + WeasyPrint (couverture, chapitres, conclusion) + pypdf (fusion, signets, lecture du nombre de pages) + reportlab (superposition des numéros de page) |
 | Conteneurisation  | Docker                                                        |
 
 ### 13.2 API Wikipédia
@@ -442,7 +460,7 @@ La version actuelle est considérée comme fonctionnelle si les points suivants 
 
 * Choix du format papier, de l'orientation et des marges, y compris la marge de reliure.
 
-* Génération d'un PDF imprimable avec couverture, table des matières, signets de navigation et pagination optionnelle.
+* Génération d'un PDF imprimable avec couverture, table des matières, signets de navigation et pagination optionnelle; quand la pagination est activée, la table des matières indique la page de chaque chapitre et de chaque article.
 
 * Téléchargement du PDF généré.
 
@@ -469,7 +487,8 @@ Wikipedia2Book/
 │       └── Wikipedia2bookLogo.png
 │
 ├── tests/
-│   └── test_syntax.py
+│   ├── test_syntax.py
+│   └── test_pdf_generation.py
 │
 ├── Dockerfile
 ├── docker-build.sh
@@ -492,7 +511,7 @@ L'essentiel du socle fonctionnel décrit dans ce document est implémenté : liv
 
 * Journalisation des erreurs et limitation du débit des requêtes API.
 
-* Tests automatisés de comportement (seule la syntaxe Python est vérifiée aujourd'hui, via `tests/test_syntax.py`).
+* Couverture de tests automatisés plus large (aujourd'hui : syntaxe Python via `tests/test_syntax.py`, et numérotation des pages/table des matières via `tests/test_pdf_generation.py` — le reste du comportement, notamment l'assemblage complet du PDF, n'est pas couvert).
 
 * Prévisualisation du livre avant génération.
 
@@ -514,5 +533,6 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 0.2.0   | 2026-11-09 | Nettoyage du code mort (suppression de `article_parser.py`, des champs `Article` inutilisés, du flux de création de « projet »). Ajout d'un test automatisé de syntaxe (`tests/test_syntax.py`) et de la politique de versionnement. |
 | 0.2.1   | 2026-11-09 | Correction : le bouton « Ajouter » ne réagissait pas quand le champ de saisie était vide (validation HTML silencieuse) — un message d'erreur explicite est affiché à la place. |
 | 0.3.0   | 2026-11-09 | Le numéro de version applicatif est désormais affiché dans le pied de page, en plus du commit git. |
+| 0.4.0   | 2026-11-09 | Numérotation continue de toutes les pages du PDF généré (y compris les pages d'articles, via une superposition reportlab/pypdf) et affichage du numéro de page de chaque chapitre/article dans la table des matières. Ajout de `tests/test_pdf_generation.py`. |
 
 Fin du document — Wikipedia2Book, spécifications version 1.1.

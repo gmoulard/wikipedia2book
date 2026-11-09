@@ -10,7 +10,7 @@ Wikipedia2Book crée directement un livre PDF imprimable à partir d'articles Wi
 
 - **Pas de gestion multi-projets.** Un seul livre à la fois, créé automatiquement en mémoire navigateur. Ne jamais réintroduire un écran de création/liste/suppression de « projets ».
 - **Serveur sans état.** Aucune persistance disque côté serveur (pas de DB, pas de fichier projet, pas de PDF stocké). La sauvegarde est entièrement à la charge de l'utilisateur via export/import JSON depuis le navigateur.
-- **Les articles ne sont jamais reconstruits.** Chaque article sélectionné est intégré tel quel via le PDF officiel Wikipédia (`/api/rest_v1/page/pdf/{titre}`). Ne pas réintroduire de parsing/reconstruction HTML du corps d'un article — c'était du code mort (`article_parser.py`) et a été supprimé pour cette raison.
+- **Les articles ne sont jamais reconstruits.** Chaque article sélectionné est intégré tel quel via le PDF officiel Wikipédia (`/api/rest_v1/page/pdf/{titre}`). Ne pas réintroduire de parsing/reconstruction HTML du corps d'un article — c'était du code mort (`article_parser.py`) et a été supprimé pour cette raison. Seule exception tolérée : une superposition fine (overlay pypdf/reportlab) comme le numéro de page, qui n'altère ni ne relit le contenu de la page — pas un parsing/reconstruction au sens de ce principe.
 
 ## Style de code — « vibe coding »
 
@@ -30,7 +30,8 @@ Personne ne lit ce code. En conséquence :
 - `app/main.py` — endpoints FastAPI, sans état.
 - `app/models.py` — modèle Pydantic `Project` = l'état complet du livre. Le nom `Project` (et le format JSON exporté `{"format": "wikipedia2book-workspace", "version": 1, "projects": [...]}`) est un détail d'implémentation conservé pour la compatibilité des fichiers déjà exportés par des utilisateurs : ne pas renommer sans gérer une migration.
 - `app/wikipedia_api.py` — unique point de contact avec MediaWiki (recherche, liens, PDF officiel). Toute nouvelle requête Wikipédia passe par `MediaWikiClient`, avec le même `User-Agent` et les mêmes bornes de timeout.
-- `app/book_builder.py` — génère uniquement couverture, pages de chapitre et conclusion (WeasyPrint). Les pages d'articles ne sont jamais générées par l'app : toujours le PDF officiel Wikipédia tel quel, fusionné par `pypdf`.
+- `app/book_builder.py` — génère uniquement couverture, pages de chapitre et conclusion (WeasyPrint). Les pages d'articles ne sont jamais générées par l'app : toujours le PDF officiel Wikipédia tel quel, fusionné par `pypdf`. `build_book_html` accepte `article_pages`/`chapter_pages` (page de départ de chaque entrée) pour les afficher dans la table des matières — `None`/absent quand la numérotation est désactivée.
+- `app/pdf_generator.py` — `generate_pdf` (WeasyPrint, HTML → PDF) et `stamp_page_numbers` (pypdf + reportlab : superpose un numéro en bas de chaque page du `PdfWriter` final, en respectant la taille propre de chaque page — y compris les pages d'articles). `stamp_page_numbers` n'a besoin ni de WeasyPrint ni de GTK/Pango, mais l'import du *module* échoue quand même sur cette machine à cause du `from weasyprint import HTML` en tête de fichier — voir le contournement (stub `sys.modules`) dans `tests/test_pdf_generation.py`.
 - `app/explorer.py` — BFS sur les liens internes, bornes `max_depth ≤ 3`, `max_articles ≤ 200`.
 - `app/static/app.js` — toute la logique front, un seul fichier, pas de framework. L'état vit dans `state.project`.
 
@@ -52,13 +53,16 @@ Ajouter la nouvelle version dans le tableau de la section 19 de `SPECIFICATIONS.
 
 ## Vérification avant de considérer une tâche terminée
 
-Un test automatisé existe : `tests/test_syntax.py` (stdlib `unittest`, aucune dépendance supplémentaire) — il vérifie que tous les fichiers `.py` sous `app/` parsent sans erreur de syntaxe. Le lancer pour la version courante avant de conclure une tâche touchant au backend :
+Des tests automatisés existent sous `tests/` (stdlib `unittest`, lancés avec le `.venv`) :
 
 ```bash
 .venv/Scripts/python.exe -m unittest discover -s tests -v
 ```
 
-Au-delà de ce test de syntaxe, reste un angle mort : rien ne vérifie le comportement (gap connu, section 18 de la spec).
+- `test_syntax.py` : tous les fichiers `.py` sous `app/` parsent sans erreur de syntaxe.
+- `test_pdf_generation.py` : comportement réel de `stamp_page_numbers` (pypdf/reportlab, sans WeasyPrint) et des numéros de page dans la table des matières (`build_book_html`). Essaie d'abord un vrai `import weasyprint` ; si ça échoue (cas de cette machine), stub `sys.modules["weasyprint"]` avant d'importer `app.pdf_generator` — réutiliser ce motif pour tout nouveau test touchant à `pdf_generator.py`/`book_builder.py` sans dépendre de WeasyPrint.
+
+Reste un angle mort : l'assemblage complet du PDF dans `/api/pdf` (main.py) n'est testé par rien d'automatisé — seules ses briques (book_builder, pdf_generator) le sont (gap partiel, section 18 de la spec).
 
 - `python`/`py` dans le PATH par défaut pointent vers l'alias cassé du Microsoft Store. Le vrai interpréteur est `C:\Users\<utilisateur>\AppData\Local\Programs\Python\Python312\python.exe`.
 - Un virtualenv `.venv/` existe à la racine (ignoré par git) avec `requirements.txt` déjà installé : `.venv/Scripts/python.exe`.
