@@ -417,7 +417,17 @@ async function importWikipediaBook(url) {
     const newArticles = articles.filter((a) => !activeArticles().some((e) => sameArticle(e, a)));
     if (!newArticles.length) throw new Error('Toutes les pages de ce livre sont d\u00e9j\u00e0 dans le projet.');
     state.project.main_articles.push(...newArticles);
-    queueSave({ main_articles: state.project.main_articles });
+    // Extraire le titre du livre depuis l'URL (partie après le dernier /)
+    try {
+      const bookName = decodeURIComponent(url.split('/').pop()).replace(/_/g, ' ').trim();
+      if (bookName) {
+        state.project.name = bookName;
+        state.project.book_title = bookName;
+        $('#projectName').value = bookName;
+        $('#breadcrumbProject').textContent = bookName.toLocaleUpperCase('fr');
+      }
+    } catch { /* titre non critique */ }
+    queueSave({ main_articles: state.project.main_articles, name: state.project.name, book_title: state.project.book_title });
     renderWorkspace();
     $('#articleQuery').value = '';
     $('#entryHint').textContent = `${newArticles.length} pages ajout\u00e9es depuis le livre Wikip\u00e9dia.`;
