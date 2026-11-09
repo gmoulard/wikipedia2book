@@ -44,9 +44,11 @@ L'interface web est disponible sur `http://localhost:8000` et la documentation i
 Le conteneur peut être lancé directement :
 
 ```bash
-docker build -t wikipedia2book .
+sh docker-build.sh
 docker run --rm -p 8000:8000 wikipedia2book
 ```
+
+Le script `docker-build.sh` injecte automatiquement le commit, la date et l'auteur git dans l'image via `--build-arg`, ce qui permet au pied de page d'afficher la version correcte.
 
 L'application est accessible sur `http://localhost:8000`.
 
