@@ -72,7 +72,11 @@ Des tests automatisés existent sous `tests/` (stdlib `unittest`, lancés avec l
 - `test_wikipedia_api.py` : `get_book_links` sans réseau, via `client._get = AsyncMock(return_value=...)` — vérifie l'ordre de wikitexte et le filtrage des liens namespacés (`Catégorie:`, `Utilisateur:`, etc.). `get_intro_and_creator` avec `AsyncMock(side_effect=[...])` (deux réponses différentes, une par appel à `_get`).
 - `test_i18n.py` : lit `i18n.js` comme du texte (regex, pas de moteur JS) et vérifie que les 5 langues définissent exactement les mêmes clés, sans doublon, et que les paramètres `{n}`/`{error}`/etc. correspondent entre langues pour chaque clé. Ajouter toute nouvelle clé dans les 5 blocs sous peine de faire échouer ce test — c'est le but.
 
-Reste un angle mort : l'assemblage complet du PDF dans `/api/pdf` (main.py) n'est testé par rien d'automatisé — seules ses briques (book_builder, pdf_generator) le sont (gap partiel, section 18 de la spec).
+- `test_pdf_stream.py` : déroulement complet de `/api/pdf` et `/api/pdf/stream` via `TestClient`, avec `main.MediaWikiClient` et `main.generate_pdf` remplacés par des faux (PDF reportlab) — vérifie la numérotation des étapes de progression, l'événement `done` (PDF valide), l'événement `error` sur échec Wikipédia et le refus 400 d'une sélection vide.
+
+`main.build_book_pdf` est un générateur asynchrone qui produit les événements de progression puis `{"type": "done", "pdf": bytes}` : `/api/pdf` le consomme en ignorant la progression, `/api/pdf/stream` le sérialise en NDJSON. Toute nouvelle étape de génération doit y ajouter un `yield progress("code")`, incrémenter `total` en conséquence et ajouter la clé `progress.<code>` dans les 5 langues de `i18n.js`.
+
+Reste un angle mort : le rendu réel par WeasyPrint et l'assemblage avec de vraies pages générées ne sont vérifiables que dans le conteneur Docker.
 
 - `python`/`py` dans le PATH par défaut pointent vers l'alias cassé du Microsoft Store. Le vrai interpréteur est `C:\Users\<utilisateur>\AppData\Local\Programs\Python\Python312\python.exe`.
 - Un virtualenv `.venv/` existe à la racine (ignoré par git) avec `requirements.txt` déjà installé : `.venv/Scripts/python.exe`.

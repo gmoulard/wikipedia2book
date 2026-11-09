@@ -162,6 +162,15 @@
     </footer>
   </div>
 
+  <div id="pdfProgress" class="pdf-progress" hidden>
+    <div class="pdf-progress-card" role="status" aria-live="polite">
+      <p class="dialog-kicker" data-i18n="progress.title">GÉNÉRATION DU PDF</p>
+      <p class="pdf-progress-step" id="pdfProgressStep"></p>
+      <p class="pdf-progress-label" id="pdfProgressLabel"></p>
+      <div class="pdf-progress-bar"><span id="pdfProgressFill"></span></div>
+    </div>
+  </div>
+
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 </body>
 </html>

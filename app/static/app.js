@@ -613,6 +613,45 @@ function collectLayoutSettings() {
   };
 }
 
+function showPdfProgress(event) {
+  $('#pdfProgress').hidden = false;
+  $('#pdfProgressStep').textContent = event ? t('progress.step', { step: event.step, total: event.total }) : '';
+  $('#pdfProgressLabel').textContent = event ? t(`progress.${event.code}`, { title: event.title || '' }) : t('progress.starting');
+  $('#pdfProgressFill').style.width = event ? `${Math.round((event.step / event.total) * 100)}%` : '0%';
+}
+
+function hidePdfProgress() { $('#pdfProgress').hidden = true; }
+
+function pdfStreamEvent(line) {
+  if (!line.trim()) return null;
+  const event = JSON.parse(line);
+  if (event.type === 'progress') { showPdfProgress(event); return null; }
+  if (event.type === 'error') throw new Error(event.detail);
+  if (event.type === 'done') {
+    const bytes = Uint8Array.from(atob(event.pdf_base64), (c) => c.charCodeAt(0));
+    return new Blob([bytes], { type: 'application/pdf' });
+  }
+  return null;
+}
+
+async function streamPdf(project) {
+  const response = await request('/api/pdf/stream', { method: 'POST', body: JSON.stringify(project) });
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  for (;;) {
+    const { value, done } = await reader.read();
+    buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+    const lines = buffer.split('\n');
+    buffer = done ? '' : lines.pop();
+    for (const line of lines) {
+      const blob = pdfStreamEvent(line);
+      if (blob) return blob;
+    }
+    if (done) throw new Error(t('progress.interrupted'));
+  }
+}
+
 async function exportPdf() {
   if (!state.project || !selectedArticles().length) {
     showToast(t('export.noSelection'), true);
@@ -621,9 +660,9 @@ async function exportPdf() {
   const buttons = [$('#exportButton'), $('#topExportButton')].filter(Boolean);
   buttons.forEach((b) => { b.disabled = true; });
   setSaveState(t('export.generating'));
+  showPdfProgress(null);
   try {
-    const response = await request('/api/pdf', { method: 'POST', body: JSON.stringify(state.project) });
-    const blob = await response.blob();
+    const blob = await streamPdf(state.project);
     const objectUrl = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = objectUrl;
@@ -638,6 +677,7 @@ async function exportPdf() {
     setSaveState(t('export.error'));
     showToast(t('export.failed', { error: error.message }), true);
   } finally {
+    hidePdfProgress();
     buttons.forEach((b) => { b.disabled = false; });
   }
 }

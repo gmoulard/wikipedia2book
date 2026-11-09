@@ -1,10 +1,11 @@
 import base64
+import json
 import subprocess
 from io import BytesIO
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query, Response
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pypdf import PdfReader, PdfWriter
 
@@ -37,7 +38,7 @@ from app.wikipedia_api import (
 )
 
 
-app = FastAPI(title="Wikipedia2Book", version="0.9.0")
+app = FastAPI(title="Wikipedia2Book", version="0.10.0")
 static_directory = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=static_directory), name="static")
 
@@ -173,102 +174,130 @@ async def explore_project(payload: ProjectExplorationRequest) -> Project:
     return project
 
 
-@app.post("/api/pdf")
-async def create_pdf(project: Project) -> Response:
-    selected: list[Article | UploadedDocument] = [
+def _selected_items(project: Project) -> list[Article | UploadedDocument]:
+    selected = [
         item
         for item in project.main_articles + project.discovered_articles + project.uploaded_documents
         if item.selected
     ]
     if not selected:
         raise HTTPException(status_code=400, detail="Sélectionnez au moins un article avant l’export.")
+    return selected
 
-    try:
-        groups = ordered_article_groups(project, selected)
-        writer = PdfWriter()
-        streams: list[BytesIO] = []
-        page_width_mm, page_height_mm = page_size_mm(project)
 
-        def append_pdf(pdf_data: bytes) -> int:
-            stream = BytesIO(fit_pdf_to_format(pdf_data, page_width_mm, page_height_mm))
-            streams.append(stream)
-            page_number = len(writer.pages)
-            writer.append(stream)
-            return page_number
+def _pdf_error_detail(error: Exception) -> str:
+    if isinstance(error, (MediaWikiError, ValueError)):
+        return str(error)
+    return "La génération du PDF a échoué."
 
-        def document_pdf(document: UploadedDocument) -> bytes:
-            data = base64.b64decode(document.data_base64)
-            if document.kind == "pdf":
-                return data
-            return image_to_pdf(data, page_width_mm, page_height_mm)
 
-        item_pdfs: dict[str, bytes] = {}
-        async with MediaWikiClient() as client:
-            for _, items in groups:
-                for item in items:
-                    if item.key in item_pdfs:
-                        continue
-                    item_pdfs[item.key] = (
-                        await client.get_article_pdf(item.title, item.language)
-                        if isinstance(item, Article)
-                        else document_pdf(item)
-                    )
+async def build_book_pdf(project: Project, selected: list[Article | UploadedDocument]):
+    groups = ordered_article_groups(project, selected)
+    writer = PdfWriter()
+    streams: list[BytesIO] = []
+    page_width_mm, page_height_mm = page_size_mm(project)
+    unique_items = list({item.key: item for _, items in groups for item in items}.values())
+    total = len(unique_items) + 3 + (2 if project.page_numbers else 0)
+    step = 0
 
-        toc_at_start = project.toc_position != "end"
+    def progress(code: str, **params) -> dict:
+        nonlocal step
+        step += 1
+        return {"type": "progress", "step": step, "total": total, "code": code, **params}
 
-        article_pages: dict[str, int] = {}
-        chapter_pages: list[int | None] = [None] * len(groups)
-        if project.page_numbers:
-            cursor = len(PdfReader(BytesIO(generate_pdf(build_cover_html(project)))).pages) + 1
-            if toc_at_start:
-                cursor += len(PdfReader(BytesIO(generate_pdf(build_toc_html(project, selected)))).pages)
-            for index, (chapter_title, items) in enumerate(groups):
-                if chapter_title:
-                    chapter_pages[index] = cursor
-                    cursor += 1
-                for item in items:
-                    article_pages[item.key] = cursor
-                    cursor += len(PdfReader(BytesIO(item_pdfs[item.key])).pages)
+    def append_pdf(pdf_data: bytes) -> int:
+        stream = BytesIO(fit_pdf_to_format(pdf_data, page_width_mm, page_height_mm))
+        streams.append(stream)
+        page_number = len(writer.pages)
+        writer.append(stream)
+        return page_number
 
-        toc = generate_pdf(build_toc_html(project, selected, article_pages, chapter_pages))
-        cover = generate_pdf(build_cover_html(project))
-        root_outline = writer.add_outline_item(
-            project.book_title or project.name,
-            append_pdf(cover),
-        )
+    def document_pdf(document: UploadedDocument) -> bytes:
+        data = base64.b64decode(document.data_base64)
+        if document.kind == "pdf":
+            return data
+        return image_to_pdf(data, page_width_mm, page_height_mm)
+
+    item_pdfs: dict[str, bytes] = {}
+    async with MediaWikiClient() as client:
+        for item in unique_items:
+            if isinstance(item, Article):
+                yield progress("fetch_article", title=item.title)
+                item_pdfs[item.key] = await client.get_article_pdf(item.title, item.language)
+            else:
+                yield progress("prepare_document", title=item.title)
+                item_pdfs[item.key] = document_pdf(item)
+
+    toc_at_start = project.toc_position != "end"
+
+    article_pages: dict[str, int] = {}
+    chapter_pages: list[int | None] = [None] * len(groups)
+    if project.page_numbers:
+        yield progress("compute_page_numbers")
+        cursor = len(PdfReader(BytesIO(generate_pdf(build_cover_html(project)))).pages) + 1
         if toc_at_start:
-            writer.add_outline_item("Table des matières", append_pdf(toc), parent=root_outline)
-
-        for chapter_title, items in groups:
-            chapter_outline = root_outline
+            cursor += len(PdfReader(BytesIO(generate_pdf(build_toc_html(project, selected)))).pages)
+        for index, (chapter_title, items) in enumerate(groups):
             if chapter_title:
-                chapter_page = generate_pdf(build_chapter_page_html(project, chapter_title))
-                chapter_outline = writer.add_outline_item(
-                    chapter_title,
-                    append_pdf(chapter_page),
-                    parent=root_outline,
-                )
+                chapter_pages[index] = cursor
+                cursor += 1
             for item in items:
-                item_page = append_pdf(item_pdfs[item.key])
-                writer.add_outline_item(item.title, item_page, parent=chapter_outline)
+                article_pages[item.key] = cursor
+                cursor += len(PdfReader(BytesIO(item_pdfs[item.key])).pages)
 
-        if not toc_at_start:
-            writer.add_outline_item("Table des matières", append_pdf(toc), parent=root_outline)
+    yield progress("cover_and_toc")
+    toc = generate_pdf(build_toc_html(project, selected, article_pages, chapter_pages))
+    cover = generate_pdf(build_cover_html(project))
 
-        if project.conclusion:
-            conclusion_page = generate_pdf(build_conclusion_page_html(project))
-            writer.add_outline_item(
-                "Conclusion",
-                append_pdf(conclusion_page),
+    yield progress("assemble")
+    root_outline = writer.add_outline_item(
+        project.book_title or project.name,
+        append_pdf(cover),
+    )
+    if toc_at_start:
+        writer.add_outline_item("Table des matières", append_pdf(toc), parent=root_outline)
+
+    for chapter_title, items in groups:
+        chapter_outline = root_outline
+        if chapter_title:
+            chapter_page = generate_pdf(build_chapter_page_html(project, chapter_title))
+            chapter_outline = writer.add_outline_item(
+                chapter_title,
+                append_pdf(chapter_page),
                 parent=root_outline,
             )
+        for item in items:
+            item_page = append_pdf(item_pdfs[item.key])
+            writer.add_outline_item(item.title, item_page, parent=chapter_outline)
 
-        if project.page_numbers:
-            stamp_page_numbers(writer)
+    if not toc_at_start:
+        writer.add_outline_item("Table des matières", append_pdf(toc), parent=root_outline)
 
-        output = BytesIO()
-        writer.write(output)
-        pdf_data = output.getvalue()
+    if project.conclusion:
+        conclusion_page = generate_pdf(build_conclusion_page_html(project))
+        writer.add_outline_item(
+            "Conclusion",
+            append_pdf(conclusion_page),
+            parent=root_outline,
+        )
+
+    if project.page_numbers:
+        yield progress("stamp_page_numbers")
+        stamp_page_numbers(writer)
+
+    yield progress("finalize")
+    output = BytesIO()
+    writer.write(output)
+    yield {"type": "done", "pdf": output.getvalue()}
+
+
+@app.post("/api/pdf")
+async def create_pdf(project: Project) -> Response:
+    selected = _selected_items(project)
+    try:
+        async for event in build_book_pdf(project, selected):
+            if event["type"] == "done":
+                pdf_data = event["pdf"]
     except Exception as error:
         if isinstance(error, MediaWikiError):
             raise _mediawiki_error(error) from error
@@ -277,4 +306,24 @@ async def create_pdf(project: Project) -> Response:
         content=pdf_data,
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{project.book_title or project.name}.pdf"'},
+    )
+
+
+@app.post("/api/pdf/stream")
+async def create_pdf_stream(project: Project) -> StreamingResponse:
+    selected = _selected_items(project)
+
+    async def events():
+        try:
+            async for event in build_book_pdf(project, selected):
+                if event["type"] == "done":
+                    event = {"type": "done", "pdf_base64": base64.b64encode(event["pdf"]).decode("ascii")}
+                yield json.dumps(event, ensure_ascii=False) + "\n"
+        except Exception as error:
+            yield json.dumps({"type": "error", "detail": _pdf_error_detail(error)}, ensure_ascii=False) + "\n"
+
+    return StreamingResponse(
+        events(),
+        media_type="application/x-ndjson",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
