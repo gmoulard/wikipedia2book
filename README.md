@@ -7,6 +7,7 @@ Wikipedia2Book est une application web qui permet de composer directement un liv
 - Un livre unique, construit en mémoire dans le navigateur; export/import de son état sous forme de fichier JSON.
 - Ajout d'articles par titre, URL ou recherche; le contenu complet n'est récupéré qu'à la génération.
 - Import de la liste des articles depuis l'URL d'une page de livre Wikipédia, dans leur ordre réel.
+- Introduction et auteur du livre proposés automatiquement à partir du premier article ajouté.
 - Exploration des liens internes de Wikipédia avec profondeur et nombre d'articles paramétrables.
 - Sélection manuelle des articles à inclure; les articles découverts ne sont jamais ajoutés automatiquement.
 - Organisation des articles en chapitres, réordonnables par glisser-déposer, et configuration du format du livre.

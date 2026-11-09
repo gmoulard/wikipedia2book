@@ -105,6 +105,22 @@ class MediaWikiClient:
             for item in items
         ]
 
+    async def get_intro_and_creator(self, title: str, language: str = "fr") -> tuple[str, str]:
+        extract_result = await self._get(
+            language, {"prop": "extracts", "exintro": 1, "explaintext": 1, "titles": title}
+        )
+        pages = extract_result.get("query", {}).get("pages", [])
+        introduction = pages[0].get("extract", "") if pages and not pages[0].get("missing") else ""
+
+        creator_result = await self._get(
+            language, {"prop": "revisions", "rvlimit": 1, "rvdir": "newer", "rvprop": "user", "titles": title}
+        )
+        rev_pages = creator_result.get("query", {}).get("pages", [])
+        revisions = rev_pages[0].get("revisions", []) if rev_pages else []
+        creator = revisions[0].get("user", "") if revisions else ""
+
+        return introduction, creator
+
     async def get_article_pdf(self, title: str, language: str = "fr") -> bytes:
         language = validate_language(language)
         if self._client is None:

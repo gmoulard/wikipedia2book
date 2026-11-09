@@ -36,7 +36,7 @@ from app.wikipedia_api import (
 )
 
 
-app = FastAPI(title="Wikipedia2Book", version="0.7.0")
+app = FastAPI(title="Wikipedia2Book", version="0.8.0")
 static_directory = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=static_directory), name="static")
 
@@ -92,6 +92,19 @@ async def search_articles(
             return await client.search(query, language, limit)
     except (MediaWikiError, ValueError) as error:
         raise _mediawiki_error(error) from error
+
+
+@app.get("/api/articles/intro")
+async def article_intro(
+    title: str = Query(min_length=1, max_length=300),
+    language: str = Query(default="fr", pattern=r"^[a-z0-9-]{2,12}$"),
+) -> dict[str, str]:
+    try:
+        async with MediaWikiClient() as client:
+            introduction, creator = await client.get_intro_and_creator(title, language)
+    except (MediaWikiError, ValueError) as error:
+        raise _mediawiki_error(error) from error
+    return {"introduction": introduction, "author": creator}
 
 
 @app.post("/api/articles", response_model=Article, status_code=201)

@@ -32,5 +32,27 @@ class GetBookLinksOrderTest(unittest.TestCase):
             asyncio.run(client.get_book_links("Titre", "fr"))
 
 
+class GetIntroAndCreatorTest(unittest.TestCase):
+    def test_returns_extract_and_first_revision_author(self):
+        client = MediaWikiClient()
+        client._get = AsyncMock(side_effect=[
+            {"query": {"pages": [{"extract": "Une introduction."}]}},
+            {"query": {"pages": [{"revisions": [{"user": "Hashar"}]}]}},
+        ])
+        introduction, creator = asyncio.run(client.get_intro_and_creator("Chat", "fr"))
+        self.assertEqual(introduction, "Une introduction.")
+        self.assertEqual(creator, "Hashar")
+
+    def test_missing_page_returns_empty_strings(self):
+        client = MediaWikiClient()
+        client._get = AsyncMock(side_effect=[
+            {"query": {"pages": [{"missing": True}]}},
+            {"query": {"pages": [{"revisions": []}]}},
+        ])
+        introduction, creator = asyncio.run(client.get_intro_and_creator("Inconnu", "fr"))
+        self.assertEqual(introduction, "")
+        self.assertEqual(creator, "")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -90,6 +90,16 @@ Pour chaque article, le logiciel conserve :
 
 L'utilisateur peut supprimer un article principal sans affecter les autres.
 
+### 3.3 Introduction et auteur proposés automatiquement
+
+Quand le tout premier article principal du livre est ajouté (y compris le premier article d'une page de livre importée, section 3.1), le logiciel propose automatiquement, dans l'étape Édition (section 11) :
+
+* L'introduction du livre, à partir du résumé introductif de cet article sur Wikipédia.
+
+* L'auteur du livre, à partir du pseudonyme (ou de l'IP, pour une contribution anonyme) ayant créé la page sur Wikipédia.
+
+Cette proposition ne remplace jamais un champ déjà renseigné par l'utilisateur, et reste entièrement modifiable. Elle ne se déclenche qu'une fois, pour le premier article seulement — ajouter d'autres articles ensuite ne la redéclenche pas.
+
 ## 4\. Exploration des articles liés
 
 ### 4.1 Principe
@@ -410,7 +420,9 @@ Le logiciel utilise les interfaces officielles de MediaWiki pour :
 
 * Explorer les liens internes (`action=query&prop=links`).
 
-* Récupérer la liste des articles d'une page de livre (`prop=info|links`, avec pagination `continue`).
+* Récupérer la liste des articles d'une page de livre, dans leur ordre réel (`prop=revisions&rvprop=content`, lecture du wikitexte — section 3.1).
+
+* Récupérer le résumé introductif et l'auteur de la création d'un article (`prop=extracts&exintro=1` et `prop=revisions&rvdir=newer&rvlimit=1`), pour la proposition automatique d'introduction et d'auteur (section 3.3).
 
 * Télécharger le PDF officiel de chaque article sélectionné, au moment de l'export (`/api/rest_v1/page/pdf/{titre}`).
 
@@ -509,6 +521,8 @@ La version actuelle est considérée comme fonctionnelle si les points suivants 
 
 * Changement de la langue de l'interface (français, anglais, chinois, italien, allemand) sans rechargement de la page.
 
+* Proposition automatique, non destructive, de l'introduction et de l'auteur du livre à partir du premier article ajouté.
+
 ## 17\. Structure du projet
 
 ```text
@@ -584,5 +598,6 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 0.5.0   | 2026-11-09 | Import d'une page de livre Wikipédia : conservation de l'ordre réel des articles (lecture du wikitexte) au lieu de l'ordre alphabétique renvoyé par l'API. Agrandissement du champ de titre du livre (correction d'un bug de mise en page qui ne laissait voir qu'environ 26 caractères). Nouvelle fonctionnalité : import d'images ou de PDF comme documents intégrés au livre (section 6.1), conservés en base64 dans l'état du livre et l'export JSON. |
 | 0.6.0   | 2026-11-09 | Le bouton « Générer le PDF » n'est plus jamais désactivé. Toutes les pages du PDF généré (y compris les articles et documents importés) sont désormais recomposées sur le format et l'orientation choisis pour le livre (section 10.1) — ce qui fiabilise aussi la numérotation des pages, activée par défaut. Le fichier JSON de sauvegarde est nommé d'après le titre du livre. Le message d'import d'un livre Wikipédia pointe vers l'aide Wikipédia correspondante. |
 | 0.7.0   | 2026-11-09 | Interface multilingue : français, anglais, chinois, italien, allemand, via un sélecteur dans la barre supérieure (`app/static/i18n.js`, section 12.1). Langue détectée automatiquement et mémorisée dans le navigateur. Ajout de `tests/test_i18n.py` (parité des clés et des paramètres `{...}` entre les 5 langues). |
+| 0.8.0   | 2026-11-09 | Lors de l'ajout du tout premier article principal, le logiciel propose automatiquement (sans écraser une saisie existante) l'introduction du livre à partir du résumé introductif de l'article, et l'auteur à partir du créateur de la page Wikipédia (section 3.3). Nouvel endpoint `/api/articles/intro`. |
 
 Fin du document — Wikipedia2Book, spécifications version 1.1.

@@ -372,6 +372,22 @@ async function loadProjects() {
   setView('sources');
 }
 
+async function suggestIntroAndAuthor(article) {
+  if (!state.project || (state.project.introduction && state.project.book_author)) return;
+  try {
+    const params = new URLSearchParams({ title: article.title, language: article.language });
+    const info = await getJson(`/api/articles/intro?${params}`);
+    const patch = {};
+    if (!state.project.introduction && info.introduction) patch.introduction = info.introduction;
+    if (!state.project.book_author && info.author) patch.book_author = info.author;
+    if (Object.keys(patch).length) {
+      Object.assign(state.project, patch);
+      queueSave(patch);
+      renderBookSettings();
+    }
+  } catch { /* suggestion non critique */ }
+}
+
 async function addArticle(source) {
   if (!state.project) return;
   const button = $('#addArticleButton');
@@ -381,9 +397,11 @@ async function addArticle(source) {
     const article = await getJson('/api/articles', { method: 'POST', body: JSON.stringify(source) });
     if (activeArticles().some((item) => sameArticle(item, article))) throw new Error(t('sources.alreadyInBook'));
     article.selected = true;
+    const wasFirst = state.project.main_articles.length === 0;
     state.project.main_articles.push(article);
     queueSave({ main_articles: state.project.main_articles });
     renderWorkspace();
+    if (wasFirst) await suggestIntroAndAuthor(article);
     $('#articleQuery').value = '';
     $('#searchResults').hidden = true;
     $('#entryHint').textContent = t('sources.addedToMain');
@@ -401,6 +419,7 @@ async function importWikipediaBook(url) {
     const articles = await getJson('/api/books/import', { method: 'POST', body: JSON.stringify({ url }) });
     const newArticles = articles.filter((a) => !activeArticles().some((e) => sameArticle(e, a)));
     if (!newArticles.length) throw new Error(t('sources.allBookPagesAlready'));
+    const wasFirst = state.project.main_articles.length === 0;
     state.project.main_articles.push(...newArticles);
     // Extraire le titre du livre depuis l'URL (partie après le dernier /)
     try {
@@ -414,6 +433,7 @@ async function importWikipediaBook(url) {
     } catch { /* titre non critique */ }
     queueSave({ main_articles: state.project.main_articles, name: state.project.name, book_title: state.project.book_title });
     renderWorkspace();
+    if (wasFirst) await suggestIntroAndAuthor(newArticles[0]);
     $('#articleQuery').value = '';
     const bookLink = `<a href="https://fr.wikipedia.org/wiki/Aide:Livres" target="_blank" rel="noopener noreferrer">${escapeHtml(t('sources.bookLinkText'))}</a>`;
     $('#entryHint').innerHTML = t('sources.pagesAddedHint', { n: newArticles.length, link: bookLink });
