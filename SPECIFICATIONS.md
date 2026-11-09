@@ -36,7 +36,7 @@ Le logiciel ne gère pas de liste de projets : un seul livre est construit à la
 
 * Toutes les modifications (articles, sélection, organisation, mise en page) sont conservées en mémoire dans le navigateur pendant la session, et envoyées à l'API uniquement pour les opérations qui le nécessitent (recherche, exploration, génération du PDF).
 
-* L'utilisateur peut télécharger explicitement l'état du livre sous forme de fichier JSON.
+* L'utilisateur peut télécharger explicitement l'état du livre sous forme de fichier JSON, nommé d'après le titre du livre (ou son nom, si aucun titre n'est renseigné).
 
 * L'utilisateur peut importer un fichier JSON précédemment téléchargé pour reprendre un livre; l'import remplace le livre en cours.
 
@@ -68,7 +68,7 @@ L'utilisateur ajoute des articles à son livre par l'un des moyens suivants :
 
 * Recherche dans Wikipédia : des résultats sont proposés au fil de la saisie, à ajouter d'un clic.
 
-* URL d'une page de « livre » Wikipédia listant des articles : tous les articles qu'elle référence sont importés et pré-sélectionnés, **dans l'ordre où ils apparaissent sur la page de livre** (et non par ordre alphabétique — l'API MediaWiki trie les liens, le logiciel relit donc le wikitexte de la page pour retrouver l'ordre réel). Seuls leur titre et leur URL sont chargés à ce stade; leur PDF complet n'est téléchargé qu'au moment de la génération.
+* URL d'une page de « livre » Wikipédia listant des articles : tous les articles qu'elle référence sont importés et pré-sélectionnés, **dans l'ordre où ils apparaissent sur la page de livre** (et non par ordre alphabétique — l'API MediaWiki trie les liens, le logiciel relit donc le wikitexte de la page pour retrouver l'ordre réel). Seuls leur titre et leur URL sont chargés à ce stade; leur PDF complet n'est téléchargé qu'au moment de la génération. Le message de confirmation renvoie vers la page d'aide Wikipédia sur les livres (`https://fr.wikipedia.org/wiki/Aide:Livres`).
 
 Exemple d'URL d'article :
 
@@ -177,7 +177,7 @@ Fonctionnalités :
 
 * Ajouter une introduction générale et une conclusion.
 
-* Activer ou non la numérotation des pages.
+* Activer ou non la numérotation des pages (activée par défaut).
 
 Un article peut être déplacé librement dans la structure du livre.
 
@@ -199,7 +199,7 @@ Dans l'étape Organisation, l'utilisateur peut aussi importer ses propres fichie
 
 L'ajout et l'exploration ne téléchargent pas le contenu complet des pages. Au moment de générer le PDF, chaque article sélectionné est récupéré via l'endpoint PDF officiel de Wikimedia (`/api/rest_v1/page/pdf/{titre}`), équivalent à la fonction « Télécharger comme PDF » de Wikipédia.
 
-Le PDF officiel de chaque article est conservé intégralement, avec son contenu, sa structure, ses images et ses références. Les PDFs sont assemblés dans l'ordre du livre sans reconstruire ni tronquer le corps des articles.
+Le contenu de chaque article (texte, structure, images, références) n'est jamais reconstruit : c'est exactement celui du PDF officiel Wikipédia. Seule sa mise en page physique change : chaque page est recomposée (mise à l'échelle et centrée, sans déformation) sur le format et l'orientation choisis pour le livre — voir section 10.1.
 
 ## 8\. Références, images et licences
 
@@ -283,17 +283,27 @@ Le PDF est structuré comme un véritable livre.
 
 * Conclusion, si elle a été saisie.
 
-Les articles eux-mêmes ne sont pas mis en page par l'application : ce sont les pages du PDF officiel Wikipédia, insérées telles quelles.
-
-Point important : les pages générées par l'application (couverture, introduction, table des matières, pages de chapitre, conclusion) suivent le format, l'orientation et les marges configurés; les pages d'articles conservent intégralement la mise en page du PDF Wikipédia d'origine, quel que soit le format choisi pour le reste du livre.
+Le contenu des articles et des documents importés n'est pas mis en page par l'application : ce sont les pages de leur PDF d'origine (officiel Wikipédia, ou document importé). Leur format physique, lui, est systématiquement harmonisé avec le reste du livre — voir section 10.1.
 
 La navigation dans le PDF final s'appuie sur des signets (une entrée par chapitre et par article), et non sur les liens de la table des matières.
 
-### 10.1 Numérotation des pages
+### 10.1 Format et orientation, appliqués à toutes les pages
 
-Quand l'option « Numéroter les pages » est activée (section 6) :
+Toutes les pages du PDF final respectent le format et l'orientation choisis pour le livre (section 9), sans exception :
 
-* Toutes les pages du livre affichent un numéro en bas de page, de façon continue — y compris les pages d'articles (PDF officiel Wikipédia), à l'exception de la couverture.
+* Les pages générées par l'application (couverture, introduction, table des matières, pages de chapitre, conclusion) sont nativement produites à ce format.
+
+* Chaque page d'article (PDF officiel Wikipédia) et chaque page de document importé est recomposée sur une page de ce même format : son contenu est mis à l'échelle et centré, en conservant ses proportions d'origine (pas de déformation). Si les proportions de la page source diffèrent de celles du livre, des marges blanches apparaissent sur les côtés ou en haut/bas plutôt que de déformer le contenu.
+
+* Le contenu lui-même (texte, images, références) n'est jamais modifié ni reconstruit — seule sa mise à l'échelle et sa position sur la page changent.
+
+### 10.2 Numérotation des pages
+
+L'option « Numéroter les pages » (section 6) est activée par défaut et peut être désactivée.
+
+Quand elle est activée :
+
+* Toutes les pages du livre affichent un numéro en bas de page, de façon continue — y compris les pages d'articles et de documents importés, à l'exception de la couverture.
 
 * La table des matières affiche, pour chaque chapitre et chaque article, le numéro de la page où il commence.
 
@@ -305,17 +315,21 @@ Aucune fonctionnalité de prévisualisation n'est proposée actuellement.
 
 ### 11.1 Déroulement
 
-Une fois les articles sélectionnés et organisés, l'utilisateur lance la génération du PDF. Le logiciel :
+Le bouton « Générer le PDF » est toujours visible et actif, quel que soit l'onglet affiché; si aucun article ni document n'est sélectionné, un message l'indique au moment du clic plutôt que de désactiver le bouton.
+
+Une fois le PDF lancé, le logiciel :
 
 * Vérifie qu'au moins un article ou document est sélectionné; sinon, la génération est refusée.
 
 * Télécharge le PDF officiel de chaque article sélectionné; décode chaque document importé sélectionné (section 6.1), en convertissant une image en page PDF si besoin.
 
-* Si la numérotation des pages est activée, calcule à l'avance la page de départ de chaque chapitre et de chaque article (section 10.1).
+* Si la numérotation des pages est activée, calcule à l'avance la page de départ de chaque chapitre et de chaque article (section 10.2).
 
 * Génère la couverture, l'introduction éventuelle et la table des matières (avec les numéros de page si activés), avec un signet racine portant le titre du livre.
 
 * Pour chaque chapitre (ou pour l'ensemble des articles s'il n'y a pas de chapitre) : génère une page de titre de chapitre avec son propre signet, puis ajoute le PDF officiel de chaque article du chapitre, avec un signet par article.
+
+* Recompose chaque page ajoutée (couverture, chapitres, articles, documents importés) sur le format et l'orientation choisis pour le livre (section 10.1), avant de l'assembler au document final.
 
 * Ajoute une page de conclusion avec signet, si une conclusion a été saisie.
 
@@ -329,9 +343,9 @@ Le PDF produit est :
 
 * Imprimable et structuré par des signets de navigation.
 
-* Conforme au format choisi pour ses pages de couverture, de chapitre et de conclusion.
+* Conforme, sur toutes ses pages, au format et à l'orientation choisis pour le livre.
 
-* Fidèle au PDF officiel Wikipédia pour ses pages d'articles.
+* Fidèle au contenu du PDF officiel Wikipédia pour les articles, et de chaque document importé.
 
 * Compatible avec les lecteurs PDF courants.
 
@@ -478,11 +492,13 @@ La version actuelle est considérée comme fonctionnelle si les points suivants 
 
 * Choix du format papier, de l'orientation et des marges, y compris la marge de reliure.
 
-* Génération d'un PDF imprimable avec couverture, table des matières, signets de navigation et pagination optionnelle; quand la pagination est activée, la table des matières indique la page de chaque chapitre et de chaque article.
+* Génération d'un PDF imprimable dont toutes les pages respectent le format et l'orientation choisis, avec couverture, table des matières, signets de navigation et pagination (activée par défaut); la table des matières indique alors la page de chaque chapitre et de chaque article.
+
+* Le bouton de génération du PDF est toujours visible et actif.
 
 * Téléchargement du PDF généré.
 
-* Export puis import du livre via un fichier JSON local.
+* Export puis import du livre via un fichier JSON local, nommé d'après le titre du livre.
 
 ## 17\. Structure du projet
 
@@ -555,5 +571,6 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 0.3.0   | 2026-11-09 | Le numéro de version applicatif est désormais affiché dans le pied de page, en plus du commit git. |
 | 0.4.0   | 2026-11-09 | Numérotation continue de toutes les pages du PDF généré (y compris les pages d'articles, via une superposition reportlab/pypdf) et affichage du numéro de page de chaque chapitre/article dans la table des matières. Ajout de `tests/test_pdf_generation.py`. |
 | 0.5.0   | 2026-11-09 | Import d'une page de livre Wikipédia : conservation de l'ordre réel des articles (lecture du wikitexte) au lieu de l'ordre alphabétique renvoyé par l'API. Agrandissement du champ de titre du livre (correction d'un bug de mise en page qui ne laissait voir qu'environ 26 caractères). Nouvelle fonctionnalité : import d'images ou de PDF comme documents intégrés au livre (section 6.1), conservés en base64 dans l'état du livre et l'export JSON. |
+| 0.6.0   | 2026-11-09 | Le bouton « Générer le PDF » n'est plus jamais désactivé. Toutes les pages du PDF généré (y compris les articles et documents importés) sont désormais recomposées sur le format et l'orientation choisis pour le livre (section 10.1) — ce qui fiabilise aussi la numérotation des pages, activée par défaut. Le fichier JSON de sauvegarde est nommé d'après le titre du livre. Le message d'import d'un livre Wikipédia pointe vers l'aide Wikipédia correspondante. |
 
 Fin du document — Wikipedia2Book, spécifications version 1.1.

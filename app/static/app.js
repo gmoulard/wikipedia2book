@@ -73,14 +73,13 @@ function normalizeProject(project) {
     book_title: '', book_subtitle: '', book_author: '', introduction: '', conclusion: '',
     page_format: 'A4', custom_width_mm: 148, custom_height_mm: 210, orientation: 'portrait',
     margin_top_mm: 18, margin_bottom_mm: 18, margin_inside_mm: 18, margin_outside_mm: 16,
-    margin_binding_mm: 0, article_order: [], chapters: [], toc_position: 'start', page_numbers: false, ...project,
+    margin_binding_mm: 0, article_order: [], chapters: [], toc_position: 'start', page_numbers: true, ...project,
   };
 }
 
 function renderWorkspace() {
   const hasProject = Boolean(state.project);
   $('#projectWorkspace').hidden = !hasProject;
-  $('#topExportButton').disabled = !hasProject || selectedArticles().length === 0;
   $('#saveWorkspaceButton').disabled = !hasProject;
   $('#breadcrumbProject').textContent = hasProject ? state.project.name.toLocaleUpperCase('fr') : 'NOUVEAU PROJET';
   if (!hasProject) return;
@@ -411,7 +410,7 @@ async function importWikipediaBook(url) {
     queueSave({ main_articles: state.project.main_articles, name: state.project.name, book_title: state.project.book_title });
     renderWorkspace();
     $('#articleQuery').value = '';
-    $('#entryHint').textContent = `${newArticles.length} pages ajout\u00e9es depuis le livre Wikip\u00e9dia.`;
+    $('#entryHint').innerHTML = `${newArticles.length} pages ajout\u00e9es depuis le <a href="https://fr.wikipedia.org/wiki/Aide:Livres" target="_blank" rel="noopener noreferrer">livre Wikip\u00e9dia</a>.`;
     showToast(`${newArticles.length} pages ajout\u00e9es \u00e0 la s\u00e9lection.`);
   } catch (error) { showToast(`Import du livre impossible\u00a0: ${error.message}`, true); }
   finally { button.disabled = false; button.innerHTML = 'Ajouter <span aria-hidden="true">+</span>'; }
@@ -601,7 +600,7 @@ async function exportPdf() {
     const objectUrl = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = objectUrl;
-    anchor.download = `${(state.project.book_title || state.project.name).replace(/[^a-z0-9-_ ]/gi, '').trim().replace(/\s+/g, '-') || 'livre'}.pdf`;
+    anchor.download = `${bookFileName(state.project)}.pdf`;
     document.body.append(anchor);
     anchor.click();
     anchor.remove();
@@ -612,8 +611,12 @@ async function exportPdf() {
     setSaveState('Erreur de g\u00e9n\u00e9ration');
     showToast(`La g\u00e9n\u00e9ration du PDF a \u00e9chou\u00e9\u00a0: ${error.message}`, true);
   } finally {
-    buttons.forEach((b) => { b.disabled = selectedArticles().length === 0; });
+    buttons.forEach((b) => { b.disabled = false; });
   }
+}
+
+function bookFileName(project) {
+  return (project.book_title || project.name).replace(/[^a-z0-9-_ ]/gi, '').trim().replace(/\s+/g, '-') || 'livre';
 }
 
 function exportWorkspace() {
@@ -623,7 +626,7 @@ function exportWorkspace() {
   const objectUrl = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = objectUrl;
-  anchor.download = 'wikipedia2book-workspace.json';
+  anchor.download = `${bookFileName(state.project)}.json`;
   document.body.append(anchor);
   anchor.click();
   anchor.remove();

@@ -144,6 +144,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .article-form select { width: 57px; flex: 0 0 auto; height: 39px; padding: 0 6px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--paper); color: var(--ink-soft); font-size: 11px; }
 .article-form .button { flex: 0 0 auto; }
 .field-hint { margin: 8px 0 0; color: var(--muted); font-size: 10px; }
+.field-hint a { color: var(--teal); text-decoration: underline; }
 .explore-box { display: grid; grid-template-columns: 1fr 1fr; align-content: start; gap: 8px 10px; padding: 13px 14px; }
 .explore-head { grid-column: 1 / -1; display: flex; align-items: center; gap: 9px; margin-bottom: 3px; }
 .explore-icon { display: grid; width: 26px; height: 26px; place-items: center; border-radius: 5px; background: var(--coral-pale); color: var(--coral); font-size: 17px; }

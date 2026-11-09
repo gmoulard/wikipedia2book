@@ -1,6 +1,6 @@
 from io import BytesIO
 
-from pypdf import PdfReader, PdfWriter
+from pypdf import PageObject, PdfReader, PdfWriter, Transformation
 from reportlab.lib.units import mm
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
@@ -9,6 +9,31 @@ from weasyprint import HTML
 
 def generate_pdf(html_document: str) -> bytes:
     return HTML(string=html_document).write_pdf()
+
+
+def fit_page_to_format(source_page, width_pt: float, height_pt: float) -> PageObject:
+    source_page.transfer_rotation_to_content()
+    source_width = float(source_page.mediabox.width)
+    source_height = float(source_page.mediabox.height)
+    scale = min(width_pt / source_width, height_pt / source_height)
+    tx = (width_pt - source_width * scale) / 2
+    ty = (height_pt - source_height * scale) / 2
+    transformation = Transformation().scale(scale, scale).translate(tx, ty)
+    target = PageObject.create_blank_page(width=width_pt, height=height_pt)
+    target.merge_transformed_page(source_page, transformation)
+    return target
+
+
+def fit_pdf_to_format(pdf_data: bytes, width_mm: float, height_mm: float) -> bytes:
+    width_pt, height_pt = width_mm * mm, height_mm * mm
+    reader = PdfReader(BytesIO(pdf_data))
+    writer = PdfWriter()
+    for page in reader.pages:
+        writer.add_page(fit_page_to_format(page, width_pt, height_pt))
+    buffer = BytesIO()
+    writer.write(buffer)
+    buffer.seek(0)
+    return buffer.read()
 
 
 def image_to_pdf(image_bytes: bytes, page_width_mm: float, page_height_mm: float) -> bytes:

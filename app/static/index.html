@@ -24,7 +24,7 @@
         <input id="workspaceFileInput" type="file" accept=".json,application/json" hidden>
         <button class="icon-button" id="importWorkspaceButton" type="button" title="Importer un fichier JSON" aria-label="Importer un fichier JSON">↑</button>
         <button class="icon-button" id="saveWorkspaceButton" type="button" title="Télécharger le projet en JSON" aria-label="Télécharger le projet en JSON" disabled>↓</button>
-        <button class="button button-dark" id="topExportButton" type="button" disabled><span aria-hidden="true">↓</span> Générer le PDF</button>
+        <button class="button button-dark" id="topExportButton" type="button"><span aria-hidden="true">↓</span> Générer le PDF</button>
       </div>
     </header>
 
@@ -138,7 +138,7 @@
                 <label class="field">Marge intérieure (mm)<input id="marginInside" type="number" min="0" max="100" value="18"></label>
                 <label class="field">Marge extérieure (mm)<input id="marginOutside" type="number" min="0" max="100" value="16"></label>
                 <label class="field field-wide">Marge de reliure (mm)<input id="marginBinding" type="number" min="0" max="40" value="0"></label>
-                <label class="field field-wide checkbox-field"><input id="pageNumbers" type="checkbox"> Numéroter les pages</label>
+                <label class="field field-wide checkbox-field"><input id="pageNumbers" type="checkbox" checked> Numéroter les pages</label>
               </div>
             </section>
           </div>

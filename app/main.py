@@ -25,7 +25,7 @@ from app.models import (
     UploadedDocument,
     utc_now,
 )
-from app.pdf_generator import generate_pdf, image_to_pdf, stamp_page_numbers
+from app.pdf_generator import fit_pdf_to_format, generate_pdf, image_to_pdf, stamp_page_numbers
 from app.wikipedia_api import (
     MediaWikiClient,
     MediaWikiError,
@@ -36,7 +36,7 @@ from app.wikipedia_api import (
 )
 
 
-app = FastAPI(title="Wikipedia2Book", version="0.5.0")
+app = FastAPI(title="Wikipedia2Book", version="0.6.0")
 static_directory = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=static_directory), name="static")
 
@@ -173,15 +173,14 @@ async def create_pdf(project: Project) -> Response:
         groups = ordered_article_groups(project, selected)
         writer = PdfWriter()
         streams: list[BytesIO] = []
+        page_width_mm, page_height_mm = page_size_mm(project)
 
         def append_pdf(pdf_data: bytes) -> int:
-            stream = BytesIO(pdf_data)
+            stream = BytesIO(fit_pdf_to_format(pdf_data, page_width_mm, page_height_mm))
             streams.append(stream)
             page_number = len(writer.pages)
             writer.append(stream)
             return page_number
-
-        page_width_mm, page_height_mm = page_size_mm(project)
 
         def document_pdf(document: UploadedDocument) -> bytes:
             data = base64.b64decode(document.data_base64)
