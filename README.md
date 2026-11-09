@@ -1,38 +1,38 @@
 # Wikipedia2Book
 
-Wikipedia2Book est une application web qui permet de composer directement un livre PDF imprimable à partir d'articles Wikipédia, sans étape de création de « projet » : un livre est prêt dès l'ouverture de la page. L'utilisateur choisit les articles, explore les liens associés, organise le contenu en chapitres et configure la mise en page avant l'export.
+Wikipedia2Book is a web application for composing a printable PDF book directly from Wikipedia articles, with no "project" creation step: a book is ready as soon as the page opens. The user picks articles, explores related links, organizes the content into chapters and configures the layout before exporting.
 
-## Fonctionnalités
+## Features
 
-- Un livre unique, construit en mémoire dans le navigateur; export/import de son état sous forme de fichier JSON.
-- Ajout d'articles par titre, URL ou recherche; le contenu complet n'est récupéré qu'à la génération.
-- Import de la liste des articles depuis l'URL d'une page de livre Wikipédia, dans leur ordre réel.
-- Introduction et auteur du livre proposés automatiquement à partir du premier article ajouté.
-- Exploration des liens internes de Wikipédia avec profondeur et nombre d'articles paramétrables.
-- Sélection manuelle des articles à inclure; les articles découverts ne sont jamais ajoutés automatiquement.
-- Organisation des articles en chapitres, réordonnables par glisser-déposer, et configuration du format du livre.
-- Import d'images ou de PDF personnels, intégrés au livre comme des articles.
-- Génération d'un livre en assemblant les PDFs complets officiels téléchargés depuis Wikipédia, avec signets de navigation et numérotation continue des pages (table des matières incluse).
-- Interface disponible en français, anglais, chinois, italien et allemand.
+- A single book, built in browser memory; its state can be exported/imported as a JSON file.
+- Add articles by title, URL or search; the full content is only fetched at generation time.
+- Import the list of articles from the URL of a Wikipedia book page, in their actual order.
+- Book introduction and author suggested automatically from the first article added.
+- Exploration of Wikipedia internal links with configurable depth and number of articles.
+- Manual selection of the articles to include; discovered articles are never added automatically.
+- Organization of articles into chapters, reorderable by drag and drop, and configuration of the book format.
+- Import of personal images or PDFs, integrated into the book like articles.
+- Book generation by assembling the official full PDFs downloaded from Wikipedia, with navigation bookmarks and continuous page numbering (table of contents included).
+- Interface available in French, English, Chinese, Italian and German.
 
 ## Architecture
 
-- Python et FastAPI pour le backend.
-- HTML, CSS et JavaScript pour l'interface web (page unique, sans framework).
-- API officielle MediaWiki pour la recherche et l'exploration; endpoint PDF officiel pour récupérer les articles complets à l'export.
-- JSON échangé avec l'API, sans persistance sur le serveur.
-- WeasyPrint pour la couverture, les pages de chapitre et la conclusion; pypdf pour fusionner les PDFs en mémoire; reportlab pour les numéros de page et la conversion d'images importées en PDF.
-- Docker pour le déploiement.
+- Python and FastAPI for the backend.
+- HTML, CSS and JavaScript for the web interface (single page, no framework).
+- Official MediaWiki API for search and exploration; official PDF endpoint to fetch full articles at export time.
+- JSON exchanged with the API, with no server-side persistence.
+- WeasyPrint for the cover, chapter pages and conclusion; pypdf to merge PDFs in memory; reportlab for page numbers and for converting imported images to PDF.
+- Docker for deployment.
 
-Les détails fonctionnels et techniques sont décrits dans [SPECIFICATIONS.md](SPECIFICATIONS.md).
+Functional and technical details are described in [SPECIFICATIONS.md](SPECIFICATIONS.md) (in French).
 
-## État du projet
+## Project status
 
-Le dépôt contient le backend FastAPI et l'interface web correspondante. Elle permet de construire le livre en mémoire dans le navigateur, rechercher ou ajouter des références sans télécharger le contenu complet, explorer les liens Wikipédia, contrôler la sélection, organiser les chapitres et régler la couverture. À la génération, les PDFs complets des articles sélectionnés sont récupérés depuis Wikipédia et fusionnés en mémoire. Le serveur ne conserve ni le livre ni les PDF : l'utilisateur importe et télécharge explicitement un fichier JSON depuis l'interface.
+The repository contains the FastAPI backend and the matching web interface. It lets you build the book in browser memory, search for or add references without downloading the full content, explore Wikipedia links, control the selection, organize chapters and set up the cover. At generation time, the full PDFs of the selected articles are fetched from Wikipedia and merged in memory. The server stores neither the book nor the PDFs: the user explicitly imports and downloads a JSON file from the interface.
 
-## Démarrer l'application
+## Running the application
 
-Avec Python 3.12 et les dépendances système nécessaires à WeasyPrint installées :
+With Python 3.12 and the system dependencies required by WeasyPrint installed:
 
 ```bash
 python -m venv .venv
@@ -41,23 +41,22 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-L'interface web est disponible sur `http://localhost:8000` et la documentation interactive de l'API sur `http://localhost:8000/docs`.
+The web interface is available at `http://localhost:8000` and the interactive API documentation at `http://localhost:8000/docs`.
 
-Le conteneur peut être lancé directement :
+The container can be run directly:
 
 ```bash
 sh docker-build.sh
 docker run --rm -p 8000:8000 wikipedia2book
 ```
 
-Le script `docker-build.sh` injecte automatiquement le commit, la date et l'auteur git dans l'image via `--build-arg`, ce qui permet au pied de page d'afficher la version correcte.
+The `docker-build.sh` script automatically injects the git commit, date and author into the image via `--build-arg`, so the footer displays the correct version.
 
-L'application est accessible sur `http://localhost:8000`.
+The application is then reachable at `http://localhost:8000`.
 
+## Deployment
 
-Le déployement  
+- [Northflank](https://prod--wikipedia2book--wkvpbnfj6h4v.code.run) (Prod--wikipedia2book--wkvpbnfj6h4v.code.run)
+- [Railway](https://wikipedia2book-production.up.railway.app/)
 
-Prod--wikipedia2book--wkvpbnfj6h4v.code.run
-[app.northflank.com](Prod--wikipedia2book--wkvpbnfj6h4v.code.run).
-[Railway](https://wikipedia2book-production.up.railway.app/).
-La documentation de l'API en production est disponible sur [Railway](https://wikipedia2book-production.up.railway.app/docs).
+The production API documentation is available on [Railway](https://wikipedia2book-production.up.railway.app/docs).
