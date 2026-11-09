@@ -632,9 +632,9 @@ document.addEventListener('click', async (event) => {
     state.sourceMode = modeButton.dataset.sourceMode;
     $$('.entry-tab').forEach((tab) => tab.classList.toggle('active', tab === modeButton));
     const defaults = {
-      book:   { placeholder: 'https://fr.wikipedia.org/wiki/Utilisateur:…/Livres/…',                        hint: 'Collez l’URL d’une page de livre Wikipédia pour importer ses liens d’articles.', value: 'https://fr.wikipedia.org/wiki/Utilisateur:474D6F756C617264/Livres/Les_%C3%A9paves_de_la_rade_de_Saint-Pierre_suite_a_l%27%C3%A9ruption_de_la_montagne_Pel%C3%A9e_en_1902' },
-      url:    { placeholder: 'https://fr.wikipedia.org/wiki/…',                                              hint: 'Collez une URL HTTPS pointant vers un article Wikipédia.',                                    value: 'https://fr.wikipedia.org/wiki/%C3%89paves_de_la_rade_de_Saint-Pierre' },
-      search: { placeholder: 'Rechercher un article…',                                                       hint: 'Saisissez quelques mots pour rechercher dans Wikipédia.',                                    value: 'Épaves de la rade de Saint-Pierre' },
+      book:   { placeholder: 'https://fr.wikipedia.org/wiki/Utilisateur:…/Livres/…', hint: 'Collez l’URL d’une page de livre Wikipédia pour importer ses liens d’articles.', value: 'https://fr.wikipedia.org/wiki/Utilisateur:474D6F756C617264/Livres/Les_%C3%A9paves_de_la_rade_de_Saint-Pierre_suite_a_l%27%C3%A9ruption_de_la_montagne_Pel%C3%A9e_en_1902' },
+      url:    { placeholder: 'https://fr.wikipedia.org/wiki/…', hint: 'Collez une URL HTTPS pointant vers un article Wikipédia.', value: 'https://fr.wikipedia.org/wiki/%C3%89paves_de_la_rade_de_Saint-Pierre' },
+      search: { placeholder: 'Rechercher un article…', hint: 'Saisissez quelques mots pour rechercher dans Wikipédia.', value: 'Épaves de la rade de Saint-Pierre' },
     };
     const d = defaults[state.sourceMode];
     $('#articleQuery').placeholder = d.placeholder;
