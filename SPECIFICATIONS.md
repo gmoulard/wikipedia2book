@@ -468,9 +468,14 @@ Wikipedia2Book/
 │       ├── app.js
 │       └── Wikipedia2bookLogo.png
 │
+├── tests/
+│   └── test_syntax.py
+│
 ├── Dockerfile
 ├── docker-build.sh
 ├── requirements.txt
+├── .gitignore
+├── CLAUDE.md
 ├── README.md
 └── SPECIFICATIONS.md
 ```
@@ -487,7 +492,7 @@ L'essentiel du socle fonctionnel décrit dans ce document est implémenté : liv
 
 * Journalisation des erreurs et limitation du débit des requêtes API.
 
-* Tests automatisés.
+* Tests automatisés de comportement (seule la syntaxe Python est vérifiée aujourd'hui, via `tests/test_syntax.py`).
 
 * Prévisualisation du livre avant génération.
 
