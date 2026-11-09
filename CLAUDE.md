@@ -48,6 +48,8 @@ Chaque génération/modification de code par un agent doit incrémenter le numé
 
 Ne jamais terminer une génération de code sans ce bump, même minime.
 
+Ajouter la nouvelle version dans le tableau de la section 19 de `SPECIFICATIONS.md` (« Historique des versions »), avec la date et un résumé court des modifications — dans le même changement, pas après coup.
+
 ## Vérification avant de considérer une tâche terminée
 
 Un test automatisé existe : `tests/test_syntax.py` (stdlib `unittest`, aucune dépendance supplémentaire) — il vérifie que tous les fichiers `.py` sous `app/` parsent sans erreur de syntaxe. Le lancer pour la version courante avant de conclure une tâche touchant au backend :

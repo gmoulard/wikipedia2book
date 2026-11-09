@@ -504,4 +504,15 @@ L'essentiel du socle fonctionnel décrit dans ce document est implémenté : liv
 
 Toute évolution doit préserver les principes fondamentaux du logiciel, notamment le contrôle total de l'utilisateur sur la sélection des articles et l'absence de toute notion de projet.
 
+## 19\. Historique des versions
+
+Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l'application — voir section 12). Mis à jour à chaque génération de code, selon la règle définie dans `CLAUDE.md`.
+
+| Version | Date       | Modifications apportées |
+| ------- | ---------- | ------------------------ |
+| 0.1.0   | 2026-11-07 | Version initiale : livre unique en mémoire, ajout et exploration des articles, sélection manuelle, organisation en chapitres, formats et marges configurables, génération du PDF avec signets de navigation. |
+| 0.2.0   | 2026-11-09 | Nettoyage du code mort (suppression de `article_parser.py`, des champs `Article` inutilisés, du flux de création de « projet »). Ajout d'un test automatisé de syntaxe (`tests/test_syntax.py`) et de la politique de versionnement. |
+| 0.2.1   | 2026-11-09 | Correction : le bouton « Ajouter » ne réagissait pas quand le champ de saisie était vide (validation HTML silencieuse) — un message d'erreur explicite est affiché à la place. |
+| 0.3.0   | 2026-11-09 | Le numéro de version applicatif est désormais affiché dans le pied de page, en plus du commit git. |
+
 Fin du document — Wikipedia2Book, spécifications version 1.1.
