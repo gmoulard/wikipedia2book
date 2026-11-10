@@ -164,13 +164,11 @@ Pour chaque article découvert, le logiciel affiche :
 
 * Son URL.
 
-* L'article principal qui a conduit à sa découverte.
+* L'article principal qui a conduit à sa découverte (« Depuis … »).
 
-* Sa profondeur de découverte.
+* Un bouton « Ajouter au livre » et un bouton « × » pour l'écarter (section 5).
 
-* Son statut de sélection.
-
-Les doublons sont éliminés automatiquement (comparaison insensible à la casse sur la langue et le titre), y compris lorsqu'un même article est lié depuis plusieurs pages. Une nouvelle exploration ajoute ses résultats aux suggestions déjà présentes, sans dupliquer un article déjà suggéré ni un article déjà ajouté par l'utilisateur.
+Les doublons sont éliminés automatiquement (comparaison insensible à la casse sur la langue et le titre), y compris lorsqu'un même article est lié depuis plusieurs pages. Une nouvelle exploration ajoute ses résultats aux suggestions déjà présentes, sans dupliquer un article déjà suggéré, déjà ajouté par l'utilisateur, ou écarté pendant la session en cours.
 
 ### 4.4 Lancer l'exploration
 
@@ -180,11 +178,9 @@ L'exploration se lance depuis la section « Suggestions » de l'étape Sources, 
 
 * Le bouton « Articles liés » présent sur chaque carte d'article principal explore à partir de ce seul article.
 
-* Au-dessus du bouton, l'utilisateur choisit combien de suggestions il souhaite : « Quelques-unes » (10), « Une bonne sélection » (30, par défaut) ou « Beaucoup » (100). L'API accepte toute valeur entre 1 et 200.
+* Aucun réglage n'est demandé : chaque exploration cherche les liens directs (profondeur 1) et propose jusqu'à 30 nouvelles suggestions. Relancer l'exploration propose les 30 suivantes, car le maximum transmis à l'API tient compte des articles déjà connus (borné à 200). L'API, elle, accepte toujours une profondeur de 0 à 3 et un maximum de 1 à 200.
 
-* La profondeur (1 par défaut) se règle dans « Options avancées », replié par défaut.
-
-* À la fin, un message indique le nombre de nouvelles suggestions trouvées et invite à cocher celles à ajouter au livre, puis la page défile jusqu'à la liste des suggestions; si rien de nouveau n'a été trouvé, un message le précise.
+* À la fin, un message indique le nombre de nouvelles suggestions trouvées, puis la page défile jusqu'à la liste des suggestions; si rien de nouveau n'a été trouvé, un message le précise.
 
 ## 5\. Sélection des articles
 
@@ -192,27 +188,23 @@ Cette fonctionnalité est essentielle.
 
 Aucun article découvert ne doit être intégré automatiquement au livre.
 
-Le logiciel présente la liste des articles découverts et laisse l'utilisateur choisir exactement ceux qu'il souhaite conserver.
+Le logiciel présente la liste des articles découverts (« Suggestions ») et laisse l'utilisateur choisir exactement ceux qu'il souhaite conserver.
 
 Fonctionnalités disponibles :
 
-* Sélection individuelle.
+* « Ajouter au livre » sur une suggestion : elle quitte la liste des suggestions et rejoint « Vos articles », cochée, avec la mention de l'article d'origine; un message confirme l'ajout. Elle devient alors un article principal comme les autres : elle peut être décochée, retirée, ou servir de point de départ à une nouvelle exploration.
 
-* Désélection individuelle.
+* « × » sur une suggestion : elle est écartée de la liste et n'est plus reproposée pendant la session en cours.
 
-* Tout sélectionner (parmi les articles découverts).
+* « Tout ajouter » : ajoute toutes les suggestions visibles (en respectant les filtres actifs).
 
-* Sélectionner les visibles (respecte les filtres actifs).
-
-* Tout désélectionner.
-
-* Recherche par titre parmi les articles découverts.
+* Recherche par titre parmi les suggestions.
 
 * Filtrage par article d'origine.
 
-* Filtrage par profondeur de découverte.
+* Dans « Vos articles », une case à cocher par article indique s'il est inclus dans le livre.
 
-La sélection est conservée avec le reste du livre, en mémoire et dans l'export JSON.
+La sélection est conservée avec le reste du livre, en mémoire et dans l'export JSON. À l'ouverture d'un fichier JSON plus ancien, les articles découverts qui y étaient cochés sont rangés dans « Vos articles », les autres restent dans les suggestions.
 
 ## 6\. Organisation du livre
 
@@ -617,7 +609,7 @@ La version actuelle est considérée comme fonctionnelle si les points suivants 
 
 * Détection des doublons parmi les articles découverts.
 
-* Affichage des articles découverts avec leurs filtres (origine, profondeur, titre).
+* Affichage des articles découverts avec leurs filtres (origine, titre) et ajout au livre en un clic.
 
 * Sélection manuelle des articles; aucun ajout automatique d'article découvert.
 
@@ -733,5 +725,6 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 0.19.0  | 2026-11-11 | Interface plus intuitive : titre du livre modifiable directement en tête de page (plus de mention « projet » ni de champ titre en double dans l'étape Édition); boutons « Ouvrir » et « Enregistrer » libellés dans la barre supérieure; bouton « Étape suivante » en bas des étapes Sources et Organisation; préréglages de marges (Standard, Étroites, Larges, Pour reliure, Personnalisées) avec réglage au millimètre replié; case « Numéroter les pages » alignée avec son libellé; libellés « Vos articles » et « Suggestions » à la place de « Articles principaux » et « Articles découverts », dans les 12 langues; la barre supérieure ne déborde plus sur smartphone. |
 | 0.20.0  | 2026-11-11 | Nouvelle ergonomie de l'exploration des liens (section 4.4) : le panneau « Explorer les liens » (profondeur, maximum d'articles) est remplacé, dans la section « Suggestions », par un bouton « Trouver des articles liés à vos articles » désactivé tant qu'aucun article n'est ajouté, un choix en trois niveaux du nombre de suggestions, la profondeur dans des options avancées repliées, et un bouton « Articles liés » sur chaque article pour explorer à partir de lui seul. Les nouvelles explorations s'ajoutent aux suggestions existantes. Correction : le bouton « Ajouter » restait dans l'ancienne langue après un ajout suivi d'un changement de langue. |
 | 0.20.1  | 2026-11-11 | Le pied de page n'affiche plus « unknown » quand le commit git n'est pas connu au déploiement (valeur par défaut `unknown` de l'image Docker ignorée) : seuls la version et les informations disponibles sont affichées. |
+| 0.21.0  | 2026-11-11 | Articles liés plus simples : plus aucun réglage avant l'exploration (profondeur 1, 30 suggestions par exploration, les suivantes en relançant). Chaque suggestion a un bouton « Ajouter au livre » qui la fait passer visiblement dans « Vos articles » et un bouton « × » pour l'écarter, à la place des cases à cocher; « Tout ajouter » remplace les boutons de sélection groupée; le filtre par profondeur disparaît. Les suggestions cochées d'un ancien fichier JSON sont rangées dans « Vos articles » à l'ouverture (sections 4 et 5). |
 
 Fin du document — Wikipedia2Book, spécifications version 1.1.
