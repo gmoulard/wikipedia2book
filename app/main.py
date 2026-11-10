@@ -25,9 +25,11 @@ from app.models import (
     Article,
     ArticleRequest,
     BookImportRequest,
+    BookGenerationRequest,
     Project,
     ProjectExplorationRequest,
     UploadedDocument,
+    WikipediaBookGenerationRequest,
     utc_now,
 )
 from app.pdf_generator import fit_pdf_to_format, generate_pdf, image_to_pdf, stamp_page_numbers
@@ -41,7 +43,7 @@ from app.wikipedia_api import (
 )
 
 
-app = FastAPI(title="Wikipedia2Book", version="0.15.0")
+app = FastAPI(title="Wikipedia2Book", version="0.18.0")
 static_directory = Path(__file__).parent / "static"
 PDF_LANGUAGE_PATTERN = "^(" + "|".join(PDF_LABELS) + ")$"
 app.mount("/static", StaticFiles(directory=static_directory), name="static")
@@ -239,7 +241,7 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
     if project.page_numbers:
         yield progress("compute_page_numbers")
         cursor = len(PdfReader(BytesIO(generate_pdf(build_cover_html(project, language)))).pages) + 1
-        if toc_at_start:
+        if project.table_of_contents and toc_at_start:
             cursor += len(PdfReader(BytesIO(generate_pdf(build_toc_html(project, selected, language=language)))).pages)
         for index, (chapter_title, items) in enumerate(groups):
             if chapter_title:
@@ -250,7 +252,11 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
                 cursor += len(PdfReader(BytesIO(item_pdfs[item.key])).pages)
 
     yield progress("cover_and_toc")
-    toc = generate_pdf(build_toc_html(project, selected, article_pages, chapter_pages, language))
+    toc = (
+        generate_pdf(build_toc_html(project, selected, article_pages, chapter_pages, language))
+        if project.table_of_contents
+        else None
+    )
     cover = generate_pdf(build_cover_html(project, language))
 
     yield progress("assemble")
@@ -258,7 +264,7 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
         project.book_title or project.name,
         append_pdf(cover),
     )
-    if toc_at_start:
+    if project.table_of_contents and toc_at_start:
         writer.add_outline_item(pdf_label(language, "toc"), append_pdf(toc), parent=root_outline)
 
     for chapter_title, items in groups:
@@ -274,7 +280,7 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
             item_page = append_pdf(item_pdfs[item.key])
             writer.add_outline_item(item.title, item_page, parent=chapter_outline)
 
-    if not toc_at_start:
+    if project.table_of_contents and not toc_at_start:
         writer.add_outline_item(pdf_label(language, "toc"), append_pdf(toc), parent=root_outline)
 
     writer.add_outline_item(
@@ -305,6 +311,10 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
 async def create_pdf(
     project: Project, language: str = Query(default="fr", pattern=PDF_LANGUAGE_PATTERN)
 ) -> Response:
+    return await _create_pdf_response(project, language)
+
+
+async def _create_pdf_response(project: Project, language: str) -> Response:
     selected = _selected_items(project)
     try:
         async for event in build_book_pdf(project, selected, language):
@@ -319,6 +329,99 @@ async def create_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{project.book_title or project.name}.pdf"'},
     )
+
+
+@app.post("/api/books/generate", response_class=Response)
+async def generate_book(
+    payload: BookGenerationRequest, language: str = Query(default="fr", pattern=PDF_LANGUAGE_PATTERN)
+) -> Response:
+    articles = [add_article_reference(article) for article in payload.articles]
+    options = payload.model_dump(exclude={"articles"})
+    project = Project(
+        name=payload.book_title or "Wikipedia2Book",
+        main_articles=articles,
+        **options,
+    )
+    return await _create_pdf_response(project, language)
+
+
+@app.post("/api/books/generate-from-wikipedia-book", response_class=Response)
+async def generate_book_from_wikipedia_book_endpoint(
+    payload: WikipediaBookGenerationRequest,
+    language: str = Query(default="fr", pattern=PDF_LANGUAGE_PATTERN),
+) -> Response:
+    return await _generate_book_from_wikipedia_book(
+        url=payload.url,
+        book_title=payload.book_title,
+        book_subtitle=payload.book_subtitle,
+        book_author=payload.book_author,
+        page_format=payload.page_format,
+        orientation=payload.orientation,
+        page_numbers=payload.page_numbers,
+        table_of_contents=payload.table_of_contents,
+        language=language,
+    )
+
+
+@app.get("/api/books/generate-from-wikipedia-book", response_class=Response)
+async def generate_book_from_wikipedia_book_get(
+    url: str = Query(min_length=1, max_length=2048),
+    book_title: str | None = Query(default=None, max_length=200),
+    book_subtitle: str | None = Query(default=None, max_length=300),
+    book_author: str | None = Query(default=None, max_length=200),
+    page_format: str = Query(default="A4", pattern=r"^(A[0-6]|Letter|Legal|custom)$"),
+    orientation: str = Query(default="portrait", pattern=r"^(portrait|landscape)$"),
+    page_numbers: bool = True,
+    table_of_contents: bool = True,
+    language: str = Query(default="fr", pattern=PDF_LANGUAGE_PATTERN),
+) -> Response:
+    response = await _generate_book_from_wikipedia_book(
+        url=url,
+        book_title=book_title,
+        book_subtitle=book_subtitle,
+        book_author=book_author,
+        page_format=page_format,
+        orientation=orientation,
+        page_numbers=page_numbers,
+        table_of_contents=table_of_contents,
+        language=language,
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+async def _generate_book_from_wikipedia_book(
+    url: str,
+    book_title: str | None,
+    book_subtitle: str | None,
+    book_author: str | None,
+    page_format: str,
+    orientation: str,
+    page_numbers: bool,
+    table_of_contents: bool,
+    language: str,
+) -> Response:
+    try:
+        source_language, source_title = parse_article_url(url)
+        articles = await import_wikipedia_book(BookImportRequest(url=url))
+        if book_author is None:
+            async with MediaWikiClient() as client:
+                _, book_author = await client.get_intro_and_creator(source_title, source_language)
+    except (MediaWikiError, ValueError) as error:
+        raise _mediawiki_error(error) from error
+    book_title = (book_title or source_title)[:200]
+    project = Project(
+        name=(book_title or "Wikipedia2Book")[:120],
+        book_title=book_title,
+        book_subtitle=book_subtitle or "",
+        book_author=book_author or "",
+        main_articles=articles,
+        page_format=page_format,
+        orientation=orientation,
+        page_numbers=page_numbers,
+        table_of_contents=table_of_contents,
+    )
+    return await _create_pdf_response(project, language)
 
 
 @app.post("/api/pdf/stream")

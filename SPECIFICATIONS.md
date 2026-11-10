@@ -359,6 +359,8 @@ Pendant toute la génération, une fenêtre de statut indique l'étape en cours 
 
 Côté serveur, cette progression est transmise par l'endpoint `POST /api/pdf/stream`, qui renvoie un flux NDJSON (une ligne JSON par événement) : `{"type": "progress", "step", "total", "code", "title"?}` pour chaque étape, puis `{"type": "done", "pdf_base64"}` avec le PDF encodé en base64, ou `{"type": "error", "detail"}` en cas d'échec en cours de génération. Une sélection vide est refusée avant le début du flux (erreur HTTP 400). L'endpoint `POST /api/pdf`, qui renvoie directement le fichier PDF sans progression, reste disponible pour un usage direct de l'API.
 
+Deux endpoints de génération de haut niveau renvoient également directement un fichier PDF : `POST /api/books/generate` reçoit une liste explicite de références d'articles (titre ou URL), les métadonnées et les principaux réglages de mise en page; `POST /api/books/generate-from-wikipedia-book` reçoit l'URL d'une page de livre Wikipédia et un titre de livre facultatif. Dans ce dernier cas, tous les articles listés par Wikipédia sont inclus dans leur ordre d'apparition et sélectionnés pour la génération. Ces endpoints ne conservent aucun livre côté serveur.
+
 ### 11.2 Résultat
 
 Le PDF produit est :
@@ -440,7 +442,57 @@ Le logiciel utilise les interfaces officielles de MediaWiki pour :
 
 Chaque requête utilise un en-tête `User-Agent` dédié; les délais d'attente sont bornés (20 secondes pour les appels à l'API, 120 secondes pour le téléchargement d'un PDF).
 
-### 13.3 Docker et déploiement
+### 13.3 Exemples d'appels HTTP
+
+Les exemples ci-dessous supposent que le serveur fonctionne sur `http://localhost:8000`. Remplacer cette adresse par le domaine du déploiement pour appeler une instance distante.
+
+#### Dans un navigateur web
+
+Les endpoints GET peuvent être ouverts directement dans la barre d'adresse :
+
+* Rechercher des articles : `http://localhost:8000/api/search?query=Albert%20Einstein&language=fr&limit=5`.
+
+* Obtenir l'introduction et le créateur d'un article : `http://localhost:8000/api/articles/intro?title=Albert%20Einstein&language=fr`.
+
+* Générer le PDF d'une page de livre Wikipédia : `http://localhost:8000/api/books/generate-from-wikipedia-book?url=https%3A%2F%2Ffr.wikipedia.org%2Fwiki%2FLivre%3AAnimaux`. Le paramètre `url` est obligatoire; `language` est facultatif et vaut `fr` par défaut. Le PDF est renvoyé en téléchargement.
+
+* Vérifier que le service répond : `http://localhost:8000/health`.
+
+* Afficher la documentation interactive et appeler également les endpoints POST : `http://localhost:8000/docs`.
+
+L'endpoint GET de génération depuis une page de livre Wikipédia peut être appelé directement dans le navigateur. Les autres endpoints de génération de PDF utilisent POST; pour ceux-ci, utiliser `curl` ou la documentation interactive `/docs`.
+
+#### Avec curl
+
+Générer un PDF à partir d'une liste explicite de références d'articles :
+
+```bash
+curl --fail --show-error --request POST 'http://localhost:8000/api/books/generate?language=fr' \
+	--header 'Content-Type: application/json' \
+	--data '{"book_title":"Animaux","articles":[{"title":"Chat","language":"fr"},{"url":"https://fr.wikipedia.org/wiki/Chien"}]}' \
+	--output animaux.pdf
+```
+
+Générer un PDF à partir d'une page de livre Wikipédia, en remplaçant l'URL d'exemple par celle d'une page de livre existante :
+
+```bash
+curl --fail --show-error --request POST 'http://localhost:8000/api/books/generate-from-wikipedia-book?language=fr' \
+	--header 'Content-Type: application/json' \
+	--data '{"url":"https://fr.wikipedia.org/wiki/Livre:Animaux","book_title":"Animaux"}' \
+	--output animaux.pdf
+```
+
+La même génération peut être appelée avec GET et uniquement l'URL de la page de livre :
+
+```bash
+curl --fail --show-error --get 'http://localhost:8000/api/books/generate-from-wikipedia-book' \
+	--data-urlencode 'url=https://fr.wikipedia.org/wiki/Livre:Animaux' \
+	--output animaux.pdf
+```
+
+Dans les deux cas, la réponse est le fichier PDF binaire; `--output` le sauvegarde localement. `language` règle la langue des libellés générés dans le PDF et les langues prises en charge sont celles de la section 12.1.
+
+### 13.4 Docker et déploiement
 
 Le logiciel est livré avec :
 
@@ -620,5 +672,7 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 0.13.0  | 2026-11-10 | Nouvelle page « Licence » dans le PDF généré, entre le dernier article et la conclusion : licence CC BY-SA 4.0, conditions de réutilisation, et liste des articles sources avec lien vers l'article et son historique (section 15). |
 | 0.14.0  | 2026-11-10 | Les titres et libellés ajoutés par l'application dans le PDF (introduction, table des matières, chapitre, sans chapitre, conclusion, licence, sources, date d'édition, signets) sont rédigés dans la langue choisie pour l'interface au moment de la génération, avec écriture de droite à gauche pour l'arabe et le persan (section 12.1). Ajout des polices Noto CJK dans l'image Docker pour le chinois et le japonais. |
 | 0.15.0  | 2026-11-10 | Le texte explicatif de la page de licence (nom officiel de la licence, lien vers l'acte localisé, conditions de réutilisation, mentions) est lui aussi traduit dans la langue de l'interface (sections 12.1 et 15). |
+| 0.16.0  | 2026-11-10 | Ajout des API de génération directe d'un livre PDF depuis une liste explicite d'articles ou depuis une page de livre Wikipédia, avec conservation de l'ordre des articles de cette dernière. |
+| 0.17.0  | 2026-11-10 | Ajout d'un endpoint GET qui génère un PDF depuis l'URL d'une page de livre Wikipédia, appelable directement dans un navigateur. |
 
 Fin du document — Wikipedia2Book, spécifications version 1.1.

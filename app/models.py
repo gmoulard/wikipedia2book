@@ -69,6 +69,7 @@ class Project(BaseModel):
     article_order: list[str] = Field(default_factory=list)
     chapters: list[BookChapter] = Field(default_factory=list)
     toc_position: Literal["start", "end"] = "start"
+    table_of_contents: bool = True
     page_numbers: bool = True
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)
@@ -92,7 +93,37 @@ class BookImportRequest(BaseModel):
     url: str = Field(min_length=1, max_length=2048)
 
 
+class WikipediaBookGenerationRequest(BookImportRequest):
+    book_title: str | None = Field(default=None, max_length=200)
+    book_subtitle: str | None = Field(default=None, max_length=300)
+    book_author: str | None = Field(default=None, max_length=200)
+    page_format: Literal["A0", "A1", "A2", "A3", "A4", "A5", "A6", "Letter", "Legal", "custom"] = "A4"
+    orientation: Literal["portrait", "landscape"] = "portrait"
+    page_numbers: bool = True
+    table_of_contents: bool = True
+
+
 class ProjectExplorationRequest(BaseModel):
     project: Project
     max_depth: int = Field(default=1, ge=0, le=3)
     max_articles: int = Field(default=30, ge=1, le=200)
+
+
+class BookGenerationRequest(BaseModel):
+    articles: list[ArticleRequest] = Field(min_length=1, max_length=200)
+    book_title: str = Field(default="", max_length=200)
+    book_subtitle: str = Field(default="", max_length=300)
+    book_author: str = Field(default="", max_length=200)
+    introduction: str = Field(default="", max_length=20000)
+    conclusion: str = Field(default="", max_length=20000)
+    page_format: Literal["A0", "A1", "A2", "A3", "A4", "A5", "A6", "Letter", "Legal", "custom"] = "A4"
+    custom_width_mm: float = Field(default=148, ge=50, le=1000)
+    custom_height_mm: float = Field(default=210, ge=50, le=1000)
+    orientation: Literal["portrait", "landscape"] = "portrait"
+    margin_top_mm: float = Field(default=18, ge=0, le=100)
+    margin_bottom_mm: float = Field(default=18, ge=0, le=100)
+    margin_inside_mm: float = Field(default=18, ge=0, le=100)
+    margin_outside_mm: float = Field(default=16, ge=0, le=100)
+    margin_binding_mm: float = Field(default=0, ge=0, le=40)
+    toc_position: Literal["start", "end"] = "start"
+    page_numbers: bool = True

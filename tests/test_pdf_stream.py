@@ -45,6 +45,9 @@ class FakeClient:
             raise MediaWikiError(f"PDF indisponible pour {title}")
         return _make_pdf(2)
 
+    async def get_book_links(self, title, language, limit=200):
+        return ["Chien", "Chat"]
+
 
 def _project(**extra):
     articles = [
@@ -115,6 +118,41 @@ class PdfStreamTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers["content-type"], "application/pdf")
         self.assertEqual(len(PdfReader(BytesIO(response.content)).pages), 1 + 1 + 2 + 2 + 1)
+
+    def test_high_level_generation_accepts_article_references(self):
+        response = self.client.post(
+            "/api/books/generate",
+            json={"book_title": "Animaux", "articles": [{"title": "Chat", "language": "fr"}]},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["content-type"], "application/pdf")
+        self.assertEqual(len(PdfReader(BytesIO(response.content)).pages), 1 + 1 + 2 + 1)
+
+    def test_high_level_generation_from_wikipedia_book_keeps_article_order(self):
+        response = self.client.post(
+            "/api/books/generate-from-wikipedia-book",
+            json={"url": "https://fr.wikipedia.org/wiki/Livre:Animaux", "book_title": "Animaux"},
+        )
+        self.assertEqual(response.status_code, 200)
+        pdf = PdfReader(BytesIO(response.content))
+        child_titles = [item.title for item in pdf.outline[1] if not isinstance(item, list)]
+        self.assertLess(child_titles.index("Chien"), child_titles.index("Chat"))
+
+    def test_get_generation_from_wikipedia_book_needs_only_the_url(self):
+        response = self.client.get(
+            "/api/books/generate-from-wikipedia-book",
+            params={"url": "https://fr.wikipedia.org/wiki/Livre:Animaux"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["content-type"], "application/pdf")
+        self.assertEqual(response.headers["cache-control"], "no-store")
+        pdf = PdfReader(BytesIO(response.content))
+        child_titles = [item.title for item in pdf.outline[1] if not isinstance(item, list)]
+        self.assertLess(child_titles.index("Chien"), child_titles.index("Chat"))
+
+    def test_high_level_generation_rejects_empty_article_list(self):
+        response = self.client.post("/api/books/generate", json={"articles": []})
+        self.assertEqual(response.status_code, 422)
 
     def test_generated_titles_follow_the_requested_language(self):
         project = _project(conclusion="Ende", chapters=[{"title": "Tiere", "article_keys": ["fr:title:chat"]}])
