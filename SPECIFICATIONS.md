@@ -2,6 +2,8 @@
 
 Version : 1.1 — Statut : aligné sur l'implémentation actuelle — Format : Markdown (`.md`)
 
+[TOC]
+
 ## 1\. Présentation de Wikipedia2Book
 
 ### 1.1 Objectif
