@@ -60,3 +60,11 @@ The application is then reachable at `http://localhost:8000`.
 - [Railway](https://wikipedia2book-production.up.railway.app/)
 
 The production API documentation is available on [Railway](https://wikipedia2book-production.up.railway.app/docs).
+
+## License
+
+Wikipedia2Book is free software, distributed under the [GNU Affero General Public License v3.0](https://www.gnu.org/licenses/agpl-3.0.html) (AGPL-3.0). The full text is in the [LICENSE](LICENSE) file.
+
+In short, you may use, study, modify and redistribute this software, provided that any modified version you distribute is published under the same license with its source code. Because this is the *Affero* GPL, this obligation also applies when a modified version is only offered as a network service: its users must be able to obtain its source code.
+
+This license covers the application's code only. The books it generates are made of Wikipedia content, published under its own license ([CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)), which is stated on the license page of each generated PDF.
