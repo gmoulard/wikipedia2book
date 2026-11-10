@@ -72,10 +72,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 .main-area { flex: 1; }
 .topbar { position: sticky; top: 0; z-index: 3; display: flex; min-height: 65px; align-items: center; justify-content: space-between; gap: 20px; padding: 12px 42px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--canvas) 95%, transparent); backdrop-filter: blur(14px); }
-.breadcrumb { display: flex; min-width: 0; align-items: center; gap: 11px; color: var(--muted); font-size: 9px; font-weight: 700; letter-spacing: 1px; white-space: nowrap; }
-.breadcrumb span:last-child { overflow: hidden; max-width: 230px; color: var(--ink-soft); text-overflow: ellipsis; }
-.breadcrumb-slash { color: #b3beba; }
-.topbar-actions { display: flex; align-items: center; gap: 17px; }
+.topbar-actions { display: flex; align-items: center; gap: 12px; }
+.topbar-file-button { min-height: 34px; gap: 6px; font-size: 11px; }
 .save-state { color: var(--muted); font-size: 11px; }
 .language-select { height: 30px; padding: 0 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: var(--ink-soft); font-size: 11px; color-scheme: light dark; }
 .button { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; gap: 9px; padding: 0 14px; border: 1px solid transparent; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600; transition: transform .16s ease, background .16s ease, border-color .16s ease; }
@@ -232,8 +230,13 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .field input, .field select, .field textarea { width: 100%; min-width: 0; min-height: 36px; padding: 8px 9px; border: 1px solid var(--line); border-radius: 4px; background: var(--paper); color: var(--ink); font-size: 11px; font-weight: 400; resize: vertical; }
 .field textarea { line-height: 1.55; }
 .field input::placeholder, .field textarea::placeholder { color: #a2aca8; }
-.checkbox-field { flex-direction: row; align-items: center; gap: 8px; cursor: pointer; }
-.checkbox-field input[type="checkbox"] { width: 15px; height: 15px; flex: 0 0 auto; accent-color: var(--teal); cursor: pointer; }
+.checkbox-field { display: flex; flex-direction: row; align-items: center; gap: 8px; cursor: pointer; }
+.checkbox-field input[type="checkbox"] { width: 15px; height: 15px; min-height: 0; flex: 0 0 auto; padding: 0; accent-color: var(--teal); cursor: pointer; }
+.margin-details summary { color: var(--teal-dark); cursor: pointer; font-size: 11px; font-weight: 600; }
+.margin-details .settings-grid { margin-top: 12px; }
+.step-footer { display: flex; justify-content: flex-end; margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--line); }
+.step-arrow { display: inline-block; }
+[dir="rtl"] .step-arrow { transform: scaleX(-1); }
 
 .orientation-field { margin: 0; padding: 0; border: 0; }
 .orientation-field legend { margin-bottom: 6px; color: var(--ink-soft); font-size: 10px; font-weight: 600; }
@@ -273,8 +276,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 @media (max-width: 760px) {
   .topbar { min-height: 56px; padding: 9px 16px; gap: 10px; }
   .brand { padding: 0; }
-  .breadcrumb { gap: 7px; font-size: 8px; }
-  .breadcrumb span:last-child { max-width: 105px; }
+  .topbar-file-button { width: 32px; min-height: 32px; padding: 0; }
+  .language-select { max-width: 76px; }
+  .brand > span { display: none; }
+  .topbar-actions .button-dark { padding: 0 9px; }
+  .topbar-file-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .topbar-actions { gap: 9px; }
   .save-state { display: none; }
   .topbar-actions .button { min-height: 34px; padding: 0 10px; font-size: 10px; }

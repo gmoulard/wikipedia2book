@@ -83,11 +83,13 @@ function renderWorkspace() {
   const hasProject = Boolean(state.project);
   $('#projectWorkspace').hidden = !hasProject;
   $('#saveWorkspaceButton').disabled = !hasProject;
-  $('#breadcrumbProject').textContent = hasProject ? state.project.name.toLocaleUpperCase(lang()) : t('topbar.newProject');
+  $$('[data-next-step]').forEach((button) => {
+    button.querySelector('.step-footer-label').textContent = t('nav.next', { step: t(`tabs.${button.dataset.nextStep}`) });
+  });
   if (!hasProject) return;
   const nameInput = $('#projectName');
   const descInput = $('#projectDescription');
-  if (document.activeElement !== nameInput) nameInput.value = state.project.name;
+  if (document.activeElement !== nameInput) nameInput.value = state.project.book_title || state.project.name;
   if (document.activeElement !== descInput) descInput.value = state.project.description || '';
   $('#sourceCount').textContent = activeArticles().length;
   $('#selectedCount').textContent = selectedArticles().length;
@@ -317,7 +319,7 @@ function applyDragDrop(fromIndex, toIndex) {
 function renderBookSettings() {
   const project = state.project;
   const controls = {
-    bookTitle: 'book_title', bookSubtitle: 'book_subtitle', bookAuthor: 'book_author',
+    bookSubtitle: 'book_subtitle', bookAuthor: 'book_author',
     bookIntroduction: 'introduction', bookConclusion: 'conclusion', pageFormat: 'page_format',
     customWidth: 'custom_width_mm', customHeight: 'custom_height_mm', marginTop: 'margin_top_mm',
     marginBottom: 'margin_bottom_mm', marginInside: 'margin_inside_mm', marginOutside: 'margin_outside_mm', marginBinding: 'margin_binding_mm',
@@ -330,6 +332,26 @@ function renderBookSettings() {
   if (orientation) orientation.checked = true;
   $('#customDimensions').hidden = project.page_format !== 'custom';
   $('#pageNumbers').checked = project.page_numbers || false;
+  $('#marginPreset').value = marginPresetOf(project);
+}
+
+const MARGIN_PRESETS = {
+  standard: { margin_top_mm: 18, margin_bottom_mm: 18, margin_inside_mm: 18, margin_outside_mm: 16, margin_binding_mm: 0 },
+  narrow: { margin_top_mm: 10, margin_bottom_mm: 10, margin_inside_mm: 12, margin_outside_mm: 10, margin_binding_mm: 0 },
+  wide: { margin_top_mm: 25, margin_bottom_mm: 25, margin_inside_mm: 25, margin_outside_mm: 22, margin_binding_mm: 0 },
+  binding: { margin_top_mm: 18, margin_bottom_mm: 18, margin_inside_mm: 20, margin_outside_mm: 16, margin_binding_mm: 10 },
+};
+
+function marginPresetOf(project) {
+  const match = Object.entries(MARGIN_PRESETS).find(([, margins]) => Object.entries(margins).every(([field, value]) => Number(project[field]) === value));
+  return match ? match[0] : 'custom';
+}
+
+function applyMarginPreset(name) {
+  const margins = MARGIN_PRESETS[name];
+  if (!margins) { $('.margin-details').open = true; return; }
+  queueSave({ ...margins });
+  renderBookSettings();
 }
 
 function setProject(project) {
@@ -427,7 +449,6 @@ async function importWikipediaBook(url) {
         state.project.name = bookName;
         state.project.book_title = bookName;
         $('#projectName').value = bookName;
-        $('#breadcrumbProject').textContent = bookName.toLocaleUpperCase(lang());
       }
     } catch { /* titre non critique */ }
     queueSave({ main_articles: state.project.main_articles, name: state.project.name, book_title: state.project.book_title });
@@ -740,7 +761,11 @@ function sourceModeDefaults(mode) {
 
 document.addEventListener('click', async (event) => {
   const viewButton = event.target.closest('[data-view]');
-  if (viewButton) { setView(viewButton.dataset.view); return; }
+  if (viewButton) {
+    setView(viewButton.dataset.view);
+    if (viewButton.closest('.step-footer')) window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
   const modeButton = event.target.closest('[data-source-mode]');
   if (modeButton) {
     state.sourceMode = modeButton.dataset.sourceMode;
@@ -782,11 +807,13 @@ document.addEventListener('change', async (event) => {
   if (event.target.matches('#originFilter, #depthFilter')) { renderArticles(); return; }
   if (event.target.matches('input[name="orientation"]')) { const layout = collectLayoutSettings(); Object.assign(state.project, layout); queueSave(layout); return; }
   if (event.target.matches('#pageNumbers')) { queueSave({ page_numbers: event.target.checked }); return; }
-  const textSettings = { bookTitle: 'book_title', bookSubtitle: 'book_subtitle', bookAuthor: 'book_author', bookIntroduction: 'introduction', bookConclusion: 'conclusion' };
+  const textSettings = { bookSubtitle: 'book_subtitle', bookAuthor: 'book_author', bookIntroduction: 'introduction', bookConclusion: 'conclusion' };
   if (textSettings[event.target.id]) patchSetting(event.target.id, textSettings[event.target.id]);
   const numericSettings = { customWidth: 'custom_width_mm', customHeight: 'custom_height_mm', marginTop: 'margin_top_mm', marginBottom: 'margin_bottom_mm', marginInside: 'margin_inside_mm', marginOutside: 'margin_outside_mm', marginBinding: 'margin_binding_mm' };
   if (numericSettings[event.target.id]) patchSetting(event.target.id, numericSettings[event.target.id], Number);
   if (event.target.matches('#pageFormat')) patchSetting('pageFormat', 'page_format');
+  if (event.target.matches('#marginPreset')) applyMarginPreset(event.target.value);
+  if (numericSettings[event.target.id]?.startsWith('margin_')) $('#marginPreset').value = marginPresetOf(state.project);
 });
 
 document.addEventListener('input', (event) => {
@@ -794,7 +821,7 @@ document.addEventListener('input', (event) => {
   if (event.target.matches('#articleFilter')) renderArticles();
   if (event.target.matches('#projectName')) {
     const value = event.target.value.trim();
-    if (value) { state.project.name = value; queueSave({ name: value }); $('#breadcrumbProject').textContent = value.toLocaleUpperCase(lang()); }
+    if (value) queueSave({ name: value, book_title: value });
   }
   if (event.target.matches('#projectDescription')) { state.project.description = event.target.value; queueSave({ description: event.target.value }); }
   const chapterNameEl = event.target.closest('.chapter-name');
@@ -803,7 +830,7 @@ document.addEventListener('input', (event) => {
     const chapter = state.project.chapters.find((c) => c.id === row?.dataset.chapterId);
     if (chapter && chapterNameEl.value.trim()) { chapter.title = chapterNameEl.value; queueSave({ chapters: state.project.chapters }); }
   }
-  const textSettings = { bookTitle: 'book_title', bookSubtitle: 'book_subtitle', bookAuthor: 'book_author', bookIntroduction: 'introduction', bookConclusion: 'conclusion' };
+  const textSettings = { bookSubtitle: 'book_subtitle', bookAuthor: 'book_author', bookIntroduction: 'introduction', bookConclusion: 'conclusion' };
   if (textSettings[event.target.id]) { state.project[textSettings[event.target.id]] = event.target.value; queueSave({ [textSettings[event.target.id]]: event.target.value }); }
 });
 

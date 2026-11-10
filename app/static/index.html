@@ -19,16 +19,15 @@
         <img class="brand-logo" src="/static/Wikipedia2bookLogo.png" width="28" height="28" alt="" aria-hidden="true">
         <span>WIKIPEDIA<span class="brand-light">2BOOK</span></span>
       </a>
-      <div class="breadcrumb"><span data-i18n="topbar.eyebrow">ATELIER ÉDITORIAL</span><span class="breadcrumb-slash">/</span><span id="breadcrumbProject" data-i18n="topbar.newProject">NOUVEAU PROJET</span></div>
       <div class="topbar-actions">
-        <span class="save-state" id="saveState" data-i18n="topbar.noFile">Aucun fichier chargé</span>
+        <span class="save-state" id="saveState" data-i18n="topbar.noFile">Livre non enregistré</span>
         <label class="visually-hidden" for="languageSelect">Language / Langue / Idioma / Língua / Lingua / Sprache / Taal / Dil / 语言 / 言語 / اللغة / زبان</label>
         <select id="languageSelect" class="language-select" aria-label="Language / Langue / Idioma / Língua / Lingua / Sprache / Taal / Dil / 语言 / 言語 / زبان">
           <option value="fr">Français</option><option value="en">English</option><option value="es">Español</option><option value="pt">Português</option><option value="it">Italiano</option><option value="de">Deutsch</option><option value="nl">Nederlands</option><option value="tr">Türkçe</option><option value="zh">中文</option><option value="ja">日本語</option><option value="ar">العربية</option><option value="fa">فارسی</option>
         </select>
         <input id="workspaceFileInput" type="file" accept=".json,application/json" hidden>
-        <button class="icon-button" id="importWorkspaceButton" type="button" data-i18n-title="topbar.importJson" data-i18n-aria-label="topbar.importJson" title="Importer un fichier JSON" aria-label="Importer un fichier JSON">↑</button>
-        <button class="icon-button" id="saveWorkspaceButton" type="button" data-i18n-title="topbar.saveJson" data-i18n-aria-label="topbar.saveJson" title="Télécharger le livre en JSON" aria-label="Télécharger le livre en JSON" disabled>↓</button>
+        <button class="button button-outline topbar-file-button" id="importWorkspaceButton" type="button" data-i18n-title="topbar.importJson" title="Ouvrir un livre enregistré (fichier JSON)"><span aria-hidden="true">↑</span> <span class="topbar-file-label" data-i18n="topbar.open">Ouvrir</span></button>
+        <button class="button button-outline topbar-file-button" id="saveWorkspaceButton" type="button" data-i18n-title="topbar.saveJson" title="Enregistrer le livre sur votre ordinateur (fichier JSON)" disabled><span aria-hidden="true">↓</span> <span class="topbar-file-label" data-i18n="topbar.save">Enregistrer</span></button>
         <button class="button button-dark" id="topExportButton" type="button"><span aria-hidden="true">↓</span> <span data-i18n="topbar.generatePdf">Générer le PDF</span></button>
       </div>
     </header>
@@ -37,15 +36,15 @@
       <div id="projectWorkspace" class="project-workspace">
         <section class="project-heading">
           <div class="project-heading-main">
-            <div class="eyebrow"><span class="eyebrow-dot"></span> <span data-i18n="heading.eyebrow">PROJET DE LIVRE</span></div>
-            <label class="visually-hidden" for="projectName" data-i18n="heading.nameLabel">Nom du projet</label>
-            <input id="projectName" class="project-title-input" maxlength="120" placeholder="Sans titre" data-i18n-placeholder="heading.namePlaceholder" autocomplete="off">
-            <label class="visually-hidden" for="projectDescription" data-i18n="heading.descLabel">Description du projet</label>
-            <input id="projectDescription" class="project-description-input" maxlength="2000" placeholder="Une note sur ce que vous souhaitez explorer…" data-i18n-placeholder="heading.descPlaceholder" autocomplete="off">
+            <div class="eyebrow"><span class="eyebrow-dot"></span> <span data-i18n="heading.eyebrow">VOTRE LIVRE</span></div>
+            <label class="visually-hidden" for="projectName" data-i18n="heading.nameLabel">Titre du livre</label>
+            <input id="projectName" class="project-title-input" maxlength="120" placeholder="Titre du livre" data-i18n-placeholder="heading.namePlaceholder" autocomplete="off">
+            <label class="visually-hidden" for="projectDescription" data-i18n="heading.descLabel">Note de couverture</label>
+            <input id="projectDescription" class="project-description-input" maxlength="2000" placeholder="Note affichée sur la couverture (facultatif)" data-i18n-placeholder="heading.descPlaceholder" autocomplete="off">
           </div>
         </section>
 
-        <nav class="workflow-tabs" aria-label="Étapes du projet" data-i18n-aria-label="tabs.ariaLabel">
+        <nav class="workflow-tabs" aria-label="Étapes du livre" data-i18n-aria-label="tabs.ariaLabel">
           <button class="workflow-tab active" type="button" data-view="sources"><span class="tab-number">01</span> <span data-i18n="tabs.sources">Sources</span> <span class="tab-count" id="sourceCount">0</span></button>
           <button class="workflow-tab" type="button" data-view="organization"><span class="tab-number">02</span> <span data-i18n="tabs.organization">Organisation</span> <span class="tab-count" id="selectedCount">0</span></button>
           <button class="workflow-tab" type="button" data-view="book"><span class="tab-number">03</span> <span data-i18n="tabs.edition">Édition</span></button>
@@ -54,7 +53,7 @@
         <section class="view-panel" id="sourcesPanel" data-panel="sources">
           <div class="section-intro">
             <div><div class="eyebrow" data-i18n="sources.eyebrow">COLLECTE</div><h2 data-i18n="sources.title">Construire le livre</h2></div>
-            <p data-i18n="sources.intro">Ajoutez vos articles principaux. Les suggestions découvertes restent à valider avant d'entrer dans le livre.</p>
+            <p data-i18n="sources.intro">Ajoutez vos articles. L'exploration des liens vous propose des suggestions : cochez celles à inclure dans le livre.</p>
           </div>
           <div class="source-tools">
             <div class="source-entry">
@@ -85,11 +84,11 @@
           </div>
           <div class="article-columns">
             <section class="article-section">
-              <div class="list-heading"><div><span class="eyebrow" data-i18n="main.eyebrow">VOTRE SÉLECTION DE DÉPART</span><h3><span data-i18n="main.title">Articles principaux</span> <span id="mainArticleCount" class="count-inline">0</span></h3></div><span class="list-note" data-i18n="main.note">Inclus par défaut</span></div>
+              <div class="list-heading"><div><span class="eyebrow" data-i18n="main.eyebrow">AJOUTÉS PAR VOUS</span><h3><span data-i18n="main.title">Vos articles</span> <span id="mainArticleCount" class="count-inline">0</span></h3></div><span class="list-note" data-i18n="main.note">Cochés = inclus dans le livre</span></div>
               <div id="mainArticles" class="article-list"></div>
             </section>
             <section class="article-section discovered-section">
-              <div class="list-heading"><div><span class="eyebrow" data-i18n="discovered.eyebrow">À EXAMINER</span><h3><span data-i18n="discovered.title">Articles découverts</span> <span id="discoveredArticleCount" class="count-inline">0</span></h3></div><button id="selectDiscoveredButton" class="text-button" type="button" disabled data-i18n="discovered.selectAll">Tout sélectionner</button></div>
+              <div class="list-heading"><div><span class="eyebrow" data-i18n="discovered.eyebrow">LIENS À EXAMINER</span><h3><span data-i18n="discovered.title">Suggestions</span> <span id="discoveredArticleCount" class="count-inline">0</span></h3></div><button id="selectDiscoveredButton" class="text-button" type="button" disabled data-i18n="discovered.selectAll">Tout sélectionner</button></div>
               <div class="discovery-filters">
                 <label class="filter-search"><span aria-hidden="true">⌕</span><input id="articleFilter" type="search" placeholder="Filtrer par titre…" data-i18n-placeholder="discovered.filterPlaceholder"></label>
                 <select id="originFilter" aria-label="Filtrer par origine" data-i18n-aria-label="discovered.originAria"><option value="" data-i18n="discovered.allOrigins">Toutes les origines</option></select>
@@ -99,6 +98,7 @@
               <div id="discoveredArticles" class="article-list"></div>
             </section>
           </div>
+          <div class="step-footer"><button class="button button-teal" type="button" data-view="organization" data-next-step="organization"><span class="step-footer-label">Étape suivante : Organisation</span> <span class="step-arrow" aria-hidden="true">→</span></button></div>
         </section>
 
         <section class="view-panel" id="organizationPanel" data-panel="organization" hidden>
@@ -114,6 +114,7 @@
             <div id="uploadedDocumentsList" class="uploaded-documents-list"></div>
           </div>
           <div id="organizationList" class="organization-list"></div>
+          <div class="step-footer"><button class="button button-teal" type="button" data-view="book" data-next-step="edition"><span class="step-footer-label">Étape suivante : Édition</span> <span class="step-arrow" aria-hidden="true">→</span></button></div>
         </section>
 
         <section class="view-panel" id="bookPanel" data-panel="book" hidden>
@@ -125,7 +126,6 @@
             <section class="settings-section">
               <div class="settings-heading"><span class="settings-index">A</span><div><h3 data-i18n="edition.identityTitle">Identité du livre</h3><p data-i18n="edition.identitySubtitle">Les informations de couverture et d'ouverture</p></div></div>
               <div class="form-grid">
-                <label class="field field-wide"><span data-i18n="edition.bookTitleLabel">Titre du livre</span><input id="bookTitle" type="text" placeholder="Reprend le nom du projet" data-i18n-placeholder="edition.bookTitlePlaceholder"></label>
                 <label class="field field-wide"><span data-i18n="edition.subtitleLabel">Sous-titre</span><input id="bookSubtitle" type="text" placeholder="Facultatif" data-i18n-placeholder="common.optional"></label>
                 <label class="field field-wide"><span data-i18n="edition.authorLabel">Auteur ou éditeur</span><input id="bookAuthor" type="text" placeholder="Facultatif" data-i18n-placeholder="common.optional"></label>
                 <label class="field field-wide"><span data-i18n="edition.introLabel">Introduction</span><textarea id="bookIntroduction" rows="4" placeholder="Quelques mots pour ouvrir le livre…" data-i18n-placeholder="edition.introPlaceholder"></textarea></label>
@@ -138,11 +138,14 @@
                 <label class="field"><span data-i18n="edition.paperFormatLabel">Format papier</span><select id="pageFormat"><option>A5</option><option selected>A4</option><option>A6</option><option>A3</option><option>A2</option><option>A1</option><option>A0</option><option>Letter</option><option>Legal</option><option value="custom" data-i18n="edition.customOption">Personnalisé</option></select></label>
                 <fieldset class="field orientation-field"><legend data-i18n="edition.orientationLegend">Orientation</legend><div class="segmented-control"><label><input type="radio" name="orientation" value="portrait"><span data-i18n="edition.portrait">Portrait</span></label><label><input type="radio" name="orientation" value="landscape"><span data-i18n="edition.landscape">Paysage</span></label></div></fieldset>
                 <div id="customDimensions" class="custom-dimensions field-wide" hidden><label class="field"><span data-i18n="edition.widthLabel">Largeur (mm)</span><input id="customWidth" type="number" min="50" max="1000" value="148"></label><label class="field"><span data-i18n="edition.heightLabel">Hauteur (mm)</span><input id="customHeight" type="number" min="50" max="1000" value="210"></label></div>
-                <label class="field"><span data-i18n="edition.marginTop">Marge supérieure (mm)</span><input id="marginTop" type="number" min="0" max="100" value="18"></label>
-                <label class="field"><span data-i18n="edition.marginBottom">Marge inférieure (mm)</span><input id="marginBottom" type="number" min="0" max="100" value="18"></label>
-                <label class="field"><span data-i18n="edition.marginInside">Marge intérieure (mm)</span><input id="marginInside" type="number" min="0" max="100" value="18"></label>
-                <label class="field"><span data-i18n="edition.marginOutside">Marge extérieure (mm)</span><input id="marginOutside" type="number" min="0" max="100" value="16"></label>
-                <label class="field field-wide"><span data-i18n="edition.marginBinding">Marge de reliure (mm)</span><input id="marginBinding" type="number" min="0" max="40" value="0"></label>
+                <label class="field field-wide"><span data-i18n="edition.marginsLabel">Marges</span><select id="marginPreset"><option value="standard" data-i18n="edition.marginsStandard">Standard</option><option value="narrow" data-i18n="edition.marginsNarrow">Étroites</option><option value="wide" data-i18n="edition.marginsWide">Larges</option><option value="binding" data-i18n="edition.marginsBinding">Pour reliure</option><option value="custom" data-i18n="edition.marginsCustom">Personnalisées</option></select></label>
+                <details class="margin-details field-wide"><summary data-i18n="edition.marginsDetails">Régler les marges au millimètre</summary><div class="form-grid settings-grid">
+                  <label class="field"><span data-i18n="edition.marginTop">Marge supérieure (mm)</span><input id="marginTop" type="number" min="0" max="100" value="18"></label>
+                  <label class="field"><span data-i18n="edition.marginBottom">Marge inférieure (mm)</span><input id="marginBottom" type="number" min="0" max="100" value="18"></label>
+                  <label class="field"><span data-i18n="edition.marginInside">Marge intérieure (mm)</span><input id="marginInside" type="number" min="0" max="100" value="18"></label>
+                  <label class="field"><span data-i18n="edition.marginOutside">Marge extérieure (mm)</span><input id="marginOutside" type="number" min="0" max="100" value="16"></label>
+                  <label class="field field-wide"><span data-i18n="edition.marginBinding">Marge de reliure (mm)</span><input id="marginBinding" type="number" min="0" max="40" value="0"></label>
+                </div></details>
                 <label class="field field-wide checkbox-field"><input id="pageNumbers" type="checkbox" checked> <span data-i18n="edition.pageNumbers">Numéroter les pages</span></label>
               </div>
             </section>

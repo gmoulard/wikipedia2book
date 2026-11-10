@@ -302,7 +302,18 @@ Deux orientations sont disponibles :
 
 ### 9.4 Marges
 
-L'utilisateur règle indépendamment :
+L'utilisateur choisit d'abord un jeu de marges prédéfini :
+
+| Préréglage    | Haut | Bas | Intérieure | Extérieure | Reliure |
+| ------------- | ---- | --- | ---------- | ---------- | ------- |
+| Standard      | 18   | 18  | 18         | 16         | 0       |
+| Étroites      | 10   | 10  | 12         | 10         | 0       |
+| Larges        | 25   | 25  | 25         | 22         | 0       |
+| Pour reliure  | 18   | 18  | 20         | 16         | 10      |
+
+Valeurs en millimètres; « Standard » correspond aux valeurs par défaut. Le choix « Personnalisées », ou le dépliage de « Régler les marges au millimètre », donne accès au réglage individuel de chaque marge. Le préréglage affiché est déduit des valeurs du livre : dès qu'une marge ne correspond plus à aucun préréglage, « Personnalisées » est affiché. Les préréglages ne sont pas enregistrés en tant que tels dans le livre ni dans l'export JSON, seules les cinq valeurs le sont.
+
+Les marges réglables individuellement sont :
 
 * La marge supérieure.
 
@@ -426,15 +437,17 @@ En cas d'échec, le logiciel affiche un message explicite. Les erreurs possibles
 
 ## 12\. Interface utilisateur
 
-L'application est une page unique, organisée en trois étapes accessibles par des onglets, sans écran de création ou de gestion de projet :
+L'application est une page unique, organisée en trois étapes accessibles par des onglets, sans écran de création ou de gestion de projet. Le titre du livre est affiché en tête de page, sous la mention « Votre livre », et se modifie directement à cet endroit (« Mon livre » par défaut); c'est le seul champ de titre, l'étape Édition ne le répète pas. Juste en dessous, un champ facultatif « Note de couverture » renseigne la note imprimée sur la couverture.
 
-* 01 — Sources : ajout des articles principaux et exploration des liens.
+* 01 — Sources : ajout des articles principaux (affichés sous le titre « Vos articles ») et exploration des liens (articles découverts, affichés sous le titre « Suggestions »).
 
 * 02 — Organisation : réorganisation des articles, chapitres, position de la table des matières.
 
-* 03 — Édition : identité du livre (titre, sous-titre, auteur, introduction, conclusion) et format d'impression.
+* 03 — Édition : identité du livre (sous-titre, auteur, introduction, conclusion) et format d'impression (format papier, orientation, préréglage de marges, numérotation des pages).
 
-Une barre supérieure permet à tout moment d'importer ou d'exporter le livre en JSON et de lancer la génération du PDF.
+En bas des étapes Sources et Organisation, un bouton « Étape suivante : … » ouvre l'étape suivante et remonte en haut de la page.
+
+Une barre supérieure permet à tout moment d'ouvrir un livre enregistré (bouton « Ouvrir », import JSON), d'enregistrer le livre sur son ordinateur (bouton « Enregistrer », export JSON) et de lancer la génération du PDF. Elle indique aussi si le livre en cours a été enregistré. Sur smartphone, les boutons « Ouvrir » et « Enregistrer » ne montrent que leur icône et le nom de l'application est masqué, pour que la barre tienne dans la largeur de l'écran.
 
 L'interface est utilisable sur ordinateur, tablette et smartphone, et respecte le thème clair/sombre du système.
 
@@ -711,5 +724,6 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 0.15.0  | 2026-11-10 | Le texte explicatif de la page de licence (nom officiel de la licence, lien vers l'acte localisé, conditions de réutilisation, mentions) est lui aussi traduit dans la langue de l'interface (sections 12.1 et 15). |
 | 0.16.0  | 2026-11-10 | Ajout des API de génération directe d'un livre PDF depuis une liste explicite d'articles ou depuis une page de livre Wikipédia, avec conservation de l'ordre des articles de cette dernière. |
 | 0.17.0  | 2026-11-10 | Ajout d'un endpoint GET qui génère un PDF depuis l'URL d'une page de livre Wikipédia, appelable directement dans un navigateur. |
+| 0.19.0  | 2026-11-11 | Interface plus intuitive : titre du livre modifiable directement en tête de page (plus de mention « projet » ni de champ titre en double dans l'étape Édition); boutons « Ouvrir » et « Enregistrer » libellés dans la barre supérieure; bouton « Étape suivante » en bas des étapes Sources et Organisation; préréglages de marges (Standard, Étroites, Larges, Pour reliure, Personnalisées) avec réglage au millimètre replié; case « Numéroter les pages » alignée avec son libellé; libellés « Vos articles » et « Suggestions » à la place de « Articles principaux » et « Articles découverts », dans les 12 langues; la barre supérieure ne déborde plus sur smartphone. |
 
 Fin du document — Wikipedia2Book, spécifications version 1.1.
