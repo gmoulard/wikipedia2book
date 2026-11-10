@@ -113,6 +113,15 @@ class TranslatedTitlesTest(unittest.TestCase):
         self.assertIn("الفصل", arabic)
         self.assertIn("الترخيص", build_license_page_html(project, [article], "ar"))
 
+    def test_license_explanation_is_translated(self):
+        article = Article(title="Hund", language="de", url="https://de.wikipedia.org/wiki/Hund", selected=True)
+        html = build_license_page_html(Project(name="T"), [article], "de")
+        self.assertIn("Namensnennung – Weitergabe unter gleichen Bedingungen 4.0 International (CC BY-SA 4.0)", html)
+        self.assertIn("https://creativecommons.org/licenses/by-sa/4.0/deed.de", html)
+        self.assertIn("keine offizielle Veröffentlichung", html)
+        self.assertNotIn("Les textes", html)
+        self.assertIn("deed.zh-hans", build_license_page_html(Project(name="T"), [article], "zh"))
+
 
 if __name__ == "__main__":
     unittest.main()
