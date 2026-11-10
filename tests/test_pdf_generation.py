@@ -101,5 +101,18 @@ class LicensePageTest(unittest.TestCase):
         self.assertIn("Carte.png", html)
 
 
+class TranslatedTitlesTest(unittest.TestCase):
+    def test_generated_pages_use_the_requested_language(self):
+        from app.book_builder import build_chapter_page_html, build_cover_html
+        article = Article(title="Chat", language="fr", url="https://fr.wikipedia.org/wiki/Chat", selected=True)
+        project = Project(name="T", introduction="Bonjour")
+        self.assertIn("Table of contents", build_toc_html(project, [article], language="en"))
+        self.assertIn("<h2>Einleitung</h2>", build_cover_html(project, "de"))
+        arabic = build_chapter_page_html(project, "Chapitre", "ar")
+        self.assertIn('lang="ar" dir="rtl"', arabic)
+        self.assertIn("الفصل", arabic)
+        self.assertIn("الترخيص", build_license_page_html(project, [article], "ar"))
+
+
 if __name__ == "__main__":
     unittest.main()

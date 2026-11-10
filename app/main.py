@@ -13,10 +13,12 @@ from app.book_builder import (
     build_chapter_page_html,
     build_conclusion_page_html,
     build_cover_html,
+    PDF_LABELS,
     build_license_page_html,
     build_toc_html,
     ordered_article_groups,
     page_size_mm,
+    pdf_label,
 )
 from app.explorer import discover_related_articles
 from app.models import (
@@ -39,8 +41,9 @@ from app.wikipedia_api import (
 )
 
 
-app = FastAPI(title="Wikipedia2Book", version="0.13.0")
+app = FastAPI(title="Wikipedia2Book", version="0.14.0")
 static_directory = Path(__file__).parent / "static"
+PDF_LANGUAGE_PATTERN = "^(" + "|".join(PDF_LABELS) + ")$"
 app.mount("/static", StaticFiles(directory=static_directory), name="static")
 
 
@@ -192,8 +195,8 @@ def _pdf_error_detail(error: Exception) -> str:
     return "La génération du PDF a échoué."
 
 
-async def build_book_pdf(project: Project, selected: list[Article | UploadedDocument]):
-    groups = ordered_article_groups(project, selected)
+async def build_book_pdf(project: Project, selected: list[Article | UploadedDocument], language: str):
+    groups = ordered_article_groups(project, selected, language)
     writer = PdfWriter()
     streams: list[BytesIO] = []
     page_width_mm, page_height_mm = page_size_mm(project)
@@ -235,9 +238,9 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
     chapter_pages: list[int | None] = [None] * len(groups)
     if project.page_numbers:
         yield progress("compute_page_numbers")
-        cursor = len(PdfReader(BytesIO(generate_pdf(build_cover_html(project)))).pages) + 1
+        cursor = len(PdfReader(BytesIO(generate_pdf(build_cover_html(project, language)))).pages) + 1
         if toc_at_start:
-            cursor += len(PdfReader(BytesIO(generate_pdf(build_toc_html(project, selected)))).pages)
+            cursor += len(PdfReader(BytesIO(generate_pdf(build_toc_html(project, selected, language=language)))).pages)
         for index, (chapter_title, items) in enumerate(groups):
             if chapter_title:
                 chapter_pages[index] = cursor
@@ -247,8 +250,8 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
                 cursor += len(PdfReader(BytesIO(item_pdfs[item.key])).pages)
 
     yield progress("cover_and_toc")
-    toc = generate_pdf(build_toc_html(project, selected, article_pages, chapter_pages))
-    cover = generate_pdf(build_cover_html(project))
+    toc = generate_pdf(build_toc_html(project, selected, article_pages, chapter_pages, language))
+    cover = generate_pdf(build_cover_html(project, language))
 
     yield progress("assemble")
     root_outline = writer.add_outline_item(
@@ -256,12 +259,12 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
         append_pdf(cover),
     )
     if toc_at_start:
-        writer.add_outline_item("Table des matières", append_pdf(toc), parent=root_outline)
+        writer.add_outline_item(pdf_label(language, "toc"), append_pdf(toc), parent=root_outline)
 
     for chapter_title, items in groups:
         chapter_outline = root_outline
         if chapter_title:
-            chapter_page = generate_pdf(build_chapter_page_html(project, chapter_title))
+            chapter_page = generate_pdf(build_chapter_page_html(project, chapter_title, language))
             chapter_outline = writer.add_outline_item(
                 chapter_title,
                 append_pdf(chapter_page),
@@ -272,18 +275,18 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
             writer.add_outline_item(item.title, item_page, parent=chapter_outline)
 
     if not toc_at_start:
-        writer.add_outline_item("Table des matières", append_pdf(toc), parent=root_outline)
+        writer.add_outline_item(pdf_label(language, "toc"), append_pdf(toc), parent=root_outline)
 
     writer.add_outline_item(
-        "Licence",
-        append_pdf(generate_pdf(build_license_page_html(project, selected))),
+        pdf_label(language, "license"),
+        append_pdf(generate_pdf(build_license_page_html(project, selected, language))),
         parent=root_outline,
     )
 
     if project.conclusion:
-        conclusion_page = generate_pdf(build_conclusion_page_html(project))
+        conclusion_page = generate_pdf(build_conclusion_page_html(project, language))
         writer.add_outline_item(
-            "Conclusion",
+            pdf_label(language, "conclusion"),
             append_pdf(conclusion_page),
             parent=root_outline,
         )
@@ -299,10 +302,12 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
 
 
 @app.post("/api/pdf")
-async def create_pdf(project: Project) -> Response:
+async def create_pdf(
+    project: Project, language: str = Query(default="fr", pattern=PDF_LANGUAGE_PATTERN)
+) -> Response:
     selected = _selected_items(project)
     try:
-        async for event in build_book_pdf(project, selected):
+        async for event in build_book_pdf(project, selected, language):
             if event["type"] == "done":
                 pdf_data = event["pdf"]
     except Exception as error:
@@ -317,12 +322,14 @@ async def create_pdf(project: Project) -> Response:
 
 
 @app.post("/api/pdf/stream")
-async def create_pdf_stream(project: Project) -> StreamingResponse:
+async def create_pdf_stream(
+    project: Project, language: str = Query(default="fr", pattern=PDF_LANGUAGE_PATTERN)
+) -> StreamingResponse:
     selected = _selected_items(project)
 
     async def events():
         try:
-            async for event in build_book_pdf(project, selected):
+            async for event in build_book_pdf(project, selected, language):
                 if event["type"] == "done":
                     event = {"type": "done", "pdf_base64": base64.b64encode(event["pdf"]).decode("ascii")}
                 yield json.dumps(event, ensure_ascii=False) + "\n"

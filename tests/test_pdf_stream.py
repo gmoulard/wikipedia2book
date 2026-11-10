@@ -116,6 +116,18 @@ class PdfStreamTest(unittest.TestCase):
         self.assertEqual(response.headers["content-type"], "application/pdf")
         self.assertEqual(len(PdfReader(BytesIO(response.content)).pages), 1 + 1 + 2 + 2 + 1)
 
+    def test_generated_titles_follow_the_requested_language(self):
+        project = _project(conclusion="Ende", chapters=[{"title": "Tiere", "article_keys": ["fr:title:chat"]}])
+        response = self.client.post("/api/pdf/stream?language=de", json=project)
+        events = [json.loads(line) for line in response.text.splitlines() if line.strip()]
+        pdf = PdfReader(BytesIO(base64.b64decode(events[-1]["pdf_base64"])))
+        titles = [item.title for item in pdf.outline[1] if not isinstance(item, list)]
+        self.assertEqual(titles, ["Inhaltsverzeichnis", "Tiere", "Ohne Kapitel", "Lizenz", "Schlusswort"])
+
+    def test_unknown_language_is_refused(self):
+        response = self.client.post("/api/pdf/stream?language=xx", json=_project())
+        self.assertEqual(response.status_code, 422)
+
 
 if __name__ == "__main__":
     unittest.main()

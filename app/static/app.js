@@ -634,7 +634,7 @@ function pdfStreamEvent(line) {
 }
 
 async function streamPdf(project) {
-  const response = await request('/api/pdf/stream', { method: 'POST', body: JSON.stringify(project) });
+  const response = await request(`/api/pdf/stream?language=${encodeURIComponent(lang())}`, { method: 'POST', body: JSON.stringify(project) });
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';

@@ -42,5 +42,19 @@ class I18nParityTest(unittest.TestCase):
                     self.assertEqual(other_placeholders, fr_placeholders)
 
 
+class PdfLabelsTest(unittest.TestCase):
+    def test_pdf_labels_cover_every_interface_language_with_the_same_keys(self):
+        from app.book_builder import PDF_LABELS
+        source = I18N_PATH.read_text(encoding="utf-8")
+        supported = re.findall(r'"([a-z]{2})"', re.search(r"SUPPORTED_LANGUAGES = \[(.*?)\]", source).group(1))
+        self.assertEqual(list(PDF_LABELS), supported)
+        reference = PDF_LABELS["fr"]
+        for lang, labels in PDF_LABELS.items():
+            with self.subTest(lang=lang):
+                self.assertEqual(set(labels), set(reference))
+                for key, text in labels.items():
+                    self.assertEqual(re.findall(r"\{(\w+)\}", text), re.findall(r"\{(\w+)\}", reference[key]))
+
+
 if __name__ == "__main__":
     unittest.main()

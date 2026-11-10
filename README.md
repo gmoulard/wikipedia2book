@@ -13,7 +13,7 @@ Wikipedia2Book is a web application for composing a printable PDF book directly 
 - Organization of articles into chapters, reorderable by drag and drop, and configuration of the book format.
 - Import of personal images or PDFs, integrated into the book like articles.
 - Book generation by assembling the official full PDFs downloaded from Wikipedia, with navigation bookmarks and continuous page numbering (table of contents included).
-- Interface available in 12 languages: French, English, Spanish, Portuguese, Italian, German, Dutch, Turkish, Chinese, Japanese, Arabic and Persian (Arabic and Persian right-to-left).
+- Interface available in 12 languages: French, English, Spanish, Portuguese, Italian, German, Dutch, Turkish, Chinese, Japanese, Arabic and Persian (Arabic and Persian right-to-left). The titles the app adds to the generated PDF (table of contents, chapter, conclusion, license, bookmarks…) follow the interface language.
 
 ## Architecture
 
