@@ -2,6 +2,43 @@
 
 Version : 1.1 — Statut : aligné sur l'implémentation actuelle — Format : Markdown (`.md`)
 
+## Table des matières
+
+- [1. Présentation de Wikipedia2Book](#1-pr%C3%A9sentation-de-wikipedia2book)
+- [2. Le livre en mémoire et sa sauvegarde](#2-le-livre-en-m%C3%A9moire-et-sa-sauvegarde)
+- [3. Ajout des articles](#3-ajout-des-articles)
+  - [3.1 Méthodes d'ajout](#31-m%C3%A9thodes-dajout)
+  - [3.2 Informations conservées par article](#32-informations-conserv%C3%A9es-par-article)
+  - [3.3 Introduction et auteur proposés automatiquement](#33-introduction-et-auteur-propos%C3%A9s-automatiquement)
+- [4. Exploration des articles liés](#4-exploration-des-articles-li%C3%A9s)
+  - [4.1 Principe](#41-principe)
+  - [4.2 Profondeur d'exploration](#42-profondeur-dexploitation)
+  - [4.3 Résultats de l'exploration](#43-r%C3%A9sultats-de-lexploration)
+  - [4.4 Limites de l'exploration](#44-limites-de-lexploration)
+- [5. Sélection des articles](#5-s%C3%A9lection-des-articles)
+- [6. Organisation du livre](#6-organisation-du-livre)
+  - [6.1 Documents importés](#61-documents-import%C3%A9s)
+- [7. Récupération du contenu Wikipédia](#7-r%C3%A9cup%C3%A9ration-du-contenu-wikip%C3%A9dia)
+- [8. Filtres et recherche](#8-filtres-et-recherche)
+- [9. Génération du livre et export JSON](#9-g%C3%A9n%C3%A9ration-du-livre-et-export-json)
+- [10. Mise en page du livre](#10-mise-en-page-du-livre)
+- [11. Génération du PDF](#11-g%C3%A9n%C3%A9ration-du-pdf)
+  - [11.1 Déroulement](#111-d%C3%A9roulement)
+  - [11.2 Résultat](#112-r%C3%A9sultat)
+  - [11.3 Gestion des erreurs](#113-gestion-des-erreurs)
+- [12. Interface utilisateur](#12-interface-utilisateur)
+- [13. Architecture technique](#13-architecture-technique)
+  - [13.1 Technologies](#131-technologies)
+  - [13.2 API Wikipédia](#132-api-wikip%C3%A9dia)
+  - [13.3 Exemples d'appels HTTP](#133-exemples-dappels-http)
+  - [13.4 Docker et déploiement](#134-docker-et-d%C3%A9ploiement)
+- [14. Sécurité et robustesse](#14-s%C3%A9curit%C3%A9-et-robustesse)
+- [15. Respect des licences Wikipédia](#15-respect-des-licences-wikip%C3%A9dia)
+- [16. Critères d'acceptation](#16-crit%C3%A8res-dacceptation)
+- [17. Structure du projet](#17-structure-du-projet)
+- [18. État d'avancement et évolutions futures](#18-%C3%A9tat-davancement-et-%C3%A9volutions-futures)
+- [19. Historique des versions](#19-historique-des-versions)
+
 ## 1\. Présentation de Wikipedia2Book
 
 ### 1.1 Objectif
