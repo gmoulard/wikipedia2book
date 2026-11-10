@@ -164,3 +164,51 @@ def build_conclusion_page_html(project: Project) -> str:
 body {{ color: #202020; font: 11pt serif; line-height: 1.6; }}
 h1 {{ font-size: 22pt; }}
 </style></head><body><h1>Conclusion</h1><p>{conclusion}</p></body></html>"""
+
+
+def _history_url(article: Article) -> str:
+    return article.url.replace("/wiki/", "/w/index.php?title=", 1) + "&action=history"
+
+
+def build_license_page_html(project: Project, items: list[BookItem]) -> str:
+    page_width, page_height, margin_top, margin_bottom, inner, outer = _page_layout(project)
+    groups = ordered_article_groups(project, items)
+    ordered = list({item.key: item for _, group in groups for item in group}.values())
+    articles = [item for item in ordered if isinstance(item, Article)]
+    documents = [item for item in ordered if isinstance(item, UploadedDocument)]
+    sources = "".join(
+        f'<li><strong>{escape(article.title)}</strong><br>{escape(article.url)}<br>'
+        f'Historique et auteurs : {escape(_history_url(article))}</li>'
+        for article in articles
+    )
+    sources_section = f"<h2>Sources et auteurs</h2><ol>{sources}</ol>" if articles else ""
+    documents_note = (
+        "<p>Les documents importés ("
+        + ", ".join(escape(document.title) for document in documents)
+        + ") ne proviennent pas de Wikipédia et ne sont pas couverts par cette licence.</p>"
+        if documents else ""
+    )
+    return f"""<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><style>
+@page {{ size: {page_width:g}mm {page_height:g}mm; margin: {margin_top:g}mm {outer:g}mm {margin_bottom:g}mm {inner:g}mm; }}
+@page :left {{ margin-left: {inner:g}mm; margin-right: {outer:g}mm; }}
+@page :right {{ margin-left: {outer:g}mm; margin-right: {inner:g}mm; }}
+body {{ color: #202020; font: 10pt serif; line-height: 1.5; }}
+h1 {{ font-size: 22pt; }}
+h2 {{ font-size: 14pt; margin-top: 18pt; }}
+ol {{ padding-left: 18pt; font-size: 9pt; }}
+li {{ margin-bottom: 6pt; overflow-wrap: anywhere; }}
+.license-name {{ font-weight: bold; }}
+</style></head><body>
+<h1>Licence</h1>
+<p>Les textes des articles Wikipédia reproduits dans ce livre sont publiés sous licence
+<span class="license-name">Creative Commons Attribution – Partage dans les mêmes conditions 4.0 International (CC BY-SA 4.0)</span> :
+https://creativecommons.org/licenses/by-sa/4.0/deed.fr</p>
+<p>Vous êtes libre de partager et d'adapter ce contenu, y compris à des fins commerciales, à condition de créditer
+les auteurs, d'indiquer la licence et si des modifications ont été apportées, et de diffuser toute adaptation
+sous la même licence.</p>
+<p>Les images et médias conservent leurs propres licences, indiquées dans chaque article.</p>
+{documents_note}
+<p>Ce livre n'est pas une publication officielle de Wikipédia ni de la Wikimedia Foundation.</p>
+{sources_section}
+</body></html>"""

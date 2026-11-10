@@ -21,7 +21,7 @@ Wikipedia2Book is a web application for composing a printable PDF book directly 
 - HTML, CSS and JavaScript for the web interface (single page, no framework).
 - Official MediaWiki API for search and exploration; official PDF endpoint to fetch full articles at export time.
 - JSON exchanged with the API, with no server-side persistence.
-- WeasyPrint for the cover, chapter pages and conclusion; pypdf to merge PDFs in memory; reportlab for page numbers and for converting imported images to PDF.
+- WeasyPrint for the cover, chapter pages, license page (CC BY-SA 4.0, with article sources) and conclusion; pypdf to merge PDFs in memory; reportlab for page numbers and for converting imported images to PDF.
 - Docker for deployment.
 
 Functional and technical details are described in [SPECIFICATIONS.md](SPECIFICATIONS.md) (in French).

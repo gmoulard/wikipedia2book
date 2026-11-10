@@ -13,6 +13,7 @@ from app.book_builder import (
     build_chapter_page_html,
     build_conclusion_page_html,
     build_cover_html,
+    build_license_page_html,
     build_toc_html,
     ordered_article_groups,
     page_size_mm,
@@ -38,7 +39,7 @@ from app.wikipedia_api import (
 )
 
 
-app = FastAPI(title="Wikipedia2Book", version="0.12.0")
+app = FastAPI(title="Wikipedia2Book", version="0.13.0")
 static_directory = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=static_directory), name="static")
 
@@ -272,6 +273,12 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
 
     if not toc_at_start:
         writer.add_outline_item("Table des matières", append_pdf(toc), parent=root_outline)
+
+    writer.add_outline_item(
+        "Licence",
+        append_pdf(generate_pdf(build_license_page_html(project, selected))),
+        parent=root_outline,
+    )
 
     if project.conclusion:
         conclusion_page = generate_pdf(build_conclusion_page_html(project))

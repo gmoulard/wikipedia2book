@@ -13,7 +13,7 @@ except Exception:
 from reportlab.pdfgen import canvas
 from pypdf import PdfReader, PdfWriter
 
-from app.book_builder import build_toc_html
+from app.book_builder import build_license_page_html, build_toc_html
 from app.models import Article, Project
 from app.pdf_generator import fit_pdf_to_format, stamp_page_numbers
 
@@ -84,6 +84,21 @@ class TableOfContentsPageNumbersTest(unittest.TestCase):
         article = Article(title="Chat", language="fr", url="https://fr.wikipedia.org/wiki/Chat", selected=True)
         html = build_toc_html(project, [article])
         self.assertNotIn('<span class="page-no">', html)
+
+
+class LicensePageTest(unittest.TestCase):
+    def test_license_page_names_cc_by_sa_and_lists_sources_in_book_order(self):
+        from app.models import UploadedDocument
+        first = Article(title="Chien", language="fr", url="https://fr.wikipedia.org/wiki/Chien", selected=True)
+        second = Article(title="Chat", language="fr", url="https://fr.wikipedia.org/wiki/Chat", selected=True)
+        document = UploadedDocument(title="Carte.png", kind="image", mime_type="image/png", data_base64="AA==", selected=True)
+        project = Project(name="T", article_order=[first.key, second.key])
+        html = build_license_page_html(project, [second, first, document])
+        self.assertIn("CC BY-SA 4.0", html)
+        self.assertIn("https://creativecommons.org/licenses/by-sa/4.0/deed.fr", html)
+        self.assertLess(html.index("Chien"), html.index("Chat"))
+        self.assertIn("https://fr.wikipedia.org/w/index.php?title=Chat&amp;action=history", html)
+        self.assertIn("Carte.png", html)
 
 
 if __name__ == "__main__":

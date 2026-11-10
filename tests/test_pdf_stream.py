@@ -88,7 +88,8 @@ class PdfStreamTest(unittest.TestCase):
         self.assertEqual([e.get("title") for e in progress[:2]], ["Chat", "Chien"])
         self.assertEqual(events[-1]["type"], "done")
         pdf = PdfReader(BytesIO(base64.b64decode(events[-1]["pdf_base64"])))
-        self.assertEqual(len(pdf.pages), 1 + 1 + 2 + 2 + 1)
+        self.assertEqual(len(pdf.pages), 1 + 1 + 2 + 2 + 1 + 1)
+        self.assertIn("Licence", [item.title for item in pdf.outline[1]])
 
     def test_without_page_numbers_there_are_fewer_steps(self):
         events = self._events(_project(page_numbers=False))
@@ -113,7 +114,7 @@ class PdfStreamTest(unittest.TestCase):
         response = self.client.post("/api/pdf", json=_project())
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers["content-type"], "application/pdf")
-        self.assertEqual(len(PdfReader(BytesIO(response.content)).pages), 1 + 1 + 2 + 2)
+        self.assertEqual(len(PdfReader(BytesIO(response.content)).pages), 1 + 1 + 2 + 2 + 1)
 
 
 if __name__ == "__main__":

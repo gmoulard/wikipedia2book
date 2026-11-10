@@ -291,19 +291,21 @@ Le PDF est structuré comme un véritable livre.
 
 * Pages de titre de chapitre, pour chaque chapitre contenant des articles.
 
+* Page de licence (section 15), toujours présente, placée après le dernier article (et après la table des matières si elle est en fin de livre), juste avant la conclusion.
+
 * Conclusion, si elle a été saisie.
 
 Le contenu des articles et des documents importés n'est pas mis en page par l'application : ce sont les pages de leur PDF d'origine (officiel Wikipédia, ou document importé). Leur format physique, lui, est systématiquement harmonisé avec le reste du livre — voir section 10.1.
 
 La couverture et la table des matières sont deux sections distinctes dans le PDF final : la position choisie pour la table des matières (section 6, « Début du livre » ou « Fin du livre ») est celle effectivement utilisée à la génération — la couverture reste toujours la première page, la table des matières se place juste après elle, ou juste après le dernier article (avant la conclusion).
 
-La navigation dans le PDF final s'appuie sur des signets (couverture, table des matières, une entrée par chapitre et par article, conclusion), et non sur les liens de la table des matières.
+La navigation dans le PDF final s'appuie sur des signets (couverture, table des matières, une entrée par chapitre et par article, licence, conclusion), et non sur les liens de la table des matières.
 
 ### 10.1 Format et orientation, appliqués à toutes les pages
 
 Toutes les pages du PDF final respectent le format et l'orientation choisis pour le livre (section 9), sans exception :
 
-* Les pages générées par l'application (couverture, introduction, table des matières, pages de chapitre, conclusion) sont nativement produites à ce format.
+* Les pages générées par l'application (couverture, introduction, table des matières, pages de chapitre, licence, conclusion) sont nativement produites à ce format.
 
 * Chaque page d'article (PDF officiel Wikipédia) et chaque page de document importé est recomposée sur une page de ce même format : son contenu est mis à l'échelle et centré, en conservant ses proportions d'origine (pas de déformation). Si les proportions de la page source diffèrent de celles du livre, des marges blanches apparaissent sur les côtés ou en haut/bas plutôt que de déformer le contenu.
 
@@ -344,6 +346,8 @@ Une fois le PDF lancé, le logiciel :
 * Pour chaque chapitre (ou pour l'ensemble des articles s'il n'y a pas de chapitre) : génère une page de titre de chapitre avec son propre signet, puis ajoute le PDF officiel de chaque article du chapitre, avec un signet par article.
 
 * Recompose chaque page ajoutée (couverture, table des matières, chapitres, articles, documents importés) sur le format et l'orientation choisis pour le livre (section 10.1), avant de l'assembler au document final.
+
+* Ajoute une page de licence avec signet « Licence » (section 15), après le dernier chapitre/article et la table des matières éventuellement placée en fin de livre.
 
 * Ajoute une page de conclusion avec signet, si une conclusion a été saisie — toujours après la table des matières, même quand elle est positionnée en fin de livre.
 
@@ -487,6 +491,8 @@ Le logiciel :
 
 * Conserve le lien vers chaque article original.
 
+* Ajoute au livre une page « Licence », juste avant la conclusion, qui indique que les textes Wikipédia sont sous licence Creative Commons Attribution – Partage dans les mêmes conditions 4.0 International (CC BY-SA 4.0), avec le lien vers la licence, un résumé des conditions de réutilisation, et la liste des articles dans l'ordre du livre avec, pour chacun, l'URL de l'article et celle de son historique (qui recense les auteurs). Les documents importés y sont cités comme non couverts par cette licence. Cette page rappelle aussi que le livre n'est pas une publication officielle de Wikipédia; elle est rédigée en français, comme le reste des pages générées.
+
 * N'altère pas le contenu, les crédits ni les mentions de licence imprimés par Wikipédia dans son propre PDF.
 
 * Ne présente pas le livre généré comme une publication officielle de Wikipédia.
@@ -611,5 +617,6 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 0.10.0  | 2026-11-10 | Fenêtre de statut pendant la génération du PDF : numéro de l'étape en cours, nombre total d'étapes, libellé de l'étape (traduit dans toutes les langues de l'interface) et barre de progression (section 11.1). Nouvel endpoint `/api/pdf/stream` (flux NDJSON de progression puis PDF en base64), utilisé par l'interface; `/api/pdf` reste disponible. Ajout de `tests/test_pdf_stream.py`. |
 | 0.11.0  | 2026-11-10 | Six nouvelles langues d'interface : espagnol, portugais, néerlandais, turc, japonais et persan (11 langues au total, section 12.1). Le persan bascule la page en écriture de droite à gauche. Le sélecteur de langue affiche le nom de chaque langue dans cette langue. |
 | 0.12.0  | 2026-11-10 | Ajout de l'arabe comme langue d'interface (12 langues au total), affiché de droite à gauche comme le persan. |
+| 0.13.0  | 2026-11-10 | Nouvelle page « Licence » dans le PDF généré, entre le dernier article et la conclusion : licence CC BY-SA 4.0, conditions de réutilisation, et liste des articles sources avec lien vers l'article et son historique (section 15). |
 
 Fin du document — Wikipedia2Book, spécifications version 1.1.
