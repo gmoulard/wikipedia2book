@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 I18N_PATH = Path(__file__).resolve().parent.parent / "app" / "static" / "i18n.js"
-LANGUAGES = ["fr", "en", "zh", "it", "de"]
+LANGUAGES = ["fr", "en", "es", "pt", "it", "de", "nl", "tr", "zh", "ja", "fa"]
 
 
 def _extract_blocks(source):

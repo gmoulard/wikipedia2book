@@ -397,7 +397,7 @@ L'interface est utilisable sur ordinateur, tablette et smartphone, et respecte l
 
 ### 12.1 Langues de l'interface
 
-L'interface (libellés, boutons, messages) est disponible en français, anglais, chinois, italien et allemand, via un sélecteur dans la barre supérieure. La langue choisie est mémorisée dans le navigateur (elle n'est pas enregistrée dans le livre ni dans l'export JSON) et détectée automatiquement à la première visite à partir de la langue du navigateur, avec repli sur le français.
+L'interface (libellés, boutons, messages) est disponible en français, anglais, espagnol, portugais, italien, allemand, néerlandais, turc, chinois, japonais et persan, via un sélecteur dans la barre supérieure. Le persan s'affiche de droite à gauche : toute la page passe alors en sens d'écriture `rtl` (attribut `dir` du document), et revient en `ltr` pour les autres langues. La langue choisie est mémorisée dans le navigateur (elle n'est pas enregistrée dans le livre ni dans l'export JSON) et détectée automatiquement à la première visite à partir de la langue du navigateur, avec repli sur le français.
 
 Cette langue d'interface est indépendante de la langue des articles Wikipédia (section 3), qui reste un réglage séparé par article. Elle ne s'applique pas non plus au contenu du PDF généré (couverture, table des matières, pages de chapitre), qui reste en français, ni aux messages d'erreur renvoyés par le serveur.
 
@@ -412,7 +412,7 @@ Cette langue d'interface est indépendante de la langue des articles Wikipédia 
 | Client HTTP       | httpx (appels à l'API MediaWiki et à l'endpoint PDF)          |
 | Analyse HTML      | BeautifulSoup4 (extraits de recherche)                        |
 | Interface         | HTML, CSS, JavaScript (page unique, sans framework)           |
-| Internationalisation | Dictionnaire JavaScript interne (`i18n.js`), FR/EN/ZH/IT/DE, sans dépendance externe |
+| Internationalisation | Dictionnaire JavaScript interne (`i18n.js`), FR/EN/ES/PT/IT/DE/NL/TR/ZH/JA/FA, sans dépendance externe |
 | API Wikipédia     | API MediaWiki (`action=query`) + endpoint REST `page/pdf`     |
 | Échange du livre  | JSON navigateur ↔ API                                         |
 | Génération PDF    | PDF officiel Wikimedia (articles) + WeasyPrint (couverture, chapitres, conclusion) + pypdf (fusion, signets, lecture du nombre de pages) + reportlab (numéros de page, conversion d'une image importée en page PDF) |
@@ -527,7 +527,7 @@ La version actuelle est considérée comme fonctionnelle si les points suivants 
 
 * Export puis import du livre via un fichier JSON local, nommé d'après le titre du livre.
 
-* Changement de la langue de l'interface (français, anglais, chinois, italien, allemand) sans rechargement de la page.
+* Changement de la langue de l'interface (11 langues, section 12.1) sans rechargement de la page.
 
 * Proposition automatique, non destructive, de l'introduction et de l'auteur du livre à partir du premier article ajouté.
 
@@ -608,6 +608,7 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 0.7.0   | 2026-11-09 | Interface multilingue : français, anglais, chinois, italien, allemand, via un sélecteur dans la barre supérieure (`app/static/i18n.js`, section 12.1). Langue détectée automatiquement et mémorisée dans le navigateur. Ajout de `tests/test_i18n.py` (parité des clés et des paramètres `{...}` entre les 5 langues). |
 | 0.8.0   | 2026-11-09 | Lors de l'ajout du tout premier article principal, le logiciel propose automatiquement (sans écraser une saisie existante) l'introduction du livre à partir du résumé introductif de l'article, et l'auteur à partir du créateur de la page Wikipédia (section 3.3). Nouvel endpoint `/api/articles/intro`. |
 | 0.9.0   | 2026-11-09 | Correction : la position de la table des matières (section 6) n'était jamais appliquée dans le PDF généré, elle se retrouvait toujours au début — la couverture et la table des matières sont désormais deux sections distinctes, assemblées à la position choisie. Correction d'un conflit de fusion Git resté non résolu dans la feuille de style, qui rendait le bouton « Générer le PDF » (et les notifications) illisibles sans survol de la souris dans certaines configurations. |
-| 0.10.0  | 2026-11-10 | Fenêtre de statut pendant la génération du PDF : numéro de l'étape en cours, nombre total d'étapes, libellé de l'étape (traduit dans les 5 langues) et barre de progression (section 11.1). Nouvel endpoint `/api/pdf/stream` (flux NDJSON de progression puis PDF en base64), utilisé par l'interface; `/api/pdf` reste disponible. Ajout de `tests/test_pdf_stream.py`. |
+| 0.10.0  | 2026-11-10 | Fenêtre de statut pendant la génération du PDF : numéro de l'étape en cours, nombre total d'étapes, libellé de l'étape (traduit dans toutes les langues de l'interface) et barre de progression (section 11.1). Nouvel endpoint `/api/pdf/stream` (flux NDJSON de progression puis PDF en base64), utilisé par l'interface; `/api/pdf` reste disponible. Ajout de `tests/test_pdf_stream.py`. |
+| 0.11.0  | 2026-11-10 | Six nouvelles langues d'interface : espagnol, portugais, néerlandais, turc, japonais et persan (11 langues au total, section 12.1). Le persan bascule la page en écriture de droite à gauche. Le sélecteur de langue affiche le nom de chaque langue dans cette langue. |
 
 Fin du document — Wikipedia2Book, spécifications version 1.1.

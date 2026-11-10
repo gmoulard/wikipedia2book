@@ -347,7 +347,6 @@ function queueSave(patch) {
 }
 
 async function loadProjects() {
-  document.documentElement.lang = lang();
   $('#languageSelect').value = lang();
   applyTranslations();
   try {
