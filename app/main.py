@@ -43,7 +43,7 @@ from app.wikipedia_api import (
 )
 
 
-app = FastAPI(title="Wikipedia2Book", version="0.20.0")
+app = FastAPI(title="Wikipedia2Book", version="0.20.1")
 static_directory = Path(__file__).parent / "static"
 PDF_LANGUAGE_PATTERN = "^(" + "|".join(PDF_LABELS) + ")$"
 app.mount("/static", StaticFiles(directory=static_directory), name="static")
@@ -77,9 +77,11 @@ def version() -> dict[str, str]:
         return {"version": app.version, "commit": full, "short": short, "date": date, "author": author}
     except Exception:
         import os
-        full = (os.environ.get("GIT_COMMIT")
-                or os.environ.get("RAILWAY_GIT_COMMIT_SHA")
-                or "unknown")
+        full = next(
+            (value for value in (os.environ.get("GIT_COMMIT"), os.environ.get("RAILWAY_GIT_COMMIT_SHA"))
+             if value and value != "unknown"),
+            "",
+        )
         return {
             "version": app.version,
             "commit": full,
