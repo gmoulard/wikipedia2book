@@ -48,6 +48,9 @@ class FakeClient:
     async def get_book_links(self, title, language, limit=200):
         return ["Chien", "Chat"]
 
+    async def get_intro_and_creator(self, title, language):
+        return ("Introduction de test", "Auteur du livre")
+
 
 def _project(**extra):
     articles = [
@@ -146,9 +149,20 @@ class PdfStreamTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers["content-type"], "application/pdf")
         self.assertEqual(response.headers["cache-control"], "no-store")
+        self.assertIn("Animaux.pdf", response.headers["content-disposition"])
         pdf = PdfReader(BytesIO(response.content))
         child_titles = [item.title for item in pdf.outline[1] if not isinstance(item, list)]
         self.assertLess(child_titles.index("Chien"), child_titles.index("Chat"))
+
+    def test_get_generation_can_disable_the_table_of_contents(self):
+        response = self.client.get(
+            "/api/books/generate-from-wikipedia-book",
+            params={"url": "https://fr.wikipedia.org/wiki/Livre:Animaux", "table_of_contents": "false"},
+        )
+        self.assertEqual(response.status_code, 200)
+        pdf = PdfReader(BytesIO(response.content))
+        outline_titles = [item.title for item in pdf.outline[1] if not isinstance(item, list)]
+        self.assertNotIn("Table des matières", outline_titles)
 
     def test_high_level_generation_rejects_empty_article_list(self):
         response = self.client.post("/api/books/generate", json={"articles": []})

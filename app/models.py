@@ -126,4 +126,5 @@ class BookGenerationRequest(BaseModel):
     margin_outside_mm: float = Field(default=16, ge=0, le=100)
     margin_binding_mm: float = Field(default=0, ge=0, le=40)
     toc_position: Literal["start", "end"] = "start"
+    table_of_contents: bool = True
     page_numbers: bool = True
