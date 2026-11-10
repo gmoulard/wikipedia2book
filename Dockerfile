@@ -15,6 +15,7 @@ RUN apt-get update \
         libpangoft2-1.0-0 \
         shared-mime-info \
         fonts-dejavu-core \
+        fonts-noto-cjk \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt ./requirements.txt
