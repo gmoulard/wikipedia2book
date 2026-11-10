@@ -95,6 +95,7 @@ function renderWorkspace() {
   $('#selectedCount').textContent = selectedArticles().length;
   $('#organizationCount').textContent = selectedArticles().length;
   renderArticles();
+  renderExploreState();
   renderUploadedDocuments();
   renderOrganization();
   renderBookSettings();
@@ -146,7 +147,7 @@ function articleCard(article, isMain) {
     <div class="article-card-top">
       <input class="article-check" type="checkbox" aria-label="${article.selected ? escapeHtml(t('meta.deselect')) : escapeHtml(t('meta.select'))} ${escapeHtml(article.title)}" ${article.selected ? 'checked' : ''}>
       <div class="article-title-wrap"><a class="article-title" href="${escapeHtml(article.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(article.title)}</a><div class="article-meta">${meta.map((m) => `<span>${escapeHtml(m)}</span>`).join('')}</div></div>
-      ${isMain ? `<button class="remove-article" type="button" title="${escapeHtml(t('meta.removeArticle'))}" aria-label="${escapeHtml(t('meta.removeArticle'))}">\u00d7</button>` : ''}
+      ${isMain ? `<button class="text-button explore-from" type="button" title="${escapeHtml(t('explore.fromArticleTitle', { title: article.title }))}"><span aria-hidden="true">↗</span> ${escapeHtml(t('explore.fromArticle'))}</button><button class="remove-article" type="button" title="${escapeHtml(t('meta.removeArticle'))}" aria-label="${escapeHtml(t('meta.removeArticle'))}">\u00d7</button>` : ''}
     </div>${summary}</article>`;
 }
 
@@ -428,7 +429,7 @@ async function addArticle(source) {
     $('#entryHint').textContent = t('sources.addedToMain');
     showToast(t('sources.articleAdded'));
   } catch (error) { showToast(error.message, true); }
-  finally { button.disabled = false; button.innerHTML = `${escapeHtml(t('sources.addButton'))} <span aria-hidden="true">+</span>`; }
+  finally { button.disabled = false; button.innerHTML = `<span data-i18n="sources.addButton">${escapeHtml(t('sources.addButton'))}</span> <span aria-hidden="true">+</span>`; }
 }
 
 async function importWikipediaBook(url) {
@@ -459,7 +460,7 @@ async function importWikipediaBook(url) {
     $('#entryHint').innerHTML = t('sources.pagesAddedHint', { n: newArticles.length, link: bookLink });
     showToast(t('sources.pagesAddedToast', { n: newArticles.length }));
   } catch (error) { showToast(t('sources.bookImportFailed', { error: error.message }), true); }
-  finally { button.disabled = false; button.innerHTML = `${escapeHtml(t('sources.addButton'))} <span aria-hidden="true">+</span>`; }
+  finally { button.disabled = false; button.innerHTML = `<span data-i18n="sources.addButton">${escapeHtml(t('sources.addButton'))}</span> <span aria-hidden="true">+</span>`; }
 }
 
 async function searchArticles(query) {
@@ -482,27 +483,45 @@ async function searchArticles(query) {
   }, 250);
 }
 
-async function exploreArticles(event) {
-  event.preventDefault();
-  if (!state.project || !state.project.main_articles.length) {
+async function exploreArticles(sources, button) {
+  if (!sources.length) {
     showToast(t('explore.atLeastOne'), true);
     return;
   }
-  const button = $('#exploreForm button[type="submit"]');
+  const label = button.innerHTML;
   button.disabled = true;
   button.textContent = t('explore.loading');
   try {
     const updated = await getJson('/api/explore', {
       method: 'POST',
-      body: JSON.stringify({ project: state.project, max_depth: Number($('#exploreDepth').value), max_articles: Number($('#exploreLimit').value) }),
+      body: JSON.stringify({
+        project: { ...state.project, main_articles: sources },
+        max_depth: Number($('#exploreDepth').value),
+        max_articles: Number($('input[name="exploreLimit"]:checked').value),
+      }),
     });
-    setProject(updated);
-    state.isDirty = true;
-    setSaveState(t('save.pendingChanges'));
-    const n = updated.discovered_articles.length;
-    showToast(n === 1 ? t('explore.result', { n }) : t('explore.resultPlural', { n }));
+    const known = new Set(activeArticles().map(articleKey));
+    const added = updated.discovered_articles.filter((a) => !known.has(articleKey(a)));
+    queueSave({ discovered_articles: [...state.project.discovered_articles, ...added] });
+    renderWorkspace();
+    const n = added.length;
+    if (!n) showToast(t('explore.none'));
+    else {
+      showToast(n === 1 ? t('explore.result', { n }) : t('explore.resultPlural', { n }));
+      $('.discovered-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   } catch (error) { showToast(error.message, true); }
-  finally { button.disabled = false; button.textContent = t('explore.button'); }
+  finally {
+    button.innerHTML = label;
+    button.disabled = false;
+    renderExploreState();
+  }
+}
+
+function renderExploreState() {
+  const hasMain = Boolean(state.project?.main_articles.length);
+  $('#exploreButton').disabled = !hasMain;
+  $('#exploreHint').hidden = hasMain;
 }
 
 function toggleArticle(card, selected) {
@@ -785,6 +804,13 @@ document.addEventListener('click', async (event) => {
     setMultipleSelection(state.project.discovered_articles.filter((a) => visible.has(articleKey(a))), true); return;
   }
   if (event.target.closest('#deselectAllButton')) { await setMultipleSelection(activeArticles(), false); return; }
+  if (event.target.closest('#exploreButton')) { await exploreArticles(state.project.main_articles, $('#exploreButton')); return; }
+  const exploreFrom = event.target.closest('.explore-from');
+  if (exploreFrom) {
+    const key = exploreFrom.closest('.article-card').dataset.articleKey;
+    await exploreArticles(state.project.main_articles.filter((a) => articleKey(a) === key), exploreFrom);
+    return;
+  }
   if (event.target.closest('#addChapterButton')) { addChapter(); return; }
   if (event.target.closest('#uploadDocumentButton')) { $('#documentFileInput').click(); return; }
   if (event.target.closest('#importWorkspaceButton')) { $('#workspaceFileInput').click(); return; }
@@ -842,7 +868,6 @@ $('#articleForm').addEventListener('submit', async (event) => {
   else if (state.sourceMode === 'url') await addArticle({ url: value, language: $('#articleLanguage').value });
   else await addArticle({ title: value, language: $('#articleLanguage').value });
 });
-$('#exploreForm').addEventListener('submit', exploreArticles);
 $('#documentFileInput').addEventListener('change', async (event) => {
   const files = [...(event.target.files || [])];
   event.target.value = '';

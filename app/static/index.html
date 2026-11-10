@@ -74,13 +74,6 @@
               <div id="searchResults" class="search-results" hidden></div>
               <p class="field-hint" id="entryHint" data-i18n="sources.hintBook">Collez l'URL d'une page de livre Wikipédia pour importer ses liens d'articles.</p>
             </div>
-            <form id="exploreForm" class="explore-box">
-              <div class="explore-head"><span class="explore-icon" aria-hidden="true">↗</span><div><strong data-i18n="explore.title">Explorer les liens</strong><small data-i18n="explore.subtitle">Proposer des articles liés</small></div></div>
-              <label for="exploreDepth" data-i18n="explore.depthLabel">Profondeur</label>
-              <select id="exploreDepth"><option value="1" data-i18n="explore.depth1">1 · liens directs</option><option value="2" data-i18n="explore.depth2">2 · deuxième niveau</option><option value="3" data-i18n="explore.depth3">3 · troisième niveau</option><option value="0" data-i18n="explore.depth0">0 · désactivée</option></select>
-              <label for="exploreLimit" data-i18n="explore.maxLabel">Maximum d'articles</label>
-              <div class="explore-submit"><input id="exploreLimit" type="number" min="1" max="200" value="30"><button class="button button-outline" type="submit" data-i18n="explore.button">Explorer</button></div>
-            </form>
           </div>
           <div class="article-columns">
             <section class="article-section">
@@ -89,6 +82,12 @@
             </section>
             <section class="article-section discovered-section">
               <div class="list-heading"><div><span class="eyebrow" data-i18n="discovered.eyebrow">LIENS À EXAMINER</span><h3><span data-i18n="discovered.title">Suggestions</span> <span id="discoveredArticleCount" class="count-inline">0</span></h3></div><button id="selectDiscoveredButton" class="text-button" type="button" disabled data-i18n="discovered.selectAll">Tout sélectionner</button></div>
+              <div class="explore-panel">
+                <fieldset class="explore-amount"><legend data-i18n="explore.amountLabel">Combien de suggestions ?</legend><div class="segmented-control segmented-three"><label><input type="radio" name="exploreLimit" value="10"><span data-i18n="explore.amountFew">Quelques-unes</span></label><label><input type="radio" name="exploreLimit" value="30" checked><span data-i18n="explore.amountGood">Une bonne sélection</span></label><label><input type="radio" name="exploreLimit" value="100"><span data-i18n="explore.amountMany">Beaucoup</span></label></div></fieldset>
+                <button class="button button-teal" id="exploreButton" type="button" disabled><span aria-hidden="true">✨</span> <span data-i18n="explore.button">Trouver des articles liés à vos articles</span></button>
+                <p class="field-hint" id="exploreHint" data-i18n="explore.needArticle">Ajoutez d'abord un article dans « Vos articles ».</p>
+                <details class="explore-advanced"><summary data-i18n="explore.advanced">Options avancées</summary><label class="explore-depth"><span data-i18n="explore.depthLabel">Profondeur des liens</span><select id="exploreDepth"><option value="1" data-i18n="explore.depth1">1 · liens directs</option><option value="2" data-i18n="explore.depth2">2 · deuxième niveau</option><option value="3" data-i18n="explore.depth3">3 · troisième niveau</option></select></label></details>
+              </div>
               <div class="discovery-filters">
                 <label class="filter-search"><span aria-hidden="true">⌕</span><input id="articleFilter" type="search" placeholder="Filtrer par titre…" data-i18n-placeholder="discovered.filterPlaceholder"></label>
                 <select id="originFilter" aria-label="Filtrer par origine" data-i18n-aria-label="discovered.originAria"><option value="" data-i18n="discovered.allOrigins">Toutes les origines</option></select>

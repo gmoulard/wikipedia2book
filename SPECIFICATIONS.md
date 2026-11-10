@@ -145,7 +145,7 @@ Le logiciel explore les liens internes présents dans les articles principaux af
 
 ### 4.2 Profondeur d'exploration
 
-La profondeur est paramétrable, entre 0 et 3 :
+La profondeur est paramétrable, entre 0 et 3 côté API (`/api/explore`); l'interface propose les profondeurs 1 à 3 :
 
 | Profondeur | Comportement                                      |
 | ---------- | ------------------------------------------------- |
@@ -170,15 +170,21 @@ Pour chaque article découvert, le logiciel affiche :
 
 * Son statut de sélection.
 
-Les doublons sont éliminés automatiquement (comparaison insensible à la casse sur la langue et le titre), y compris lorsqu'un même article est lié depuis plusieurs pages.
+Les doublons sont éliminés automatiquement (comparaison insensible à la casse sur la langue et le titre), y compris lorsqu'un même article est lié depuis plusieurs pages. Une nouvelle exploration ajoute ses résultats aux suggestions déjà présentes, sans dupliquer un article déjà suggéré ni un article déjà ajouté par l'utilisateur.
 
-### 4.4 Limites de l'exploration
+### 4.4 Lancer l'exploration
 
-L'utilisateur peut limiter :
+L'exploration se lance depuis la section « Suggestions » de l'étape Sources, ou depuis un article précis :
 
-* Le nombre maximal d'articles découverts (entre 1 et 200, 30 par défaut).
+* Le bouton « Trouver des articles liés à vos articles » explore à partir de tous les articles principaux. Il est désactivé, avec le message « Ajoutez d'abord un article dans « Vos articles » », tant qu'aucun article principal n'a été ajouté.
 
-* La profondeur maximale (entre 0 et 3, 1 par défaut).
+* Le bouton « Articles liés » présent sur chaque carte d'article principal explore à partir de ce seul article.
+
+* Au-dessus du bouton, l'utilisateur choisit combien de suggestions il souhaite : « Quelques-unes » (10), « Une bonne sélection » (30, par défaut) ou « Beaucoup » (100). L'API accepte toute valeur entre 1 et 200.
+
+* La profondeur (1 par défaut) se règle dans « Options avancées », replié par défaut.
+
+* À la fin, un message indique le nombre de nouvelles suggestions trouvées et invite à cocher celles à ajouter au livre, puis la page défile jusqu'à la liste des suggestions; si rien de nouveau n'a été trouvé, un message le précise.
 
 ## 5\. Sélection des articles
 
@@ -725,5 +731,6 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 0.16.0  | 2026-11-10 | Ajout des API de génération directe d'un livre PDF depuis une liste explicite d'articles ou depuis une page de livre Wikipédia, avec conservation de l'ordre des articles de cette dernière. |
 | 0.17.0  | 2026-11-10 | Ajout d'un endpoint GET qui génère un PDF depuis l'URL d'une page de livre Wikipédia, appelable directement dans un navigateur. |
 | 0.19.0  | 2026-11-11 | Interface plus intuitive : titre du livre modifiable directement en tête de page (plus de mention « projet » ni de champ titre en double dans l'étape Édition); boutons « Ouvrir » et « Enregistrer » libellés dans la barre supérieure; bouton « Étape suivante » en bas des étapes Sources et Organisation; préréglages de marges (Standard, Étroites, Larges, Pour reliure, Personnalisées) avec réglage au millimètre replié; case « Numéroter les pages » alignée avec son libellé; libellés « Vos articles » et « Suggestions » à la place de « Articles principaux » et « Articles découverts », dans les 12 langues; la barre supérieure ne déborde plus sur smartphone. |
+| 0.20.0  | 2026-11-11 | Nouvelle ergonomie de l'exploration des liens (section 4.4) : le panneau « Explorer les liens » (profondeur, maximum d'articles) est remplacé, dans la section « Suggestions », par un bouton « Trouver des articles liés à vos articles » désactivé tant qu'aucun article n'est ajouté, un choix en trois niveaux du nombre de suggestions, la profondeur dans des options avancées repliées, et un bouton « Articles liés » sur chaque article pour explorer à partir de lui seul. Les nouvelles explorations s'ajoutent aux suggestions existantes. Correction : le bouton « Ajouter » restait dans l'ancienne langue après un ajout suivi d'un changement de langue. |
 
 Fin du document — Wikipedia2Book, spécifications version 1.1.
