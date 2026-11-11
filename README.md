@@ -57,7 +57,17 @@ The application is then reachable at `http://localhost:8000`.
 
 ## Deployment
 
-- [toolforge.org](https://wikipedia2booktoolforge.org) On Going !!!
+- [Toolforge](https://wikipedia2book.toolforge.org)
+
+Toolforge builds the image with buildpacks (`Procfile`, `Aptfile`, `.python-version`), not with the `Dockerfile`. From `login.toolforge.org`, after `become wikipedia2book`:
+
+```bash
+toolforge build start https://github.com/gmoulard/wikipedia2book
+toolforge webservice buildservice start --mount=none --mem 2Gi --cpu 1
+```
+
+After each push: `toolforge build start …` again, then `toolforge webservice buildservice restart`.
+
 - [Northflank](https://prod--wikipedia2book--wkvpbnfj6h4v.code.run) 
 - [Railway](https://wikipedia2book-production.up.railway.app/)
 

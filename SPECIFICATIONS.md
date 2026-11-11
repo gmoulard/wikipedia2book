@@ -565,6 +565,23 @@ docker run --rm -p 8000:8000 wikipedia2book
 
 L'application est alors accessible sur `http://localhost:8000`, avec sa documentation interactive sur `http://localhost:8000/docs`.
 
+Pour Toolforge (Wikimedia Cloud), qui construit l'image avec des buildpacks et non avec le `Dockerfile`, le dépôt fournit aussi :
+
+* Un `Procfile` (commande `uvicorn` sur le port 8000 attendu par Toolforge).
+
+* Un `Aptfile` (mêmes dépendances système et polices que le `Dockerfile`).
+
+* Un fichier `.python-version` (Python 3.12).
+
+Déploiement depuis `login.toolforge.org`, dans le compte de l'outil (`become wikipedia2book`) :
+
+```bash
+toolforge build start https://github.com/gmoulard/wikipedia2book
+toolforge webservice buildservice start --mount=none --mem 2Gi --cpu 1
+```
+
+Après chaque nouvelle version poussée sur GitHub : relancer `toolforge build start …` puis `toolforge webservice buildservice restart`. Le commit affiché en pied de page vient de la variable d'environnement `GIT_COMMIT` (`toolforge envvars create GIT_COMMIT <sha>`), faute de dépôt git dans l'image.
+
 Le serveur ne stocke aucun livre ni PDF sur disque; tout l'état est conservé dans le navigateur et échangé via JSON.
 
 ## 14\. Sécurité et robustesse
@@ -673,6 +690,9 @@ Wikipedia2Book/
 │
 ├── Dockerfile
 ├── docker-build.sh
+├── Procfile
+├── Aptfile
+├── .python-version
 ├── requirements.txt
 ├── .gitignore
 ├── CLAUDE.md
@@ -736,5 +756,6 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 0.23.0  | 2026-11-11 | Table des matières libre dans l'étape Organisation : elle peut être glissée n'importe où (avant n'importe quel chapitre ou article, ou à la fin), et plus seulement basculée entre début et fin; elle peut être retirée puis remise. `toc_position` accepte désormais `before:<clé>` en plus de `start`/`end` (fichiers JSON existants toujours valides). Les numéros de page tiennent compte de sa position. Correction : la liste d'organisation affichait les articles sans chapitre avant les chapitres, alors que le PDF les place après, sous « Sans chapitre » (section 6). |
 | 0.24.0  | 2026-11-11 | Le titre du livre et la note de couverture ne sont plus affichés au-dessus des étapes Sources et Organisation : ils se saisissent dans l'étape Édition, partie A « Identité du livre ». Si le titre est laissé vide, le PDF (couverture, signet, nom de fichier) et le fichier JSON prennent le titre du premier article du livre, affiché en grisé dans le champ (section 12). |
 | 0.25.0  | 2026-11-11 | Interface restylée selon le système de design Codex de Wikimedia (bleu progressif #36c, gris Wikipédia, coins 2 px, titres serif), thème sombre aligné sur le mode nuit de Wikipédia ; Google Fonts supprimé (polices système). |
+| 0.25.1  | 2026-11-11 | Déploiement sur Toolforge : ajout d'un `Procfile`, d'un `Aptfile` et d'un `.python-version` pour le Build Service (buildpacks), documentés en section 13.4. |
 
 Fin du document — Wikipedia2Book, spécifications version 1.1.
