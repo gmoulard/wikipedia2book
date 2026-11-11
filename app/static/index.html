@@ -34,16 +34,6 @@
 
     <main class="main-area">
       <div id="projectWorkspace" class="project-workspace">
-        <section class="project-heading">
-          <div class="project-heading-main">
-            <div class="eyebrow"><span class="eyebrow-dot"></span> <span data-i18n="heading.eyebrow">VOTRE LIVRE</span></div>
-            <label class="visually-hidden" for="projectName" data-i18n="heading.nameLabel">Titre du livre</label>
-            <input id="projectName" class="project-title-input" maxlength="120" placeholder="Titre du livre" data-i18n-placeholder="heading.namePlaceholder" autocomplete="off">
-            <label class="visually-hidden" for="projectDescription" data-i18n="heading.descLabel">Note de couverture</label>
-            <input id="projectDescription" class="project-description-input" maxlength="2000" placeholder="Note affichée sur la couverture (facultatif)" data-i18n-placeholder="heading.descPlaceholder" autocomplete="off">
-          </div>
-        </section>
-
         <nav class="workflow-tabs" aria-label="Étapes du livre" data-i18n-aria-label="tabs.ariaLabel">
           <button class="workflow-tab active" type="button" data-view="sources"><span class="tab-number">01</span> <span data-i18n="tabs.sources">Sources</span> <span class="tab-count" id="sourceCount">0</span></button>
           <button class="workflow-tab" type="button" data-view="organization"><span class="tab-number">02</span> <span data-i18n="tabs.organization">Organisation</span> <span class="tab-count" id="selectedCount">0</span></button>
@@ -117,8 +107,10 @@
             <section class="settings-section">
               <div class="settings-heading"><span class="settings-index">A</span><div><h3 data-i18n="edition.identityTitle">Identité du livre</h3><p data-i18n="edition.identitySubtitle">Les informations de couverture et d'ouverture</p></div></div>
               <div class="form-grid">
+                <label class="field field-wide"><span data-i18n="heading.nameLabel">Titre du livre</span><input id="bookTitle" type="text" maxlength="200" autocomplete="off"></label>
                 <label class="field field-wide"><span data-i18n="edition.subtitleLabel">Sous-titre</span><input id="bookSubtitle" type="text" placeholder="Facultatif" data-i18n-placeholder="common.optional"></label>
                 <label class="field field-wide"><span data-i18n="edition.authorLabel">Auteur ou éditeur</span><input id="bookAuthor" type="text" placeholder="Facultatif" data-i18n-placeholder="common.optional"></label>
+                <label class="field field-wide"><span data-i18n="heading.descLabel">Note de couverture</span><input id="bookDescription" type="text" maxlength="2000" placeholder="Note affichée sur la couverture (facultatif)" data-i18n-placeholder="heading.descPlaceholder" autocomplete="off"></label>
                 <label class="field field-wide"><span data-i18n="edition.introLabel">Introduction</span><textarea id="bookIntroduction" rows="4" placeholder="Quelques mots pour ouvrir le livre…" data-i18n-placeholder="edition.introPlaceholder"></textarea></label>
                 <label class="field field-wide"><span data-i18n="edition.conclusionLabel">Conclusion</span><textarea id="bookConclusion" rows="4" placeholder="Quelques mots pour refermer le livre…" data-i18n-placeholder="edition.conclusionPlaceholder"></textarea></label>
               </div>

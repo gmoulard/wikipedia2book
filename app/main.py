@@ -45,7 +45,7 @@ from app.wikipedia_api import (
 )
 
 
-app = FastAPI(title="Wikipedia2Book", version="0.23.0")
+app = FastAPI(title="Wikipedia2Book", version="0.24.0")
 static_directory = Path(__file__).parent / "static"
 PDF_LANGUAGE_PATTERN = "^(" + "|".join(PDF_LABELS) + ")$"
 app.mount("/static", StaticFiles(directory=static_directory), name="static")
@@ -195,6 +195,14 @@ def _selected_items(project: Project) -> list[Article | UploadedDocument]:
     return selected
 
 
+def _apply_default_book_title(project: Project, selected: list[Article | UploadedDocument]) -> None:
+    if project.book_title.strip():
+        return
+    ordered = [item for _, items in ordered_article_groups(project, selected) for item in items]
+    first = next((item for item in ordered if isinstance(item, Article)), ordered[0])
+    project.book_title = first.title[:200]
+
+
 def _pdf_error_detail(error: Exception) -> str:
     if isinstance(error, (MediaWikiError, ValueError)):
         return str(error)
@@ -320,6 +328,7 @@ async def create_pdf(
 
 async def _create_pdf_response(project: Project, language: str) -> Response:
     selected = _selected_items(project)
+    _apply_default_book_title(project, selected)
     try:
         async for event in build_book_pdf(project, selected, language):
             if event["type"] == "done":
@@ -433,6 +442,7 @@ async def create_pdf_stream(
     project: Project, language: str = Query(default="fr", pattern=PDF_LANGUAGE_PATTERN)
 ) -> StreamingResponse:
     selected = _selected_items(project)
+    _apply_default_book_title(project, selected)
 
     async def events():
         try:

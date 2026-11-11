@@ -99,15 +99,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .footer-version { font-family: 'DM Sans', monospace; color: var(--muted); cursor: default; }
 
 .project-workspace { width: min(1190px, 100%); margin: 0 auto; padding: 33px 42px 72px; animation: arrive .34s ease both; }
-.project-heading { display: flex; align-items: flex-start; gap: 18px; padding-bottom: 25px; }
-.project-heading-main { flex: 1; min-width: 0; }
 .eyebrow { display: flex; align-items: center; gap: 8px; }
 .eyebrow-dot { background: var(--coral); }
-.project-title-input { display: block; width: 100%; max-width: 100%; margin: 9px 0 3px -4px; padding: 0 4px; border: 1px solid transparent; border-radius: 4px; background: transparent; color: var(--ink); font-family: 'Literata', Georgia, serif; font-size: clamp(22px, 2.6vw, 39px); font-weight: 600; line-height: 1.25; }
-.project-title-input:hover, .project-title-input:focus { border-color: var(--line); background: var(--paper); }
-.project-description-input { width: min(600px, 100%); padding: 5px 0; border: 1px solid transparent; background: transparent; color: var(--ink-soft); font-size: 13px; }
-.project-description-input::placeholder { color: #a4afaa; }
-.project-description-input:hover, .project-description-input:focus { border-bottom-color: var(--line-strong); }
 .danger-icon { font-size: 21px; }
 .danger-icon:hover { border-color: #ecc8ba; background: var(--coral-pale); color: #ab4a32; }
 .workflow-tabs { display: flex; gap: 27px; border-bottom: 1px solid var(--line-strong); }
@@ -282,7 +275,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .save-state { display: none; }
   .topbar-actions .button { min-height: 34px; padding: 0 10px; font-size: 10px; }
   .project-workspace { padding: 23px 16px 48px; }
-  .project-title-input { font-size: 29px; }
   .workflow-tabs { justify-content: space-between; gap: 12px; }
   .workflow-tab { min-height: 43px; gap: 6px; font-size: 11px; }
   .tab-number { font-size: 11px; }

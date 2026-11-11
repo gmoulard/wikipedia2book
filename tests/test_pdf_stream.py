@@ -234,6 +234,17 @@ class PdfStreamTest(unittest.TestCase):
         outline, _ = self._outline(_project(page_numbers=False, chapters=chapters, toc_position="before:chapter:"))
         self.assertEqual(outline, ["Félins", ["Chat"], "Table des matières", "Sans chapitre", ["Chien"], "Licence"])
 
+    def test_empty_book_title_defaults_to_the_first_article_in_book_order(self):
+        chapters = [{"id": "c1", "title": "Canidés", "article_keys": ["fr:title:chien"]}]
+        response = self.client.post("/api/pdf", json=_project(book_title="", page_numbers=False, chapters=chapters))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('filename="Chien.pdf"', response.headers["content-disposition"])
+        self.assertEqual(PdfReader(BytesIO(response.content)).outline[0].title, "Chien")
+
+    def test_explicit_book_title_is_kept(self):
+        response = self.client.post("/api/pdf", json=_project(page_numbers=False))
+        self.assertIn('filename="Animaux.pdf"', response.headers["content-disposition"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -90,10 +90,6 @@ function renderWorkspace() {
     button.querySelector('.step-footer-label').textContent = t('nav.next', { step: t(`tabs.${button.dataset.nextStep}`) });
   });
   if (!hasProject) return;
-  const nameInput = $('#projectName');
-  const descInput = $('#projectDescription');
-  if (document.activeElement !== nameInput) nameInput.value = state.project.book_title || state.project.name;
-  if (document.activeElement !== descInput) descInput.value = state.project.description || '';
   $('#sourceCount').textContent = activeArticles().length;
   $('#selectedCount').textContent = selectedArticles().length;
   $('#organizationCount').textContent = selectedArticles().length;
@@ -348,7 +344,7 @@ function applyDragDrop(fromIndex, toIndex) {
 function renderBookSettings() {
   const project = state.project;
   const controls = {
-    bookSubtitle: 'book_subtitle', bookAuthor: 'book_author',
+    bookTitle: 'book_title', bookDescription: 'description', bookSubtitle: 'book_subtitle', bookAuthor: 'book_author',
     bookIntroduction: 'introduction', bookConclusion: 'conclusion', pageFormat: 'page_format',
     customWidth: 'custom_width_mm', customHeight: 'custom_height_mm', marginTop: 'margin_top_mm',
     marginBottom: 'margin_bottom_mm', marginInside: 'margin_inside_mm', marginOutside: 'margin_outside_mm', marginBinding: 'margin_binding_mm',
@@ -362,6 +358,12 @@ function renderBookSettings() {
   $('#customDimensions').hidden = project.page_format !== 'custom';
   $('#pageNumbers').checked = project.page_numbers || false;
   $('#marginPreset').value = marginPresetOf(project);
+  $('#bookTitle').placeholder = defaultBookTitle() || t('heading.namePlaceholder');
+}
+
+function defaultBookTitle() {
+  const items = orderedSelectedArticles();
+  return (items.find((item) => !item.kind) || items[0])?.title || '';
 }
 
 const MARGIN_PRESETS = {
@@ -477,7 +479,6 @@ async function importWikipediaBook(url) {
       if (bookName) {
         state.project.name = bookName;
         state.project.book_title = bookName;
-        $('#projectName').value = bookName;
       }
     } catch { /* titre non critique */ }
     queueSave({ main_articles: state.project.main_articles, name: state.project.name, book_title: state.project.book_title });
@@ -727,7 +728,7 @@ async function exportPdf() {
 }
 
 function bookFileName(project) {
-  return (project.book_title || project.name).replace(/[^a-z0-9-_ ]/gi, '').trim().replace(/\s+/g, '-') || 'livre';
+  return (project.book_title || defaultBookTitle() || project.name).replace(/[^a-z0-9-_ ]/gi, '').trim().replace(/\s+/g, '-') || 'livre';
 }
 
 function exportWorkspace() {
@@ -845,7 +846,7 @@ document.addEventListener('change', async (event) => {
   if (event.target.matches('#articleLanguage')) { if ($('#articleQuery').value.trim().length >= 2) searchArticles($('#articleQuery').value); return; }
   if (event.target.matches('input[name="orientation"]')) { const layout = collectLayoutSettings(); Object.assign(state.project, layout); queueSave(layout); return; }
   if (event.target.matches('#pageNumbers')) { queueSave({ page_numbers: event.target.checked }); return; }
-  const textSettings = { bookSubtitle: 'book_subtitle', bookAuthor: 'book_author', bookIntroduction: 'introduction', bookConclusion: 'conclusion' };
+  const textSettings = { bookTitle: 'book_title', bookDescription: 'description', bookSubtitle: 'book_subtitle', bookAuthor: 'book_author', bookIntroduction: 'introduction', bookConclusion: 'conclusion' };
   if (textSettings[event.target.id]) patchSetting(event.target.id, textSettings[event.target.id]);
   const numericSettings = { customWidth: 'custom_width_mm', customHeight: 'custom_height_mm', marginTop: 'margin_top_mm', marginBottom: 'margin_bottom_mm', marginInside: 'margin_inside_mm', marginOutside: 'margin_outside_mm', marginBinding: 'margin_binding_mm' };
   if (numericSettings[event.target.id]) patchSetting(event.target.id, numericSettings[event.target.id], Number);
@@ -857,18 +858,13 @@ document.addEventListener('change', async (event) => {
 document.addEventListener('input', (event) => {
   if (event.target.matches('#articleQuery') && state.sourceMode === 'search') searchArticles(event.target.value);
   if (event.target.matches('#articleFilter')) renderArticles();
-  if (event.target.matches('#projectName')) {
-    const value = event.target.value.trim();
-    if (value) queueSave({ name: value, book_title: value });
-  }
-  if (event.target.matches('#projectDescription')) { state.project.description = event.target.value; queueSave({ description: event.target.value }); }
   const chapterNameEl = event.target.closest('.chapter-name');
   if (chapterNameEl && state.project) {
     const row = chapterNameEl.closest('.org-chapter-row');
     const chapter = state.project.chapters.find((c) => c.id === row?.dataset.chapterId);
     if (chapter && chapterNameEl.value.trim()) { chapter.title = chapterNameEl.value; queueSave({ chapters: state.project.chapters }); }
   }
-  const textSettings = { bookSubtitle: 'book_subtitle', bookAuthor: 'book_author', bookIntroduction: 'introduction', bookConclusion: 'conclusion' };
+  const textSettings = { bookTitle: 'book_title', bookDescription: 'description', bookSubtitle: 'book_subtitle', bookAuthor: 'book_author', bookIntroduction: 'introduction', bookConclusion: 'conclusion' };
   if (textSettings[event.target.id]) { state.project[textSettings[event.target.id]] = event.target.value; queueSave({ [textSettings[event.target.id]]: event.target.value }); }
 });
 

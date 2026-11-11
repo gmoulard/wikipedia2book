@@ -73,7 +73,7 @@ Le logiciel ne gère pas de liste de projets : un seul livre est construit à la
 
 * Toutes les modifications (articles, sélection, organisation, mise en page) sont conservées en mémoire dans le navigateur pendant la session, et envoyées à l'API uniquement pour les opérations qui le nécessitent (recherche, exploration, génération du PDF).
 
-* L'utilisateur peut télécharger explicitement l'état du livre sous forme de fichier JSON, nommé d'après le titre du livre (ou son nom, si aucun titre n'est renseigné).
+* L'utilisateur peut télécharger explicitement l'état du livre sous forme de fichier JSON, nommé d'après le titre du livre (ou, si aucun titre n'est renseigné, le titre du premier article du livre).
 
 * L'utilisateur peut importer un fichier JSON précédemment téléchargé pour reprendre un livre; l'import remplace le livre en cours.
 
@@ -437,13 +437,15 @@ En cas d'échec, le logiciel affiche un message explicite. Les erreurs possibles
 
 ## 12\. Interface utilisateur
 
-L'application est une page unique, organisée en trois étapes accessibles par des onglets, sans écran de création ou de gestion de projet. Le titre du livre est affiché en tête de page, sous la mention « Votre livre », et se modifie directement à cet endroit (« Mon livre » par défaut); c'est le seul champ de titre, l'étape Édition ne le répète pas. Juste en dessous, un champ facultatif « Note de couverture » renseigne la note imprimée sur la couverture.
+L'application est une page unique, organisée en trois étapes accessibles par des onglets, sans écran de création ou de gestion de projet. Les onglets des étapes sont affichés directement sous la barre supérieure : le titre du livre et la note de couverture ne sont pas affichés au-dessus des étapes, ils se saisissent uniquement dans l'étape Édition (partie A, « Identité du livre »).
+
+**Titre par défaut :** si le champ « Titre du livre » est laissé vide, le titre utilisé (couverture, signet racine, nom des fichiers PDF et JSON) est celui du premier article Wikipédia du livre, dans l'ordre défini à l'étape Organisation (à défaut d'article Wikipédia, le premier document importé). Ce titre par défaut est affiché en grisé dans le champ vide, pour que l'utilisateur sache ce qui sera imprimé; il est calculé au moment de la génération et n'est pas enregistré dans le livre. Un titre importé d'une page de livre Wikipédia (section 3.1) ou saisi par l'utilisateur est toujours prioritaire.
 
 * 01 — Sources : ajout des articles principaux (affichés sous le titre « Vos articles ») et exploration des liens (articles découverts, affichés sous le titre « Suggestions »).
 
 * 02 — Organisation : réorganisation des articles, chapitres, position ou retrait de la table des matières.
 
-* 03 — Édition : identité du livre (sous-titre, auteur, introduction, conclusion) et format d'impression (format papier, orientation, préréglage de marges, numérotation des pages).
+* 03 — Édition : identité du livre (titre, sous-titre, auteur, note de couverture, introduction, conclusion) et format d'impression (format papier, orientation, préréglage de marges, numérotation des pages).
 
 En bas des étapes Sources et Organisation, un bouton « Étape suivante : … » ouvre l'étape suivante et remonte en haut de la page.
 
@@ -730,5 +732,6 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 0.21.0  | 2026-11-11 | Articles liés plus simples : plus aucun réglage avant l'exploration (profondeur 1, 30 suggestions par exploration, les suivantes en relançant). Chaque suggestion a un bouton « Ajouter au livre » qui la fait passer visiblement dans « Vos articles » et un bouton « × » pour l'écarter, à la place des cases à cocher; « Tout ajouter » remplace les boutons de sélection groupée; le filtre par profondeur disparaît. Les suggestions cochées d'un ancien fichier JSON sont rangées dans « Vos articles » à l'ouverture (sections 4 et 5). |
 | 0.22.0  | 2026-11-11 | Suggestions encore simplifiées : la section est vide et sans bouton par défaut; « Articles liés » sur un article remplit la liste avec les articles qu'il cite, dans l'ordre d'apparition dans la page (lecture du HTML rendu via `action=parse`, au lieu de `prop=links` trié par ordre alphabétique), et un clic sur un autre article remplace la liste. Disparition du bouton global d'exploration et du filtre par origine (sections 4 et 5). |
 | 0.23.0  | 2026-11-11 | Table des matières libre dans l'étape Organisation : elle peut être glissée n'importe où (avant n'importe quel chapitre ou article, ou à la fin), et plus seulement basculée entre début et fin; elle peut être retirée puis remise. `toc_position` accepte désormais `before:<clé>` en plus de `start`/`end` (fichiers JSON existants toujours valides). Les numéros de page tiennent compte de sa position. Correction : la liste d'organisation affichait les articles sans chapitre avant les chapitres, alors que le PDF les place après, sous « Sans chapitre » (section 6). |
+| 0.24.0  | 2026-11-11 | Le titre du livre et la note de couverture ne sont plus affichés au-dessus des étapes Sources et Organisation : ils se saisissent dans l'étape Édition, partie A « Identité du livre ». Si le titre est laissé vide, le PDF (couverture, signet, nom de fichier) et le fichier JSON prennent le titre du premier article du livre, affiché en grisé dans le champ (section 12). |
 
 Fin du document — Wikipedia2Book, spécifications version 1.1.
