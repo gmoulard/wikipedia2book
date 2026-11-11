@@ -136,18 +136,23 @@ class MediaWikiClient:
             raise MediaWikiError(f"Wikipédia n’a pas renvoyé un PDF valide pour « {title} ».")
         return response.content
 
-    async def get_links(self, title: str, language: str = "fr", limit: int = 100) -> list[str]:
+    async def get_links(self, title: str, language: str = "fr") -> list[str]:
         result = await self._get(
             language,
-            {
-                "prop": "links",
-                "titles": title,
-                "plnamespace": 0,
-                "pllimit": min(max(limit, 1), 500),
-            },
+            {"action": "parse", "page": title, "prop": "text", "redirects": 1, "disabletoc": 1},
         )
-        pages = result.get("query", {}).get("pages", [])
-        return [link["title"] for page in pages for link in page.get("links", [])]
+        parsed = result.get("parse", {})
+        seen = {parsed.get("title", title).casefold()}
+        links: list[str] = []
+        for anchor in BeautifulSoup(parsed.get("text", ""), "html.parser").select('a[href^="/wiki/"]'):
+            if "new" in (anchor.get("class") or []):
+                continue
+            link_title = unquote(anchor["href"][len("/wiki/"):].split("#", 1)[0]).replace("_", " ").strip()
+            if not link_title or ":" in link_title or link_title.casefold() in seen:
+                continue
+            seen.add(link_title.casefold())
+            links.append(link_title)
+        return links
 
     async def get_book_links(
         self, title: str, language: str = "fr", limit: int = 200

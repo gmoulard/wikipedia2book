@@ -141,11 +141,11 @@ Cette proposition ne remplace jamais un champ déjà renseigné par l'utilisateu
 
 ### 4.1 Principe
 
-Le logiciel explore les liens internes présents dans les articles principaux afin de proposer des articles complémentaires, en s'appuyant sur l'API officielle MediaWiki (`action=query&prop=links`).
+Le logiciel explore les liens internes présents dans les articles principaux afin de proposer des articles complémentaires, en s'appuyant sur l'API officielle MediaWiki (`action=parse&prop=text`) : les liens sont lus dans le rendu HTML de l'article, donc **dans leur ordre d'apparition dans la page** (bandeaux, infobox et légendes compris), et non par ordre alphabétique comme le renverrait `prop=links`. Sont ignorés : les liens vers des pages inexistantes (liens rouges), les liens hors espace principal (`Fichier:`, `Catégorie:`, `Aide:`, etc.), les ancres internes, le lien de la page vers elle-même et les doublons.
 
 ### 4.2 Profondeur d'exploration
 
-La profondeur est paramétrable, entre 0 et 3 côté API (`/api/explore`); l'interface propose les profondeurs 1 à 3 :
+La profondeur est paramétrable, entre 0 et 3, côté API (`/api/explore`); l'interface utilise toujours la profondeur 1 (section 4.4) :
 
 | Profondeur | Comportement                                      |
 | ---------- | ------------------------------------------------- |
@@ -164,23 +164,21 @@ Pour chaque article découvert, le logiciel affiche :
 
 * Son URL.
 
-* L'article principal qui a conduit à sa découverte (« Depuis … »).
-
 * Un bouton « Ajouter au livre » et un bouton « × » pour l'écarter (section 5).
 
-Les doublons sont éliminés automatiquement (comparaison insensible à la casse sur la langue et le titre), y compris lorsqu'un même article est lié depuis plusieurs pages. Une nouvelle exploration ajoute ses résultats aux suggestions déjà présentes, sans dupliquer un article déjà suggéré, déjà ajouté par l'utilisateur, ou écarté pendant la session en cours.
+Au-dessus de la liste, une ligne rappelle de quel article viennent les suggestions (« Liens de « … », dans l'ordre de la page »). Les doublons sont éliminés automatiquement (comparaison insensible à la casse sur la langue et le titre), et les articles déjà présents dans « Vos articles » ne sont pas reproposés.
 
 ### 4.4 Lancer l'exploration
 
-L'exploration se lance depuis la section « Suggestions » de l'étape Sources, ou depuis un article précis :
+* Par défaut, la section « Suggestions » est vide et ne contient aucun bouton : un message invite à cliquer sur « Articles liés » sur l'un de ses articles.
 
-* Le bouton « Trouver des articles liés à vos articles » explore à partir de tous les articles principaux. Il est désactivé, avec le message « Ajoutez d'abord un article dans « Vos articles » », tant qu'aucun article principal n'a été ajouté.
+* Le bouton « Articles liés », présent sur chaque carte de « Vos articles », remplit la liste avec les articles cités par cet article, dans l'ordre de la page (profondeur 1, jusqu'à 200 liens). Le bouton de l'article dont les liens sont affichés est mis en évidence.
 
-* Le bouton « Articles liés » présent sur chaque carte d'article principal explore à partir de ce seul article.
+* Un clic sur « Articles liés » d'un autre article **vide la liste** et la remplit avec les liens de ce nouvel article : la liste montre toujours les liens d'un seul article à la fois.
 
-* Aucun réglage n'est demandé : chaque exploration cherche les liens directs (profondeur 1) et propose jusqu'à 30 nouvelles suggestions. Relancer l'exploration propose les 30 suivantes, car le maximum transmis à l'API tient compte des articles déjà connus (borné à 200). L'API, elle, accepte toujours une profondeur de 0 à 3 et un maximum de 1 à 200.
+* Aucun réglage n'est demandé. L'API, elle, accepte toujours une profondeur de 0 à 3 et un maximum de 1 à 200.
 
-* À la fin, un message indique le nombre de nouvelles suggestions trouvées, puis la page défile jusqu'à la liste des suggestions; si rien de nouveau n'a été trouvé, un message le précise.
+* À la fin, un message indique le nombre de suggestions trouvées, puis la page défile jusqu'à la liste; si l'article ne cite aucun nouvel article, un message le précise.
 
 ## 5\. Sélection des articles
 
@@ -194,13 +192,11 @@ Fonctionnalités disponibles :
 
 * « Ajouter au livre » sur une suggestion : elle quitte la liste des suggestions et rejoint « Vos articles », cochée, avec la mention de l'article d'origine; un message confirme l'ajout. Elle devient alors un article principal comme les autres : elle peut être décochée, retirée, ou servir de point de départ à une nouvelle exploration.
 
-* « × » sur une suggestion : elle est écartée de la liste et n'est plus reproposée pendant la session en cours.
+* « × » sur une suggestion : elle est retirée de la liste.
 
-* « Tout ajouter » : ajoute toutes les suggestions visibles (en respectant les filtres actifs).
+* « Tout ajouter » : ajoute toutes les suggestions visibles (en respectant le filtre par titre). Ce bouton et le filtre n'apparaissent que lorsque la liste contient des suggestions.
 
 * Recherche par titre parmi les suggestions.
-
-* Filtrage par article d'origine.
 
 * Dans « Vos articles », une case à cocher par article indique s'il est inclus dans le livre.
 
@@ -480,7 +476,7 @@ Le logiciel utilise les interfaces officielles de MediaWiki pour :
 
 * Résoudre les URL d'article et valider les codes de langue.
 
-* Explorer les liens internes (`action=query&prop=links`).
+* Explorer les liens internes, dans l'ordre de la page (`action=parse&prop=text`).
 
 * Récupérer la liste des articles d'une page de livre, dans leur ordre réel (`prop=revisions&rvprop=content`, lecture du wikitexte — section 3.1).
 
@@ -609,7 +605,7 @@ La version actuelle est considérée comme fonctionnelle si les points suivants 
 
 * Détection des doublons parmi les articles découverts.
 
-* Affichage des articles découverts avec leurs filtres (origine, titre) et ajout au livre en un clic.
+* Affichage des liens d'un article dans l'ordre de la page, filtre par titre et ajout au livre en un clic.
 
 * Sélection manuelle des articles; aucun ajout automatique d'article découvert.
 
@@ -726,5 +722,6 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 0.20.0  | 2026-11-11 | Nouvelle ergonomie de l'exploration des liens (section 4.4) : le panneau « Explorer les liens » (profondeur, maximum d'articles) est remplacé, dans la section « Suggestions », par un bouton « Trouver des articles liés à vos articles » désactivé tant qu'aucun article n'est ajouté, un choix en trois niveaux du nombre de suggestions, la profondeur dans des options avancées repliées, et un bouton « Articles liés » sur chaque article pour explorer à partir de lui seul. Les nouvelles explorations s'ajoutent aux suggestions existantes. Correction : le bouton « Ajouter » restait dans l'ancienne langue après un ajout suivi d'un changement de langue. |
 | 0.20.1  | 2026-11-11 | Le pied de page n'affiche plus « unknown » quand le commit git n'est pas connu au déploiement (valeur par défaut `unknown` de l'image Docker ignorée) : seuls la version et les informations disponibles sont affichées. |
 | 0.21.0  | 2026-11-11 | Articles liés plus simples : plus aucun réglage avant l'exploration (profondeur 1, 30 suggestions par exploration, les suivantes en relançant). Chaque suggestion a un bouton « Ajouter au livre » qui la fait passer visiblement dans « Vos articles » et un bouton « × » pour l'écarter, à la place des cases à cocher; « Tout ajouter » remplace les boutons de sélection groupée; le filtre par profondeur disparaît. Les suggestions cochées d'un ancien fichier JSON sont rangées dans « Vos articles » à l'ouverture (sections 4 et 5). |
+| 0.22.0  | 2026-11-11 | Suggestions encore simplifiées : la section est vide et sans bouton par défaut; « Articles liés » sur un article remplit la liste avec les articles qu'il cite, dans l'ordre d'apparition dans la page (lecture du HTML rendu via `action=parse`, au lieu de `prop=links` trié par ordre alphabétique), et un clic sur un autre article remplace la liste. Disparition du bouton global d'exploration et du filtre par origine (sections 4 et 5). |
 
 Fin du document — Wikipedia2Book, spécifications version 1.1.

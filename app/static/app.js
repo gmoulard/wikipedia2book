@@ -6,7 +6,6 @@ const state = {
   searchTimer: null,
   toastTimer: null,
   isDirty: false,
-  dismissedKeys: new Set(),
 };
 
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -99,7 +98,6 @@ function renderWorkspace() {
   $('#selectedCount').textContent = selectedArticles().length;
   $('#organizationCount').textContent = selectedArticles().length;
   renderArticles();
-  renderExploreState();
   renderUploadedDocuments();
   renderOrganization();
   renderBookSettings();
@@ -116,29 +114,29 @@ function renderArticles() {
   $('#mainArticleCount').textContent = project.main_articles.length;
   $('#discoveredArticleCount').textContent = project.discovered_articles.length;
   $('#mainArticles').innerHTML = project.main_articles.length
-    ? project.main_articles.map((a) => articleCard(a, true)).join('')
+    ? project.main_articles.map((a) => articleCard(a, true, a.title === suggestionSource())).join('')
     : emptyList(t('main.emptyTitle'), t('main.emptyDesc'));
 
-  const origins = [...new Set(project.discovered_articles.map((a) => a.origin_title).filter(Boolean))].sort((a, b) => a.localeCompare(b, lang()));
-  const originSelect = $('#originFilter');
-  const selectedOrigin = originSelect.value;
-  originSelect.innerHTML = `<option value="">${escapeHtml(t('discovered.allOrigins'))}</option>` + origins.map((o) => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('');
-  originSelect.value = origins.includes(selectedOrigin) ? selectedOrigin : '';
-
+  const source = suggestionSource();
+  $('#suggestionSource').hidden = !source;
+  $('#suggestionSource').textContent = source ? t('discovered.source', { title: source }) : '';
+  $('#suggestionFilters').hidden = !project.discovered_articles.length;
   const visible = visibleSuggestions();
   $('#discoveredArticles').innerHTML = visible.length
     ? visible.map((a) => articleCard(a, false)).join('')
     : emptyList(project.discovered_articles.length ? t('sources.noResultsTitle') : t('discovered.noSuggestionsTitle'),
         project.discovered_articles.length ? t('discovered.noResultsDesc') : t('discovered.noSuggestionsDesc'));
-  $('#selectDiscoveredButton').disabled = visible.length === 0;
+  $('#selectDiscoveredButton').hidden = visible.length === 0;
+}
+
+function suggestionSource() {
+  const origins = new Set(state.project.discovered_articles.map((a) => a.origin_title));
+  return origins.size === 1 ? [...origins][0] : null;
 }
 
 function visibleSuggestions() {
   const titleFilter = $('#articleFilter').value.trim().toLocaleLowerCase(lang());
-  const originFilter = $('#originFilter').value;
-  return state.project.discovered_articles.filter((a) =>
-    (!titleFilter || a.title.toLocaleLowerCase(lang()).includes(titleFilter))
-    && (!originFilter || a.origin_title === originFilter));
+  return state.project.discovered_articles.filter((a) => !titleFilter || a.title.toLocaleLowerCase(lang()).includes(titleFilter));
 }
 
 function addSuggestions(suggestions) {
@@ -154,20 +152,19 @@ function addSuggestions(suggestions) {
 }
 
 function dismissSuggestion(key) {
-  state.dismissedKeys.add(key);
   queueSave({ discovered_articles: state.project.discovered_articles.filter((a) => articleKey(a) !== key) });
   renderWorkspace();
 }
 
-function articleCard(article, isMain) {
+function articleCard(article, isMain, isSource = false) {
   const key = articleKey(article);
-  const meta = [article.language.toUpperCase(), article.origin_title ? t('meta.from', { origin: article.origin_title }) : t('meta.main')];
+  const meta = isMain ? [article.language.toUpperCase(), article.origin_title ? t('meta.from', { origin: article.origin_title }) : t('meta.main')] : [article.language.toUpperCase()];
   const summary = article.summary ? `<p class="article-summary">${escapeHtml(article.summary.slice(0, 290))}${article.summary.length > 290 ? '\u2026' : ''}</p>` : '';
   return `<article class="article-card${article.selected ? ' selected' : ''}" data-article-key="${escapeHtml(key)}">
     <div class="article-card-top">
       ${isMain ? `<input class="article-check" type="checkbox" aria-label="${article.selected ? escapeHtml(t('meta.deselect')) : escapeHtml(t('meta.select'))} ${escapeHtml(article.title)}" ${article.selected ? 'checked' : ''}>` : ''}
       <div class="article-title-wrap"><a class="article-title" href="${escapeHtml(article.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(article.title)}</a><div class="article-meta">${meta.map((m) => `<span>${escapeHtml(m)}</span>`).join('')}</div></div>
-      ${isMain ? `<button class="text-button explore-from" type="button" title="${escapeHtml(t('explore.fromArticleTitle', { title: article.title }))}"><span aria-hidden="true">↗</span> ${escapeHtml(t('explore.fromArticle'))}</button><button class="remove-article" type="button" title="${escapeHtml(t('meta.removeArticle'))}" aria-label="${escapeHtml(t('meta.removeArticle'))}">\u00d7</button>` : `<button class="button button-outline add-suggestion" type="button"><span aria-hidden="true">+</span> ${escapeHtml(t('suggestion.add'))}</button><button class="remove-article dismiss-suggestion" type="button" title="${escapeHtml(t('suggestion.dismiss'))}" aria-label="${escapeHtml(t('suggestion.dismiss'))} : ${escapeHtml(article.title)}">\u00d7</button>`}
+      ${isMain ? `<button class="text-button explore-from${isSource ? ' active' : ''}" type="button" title="${escapeHtml(t('explore.fromArticleTitle', { title: article.title }))}"><span aria-hidden="true">↗</span> ${escapeHtml(t('explore.fromArticle'))}</button><button class="remove-article" type="button" title="${escapeHtml(t('meta.removeArticle'))}" aria-label="${escapeHtml(t('meta.removeArticle'))}">\u00d7</button>` : `<button class="button button-outline add-suggestion" type="button"><span aria-hidden="true">+</span> ${escapeHtml(t('suggestion.add'))}</button><button class="remove-article dismiss-suggestion" type="button" title="${escapeHtml(t('suggestion.dismiss'))}" aria-label="${escapeHtml(t('suggestion.dismiss'))} : ${escapeHtml(article.title)}">\u00d7</button>`}
     </div>${summary}</article>`;
 }
 
@@ -503,47 +500,29 @@ async function searchArticles(query) {
   }, 250);
 }
 
-const EXPLORE_BATCH = 30;
-
-async function exploreArticles(sources, button) {
-  if (!sources.length) {
-    showToast(t('explore.atLeastOne'), true);
-    return;
-  }
-  const label = button.innerHTML;
+async function showRelatedArticles(article, button) {
   button.disabled = true;
   button.textContent = t('explore.loading');
   try {
     const updated = await getJson('/api/explore', {
       method: 'POST',
-      body: JSON.stringify({
-        project: { ...state.project, main_articles: sources },
-        max_depth: 1,
-        max_articles: Math.min(200, EXPLORE_BATCH + activeArticles().length + state.dismissedKeys.size),
-      }),
+      body: JSON.stringify({ project: { ...state.project, main_articles: [article], discovered_articles: [] }, max_depth: 1, max_articles: 200 }),
     });
-    const known = new Set([...activeArticles().map(articleKey), ...state.dismissedKeys]);
-    const added = updated.discovered_articles.filter((a) => !known.has(articleKey(a))).slice(0, EXPLORE_BATCH);
-    queueSave({ discovered_articles: [...state.project.discovered_articles, ...added] });
+    const known = new Set(state.project.main_articles.map(articleKey));
+    const related = updated.discovered_articles.filter((a) => !known.has(articleKey(a)));
+    $('#articleFilter').value = '';
+    queueSave({ discovered_articles: related });
     renderWorkspace();
-    const n = added.length;
+    const n = related.length;
     if (!n) showToast(t('explore.none'));
     else {
       showToast(n === 1 ? t('explore.result', { n }) : t('explore.resultPlural', { n }));
       $('.discovered-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  } catch (error) { showToast(error.message, true); }
-  finally {
-    button.innerHTML = label;
-    button.disabled = false;
-    renderExploreState();
+  } catch (error) {
+    showToast(error.message, true);
+    renderWorkspace();
   }
-}
-
-function renderExploreState() {
-  const hasMain = Boolean(state.project?.main_articles.length);
-  $('#exploreButton').disabled = !hasMain;
-  $('#exploreHint').hidden = hasMain;
 }
 
 function toggleArticle(card, selected) {
@@ -817,11 +796,10 @@ document.addEventListener('click', async (event) => {
   const suggestionCard = event.target.closest('#discoveredArticles .article-card');
   if (suggestionCard && event.target.closest('.add-suggestion')) { addSuggestions(state.project.discovered_articles.filter((a) => articleKey(a) === suggestionCard.dataset.articleKey)); return; }
   if (suggestionCard && event.target.closest('.dismiss-suggestion')) { dismissSuggestion(suggestionCard.dataset.articleKey); return; }
-  if (event.target.closest('#exploreButton')) { await exploreArticles(state.project.main_articles, $('#exploreButton')); return; }
   const exploreFrom = event.target.closest('.explore-from');
   if (exploreFrom) {
     const key = exploreFrom.closest('.article-card').dataset.articleKey;
-    await exploreArticles(state.project.main_articles.filter((a) => articleKey(a) === key), exploreFrom);
+    await showRelatedArticles(state.project.main_articles.find((a) => articleKey(a) === key), exploreFrom);
     return;
   }
   if (event.target.closest('#addChapterButton')) { addChapter(); return; }
@@ -843,7 +821,6 @@ document.addEventListener('change', async (event) => {
   if (event.target.matches('.doc-check')) { const row = event.target.closest('.uploaded-document-row'); toggleUploadedDocument(row.dataset.docId, event.target.checked); return; }
   if (event.target.matches('.chapter-select')) { const row = event.target.closest('.org-article'); updateChapterMembership(row.dataset.articleKey, event.target.value); return; }
   if (event.target.matches('#articleLanguage')) { if ($('#articleQuery').value.trim().length >= 2) searchArticles($('#articleQuery').value); return; }
-  if (event.target.matches('#originFilter')) { renderArticles(); return; }
   if (event.target.matches('input[name="orientation"]')) { const layout = collectLayoutSettings(); Object.assign(state.project, layout); queueSave(layout); return; }
   if (event.target.matches('#pageNumbers')) { queueSave({ page_numbers: event.target.checked }); return; }
   const textSettings = { bookSubtitle: 'book_subtitle', bookAuthor: 'book_author', bookIntroduction: 'introduction', bookConclusion: 'conclusion' };

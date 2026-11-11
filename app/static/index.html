@@ -53,7 +53,7 @@
         <section class="view-panel" id="sourcesPanel" data-panel="sources">
           <div class="section-intro">
             <div><div class="eyebrow" data-i18n="sources.eyebrow">COLLECTE</div><h2 data-i18n="sources.title">Construire le livre</h2></div>
-            <p data-i18n="sources.intro">Ajoutez vos articles. L'exploration des liens vous propose des suggestions à ajouter au livre en un clic.</p>
+            <p data-i18n="sources.intro">Ajoutez vos articles, puis cliquez sur « Articles liés » pour découvrir ceux qu'ils citent et les ajouter au livre en un clic.</p>
           </div>
           <div class="source-tools">
             <div class="source-entry">
@@ -81,14 +81,10 @@
               <div id="mainArticles" class="article-list"></div>
             </section>
             <section class="article-section discovered-section">
-              <div class="list-heading"><div><span class="eyebrow" data-i18n="discovered.eyebrow">LIENS À EXAMINER</span><h3><span data-i18n="discovered.title">Suggestions</span> <span id="discoveredArticleCount" class="count-inline">0</span></h3></div><button id="selectDiscoveredButton" class="text-button" type="button" disabled data-i18n="discovered.selectAll">Tout ajouter</button></div>
-              <div class="explore-panel">
-                <button class="button button-teal" id="exploreButton" type="button" disabled><span aria-hidden="true">✨</span> <span data-i18n="explore.button">Trouver des articles liés à vos articles</span></button>
-                <p class="field-hint" id="exploreHint" data-i18n="explore.needArticle">Ajoutez d'abord un article dans « Vos articles ».</p>
-              </div>
-              <div class="discovery-filters">
+              <div class="list-heading"><div><span class="eyebrow" data-i18n="discovered.eyebrow">LIENS À EXAMINER</span><h3><span data-i18n="discovered.title">Suggestions</span> <span id="discoveredArticleCount" class="count-inline">0</span></h3></div><button id="selectDiscoveredButton" class="text-button" type="button" hidden data-i18n="discovered.selectAll">Tout ajouter</button></div>
+              <p class="suggestion-source" id="suggestionSource" hidden></p>
+              <div class="discovery-filters" id="suggestionFilters" hidden>
                 <label class="filter-search"><span aria-hidden="true">⌕</span><input id="articleFilter" type="search" placeholder="Filtrer par titre…" data-i18n-placeholder="discovered.filterPlaceholder"></label>
-                <select id="originFilter" aria-label="Filtrer par origine" data-i18n-aria-label="discovered.originAria"><option value="" data-i18n="discovered.allOrigins">Toutes les origines</option></select>
               </div>
               <div id="discoveredArticles" class="article-list"></div>
             </section>

@@ -54,5 +54,23 @@ class GetIntroAndCreatorTest(unittest.TestCase):
         self.assertEqual(creator, "")
 
 
+class GetLinksPageOrderTest(unittest.TestCase):
+    def test_returns_article_links_in_page_order(self):
+        html = (
+            '<div><table class="infobox"><a href="/wiki/Magma">magma</a></table>'
+            '<p><a href="/wiki/Volcan">self</a> <a href="/wiki/%C3%89ruption_volcanique#Types">éruption</a>'
+            ' <a href="/wiki/Fichier:Etna.jpg">image</a> <a class="new" href="/w/index.php?title=Inexistant&amp;redlink=1">rouge</a>'
+            ' <a class="new" href="/wiki/Rouge">rouge</a> <a href="#cite_note-1">[1]</a>'
+            ' <a href="/wiki/Magma">encore</a> <a href="/wiki/Lave">lave</a></p></div>'
+        )
+        client = MediaWikiClient()
+        client._get = AsyncMock(return_value={"parse": {"title": "Volcan", "text": html}})
+
+        links = asyncio.run(client.get_links("Volcan", "fr"))
+        self.assertEqual(links, ["Magma", "Éruption volcanique", "Lave"])
+        params = client._get.call_args.args[1]
+        self.assertEqual((params["action"], params["page"], params["prop"]), ("parse", "Volcan", "text"))
+
+
 if __name__ == "__main__":
     unittest.main()

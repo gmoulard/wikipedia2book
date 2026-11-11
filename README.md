@@ -56,7 +56,8 @@ The application is then reachable at `http://localhost:8000`.
 
 ## Deployment
 
-- [Northflank](https://prod--wikipedia2book--wkvpbnfj6h4v.code.run) (Prod--wikipedia2book--wkvpbnfj6h4v.code.run)
+- [toolforge.org](https://wikipedia2booktoolforge.org) 
+- [Northflank](https://prod--wikipedia2book--wkvpbnfj6h4v.code.run) 
 - [Railway](https://wikipedia2book-production.up.railway.app/)
 
 The production API documentation is available on [Railway](https://wikipedia2book-production.up.railway.app/docs).

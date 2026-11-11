@@ -143,9 +143,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .explore-head strong, .explore-head small { display: block; }
 .explore-head strong { font-size: 11px; }
 .explore-head small { margin-top: 2px; color: var(--muted); font-size: 10px; }
-.explore-panel { display: grid; gap: 10px; margin-bottom: 14px; padding: 13px 14px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color-scheme: light dark; }
-.explore-panel > .button { justify-self: start; }
-.explore-panel .field-hint { margin: 0; }
+.suggestion-source { margin: 10px 0 0; color: var(--muted); font-size: 11px; }
+.explore-from.active { color: var(--coral); }
 .explore-from { flex: 0 0 auto; white-space: nowrap; }
 .search-results { position: absolute; z-index: 2; top: 101px; right: 16px; left: 16px; overflow: auto; max-height: 260px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--paper); box-shadow: var(--shadow); }
 .search-result { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 16px; padding: 11px 12px; border: 0; border-bottom: 1px solid var(--line); background: var(--paper); cursor: pointer; text-align: left; }
@@ -160,7 +159,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .list-heading h3 { margin: 5px 0 0; font-family: 'Literata', Georgia, serif; font-size: 17px; font-weight: 600; }
 .count-inline { display: inline-grid; min-width: 20px; height: 20px; place-items: center; margin-left: 3px; border-radius: 12px; background: #e8ecea; color: var(--ink-soft); font-family: 'DM Sans', sans-serif; font-size: 10px; vertical-align: 2px; }
 .list-note { color: var(--teal); font-size: 10px; }
-.discovery-filters { display: grid; grid-template-columns: minmax(110px, 1fr) auto; gap: 6px; padding: 11px 0 4px; }
+.discovery-filters { display: grid; grid-template-columns: 1fr; gap: 6px; padding: 11px 0 4px; }
 .discovery-filters select, .filter-search { height: 31px; min-width: 0; border: 1px solid var(--line); border-radius: 4px; background: var(--paper); color: var(--ink-soft); font-size: 10px; }
 .discovery-filters select { max-width: 125px; padding: 0 6px; }
 .filter-search { display: flex; align-items: center; gap: 5px; padding: 0 8px; }
@@ -292,7 +291,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .source-entry { padding: 12px; }
   .article-form { gap: 6px; }
   .article-form .button { padding: 0 10px; }
-  .explore-panel > .button { justify-self: stretch; }
   .discovery-filters select { max-width: none; }
   .article-columns { gap: 19px; }
   .list-heading h3 { font-size: 16px; }
