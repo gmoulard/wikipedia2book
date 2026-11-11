@@ -56,7 +56,7 @@ The application is then reachable at `http://localhost:8000`.
 
 ## Deployment
 
-- [toolforge.org](https://wikipedia2booktoolforge.org) 
+- [toolforge.org](https://wikipedia2booktoolforge.org) On Going !!!
 - [Northflank](https://prod--wikipedia2book--wkvpbnfj6h4v.code.run) 
 - [Railway](https://wikipedia2book-production.up.railway.app/)
 
