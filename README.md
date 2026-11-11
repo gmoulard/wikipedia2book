@@ -71,5 +71,5 @@ In short, you may use, study, modify and redistribute this software, provided th
 
 This license covers the application's code only. The books it generates are made of Wikipedia content, published under its own license ([CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)), which is stated on the license page of each generated PDF.
 
-![Vibe Coded](https://shields.io) 
+![Vibe Coded](https://img.shields.io/badge/vibe-coded-blueviolet)
 
