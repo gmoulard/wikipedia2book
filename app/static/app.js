@@ -75,7 +75,7 @@ function normalizeProject(input) {
     book_title: '', book_subtitle: '', book_author: '', introduction: '', conclusion: '',
     page_format: 'A4', custom_width_mm: 148, custom_height_mm: 210, orientation: 'portrait',
     margin_top_mm: 18, margin_bottom_mm: 18, margin_inside_mm: 18, margin_outside_mm: 16,
-    margin_binding_mm: 0, article_order: [], chapters: [], toc_position: 'start', page_numbers: true, ...input,
+    margin_binding_mm: 0, article_order: [], chapters: [], toc_position: 'start', table_of_contents: true, page_numbers: true, ...input,
   };
   project.main_articles = [...project.main_articles, ...project.discovered_articles.filter((a) => a.selected)];
   project.discovered_articles = project.discovered_articles.filter((a) => !a.selected);
@@ -182,37 +182,44 @@ function orderedSelectedArticles() {
   return ordered;
 }
 
-// Build the flat ordered list of "slots": toc | chapters/articles
 function buildOrgSlots() {
   const project = state.project;
-  const articles = orderedSelectedArticles();
   const chapterByArticle = new Map();
   (project.chapters || []).forEach((ch) => ch.article_keys.forEach((k) => chapterByArticle.set(k, ch.id)));
-
-  // group articles by chapter
-  const groups = [{ id: '', title: t('org.noChapterOption'), articles: [] }, ...(project.chapters || []).map((ch) => ({ ...ch, articles: [] }))];
-  articles.forEach((a) => {
-    const k = articleKey(a);
-    const g = groups.find((g) => g.id === (chapterByArticle.get(k) || '')) || groups[0];
-    g.articles.push(a);
+  const chapters = (project.chapters || []).map((ch) => ({ ...ch, articles: [] }));
+  const unassigned = [];
+  orderedSelectedArticles().forEach((a) => {
+    const chapter = chapters.find((c) => c.id === chapterByArticle.get(articleKey(a)));
+    (chapter ? chapter.articles : unassigned).push(a);
   });
-
-  // slots: toc + chapters/articles interleaved
-  const tocPos = project.toc_position || 'start';
   const slots = [];
-  if (tocPos === 'start') slots.push({ type: 'toc' });
-  groups.filter((g) => g.articles.length || g.id).forEach((g) => {
-    if (g.id) slots.push({ type: 'chapter', chapter: g });
-    g.articles.forEach((a) => slots.push({ type: 'article', article: a, chapterId: g.id }));
+  chapters.forEach((chapter) => {
+    slots.push({ type: 'chapter', chapter });
+    chapter.articles.forEach((a) => slots.push({ type: 'article', article: a, chapterId: chapter.id }));
   });
-  if (tocPos === 'end') slots.push({ type: 'toc' });
+  if (chapters.length && unassigned.length) slots.push({ type: 'unassigned' });
+  unassigned.forEach((a) => slots.push({ type: 'article', article: a, chapterId: '' }));
+  if (project.table_of_contents !== false) slots.splice(tocSlotIndex(slots), 0, { type: 'toc' });
   return slots;
+}
+
+function slotAnchor(slot) {
+  if (slot.type === 'unassigned') return 'chapter:';
+  return slot.type === 'chapter' ? `chapter:${slot.chapter.id}` : articleKey(slot.article);
+}
+
+function tocSlotIndex(slots) {
+  const position = state.project.toc_position || 'start';
+  if (position === 'end') return slots.length;
+  const index = slots.findIndex((slot) => slotAnchor(slot) === position.replace(/^before:/, ''));
+  return index < 0 ? 0 : index;
 }
 
 function renderOrganization() {
   const project = state.project;
   const articles = orderedSelectedArticles();
   $('#organizationCount').textContent = articles.length;
+  $('#addTocButton').hidden = project.table_of_contents !== false;
 
   if (!articles.length) {
     $('#organizationList').innerHTML = `<div class="org-empty">${escapeHtml(t('org.emptyListLine1'))}<br>${escapeHtml(t('org.emptyListLine2'))}</div>`;
@@ -225,8 +232,12 @@ function renderOrganization() {
       return `<div class="org-row org-toc" draggable="true" data-slot-type="toc" data-slot-index="${idx}">
         <span class="drag-handle" aria-hidden="true">\u2630</span>
         <span class="toc-icon" aria-hidden="true">\u2261</span>
-        <div><div class="org-article-title">${escapeHtml(t('org.toc'))}</div><div class="org-article-origin">${escapeHtml(t('org.tocPositionLabel', { position: slot === slots[0] ? t('org.tocStart') : t('org.tocEnd') }))}</div></div>
+        <div><div class="org-article-title">${escapeHtml(t('org.toc'))}</div><div class="org-article-origin">${escapeHtml(t('org.tocHint'))}</div></div>
+        <button class="chapter-remove toc-remove" type="button" title="${escapeHtml(t('org.removeTocTitle'))}">${escapeHtml(t('org.removeToc'))}</button>
       </div>`;
+    }
+    if (slot.type === 'unassigned') {
+      return `<div class="org-row org-chapter-row org-unassigned" data-slot-type="unassigned" data-slot-index="${idx}"><span></span><span class="chapter-letter">\u2013</span><span class="org-article-title">${escapeHtml(t('org.noChapterOption'))}</span></div>`;
     }
     if (slot.type === 'chapter') {
       const ch = slot.chapter;
@@ -266,7 +277,7 @@ function initDragDrop() {
   const list = $('#organizationList');
   let dragIndex = null;
 
-  list.querySelectorAll('.org-row[draggable]').forEach((row) => {
+  list.querySelectorAll('.org-row').forEach((row) => {
     row.addEventListener('dragstart', (e) => {
       dragIndex = Number(row.dataset.slotIndex);
       row.classList.add('dragging');
@@ -293,11 +304,11 @@ function applyDragDrop(fromIndex, toIndex) {
   const to = slots[toIndex];
   if (!from || !to) return;
 
-  // Moving TOC: just toggle position
   if (from.type === 'toc') {
-    const newPos = toIndex < fromIndex ? 'start' : 'end';
-    project.toc_position = newPos;
-    queueSave({ toc_position: newPos });
+    const others = slots.filter((slot) => slot.type !== 'toc');
+    const at = others.indexOf(to) + (toIndex > fromIndex ? 1 : 0);
+    const position = at >= others.length ? 'end' : at === 0 ? 'start' : `before:${slotAnchor(others[at])}`;
+    queueSave({ toc_position: position });
     renderOrganization();
     return;
   }
@@ -803,6 +814,17 @@ document.addEventListener('click', async (event) => {
     return;
   }
   if (event.target.closest('#addChapterButton')) { addChapter(); return; }
+  if (event.target.closest('.toc-remove')) {
+    queueSave({ table_of_contents: false });
+    renderOrganization();
+    showToast(t('org.tocRemovedToast'));
+    return;
+  }
+  if (event.target.closest('#addTocButton')) {
+    queueSave({ table_of_contents: true, toc_position: 'start' });
+    renderOrganization();
+    return;
+  }
   if (event.target.closest('#uploadDocumentButton')) { $('#documentFileInput').click(); return; }
   if (event.target.closest('#importWorkspaceButton')) { $('#workspaceFileInput').click(); return; }
   if (event.target.closest('#saveWorkspaceButton')) { exportWorkspace(); return; }

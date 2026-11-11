@@ -207,7 +207,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .org-row.drag-over { background: var(--teal-pale); box-shadow: inset 0 2px 0 var(--teal); }
 .org-article { grid-template-columns: 22px 1fr minmax(105px, 180px) 28px; }
 .org-chapter-row { grid-template-columns: 22px 24px 1fr auto; background: var(--canvas); }
-.org-toc { grid-template-columns: 22px 24px 1fr; background: var(--teal-pale); }
+.org-toc { grid-template-columns: 22px 24px 1fr auto; background: var(--teal-pale); }
+.organization-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .drag-handle { color: var(--muted); font-size: 13px; user-select: none; }
 .toc-icon { display: grid; width: 24px; height: 24px; place-items: center; border-radius: 4px; background: var(--teal-pale); color: var(--teal-dark); font-size: 15px; }
 .org-article-title { overflow: hidden; font-size: 11px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }

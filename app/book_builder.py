@@ -62,6 +62,34 @@ def ordered_article_groups(
     return groups
 
 
+def book_slots(groups: list[tuple[str, list[BookItem]]]) -> list[tuple[str, int | BookItem]]:
+    slots: list[tuple[str, int | BookItem]] = []
+    for index, (chapter_title, items) in enumerate(groups):
+        if chapter_title:
+            slots.append(("chapter", index))
+        slots.extend(("item", item) for item in items)
+    return slots
+
+
+def toc_slot_index(
+    project: Project, groups: list[tuple[str, list[BookItem]]], slots: list[tuple[str, int | BookItem]]
+) -> int | None:
+    if not project.table_of_contents:
+        return None
+    if project.toc_position == "end":
+        return len(slots)
+    anchor = project.toc_position.removeprefix("before:")
+    chapter_titles = {f"chapter:{chapter.id}": chapter.title for chapter in project.chapters}
+    for index, (kind, value) in enumerate(slots):
+        if kind == "item" and value.key == anchor:
+            return index
+        if kind == "chapter" and chapter_titles.get(anchor) == groups[value][0]:
+            return index
+        if kind == "chapter" and anchor == "chapter:" and value == len(groups) - 1 and groups[value][0] not in chapter_titles.values():
+            return index
+    return 0
+
+
 def _page_layout(project: Project) -> tuple[float, float, float, float, float, float]:
     page_width, page_height = _PAGE_SIZES.get(
         project.page_format, (project.custom_width_mm, project.custom_height_mm)

@@ -180,6 +180,60 @@ class PdfStreamTest(unittest.TestCase):
         response = self.client.post("/api/pdf/stream?language=xx", json=_project())
         self.assertEqual(response.status_code, 422)
 
+    def _outline(self, project):
+        response = self.client.post("/api/pdf", json=project)
+        self.assertEqual(response.status_code, 200, response.text)
+        pdf = PdfReader(BytesIO(response.content))
+
+        def flatten(items):
+            return [flatten(item) if isinstance(item, list) else item.title for item in items]
+
+        return flatten(pdf.outline[1]), len(pdf.pages)
+
+    def test_table_of_contents_can_be_placed_before_any_article(self):
+        outline, pages = self._outline(_project(page_numbers=False, toc_position="before:fr:title:chien"))
+        self.assertEqual(outline, ["Chat", "Table des matières", "Chien", "Licence"])
+        self.assertEqual(pages, 1 + 2 + 1 + 2 + 1)
+
+    def test_table_of_contents_can_be_placed_before_a_chapter(self):
+        chapters = [
+            {"id": "c1", "title": "Félins", "article_keys": ["fr:title:chat"]},
+            {"id": "c2", "title": "Canidés", "article_keys": ["fr:title:chien"]},
+        ]
+        outline, _ = self._outline(_project(page_numbers=False, chapters=chapters, toc_position="before:chapter:c2"))
+        self.assertEqual(outline, ["Félins", ["Chat"], "Table des matières", "Canidés", ["Chien"], "Licence"])
+
+    def test_table_of_contents_can_be_removed(self):
+        outline, pages = self._outline(_project(page_numbers=False, table_of_contents=False))
+        self.assertEqual(outline, ["Chat", "Chien", "Licence"])
+        self.assertEqual(pages, 1 + 2 + 2 + 1)
+
+    def test_unknown_anchor_falls_back_to_the_start(self):
+        outline, _ = self._outline(_project(page_numbers=False, toc_position="before:fr:title:absent"))
+        self.assertEqual(outline, ["Table des matières", "Chat", "Chien", "Licence"])
+
+    def test_invalid_toc_position_is_refused(self):
+        response = self.client.post("/api/pdf", json=_project(toc_position="milieu"))
+        self.assertEqual(response.status_code, 422)
+
+    def test_page_numbers_account_for_a_table_of_contents_in_the_middle(self):
+        rendered = []
+
+        def fake_generate(html):
+            rendered.append(html)
+            return _make_pdf(1)
+
+        with patch.object(main, "generate_pdf", fake_generate):
+            self.client.post("/api/pdf", json=_project(toc_position="before:fr:title:chien"))
+        toc_html = [html for html in rendered if "<nav>" in html][-1]
+        self.assertIn('<span>Chat</span><span class="page-no">2</span>', toc_html)
+        self.assertIn('<span>Chien</span><span class="page-no">5</span>', toc_html)
+
+    def test_table_of_contents_can_be_placed_before_the_articles_without_chapter(self):
+        chapters = [{"id": "c1", "title": "Félins", "article_keys": ["fr:title:chat"]}]
+        outline, _ = self._outline(_project(page_numbers=False, chapters=chapters, toc_position="before:chapter:"))
+        self.assertEqual(outline, ["Félins", ["Chat"], "Table des matières", "Sans chapitre", ["Chien"], "Licence"])
+
 
 if __name__ == "__main__":
     unittest.main()

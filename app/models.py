@@ -68,7 +68,7 @@ class Project(BaseModel):
     margin_binding_mm: float = Field(default=0, ge=0, le=40)
     article_order: list[str] = Field(default_factory=list)
     chapters: list[BookChapter] = Field(default_factory=list)
-    toc_position: Literal["start", "end"] = "start"
+    toc_position: str = Field(default="start", max_length=320, pattern=r"^(start|end|before:.+)$")
     table_of_contents: bool = True
     page_numbers: bool = True
     created_at: datetime = Field(default_factory=utc_now)

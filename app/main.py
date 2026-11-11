@@ -15,10 +15,12 @@ from app.book_builder import (
     build_cover_html,
     PDF_LABELS,
     build_license_page_html,
+    book_slots,
     build_toc_html,
     ordered_article_groups,
     page_size_mm,
     pdf_label,
+    toc_slot_index,
 )
 from app.explorer import discover_related_articles
 from app.models import (
@@ -43,7 +45,7 @@ from app.wikipedia_api import (
 )
 
 
-app = FastAPI(title="Wikipedia2Book", version="0.22.0")
+app = FastAPI(title="Wikipedia2Book", version="0.23.0")
 static_directory = Path(__file__).parent / "static"
 PDF_LANGUAGE_PATTERN = "^(" + "|".join(PDF_LABELS) + ")$"
 app.mount("/static", StaticFiles(directory=static_directory), name="static")
@@ -236,22 +238,28 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
                 yield progress("prepare_document", title=item.title)
                 item_pdfs[item.key] = document_pdf(item)
 
-    toc_at_start = project.toc_position != "end"
+    slots = book_slots(groups)
+    toc_at = toc_slot_index(project, groups, slots)
 
     article_pages: dict[str, int] = {}
     chapter_pages: list[int | None] = [None] * len(groups)
     if project.page_numbers:
         yield progress("compute_page_numbers")
         cursor = len(PdfReader(BytesIO(generate_pdf(build_cover_html(project, language)))).pages) + 1
-        if project.table_of_contents and toc_at_start:
-            cursor += len(PdfReader(BytesIO(generate_pdf(build_toc_html(project, selected, language=language)))).pages)
-        for index, (chapter_title, items) in enumerate(groups):
-            if chapter_title:
-                chapter_pages[index] = cursor
+        toc_pages = (
+            len(PdfReader(BytesIO(generate_pdf(build_toc_html(project, selected, language=language)))).pages)
+            if toc_at is not None and toc_at < len(slots)
+            else 0
+        )
+        for index, (kind, value) in enumerate(slots):
+            if index == toc_at:
+                cursor += toc_pages
+            if kind == "chapter":
+                chapter_pages[value] = cursor
                 cursor += 1
-            for item in items:
-                article_pages[item.key] = cursor
-                cursor += len(PdfReader(BytesIO(item_pdfs[item.key])).pages)
+            else:
+                article_pages[value.key] = cursor
+                cursor += len(PdfReader(BytesIO(item_pdfs[value.key])).pages)
 
     yield progress("cover_and_toc")
     toc = (
@@ -266,23 +274,17 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
         project.book_title or project.name,
         append_pdf(cover),
     )
-    if project.table_of_contents and toc_at_start:
-        writer.add_outline_item(pdf_label(language, "toc"), append_pdf(toc), parent=root_outline)
-
-    for chapter_title, items in groups:
-        chapter_outline = root_outline
-        if chapter_title:
+    chapter_outline = root_outline
+    for index, (kind, value) in enumerate(slots):
+        if index == toc_at:
+            writer.add_outline_item(pdf_label(language, "toc"), append_pdf(toc), parent=root_outline)
+        if kind == "chapter":
+            chapter_title = groups[value][0]
             chapter_page = generate_pdf(build_chapter_page_html(project, chapter_title, language))
-            chapter_outline = writer.add_outline_item(
-                chapter_title,
-                append_pdf(chapter_page),
-                parent=root_outline,
-            )
-        for item in items:
-            item_page = append_pdf(item_pdfs[item.key])
-            writer.add_outline_item(item.title, item_page, parent=chapter_outline)
-
-    if project.table_of_contents and not toc_at_start:
+            chapter_outline = writer.add_outline_item(chapter_title, append_pdf(chapter_page), parent=root_outline)
+        else:
+            writer.add_outline_item(value.title, append_pdf(item_pdfs[value.key]), parent=chapter_outline)
+    if toc_at == len(slots):
         writer.add_outline_item(pdf_label(language, "toc"), append_pdf(toc), parent=root_outline)
 
     writer.add_outline_item(

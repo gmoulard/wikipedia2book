@@ -87,7 +87,7 @@ Le livre contient notamment :
 
 * La sélection des articles.
 
-* La structure du livre (ordre, chapitres, position de la table des matières).
+* La structure du livre (ordre, chapitres, présence et position de la table des matières).
 
 * Les paramètres de mise en page.
 
@@ -214,7 +214,11 @@ Fonctionnalités :
 
 * Déplacer un article d'un chapitre à un autre, ou hors de tout chapitre, par glisser-déposer.
 
-* Positionner la table des matières au début ou à la fin du livre, également par glisser-déposer.
+* Placer la table des matières n'importe où dans le livre par glisser-déposer : au début, avant n'importe quel chapitre ou article (y compris au milieu d'un chapitre), ou à la fin. Sa position est enregistrée par rapport à l'élément qui la suit (`toc_position` : `start`, `end` ou `before:<clé>`, où la clé est celle d'un article/document, `chapter:<id>` pour un chapitre, ou `chapter:` pour le groupe « Sans chapitre »); si cet élément disparaît du livre, la table des matières revient au début.
+
+* Retirer la table des matières du livre (bouton « Retirer » sur sa ligne), puis la remettre (bouton « + Table des matières » dans la barre d'outils, qui la replace au début).
+
+* Quand le livre a des chapitres, les articles qui n'appartiennent à aucun chapitre sont affichés à la fin de la liste, sous l'intitulé « Sans chapitre », comme dans le PDF.
 
 * Ajouter une introduction générale et une conclusion.
 
@@ -335,11 +339,13 @@ Le PDF est structuré comme un véritable livre.
 
 * Page de licence (section 15), toujours présente, placée après le dernier article (et après la table des matières si elle est en fin de livre), juste avant la conclusion.
 
+La table des matières peut être absente si l'utilisateur l'a retirée (section 6).
+
 * Conclusion, si elle a été saisie.
 
 Le contenu des articles et des documents importés n'est pas mis en page par l'application : ce sont les pages de leur PDF d'origine (officiel Wikipédia, ou document importé). Leur format physique, lui, est systématiquement harmonisé avec le reste du livre — voir section 10.1.
 
-La couverture et la table des matières sont deux sections distinctes dans le PDF final : la position choisie pour la table des matières (section 6, « Début du livre » ou « Fin du livre ») est celle effectivement utilisée à la génération — la couverture reste toujours la première page, la table des matières se place juste après elle, ou juste après le dernier article (avant la conclusion).
+La couverture et la table des matières sont deux sections distinctes dans le PDF final : la position choisie pour la table des matières dans l'étape Organisation (section 6) est celle effectivement utilisée à la génération — la couverture reste toujours la première page, et la table des matières s'insère exactement à l'endroit choisi : juste après la couverture, avant un chapitre (avant sa page de titre), avant un article, ou après le dernier article (avant la licence et la conclusion).
 
 La navigation dans le PDF final s'appuie sur des signets (couverture, table des matières, une entrée par chapitre et par article, licence, conclusion), et non sur les liens de la table des matières.
 
@@ -363,7 +369,7 @@ Quand elle est activée :
 
 * La table des matières affiche, pour chaque chapitre et chaque article, le numéro de la page où il commence.
 
-* Pour calculer ces numéros avant d'assembler le livre, le logiciel génère une première fois la couverture et, si elle est placée au début, la table des matières, afin d'en mesurer la pagination; il régénère ensuite la table des matières avec les numéros corrects. Dans de rares cas (livre très dense), l'ajout des numéros dans la table des matières peut légèrement décaler cette pagination d'une page.
+* Pour calculer ces numéros avant d'assembler le livre, le logiciel génère une première fois la couverture et, si elle n'est pas placée à la fin, la table des matières, afin d'en mesurer la pagination (les numéros des éléments placés après la table des matières en tiennent compte); il régénère ensuite la table des matières avec les numéros corrects. Dans de rares cas (livre très dense), l'ajout des numéros dans la table des matières peut légèrement décaler cette pagination d'une page.
 
 Aucune fonctionnalité de prévisualisation n'est proposée actuellement.
 
@@ -383,7 +389,7 @@ Une fois le PDF lancé, le logiciel :
 
 * Génère la couverture (avec l'introduction éventuelle) et la table des matières (avec les numéros de page si activés) comme deux sections distinctes; la couverture reçoit le signet racine portant le titre du livre.
 
-* Place la table des matières juste après la couverture si sa position est « Début du livre », ou la met de côté pour l'ajouter après le dernier chapitre/article si sa position est « Fin du livre » (section 6).
+* Insère la table des matières à la position choisie (section 6), ou l'omet si elle a été retirée.
 
 * Pour chaque chapitre (ou pour l'ensemble des articles s'il n'y a pas de chapitre) : génère une page de titre de chapitre avec son propre signet, puis ajoute le PDF officiel de chaque article du chapitre, avec un signet par article.
 
@@ -435,7 +441,7 @@ L'application est une page unique, organisée en trois étapes accessibles par d
 
 * 01 — Sources : ajout des articles principaux (affichés sous le titre « Vos articles ») et exploration des liens (articles découverts, affichés sous le titre « Suggestions »).
 
-* 02 — Organisation : réorganisation des articles, chapitres, position de la table des matières.
+* 02 — Organisation : réorganisation des articles, chapitres, position ou retrait de la table des matières.
 
 * 03 — Édition : identité du livre (sous-titre, auteur, introduction, conclusion) et format d'impression (format papier, orientation, préréglage de marges, numérotation des pages).
 
@@ -615,7 +621,7 @@ La version actuelle est considérée comme fonctionnelle si les points suivants 
 
 * Import d'images ou de PDF comme documents intégrés au livre, au même titre que des articles.
 
-* Positionnement de la table des matières au début ou à la fin.
+* Positionnement de la table des matières n'importe où dans le livre, ou retrait.
 
 * Récupération du PDF officiel de chaque article sélectionné au moment de l'export.
 
@@ -723,5 +729,6 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 0.20.1  | 2026-11-11 | Le pied de page n'affiche plus « unknown » quand le commit git n'est pas connu au déploiement (valeur par défaut `unknown` de l'image Docker ignorée) : seuls la version et les informations disponibles sont affichées. |
 | 0.21.0  | 2026-11-11 | Articles liés plus simples : plus aucun réglage avant l'exploration (profondeur 1, 30 suggestions par exploration, les suivantes en relançant). Chaque suggestion a un bouton « Ajouter au livre » qui la fait passer visiblement dans « Vos articles » et un bouton « × » pour l'écarter, à la place des cases à cocher; « Tout ajouter » remplace les boutons de sélection groupée; le filtre par profondeur disparaît. Les suggestions cochées d'un ancien fichier JSON sont rangées dans « Vos articles » à l'ouverture (sections 4 et 5). |
 | 0.22.0  | 2026-11-11 | Suggestions encore simplifiées : la section est vide et sans bouton par défaut; « Articles liés » sur un article remplit la liste avec les articles qu'il cite, dans l'ordre d'apparition dans la page (lecture du HTML rendu via `action=parse`, au lieu de `prop=links` trié par ordre alphabétique), et un clic sur un autre article remplace la liste. Disparition du bouton global d'exploration et du filtre par origine (sections 4 et 5). |
+| 0.23.0  | 2026-11-11 | Table des matières libre dans l'étape Organisation : elle peut être glissée n'importe où (avant n'importe quel chapitre ou article, ou à la fin), et plus seulement basculée entre début et fin; elle peut être retirée puis remise. `toc_position` accepte désormais `before:<clé>` en plus de `start`/`end` (fichiers JSON existants toujours valides). Les numéros de page tiennent compte de sa position. Correction : la liste d'organisation affichait les articles sans chapitre avant les chapitres, alors que le PDF les place après, sous « Sans chapitre » (section 6). |
 
 Fin du document — Wikipedia2Book, spécifications version 1.1.
