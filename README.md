@@ -1,5 +1,6 @@
 # Wikipedia2Book
 
+
 Wikipedia2Book is a web application for composing a printable PDF book directly from Wikipedia articles, with no "project" creation step: a book is ready as soon as the page opens. The user picks articles, explores related links, organizes the content into chapters and configures the layout before exporting.
 
 ## Features
@@ -69,3 +70,6 @@ Wikipedia2Book is free software, distributed under the [GNU Affero General Publi
 In short, you may use, study, modify and redistribute this software, provided that any modified version you distribute is published under the same license with its source code. Because this is the *Affero* GPL, this obligation also applies when a modified version is only offered as a network service: its users must be able to obtain its source code.
 
 This license covers the application's code only. The books it generates are made of Wikipedia content, published under its own license ([CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)), which is stated on the license page of each generated PDF.
+
+![Vibe Coded](https://shields.io) 
+
