@@ -107,6 +107,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .footer-sep { color: var(--line-strong); }
 .footer-push { margin-left: auto; }
 .footer-version { color: var(--muted); cursor: default; }
+.footer-repo { color: var(--ink-soft); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.footer-repo:hover { text-decoration: underline; }
 
 .project-workspace { width: min(1190px, 100%); margin: 0 auto; padding: 28px 32px 72px; }
 .eyebrow { display: flex; align-items: center; gap: 8px; }
