@@ -25,6 +25,7 @@ from app.book_builder import (
 )
 from app.explorer import discover_related_articles
 from app.models import (
+    DEFAULT_BOOK_CONCLUSION,
     Article,
     ArticleRequest,
     BookImportRequest,
@@ -46,7 +47,7 @@ from app.wikipedia_api import (
 )
 
 
-app = FastAPI(title="Wikipedia2Book", version="1.0.0")
+app = FastAPI(title="Wikipedia2Book", version="1.1.0")
 static_directory = Path(__file__).parent / "static"
 PDF_LANGUAGE_PATTERN = "^(" + "|".join(PDF_LABELS) + ")$"
 app.mount("/static", StaticFiles(directory=static_directory), name="static")
@@ -374,6 +375,7 @@ async def generate_book_from_wikipedia_book_endpoint(
         book_title=payload.book_title,
         book_subtitle=payload.book_subtitle,
         book_author=payload.book_author,
+        book_conclusion=payload.book_conclusion,
         page_format=payload.page_format,
         orientation=payload.orientation,
         page_numbers=payload.page_numbers,
@@ -388,6 +390,7 @@ async def generate_book_from_wikipedia_book_get(
     book_title: str | None = Query(default=None, max_length=200),
     book_subtitle: str | None = Query(default=None, max_length=300),
     book_author: str | None = Query(default=None, max_length=200),
+    book_conclusion: str = Query(default=DEFAULT_BOOK_CONCLUSION, max_length=20000),
     page_format: str = Query(default="A4", pattern=r"^(A[0-6]|Letter|Legal|custom)$"),
     orientation: str = Query(default="portrait", pattern=r"^(portrait|landscape)$"),
     page_numbers: bool = True,
@@ -399,6 +402,7 @@ async def generate_book_from_wikipedia_book_get(
         book_title=book_title,
         book_subtitle=book_subtitle,
         book_author=book_author,
+        book_conclusion=book_conclusion,
         page_format=page_format,
         orientation=orientation,
         page_numbers=page_numbers,
@@ -414,6 +418,7 @@ async def _generate_book_from_wikipedia_book(
     book_title: str | None,
     book_subtitle: str | None,
     book_author: str | None,
+    book_conclusion: str,
     page_format: str,
     orientation: str,
     page_numbers: bool,
@@ -428,12 +433,13 @@ async def _generate_book_from_wikipedia_book(
                 _, book_author = await client.get_intro_and_creator(source_title, source_language)
     except (MediaWikiError, ValueError) as error:
         raise _mediawiki_error(error) from error
-    book_title = (book_title or source_title)[:200]
+    book_title = (book_title or _book_name(source_title))[:200]
     project = Project(
         name=(book_title or "Wikipedia2Book")[:120],
         book_title=book_title,
         book_subtitle=book_subtitle or "",
         book_author=book_author or "",
+        conclusion=book_conclusion,
         main_articles=articles,
         page_format=page_format,
         orientation=orientation,
@@ -441,6 +447,12 @@ async def _generate_book_from_wikipedia_book(
         table_of_contents=table_of_contents,
     )
     return await _create_pdf_response(project, language)
+
+
+def _book_name(page_title: str) -> str:
+    if "/" in page_title:
+        return page_title.rsplit("/", 1)[1].strip() or page_title
+    return page_title.split(":", 1)[-1].strip() or page_title
 
 
 @app.post("/api/pdf/stream")
