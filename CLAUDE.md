@@ -46,6 +46,8 @@ Les boutons « Générer le PDF » (`#topExportButton`, `#exportButton`) ne sont
 
 Pas de `docker-compose.yml` dans ce dépôt : build/run via `Dockerfile` + `docker-build.sh` (injecte commit/date/auteur git pour le pied de page). Ne pas réintroduire Compose sans raison explicite de l'utilisateur.
 
+Système de déploiement complet décrit dans `SPECIFICATIONS.md` sections 13.5 à 13.7. En bref : Railway et Northflank suivent `main` (`Dockerfile`); Toolforge suit la branche `production-toolforge` (buildpacks : `Procfile`, `Aptfile`, `.python-version`, `toolforge-fonts.conf`), déployée par `.github/workflows/deploy-toolforge.yml` + `toolforge-deploy.sh`. Un push sur `main` ne déploie donc jamais Toolforge : ne pousser vers `production-toolforge` (`git push origin main:production-toolforge`) que sur demande explicite de l'utilisateur. Toute dépendance système ajoutée au `Dockerfile` doit l'être aussi dans l'`Aptfile`.
+
 ## Versionnement
 
 Chaque génération/modification de code par un agent doit incrémenter le numéro de version de l'application, dans `app/main.py` (`FastAPI(version="x.y.z")`) :

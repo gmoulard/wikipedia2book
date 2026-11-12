@@ -31,7 +31,10 @@ Version : 1.1 — Statut : aligné sur l'implémentation actuelle — Format : M
   - [13.1 Technologies](#131-technologies)
   - [13.2 API Wikipédia](#132-api-wikip%C3%A9dia)
   - [13.3 Exemples d'appels HTTP](#133-exemples-dappels-http)
-  - [13.4 Docker et déploiement](#134-docker-et-d%C3%A9ploiement)
+  - [13.4 Docker et exécution locale](#134-docker-et-ex%C3%A9cution-locale)
+  - [13.5 Environnements et branches](#135-environnements-et-branches)
+  - [13.6 Intégration continue (GitHub Actions)](#136-int%C3%A9gration-continue-github-actions)
+  - [13.7 Toolforge](#137-toolforge)
 - [14. Sécurité et robustesse](#14-s%C3%A9curit%C3%A9-et-robustesse)
 - [15. Respect des licences Wikipédia](#15-respect-des-licences-wikip%C3%A9dia)
 - [16. Critères d'acceptation](#16-crit%C3%A8res-dacceptation)
@@ -546,11 +549,11 @@ curl --fail --show-error --get 'http://localhost:8000/api/books/generate-from-wi
 
 Dans les deux cas, la réponse est le fichier PDF binaire; `--output` le sauvegarde localement. `language` règle la langue des libellés générés dans le PDF et les langues prises en charge sont celles de la section 12.1.
 
-### 13.4 Docker et déploiement
+### 13.4 Docker et exécution locale
 
 Le logiciel est livré avec :
 
-* Un `Dockerfile` (image Python 3.12-slim avec les dépendances système de WeasyPrint).
+* Un `Dockerfile` (image Python 3.12-slim avec les dépendances système de WeasyPrint et les polices DejaVu et Noto CJK).
 
 * Un fichier `requirements.txt`.
 
@@ -565,26 +568,103 @@ docker run --rm -p 8000:8000 wikipedia2book
 
 L'application est alors accessible sur `http://localhost:8000`, avec sa documentation interactive sur `http://localhost:8000/docs`.
 
-Pour Toolforge (Wikimedia Cloud), qui construit l'image avec des buildpacks et non avec le `Dockerfile`, le dépôt fournit aussi :
+Le serveur ne stocke aucun livre ni PDF sur disque; tout l'état est conservé dans le navigateur et échangé via JSON. Le déploiement ne demande donc ni base de données ni volume persistant, sur aucune plateforme.
 
-* Un `Procfile` (commande `uvicorn` sur le port 8000 attendu par Toolforge).
+### 13.5 Environnements et branches
 
-* Un `Aptfile` (mêmes dépendances système et polices que le `Dockerfile`).
+L'application est déployée sur trois plateformes, chacune reliée à une branche du dépôt GitHub `gmoulard/wikipedia2book` :
 
-* Un fichier `.python-version` (Python 3.12).
+| Plateforme | URL | Branche suivie | Construction de l'image | Déclenchement |
+| --- | --- | --- | --- | --- |
+| Toolforge (Wikimedia Cloud) | https://wikipedia2book.toolforge.org | `production-toolforge` | Buildpacks Toolforge (`Procfile`, `Aptfile`, `.python-version`) | Workflow GitHub Actions du dépôt (section 13.6) |
+| Railway | https://wikipedia2book-production.up.railway.app | `main` | `Dockerfile` | Intégration GitHub de Railway, réglée dans son interface |
+| Northflank | https://prod--wikipedia2book--wkvpbnfj6h4v.code.run | `main` | `Dockerfile` | Intégration GitHub de Northflank, réglée dans son interface |
 
-* Un fichier `toolforge-fonts.conf` : les polices de l'`Aptfile` (dont Noto CJK pour le chinois et le japonais) sont installées hors des dossiers lus par fontconfig; ce fichier les y ajoute et place le cache fontconfig dans `/tmp`. Il est activé par la variable d'environnement `FONTCONFIG_FILE=/workspace/toolforge-fonts.conf` (`toolforge envvars create FONTCONFIG_FILE /workspace/toolforge-fonts.conf`).
+Toolforge est l'instance de référence, proposée à la communauté Wikipédia. Railway et Northflank reçoivent chaque changement poussé sur `main` et servent de préproduction.
 
-Déploiement depuis `login.toolforge.org`, dans le compte de l'outil (`become wikipedia2book`) :
+Cycle de publication :
+
+1. Développer et pousser sur `main` (ou par pull request vers `main`) : les tests tournent sur GitHub Actions, Railway et Northflank se redéploient, Toolforge n'est pas touché.
+2. Vérifier la nouvelle version sur Railway ou Northflank.
+3. Publier sur Toolforge en avançant la branche de production :
 
 ```bash
+git push origin main:production-toolforge
+```
+
+`production-toolforge` ne reçoit pas de commits propres : elle ne fait qu'avancer vers un commit déjà présent sur `main`. Revenir à une version antérieure sur Toolforge se fait en y poussant un commit plus ancien de `main` (`git push --force origin <commit>:production-toolforge`).
+
+Le choix de branche de Railway et Northflank ne fait pas partie du dépôt : il se modifie dans leurs interfaces (Railway : service, Settings, Source, Branch; Northflank : service de build, Build settings, Branch).
+
+### 13.6 Intégration continue (GitHub Actions)
+
+Un seul workflow, `.github/workflows/deploy-toolforge.yml` (« Tests and Toolforge deploy »), avec deux jobs :
+
+* `test` : à chaque push sur `main` ou `production-toolforge`, à chaque pull request et sur lancement manuel (`workflow_dispatch`). Installe Python 3.12 et `requirements.txt`, puis lance `python -m unittest discover -s tests -v`.
+
+* `deploy` : uniquement après la réussite de `test`, et uniquement pour un push (ou un lancement manuel) sur `production-toolforge`; il est ignoré (« skipped ») partout ailleurs. Il écrit la clé SSH du secret GitHub `TOOLFORGE_SSH_KEY`, fige l'empreinte ED25519 de `login.toolforge.org` dans `known_hosts` (pas de confiance aveugle au premier contact), puis exécute `toolforge-deploy.sh` dans le compte de l'outil :
+
+```bash
+ssh <login>@login.toolforge.org "become wikipedia2book bash -s" < toolforge-deploy.sh
+```
+
+Les déploiements Toolforge sont sérialisés (groupe de concurrence `toolforge-deploy`, sans annulation du déploiement en cours); les autres exécutions sont indépendantes.
+
+Le secret `TOOLFORGE_SSH_KEY` contient une clé privée OpenSSH dédiée au déploiement, distincte de la clé personnelle, dont la partie publique est enregistrée sur le compte Wikimedia (idm.wikimedia.org). La révoquer suffit à couper le déploiement automatique sans toucher aux autres accès.
+
+### 13.7 Toolforge
+
+#### Fichiers propres à Toolforge
+
+Toolforge construit l'image avec des buildpacks et ignore le `Dockerfile`. Le dépôt fournit :
+
+* `Procfile` : commande `uvicorn` sur le port 8000 attendu par Toolforge.
+
+* `Aptfile` : mêmes dépendances système et polices que le `Dockerfile`.
+
+* `.python-version` : Python 3.12.
+
+* `toolforge-fonts.conf` : les polices de l'`Aptfile` (dont Noto CJK pour le chinois et le japonais) sont installées dans `/layers/fagiani_apt/apt/usr/share/fonts`, hors des dossiers lus par fontconfig; ce fichier les y ajoute et place le cache fontconfig dans `/tmp` (sans lui, WeasyPrint ne trouve pas Noto CJK et le journal affiche « Fontconfig error: No writable cache directories »).
+
+* `toolforge-deploy.sh` : script de déploiement, exécuté dans le compte de l'outil.
+
+#### Script de déploiement
+
+`toolforge-deploy.sh` :
+
+1. lance le build de la branche `production-toolforge` (`toolforge build start --detach --json --use-latest-versions --ref production-toolforge`) et relève dans la réponse l'identifiant du build et le commit réellement construit (`resolved_ref`);
+2. suit ce build précis par son identifiant jusqu'à sa fin (au plus 15 minutes), et affiche ses journaux en cas d'échec;
+3. crée ou met à jour les variables d'environnement `FONTCONFIG_FILE=/workspace/toolforge-fonts.conf` et `GIT_COMMIT=<commit construit>` (l'image ne contient pas de dépôt git : le pied de page lit le commit dans cette variable);
+4. redémarre le webservice (`toolforge webservice buildservice restart`);
+5. vérifie, pendant au plus 200 secondes, que `https://wikipedia2book.toolforge.org/api/version` renvoie bien ce commit, et affiche les journaux du webservice sinon.
+
+Toute étape en échec arrête le script avec un code d'erreur, ce qui fait échouer le workflow.
+
+`--use-latest-versions` est nécessaire : avec les versions par défaut des buildpacks, la récupération des paquets de l'`Aptfile` échoue (`libharfbuzz-subset0`) dès que le cache apt de l'outil est vidé. Suivre le build par son identifiant, et non par « le dernier build », évite de lire l'état d'un build précédent avant que le nouveau soit enregistré.
+
+#### Mise en place initiale
+
+À faire une seule fois, depuis `login.toolforge.org`, dans le compte de l'outil (`become wikipedia2book`) :
+
+```bash
+toolforge envvars create FONTCONFIG_FILE /workspace/toolforge-fonts.conf
 toolforge build start --use-latest-versions --ref production-toolforge https://github.com/gmoulard/wikipedia2book
 toolforge webservice buildservice start --mount=none --mem 2Gi --cpu 1
 ```
 
-Toolforge déploie la branche `production-toolforge`, pas `main` : un push sur `main` (ou une pull request) lance seulement les tests, tandis que Railway et Northflank continuent de suivre `main` (réglage fait dans leurs interfaces respectives, hors du dépôt). Pour publier sur Toolforge ce qui est sur `main` : `git push origin main:production-toolforge`. Le déploiement est alors automatique : à chaque push sur `production-toolforge`, le workflow GitHub Actions `.github/workflows/deploy-toolforge.yml` lance les tests, puis, s'ils passent, se connecte en SSH à `login.toolforge.org` (clé privée dans le secret GitHub `TOOLFORGE_SSH_KEY`, empreinte du serveur figée dans le workflow) et exécute `toolforge-deploy.sh` dans le compte de l'outil. Ce script lance le build de la branche `production-toolforge` (`--ref production-toolforge`) avec les versions les plus récentes des buildpacks (`--use-latest-versions`, les versions par défaut échouaient à récupérer les paquets de l'`Aptfile`), suit ce build précis par son identifiant jusqu'à sa fin, met à jour les variables d'environnement `FONTCONFIG_FILE` et `GIT_COMMIT` (commit réellement construit, affiché en pied de page faute de dépôt git dans l'image), redémarre le webservice et vérifie via `/api/version` que le nouveau commit est servi; tout échec fait échouer le workflow. Un déploiement manuel se fait avec `ssh <login>@login.toolforge.org "become wikipedia2book bash -s" < toolforge-deploy.sh`, ou en relançant le workflow sur la branche `production-toolforge` depuis l'onglet Actions (`workflow_dispatch`).
+`--mount=none` : l'application n'utilise pas le stockage NFS de Toolforge. `--mem 2Gi --cpu 1` : WeasyPrint et l'assemblage de PDF de plusieurs centaines de pages dépassent les 512 Mi attribués par défaut.
 
-Le serveur ne stocke aucun livre ni PDF sur disque; tout l'état est conservé dans le navigateur et échangé via JSON.
+#### Déploiement manuel et exploitation
+
+* Redéployer sans nouveau commit : relancer le workflow sur la branche `production-toolforge` depuis l'onglet Actions de GitHub, ou exécuter le script à la main :
+
+```bash
+ssh <login>@login.toolforge.org "become wikipedia2book bash -s" < toolforge-deploy.sh
+```
+
+* État et journaux, dans le compte de l'outil : `toolforge webservice status`, `toolforge webservice logs -f`, `toolforge build list`, `toolforge build logs <identifiant>`, `toolforge envvars list`.
+
+* Le port SSH 22 de `login.toolforge.org` peut être bloqué par certains réseaux d'entreprise; les exécuteurs GitHub Actions n'ont pas cette limite.
 
 ## 14\. Sécurité et robustesse
 
@@ -761,10 +841,11 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 0.23.0  | 2026-11-11 | Table des matières libre dans l'étape Organisation : elle peut être glissée n'importe où (avant n'importe quel chapitre ou article, ou à la fin), et plus seulement basculée entre début et fin; elle peut être retirée puis remise. `toc_position` accepte désormais `before:<clé>` en plus de `start`/`end` (fichiers JSON existants toujours valides). Les numéros de page tiennent compte de sa position. Correction : la liste d'organisation affichait les articles sans chapitre avant les chapitres, alors que le PDF les place après, sous « Sans chapitre » (section 6). |
 | 0.24.0  | 2026-11-11 | Le titre du livre et la note de couverture ne sont plus affichés au-dessus des étapes Sources et Organisation : ils se saisissent dans l'étape Édition, partie A « Identité du livre ». Si le titre est laissé vide, le PDF (couverture, signet, nom de fichier) et le fichier JSON prennent le titre du premier article du livre, affiché en grisé dans le champ (section 12). |
 | 0.25.0  | 2026-11-11 | Interface restylée selon le système de design Codex de Wikimedia (bleu progressif #36c, gris Wikipédia, coins 2 px, titres serif), thème sombre aligné sur le mode nuit de Wikipédia ; Google Fonts supprimé (polices système). |
-| 0.25.1  | 2026-11-11 | Déploiement sur Toolforge : ajout d'un `Procfile`, d'un `Aptfile` et d'un `.python-version` pour le Build Service (buildpacks), documentés en section 13.4. |
-| 0.25.2  | 2026-11-12 | Correction : le téléchargement du PDF par l'API (`/api/pdf`, `/api/books/generate`, etc.) échouait avec une erreur 500 quand le titre du livre contenait des caractères non latins (japonais, chinois, arabe…) ; le nom de fichier est désormais transmis encodé en UTF-8 (RFC 5987). Toolforge : ajout de `toolforge-fonts.conf` pour que les polices installées par l'`Aptfile` (Noto CJK) soient trouvées par WeasyPrint (section 13.4). |
-| 1.0.0   | 2026-11-12 | Première version stable, en ligne sur wikipedia2book.toolforge.org. Déploiement automatique sur Toolforge à chaque push sur `main` : workflow GitHub Actions (tests puis déploiement SSH) et script `toolforge-deploy.sh` (section 13.4). |
+| 0.25.1  | 2026-11-11 | Déploiement sur Toolforge : ajout d'un `Procfile`, d'un `Aptfile` et d'un `.python-version` pour le Build Service (buildpacks), documentés en section 13.7. |
+| 0.25.2  | 2026-11-12 | Correction : le téléchargement du PDF par l'API (`/api/pdf`, `/api/books/generate`, etc.) échouait avec une erreur 500 quand le titre du livre contenait des caractères non latins (japonais, chinois, arabe…) ; le nom de fichier est désormais transmis encodé en UTF-8 (RFC 5987). Toolforge : ajout de `toolforge-fonts.conf` pour que les polices installées par l'`Aptfile` (Noto CJK) soient trouvées par WeasyPrint (section 13.7). |
+| 1.0.0   | 2026-11-12 | Première version stable, en ligne sur wikipedia2book.toolforge.org. Déploiement automatique sur Toolforge à chaque push sur `main` : workflow GitHub Actions (tests puis déploiement SSH) et script `toolforge-deploy.sh` (sections 13.6 et 13.7). |
 | 1.1.0   | 2026-11-12 | Génération depuis une page de livre Wikipédia (GET et POST `/api/books/generate-from-wikipedia-book`) : nouveau paramètre `book_conclusion`, par défaut « Generated by https://wikipedia2book.toolforge.org/ », vide pour supprimer la conclusion; sans `book_title`, le titre du livre ne garde que la dernière partie du nom de la page de livre (« Les épaves… » au lieu de « Utilisateur:…/Livres/Les épaves… »). |
-| 1.2.0   | 2026-11-12 | Toolforge ne se déploie plus à chaque push sur `main` mais sur la branche `production-toolforge` (`git push origin main:production-toolforge`); `main` et les pull requests lancent seulement les tests. Railway et Northflank suivent toujours `main` (section 13.4). |
+| 1.2.0   | 2026-11-12 | Toolforge ne se déploie plus à chaque push sur `main` mais sur la branche `production-toolforge` (`git push origin main:production-toolforge`); `main` et les pull requests lancent seulement les tests. Railway et Northflank suivent toujours `main` (section 13.5). |
+| 1.2.1   | 2026-11-12 | Documentation : la section 13 décrit désormais l'ensemble du système de déploiement (13.4 exécution locale, 13.5 environnements et branches, 13.6 intégration continue, 13.7 Toolforge). |
 
 Fin du document — Wikipedia2Book, spécifications version 1.1.
