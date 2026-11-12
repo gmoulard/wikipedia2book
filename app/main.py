@@ -5,7 +5,7 @@ from io import BytesIO
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import FastAPI, HTTPException, Query, Response
+from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pypdf import PdfReader, PdfWriter
@@ -50,10 +50,18 @@ from app.wikipedia_api import (
 )
 
 
-app = FastAPI(title="Wikipedia2Book", version="1.5.0")
+app = FastAPI(title="Wikipedia2Book", version="1.5.1")
 static_directory = Path(__file__).parent / "static"
 PDF_LANGUAGE_PATTERN = "^(" + "|".join(PDF_LABELS) + ")$"
 app.mount("/static", StaticFiles(directory=static_directory), name="static")
+
+
+@app.middleware("http")
+async def revalidate_web_app_files(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path == "/" or request.url.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
 
 
 @app.get("/", include_in_schema=False)

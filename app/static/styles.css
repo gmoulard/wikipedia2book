@@ -298,7 +298,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
   .article-form { gap: 6px; }
   .article-form .button { padding: 0 10px; }
   .discovery-filters select { max-width: none; }
-  .discovery-filters { grid-template-columns: 1fr; }
+  .suggestion-sort span { padding: 0 7px; font-size: 13px; }
   .article-columns { gap: 20px; }
   .list-heading h3 { font-size: 19px; }
   .list-note { font-size: 12px; }

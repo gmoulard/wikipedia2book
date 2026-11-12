@@ -255,6 +255,13 @@ class PdfStreamTest(unittest.TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(FakeClient.papers, [paper, paper])
 
+    def test_web_app_files_are_revalidated_by_the_browser(self):
+        for path in ("/", "/static/app.js", "/static/i18n.js", "/static/styles.css"):
+            response = self.client.get(path)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.headers["cache-control"], "no-cache")
+        self.assertNotIn("cache-control", self.client.get("/api/version").headers)
+
     def test_explicit_subtitle_replaces_the_book_subtitle(self):
         FakeClient.book = WikipediaBook(subtitle="Petit guide", chapters=[("", ["Chien"])])
         pages = []
