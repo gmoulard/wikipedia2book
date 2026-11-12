@@ -1,0 +1,41 @@
+name: Deploy Toolforge
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: toolforge-deploy
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python -m unittest discover -s tests -v
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure SSH
+        env:
+          TOOLFORGE_SSH_KEY: ${{ secrets.TOOLFORGE_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$TOOLFORGE_SSH_KEY" > ~/.ssh/toolforge
+          chmod 600 ~/.ssh/toolforge
+          echo "login.toolforge.org ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHHCaBsit1GY3TeucMi3gDEIpQ8uNhokVa0dr/tM6PZa" > ~/.ssh/known_hosts
+      - name: Build and restart on Toolforge
+        run: |
+          ssh -i ~/.ssh/toolforge -o IdentitiesOnly=yes -o BatchMode=yes -o ServerAliveInterval=30 \
+            gm474d6f756c617264@login.toolforge.org \
+            "become wikipedia2book bash -s" < toolforge-deploy.sh

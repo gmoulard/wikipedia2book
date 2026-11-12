@@ -578,11 +578,11 @@ Pour Toolforge (Wikimedia Cloud), qui construit l'image avec des buildpacks et n
 Déploiement depuis `login.toolforge.org`, dans le compte de l'outil (`become wikipedia2book`) :
 
 ```bash
-toolforge build start https://github.com/gmoulard/wikipedia2book
+toolforge build start --use-latest-versions https://github.com/gmoulard/wikipedia2book
 toolforge webservice buildservice start --mount=none --mem 2Gi --cpu 1
 ```
 
-Après chaque nouvelle version poussée sur GitHub : relancer `toolforge build start …` puis `toolforge webservice buildservice restart`. Le commit affiché en pied de page vient de la variable d'environnement `GIT_COMMIT` (`toolforge envvars create GIT_COMMIT <sha>`), faute de dépôt git dans l'image.
+Le déploiement est automatique : à chaque push sur `main`, le workflow GitHub Actions `.github/workflows/deploy-toolforge.yml` lance les tests, puis, s'ils passent, se connecte en SSH à `login.toolforge.org` (clé privée dans le secret GitHub `TOOLFORGE_SSH_KEY`, empreinte du serveur figée dans le workflow) et exécute `toolforge-deploy.sh` dans le compte de l'outil. Ce script lance le build avec les versions les plus récentes des buildpacks (`--use-latest-versions`, les versions par défaut échouaient à récupérer les paquets de l'`Aptfile`), suit ce build précis par son identifiant jusqu'à sa fin, met à jour les variables d'environnement `FONTCONFIG_FILE` et `GIT_COMMIT` (commit réellement construit, affiché en pied de page faute de dépôt git dans l'image), redémarre le webservice et vérifie via `/api/version` que le nouveau commit est servi; tout échec fait échouer le workflow. Un déploiement manuel se fait avec `ssh <login>@login.toolforge.org "become wikipedia2book bash -s" < toolforge-deploy.sh`, ou en relançant le workflow depuis l'onglet Actions (`workflow_dispatch`).
 
 Le serveur ne stocke aucun livre ni PDF sur disque; tout l'état est conservé dans le navigateur et échangé via JSON.
 
@@ -696,6 +696,8 @@ Wikipedia2Book/
 ├── Aptfile
 ├── .python-version
 ├── toolforge-fonts.conf
+├── toolforge-deploy.sh
+├── .github/workflows/deploy-toolforge.yml
 ├── requirements.txt
 ├── .gitignore
 ├── CLAUDE.md
@@ -761,5 +763,6 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 0.25.0  | 2026-11-11 | Interface restylée selon le système de design Codex de Wikimedia (bleu progressif #36c, gris Wikipédia, coins 2 px, titres serif), thème sombre aligné sur le mode nuit de Wikipédia ; Google Fonts supprimé (polices système). |
 | 0.25.1  | 2026-11-11 | Déploiement sur Toolforge : ajout d'un `Procfile`, d'un `Aptfile` et d'un `.python-version` pour le Build Service (buildpacks), documentés en section 13.4. |
 | 0.25.2  | 2026-11-12 | Correction : le téléchargement du PDF par l'API (`/api/pdf`, `/api/books/generate`, etc.) échouait avec une erreur 500 quand le titre du livre contenait des caractères non latins (japonais, chinois, arabe…) ; le nom de fichier est désormais transmis encodé en UTF-8 (RFC 5987). Toolforge : ajout de `toolforge-fonts.conf` pour que les polices installées par l'`Aptfile` (Noto CJK) soient trouvées par WeasyPrint (section 13.4). |
+| 1.0.0   | 2026-11-12 | Première version stable, en ligne sur wikipedia2book.toolforge.org. Déploiement automatique sur Toolforge à chaque push sur `main` : workflow GitHub Actions (tests puis déploiement SSH) et script `toolforge-deploy.sh` (section 13.4). |
 
 Fin du document — Wikipedia2Book, spécifications version 1.1.

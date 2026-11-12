@@ -63,11 +63,11 @@ Toolforge builds the image with buildpacks (`Procfile`, `Aptfile`, `.python-vers
 
 ```bash
 toolforge envvars create FONTCONFIG_FILE /workspace/toolforge-fonts.conf
-toolforge build start https://github.com/gmoulard/wikipedia2book
+toolforge build start --use-latest-versions https://github.com/gmoulard/wikipedia2book
 toolforge webservice buildservice start --mount=none --mem 2Gi --cpu 1
 ```
 
-After each push: `toolforge build start …` again, then `toolforge webservice buildservice restart`.
+Deployment is automatic: on every push to `main`, the GitHub Actions workflow `.github/workflows/deploy-toolforge.yml` runs the tests, then connects over SSH (secret `TOOLFORGE_SSH_KEY`) and runs `toolforge-deploy.sh` in the tool account: build, restart, and a check that `/api/version` serves the new commit.
 
 - [Northflank](https://prod--wikipedia2book--wkvpbnfj6h4v.code.run) 
 - [Railway](https://wikipedia2book-production.up.railway.app/)
