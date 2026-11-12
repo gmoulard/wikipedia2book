@@ -3,6 +3,7 @@ const state = {
   project: null,
   activeView: 'sources',
   sourceMode: 'book',
+  suggestionSort: 'page',
   searchTimer: null,
   toastTimer: null,
   isDirty: false,
@@ -115,7 +116,7 @@ function renderArticles() {
 
   const source = suggestionSource();
   $('#suggestionSource').hidden = !source;
-  $('#suggestionSource').textContent = source ? t('discovered.source', { title: source }) : '';
+  $('#suggestionSource').textContent = source ? t(state.suggestionSort === 'alpha' ? 'discovered.sourceAlpha' : 'discovered.source', { title: source }) : '';
   $('#suggestionFilters').hidden = !project.discovered_articles.length;
   const visible = visibleSuggestions();
   $('#discoveredArticles').innerHTML = visible.length
@@ -132,7 +133,10 @@ function suggestionSource() {
 
 function visibleSuggestions() {
   const titleFilter = $('#articleFilter').value.trim().toLocaleLowerCase(lang());
-  return state.project.discovered_articles.filter((a) => !titleFilter || a.title.toLocaleLowerCase(lang()).includes(titleFilter));
+  const visible = state.project.discovered_articles.filter((a) => !titleFilter || a.title.toLocaleLowerCase(lang()).includes(titleFilter));
+  return state.suggestionSort === 'alpha'
+    ? visible.sort((a, b) => a.title.localeCompare(b.title, lang(), { sensitivity: 'base', numeric: true }))
+    : visible;
 }
 
 function addSuggestions(suggestions) {
@@ -851,6 +855,7 @@ document.addEventListener('change', async (event) => {
   if (event.target.matches('.article-check')) { const card = event.target.closest('.article-card'); await toggleArticle(card, event.target.checked); return; }
   if (event.target.matches('.doc-check')) { const row = event.target.closest('.uploaded-document-row'); toggleUploadedDocument(row.dataset.docId, event.target.checked); return; }
   if (event.target.matches('.chapter-select')) { const row = event.target.closest('.org-article'); updateChapterMembership(row.dataset.articleKey, event.target.value); return; }
+  if (event.target.matches('input[name="suggestionSort"]')) { state.suggestionSort = event.target.value; renderArticles(); return; }
   if (event.target.matches('#articleLanguage')) { if ($('#articleQuery').value.trim().length >= 2) searchArticles($('#articleQuery').value); return; }
   if (event.target.matches('input[name="orientation"]')) { const layout = collectLayoutSettings(); Object.assign(state.project, layout); queueSave(layout); return; }
   if (event.target.matches('#pageNumbers')) { queueSave({ page_numbers: event.target.checked }); return; }

@@ -161,7 +161,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .list-heading h3 { margin: 4px 0 0; font-family: var(--serif); font-size: 21px; font-weight: 400; }
 .count-inline { display: inline-grid; min-width: 22px; height: 22px; place-items: center; margin-left: 4px; padding: 0 6px; border-radius: 11px; background: var(--interactive); color: var(--ink-soft); font-family: var(--sans); font-size: 12px; vertical-align: 3px; }
 .list-note { color: var(--ink-soft); font-size: 13px; }
-.discovery-filters { display: grid; grid-template-columns: 1fr; gap: 6px; padding: 12px 0 4px; }
+.discovery-filters { display: grid; grid-template-columns: 1fr auto; gap: 6px; padding: 12px 0 4px; }
+.suggestion-sort { grid-template-columns: auto auto; }
+.suggestion-sort span { padding: 0 10px; white-space: nowrap; }
+[dir=rtl] .segmented-control label + label span { border-right: 1px solid var(--line-strong); border-left: 0; }
 .discovery-filters select, .filter-search { height: 32px; min-width: 0; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--paper); color: var(--ink); font-size: 14px; }
 .discovery-filters select { max-width: 140px; padding: 0 6px; }
 .filter-search { display: flex; align-items: center; gap: 6px; padding: 0 8px; }
@@ -295,6 +298,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
   .article-form { gap: 6px; }
   .article-form .button { padding: 0 10px; }
   .discovery-filters select { max-width: none; }
+  .discovery-filters { grid-template-columns: 1fr; }
   .article-columns { gap: 20px; }
   .list-heading h3 { font-size: 19px; }
   .list-note { font-size: 12px; }
