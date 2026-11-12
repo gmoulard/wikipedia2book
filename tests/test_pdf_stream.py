@@ -18,7 +18,7 @@ from pypdf import PdfReader
 from reportlab.pdfgen import canvas
 
 import app.main as main
-from app.wikipedia_api import MediaWikiError
+from app.wikipedia_api import MediaWikiError, WikipediaBook
 
 
 def _make_pdf(num_pages=1):
@@ -45,8 +45,10 @@ class FakeClient:
             raise MediaWikiError(f"PDF indisponible pour {title}")
         return _make_pdf(2)
 
-    async def get_book_links(self, title, language, limit=200):
-        return ["Chien", "Chat"]
+    book = WikipediaBook(subtitle="", chapters=[("", ["Chien", "Chat"])])
+
+    async def get_book(self, title, language, limit=200):
+        return FakeClient.book
 
     async def get_intro_and_creator(self, title, language):
         return ("Introduction de test", "Auteur du livre")
@@ -63,6 +65,7 @@ def _project(**extra):
 class PdfStreamTest(unittest.TestCase):
     def setUp(self):
         FakeClient.fail = False
+        FakeClient.book = WikipediaBook(subtitle="", chapters=[("", ["Chien", "Chat"])])
         self.patches = [
             patch.object(main, "MediaWikiClient", FakeClient),
             patch.object(main, "generate_pdf", lambda html: _make_pdf(1)),
@@ -191,6 +194,66 @@ class PdfStreamTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("filename*=UTF-8''Les%20%C3%A9paves%20de%20Saint-Pierre.pdf", response.headers["content-disposition"])
         self.assertEqual(PdfReader(BytesIO(response.content)).outline[0].title, "Les épaves de Saint-Pierre")
+
+    def test_book_structure_returns_subtitle_and_chapters(self):
+        FakeClient.book = WikipediaBook(
+            subtitle="Petit guide", chapters=[("", ["Loup"]), ("Canidés", ["Chien"]), ("Félidés", ["Chat", "Lion"])]
+        )
+        response = self.client.post("/api/books/structure", json={"url": "https://fr.wikipedia.org/wiki/Livre:Animaux"})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual([a["title"] for a in data["articles"]], ["Loup", "Chien", "Chat", "Lion"])
+        self.assertEqual(data["subtitle"], "Petit guide")
+        self.assertEqual(
+            [(c["title"], c["article_keys"]) for c in data["chapters"]],
+            [("Canidés", ["fr:title:chien"]), ("Félidés", ["fr:title:chat", "fr:title:lion"])],
+        )
+        self.assertTrue(data["unassigned_first"])
+        legacy = self.client.post("/api/books/import", json={"url": "https://fr.wikipedia.org/wiki/Livre:Animaux"})
+        self.assertEqual([a["title"] for a in legacy.json()], ["Loup", "Chien", "Chat", "Lion"])
+
+    def test_wikipedia_book_generation_uses_its_subtitle_and_chapters(self):
+        FakeClient.book = WikipediaBook(subtitle="Petit guide", chapters=[("Canidés", ["Chien"]), ("Félidés", ["Chat"])])
+        pages = []
+        with patch.object(main, "generate_pdf", lambda html: pages.append(html) or _make_pdf(1)):
+            response = self.client.get(
+                "/api/books/generate-from-wikipedia-book",
+                params={"url": "https://fr.wikipedia.org/wiki/Livre:Animaux"},
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Petit guide", pages[0])
+        self.assertTrue(any("Canidés" in html and "Chien" not in html for html in pages))
+        self.assertTrue(any("Félidés" in html and "Chat" not in html for html in pages))
+
+    def test_articles_before_the_first_chapter_stay_at_the_start_without_chapter_page(self):
+        FakeClient.book = WikipediaBook(subtitle="", chapters=[("", ["Loup"]), ("Félidés", ["Chat"])])
+        pages = []
+        with patch.object(main, "generate_pdf", lambda html: pages.append(html) or _make_pdf(1)):
+            response = self.client.get(
+                "/api/books/generate-from-wikipedia-book",
+                params={"url": "https://fr.wikipedia.org/wiki/Livre:Animaux", "table_of_contents": "false"},
+            )
+        self.assertEqual(response.status_code, 200)
+        root = PdfReader(BytesIO(response.content)).outline[1]
+        titles = [item.title for item in root if not isinstance(item, list)]
+        self.assertEqual(titles[:2], ["Loup", "Félidés"])
+        self.assertFalse(any("Sans chapitre" in html for html in pages))
+
+    def test_structure_without_leading_articles_keeps_unassigned_last(self):
+        FakeClient.book = WikipediaBook(subtitle="", chapters=[("Félidés", ["Chat"])])
+        response = self.client.post("/api/books/structure", json={"url": "https://fr.wikipedia.org/wiki/Livre:Animaux"})
+        self.assertFalse(response.json()["unassigned_first"])
+
+    def test_explicit_subtitle_replaces_the_book_subtitle(self):
+        FakeClient.book = WikipediaBook(subtitle="Petit guide", chapters=[("", ["Chien"])])
+        pages = []
+        with patch.object(main, "generate_pdf", lambda html: pages.append(html) or _make_pdf(1)):
+            self.client.post(
+                "/api/books/generate-from-wikipedia-book",
+                json={"url": "https://fr.wikipedia.org/wiki/Livre:Animaux", "book_subtitle": "Autre"},
+            )
+        self.assertIn("Autre", pages[0])
+        self.assertNotIn("Petit guide", pages[0])
 
     def test_get_generation_can_disable_the_table_of_contents(self):
         response = self.client.get(

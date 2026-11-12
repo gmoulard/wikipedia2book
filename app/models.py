@@ -70,6 +70,7 @@ class Project(BaseModel):
     article_order: list[str] = Field(default_factory=list)
     chapters: list[BookChapter] = Field(default_factory=list)
     toc_position: str = Field(default="start", max_length=320, pattern=r"^(start|end|before:.+)$")
+    unassigned_first: bool = False
     table_of_contents: bool = True
     page_numbers: bool = True
     created_at: datetime = Field(default_factory=utc_now)
@@ -92,6 +93,13 @@ class ArticleRequest(BaseModel):
 
 class BookImportRequest(BaseModel):
     url: str = Field(min_length=1, max_length=2048)
+
+
+class WikipediaBookImport(BaseModel):
+    articles: list[Article]
+    subtitle: str = ""
+    chapters: list[BookChapter] = Field(default_factory=list)
+    unassigned_first: bool = False
 
 
 class WikipediaBookGenerationRequest(BookImportRequest):

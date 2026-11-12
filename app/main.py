@@ -28,12 +28,14 @@ from app.models import (
     DEFAULT_BOOK_CONCLUSION,
     Article,
     ArticleRequest,
+    BookChapter,
     BookImportRequest,
     BookGenerationRequest,
     Project,
     ProjectExplorationRequest,
     UploadedDocument,
     WikipediaBookGenerationRequest,
+    WikipediaBookImport,
     utc_now,
 )
 from app.pdf_generator import fit_pdf_to_format, generate_pdf, image_to_pdf, stamp_page_numbers
@@ -47,7 +49,7 @@ from app.wikipedia_api import (
 )
 
 
-app = FastAPI(title="Wikipedia2Book", version="1.2.1")
+app = FastAPI(title="Wikipedia2Book", version="1.3.0")
 static_directory = Path(__file__).parent / "static"
 PDF_LANGUAGE_PATTERN = "^(" + "|".join(PDF_LABELS) + ")$"
 app.mount("/static", StaticFiles(directory=static_directory), name="static")
@@ -145,26 +147,40 @@ def add_article_reference(payload: ArticleRequest) -> Article:
 
 @app.post("/api/books/import", response_model=list[Article])
 async def import_wikipedia_book(payload: BookImportRequest) -> list[Article]:
+    return (await read_wikipedia_book(payload)).articles
+
+
+@app.post("/api/books/structure", response_model=WikipediaBookImport)
+async def read_wikipedia_book(payload: BookImportRequest) -> WikipediaBookImport:
     try:
         language, title = parse_article_url(payload.url)
         async with MediaWikiClient() as client:
-            titles = await client.get_book_links(title, language, limit=200)
+            book = await client.get_book(title, language, limit=200)
     except (MediaWikiError, ValueError) as error:
         raise _mediawiki_error(error) from error
-    if not titles:
+    if not book.chapters:
         raise HTTPException(
             status_code=422,
             detail="Cette page de livre ne contient aucun lien vers des articles Wikipédia.",
         )
-    return [
-        Article(
-            title=article_title,
-            language=language,
-            url=article_url(language, article_title),
-            selected=True,
-        )
-        for article_title in titles
-    ]
+    articles: list[Article] = []
+    chapters: list[BookChapter] = []
+    for chapter_title, titles in book.chapters:
+        chapter_articles = [
+            Article(title=article_title, language=language, url=article_url(language, article_title), selected=True)
+            for article_title in titles
+        ]
+        articles.extend(chapter_articles)
+        if chapter_title:
+            chapters.append(
+                BookChapter(title=chapter_title[:120], article_keys=[article.key for article in chapter_articles])
+            )
+    return WikipediaBookImport(
+        articles=articles,
+        subtitle=book.subtitle[:300],
+        chapters=chapters,
+        unassigned_first=bool(chapters) and not book.chapters[0][0],
+    )
 
 
 @app.post("/api/explore", response_model=Project)
@@ -427,7 +443,7 @@ async def _generate_book_from_wikipedia_book(
 ) -> Response:
     try:
         source_language, source_title = parse_article_url(url)
-        articles = await import_wikipedia_book(BookImportRequest(url=url))
+        book = await read_wikipedia_book(BookImportRequest(url=url))
         if book_author is None:
             async with MediaWikiClient() as client:
                 _, book_author = await client.get_intro_and_creator(source_title, source_language)
@@ -437,10 +453,12 @@ async def _generate_book_from_wikipedia_book(
     project = Project(
         name=(book_title or "Wikipedia2Book")[:120],
         book_title=book_title,
-        book_subtitle=book_subtitle or "",
+        book_subtitle=book.subtitle if book_subtitle is None else book_subtitle,
         book_author=book_author or "",
         conclusion=book_conclusion,
-        main_articles=articles,
+        main_articles=book.articles,
+        chapters=book.chapters,
+        unassigned_first=book.unassigned_first,
         page_format=page_format,
         orientation=orientation,
         page_numbers=page_numbers,

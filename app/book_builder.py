@@ -57,7 +57,9 @@ def ordered_article_groups(
         groups = [("", ordered)]
     else:
         unassigned = [item for item in ordered if item.key not in assigned]
-        if unassigned:
+        if unassigned and project.unassigned_first:
+            groups.insert(0, ("", unassigned))
+        elif unassigned:
             groups.append((pdf_label(language, "no_chapter"), unassigned))
     return groups
 

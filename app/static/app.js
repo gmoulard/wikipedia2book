@@ -75,7 +75,7 @@ function normalizeProject(input) {
     book_title: '', book_subtitle: '', book_author: '', introduction: '', conclusion: '',
     page_format: 'A4', custom_width_mm: 148, custom_height_mm: 210, orientation: 'portrait',
     margin_top_mm: 18, margin_bottom_mm: 18, margin_inside_mm: 18, margin_outside_mm: 16,
-    margin_binding_mm: 0, article_order: [], chapters: [], toc_position: 'start', table_of_contents: true, page_numbers: true, ...input,
+    margin_binding_mm: 0, article_order: [], chapters: [], toc_position: 'start', unassigned_first: false, table_of_contents: true, page_numbers: true, ...input,
   };
   project.main_articles = [...project.main_articles, ...project.discovered_articles.filter((a) => a.selected)];
   project.discovered_articles = project.discovered_articles.filter((a) => !a.selected);
@@ -188,13 +188,14 @@ function buildOrgSlots() {
     const chapter = chapters.find((c) => c.id === chapterByArticle.get(articleKey(a)));
     (chapter ? chapter.articles : unassigned).push(a);
   });
-  const slots = [];
+  const chapterSlots = [];
   chapters.forEach((chapter) => {
-    slots.push({ type: 'chapter', chapter });
-    chapter.articles.forEach((a) => slots.push({ type: 'article', article: a, chapterId: chapter.id }));
+    chapterSlots.push({ type: 'chapter', chapter });
+    chapter.articles.forEach((a) => chapterSlots.push({ type: 'article', article: a, chapterId: chapter.id }));
   });
-  if (chapters.length && unassigned.length) slots.push({ type: 'unassigned' });
-  unassigned.forEach((a) => slots.push({ type: 'article', article: a, chapterId: '' }));
+  const unassignedSlots = unassigned.map((a) => ({ type: 'article', article: a, chapterId: '' }));
+  if (chapters.length && unassigned.length && !project.unassigned_first) unassignedSlots.unshift({ type: 'unassigned' });
+  const slots = project.unassigned_first ? [...unassignedSlots, ...chapterSlots] : [...chapterSlots, ...unassignedSlots];
   if (project.table_of_contents !== false) slots.splice(tocSlotIndex(slots), 0, { type: 'toc' });
   return slots;
 }
@@ -468,11 +469,18 @@ async function importWikipediaBook(url) {
   button.disabled = true;
   button.textContent = t('export.importingLabel');
   try {
-    const articles = await getJson('/api/books/import', { method: 'POST', body: JSON.stringify({ url }) });
-    const newArticles = articles.filter((a) => !activeArticles().some((e) => sameArticle(e, a)));
+    const book = await getJson('/api/books/structure', { method: 'POST', body: JSON.stringify({ url }) });
+    const newArticles = book.articles.filter((a) => !activeArticles().some((e) => sameArticle(e, a)));
     if (!newArticles.length) throw new Error(t('sources.allBookPagesAlready'));
     const wasFirst = state.project.main_articles.length === 0;
     state.project.main_articles.push(...newArticles);
+    if (book.unassigned_first && !state.project.chapters.length) state.project.unassigned_first = true;
+    const newKeys = new Set(newArticles.map(articleKey));
+    for (const chapter of book.chapters) {
+      const keys = chapter.article_keys.filter((key) => newKeys.has(key));
+      if (keys.length) state.project.chapters.push({ ...chapter, article_keys: keys });
+    }
+    if (book.subtitle && !state.project.book_subtitle) state.project.book_subtitle = book.subtitle;
     // Extraire le titre du livre depuis l'URL (partie après le dernier /)
     try {
       const bookName = decodeURIComponent(url.split('/').pop()).replace(/_/g, ' ').trim();
@@ -481,7 +489,7 @@ async function importWikipediaBook(url) {
         state.project.book_title = bookName;
       }
     } catch { /* titre non critique */ }
-    queueSave({ main_articles: state.project.main_articles, name: state.project.name, book_title: state.project.book_title });
+    queueSave({ main_articles: state.project.main_articles, chapters: state.project.chapters, unassigned_first: state.project.unassigned_first, book_subtitle: state.project.book_subtitle, name: state.project.name, book_title: state.project.book_title });
     renderWorkspace();
     if (wasFirst) await suggestIntroAndAuthor(newArticles[0]);
     $('#articleQuery').value = '';

@@ -5,31 +5,54 @@ from unittest.mock import AsyncMock
 from app.wikipedia_api import MediaWikiClient, MediaWikiPageNotFound
 
 
-class GetBookLinksOrderTest(unittest.TestCase):
+def _book_client(wikitext):
+    client = MediaWikiClient()
+    client._get = AsyncMock(
+        return_value={"query": {"pages": [{"revisions": [{"slots": {"main": {"content": wikitext}}}]}]}}
+    )
+    return client
+
+
+class GetBookTest(unittest.TestCase):
     def test_preserves_wikitext_order_and_skips_namespaced_links(self):
         wikitext = (
-            "== Chapitre ==\n"
+            "== Titre du livre ==\n"
             ":[[Second article]]\n"
             ":[[Premier article|texte affiché]]\n"
             ":[[Catégorie:Ignoré]]\n"
             ":[[Utilisateur:Auteur]]\n"
         )
-        payload = {
-            "query": {
-                "pages": [{"revisions": [{"slots": {"main": {"content": wikitext}}}]}]
-            }
-        }
-        client = MediaWikiClient()
-        client._get = AsyncMock(return_value=payload)
+        book = asyncio.run(_book_client(wikitext).get_book("Titre", "fr"))
+        self.assertEqual(book.subtitle, "")
+        self.assertEqual(book.chapters, [("", ["Second article", "Premier article"])])
 
-        links = asyncio.run(client.get_book_links("Titre", "fr"))
-        self.assertEqual(links, ["Second article", "Premier article"])
+    def test_reads_subtitle_and_chapters(self):
+        wikitext = (
+            "{{livre sauvegardé}}\n"
+            "== Volcans ==\n"
+            "=== Un tour du monde des '''éruptions''' ===\n"
+            "==== Pas un sous-titre ====\n"
+            ":[[Volcan]]\n"
+            ";Europe\n"
+            ":[[Etna]]\n"
+            ":[[Vésuve]]\n"
+            "; [[Amérique|Les Amériques]] \n"
+            ":[[Montagne Pelée]]\n"
+            ":[[Etna]]\n"
+            ";Chapitre vide\n"
+        )
+        book = asyncio.run(_book_client(wikitext).get_book("Titre", "fr"))
+        self.assertEqual(book.subtitle, "Un tour du monde des éruptions")
+        self.assertEqual(
+            book.chapters,
+            [("", ["Volcan"]), ("Europe", ["Etna", "Vésuve"]), ("Les Amériques", ["Montagne Pelée"])],
+        )
 
     def test_missing_page_raises(self):
         client = MediaWikiClient()
         client._get = AsyncMock(return_value={"query": {"pages": [{"missing": True}]}})
         with self.assertRaises(MediaWikiPageNotFound):
-            asyncio.run(client.get_book_links("Titre", "fr"))
+            asyncio.run(client.get_book("Titre", "fr"))
 
 
 class GetIntroAndCreatorTest(unittest.TestCase):

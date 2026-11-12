@@ -1,4 +1,5 @@
 import re
+from dataclasses import dataclass
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
 import httpx
@@ -17,6 +18,12 @@ class MediaWikiError(Exception):
 
 class MediaWikiPageNotFound(MediaWikiError):
     pass
+
+
+@dataclass
+class WikipediaBook:
+    subtitle: str
+    chapters: list[tuple[str, list[str]]]
 
 
 def validate_language(language: str) -> str:
@@ -154,12 +161,7 @@ class MediaWikiClient:
             links.append(link_title)
         return links
 
-    async def get_book_links(
-        self, title: str, language: str = "fr", limit: int = 200
-    ) -> list[str]:
-        # prop=links (et action=parse&prop=links) renvoient les liens triés par ordre
-        # alphabétique, pas dans l'ordre du livre : on lit le wikitexte brut et on
-        # extrait les [[liens]] dans leur ordre d'apparition.
+    async def get_book(self, title: str, language: str = "fr", limit: int = 200) -> WikipediaBook:
         language = validate_language(language)
         limit = min(max(limit, 1), 500)
         result = await self._get(
@@ -172,17 +174,36 @@ class MediaWikiClient:
         revisions = pages[0].get("revisions", [])
         content = revisions[0].get("slots", {}).get("main", {}).get("content", "") if revisions else ""
 
-        links: list[str] = []
+        subtitle = ""
+        chapters: list[tuple[str, list[str]]] = [("", [])]
         seen: set[str] = set()
-        for match in re.finditer(r"\[\[([^\[\]|#]+)", content):
-            link_title = match.group(1).strip().replace("_", " ")
-            if not link_title or ":" in link_title:
+        count = 0
+        for line in content.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("="):
+                heading = re.fullmatch(r"===(?!=)(.*?)(?<!=)===", stripped)
+                if heading and not subtitle:
+                    subtitle = _plain_wikitext(heading.group(1))
                 continue
-            normalized = link_title.casefold()
-            if normalized in seen:
+            if stripped.startswith(";"):
+                chapter_title = _plain_wikitext(stripped[1:])
+                if chapter_title:
+                    chapters.append((chapter_title, []))
                 continue
-            seen.add(normalized)
-            links.append(link_title)
-            if len(links) >= limit:
+            for match in re.finditer(r"\[\[([^\[\]|#]+)", line):
+                link_title = match.group(1).strip().replace("_", " ")
+                if not link_title or ":" in link_title or link_title.casefold() in seen:
+                    continue
+                seen.add(link_title.casefold())
+                chapters[-1][1].append(link_title)
+                count += 1
+                if count >= limit:
+                    break
+            if count >= limit:
                 break
-        return links
+        return WikipediaBook(subtitle=subtitle, chapters=[chapter for chapter in chapters if chapter[1]])
+
+
+def _plain_wikitext(text: str) -> str:
+    text = re.sub(r"\[\[(?:[^\[\]|]*\|)?([^\[\]]*)\]\]", r"\1", text)
+    return re.sub(r"'{2,}", "", text).strip()

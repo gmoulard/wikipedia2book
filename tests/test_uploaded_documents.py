@@ -49,6 +49,15 @@ class MixedBookItemsTest(unittest.TestCase):
         self.assertIn("Photo.png", html)
         self.assertIn('<span class="page-no">7</span>', html)
 
+    def test_unassigned_items_go_first_without_heading_when_requested(self):
+        chat = Article(title="Chat", language="fr", url="https://fr.wikipedia.org/wiki/Chat", selected=True)
+        loup = Article(title="Loup", language="fr", url="https://fr.wikipedia.org/wiki/Loup", selected=True)
+        chapters = [BookChapter(title="Félidés", article_keys=[chat.key])]
+        last = ordered_article_groups(Project(name="Test", chapters=chapters), [loup, chat])
+        self.assertEqual(last, [("Félidés", [chat]), ("Sans chapitre", [loup])])
+        first = ordered_article_groups(Project(name="Test", chapters=chapters, unassigned_first=True), [loup, chat])
+        self.assertEqual(first, [("", [loup]), ("Félidés", [chat])])
+
 
 if __name__ == "__main__":
     unittest.main()
