@@ -62,6 +62,7 @@ The application is then reachable at `http://localhost:8000`.
 Toolforge builds the image with buildpacks (`Procfile`, `Aptfile`, `.python-version`), not with the `Dockerfile`. From `login.toolforge.org`, after `become wikipedia2book`:
 
 ```bash
+toolforge envvars create FONTCONFIG_FILE /workspace/toolforge-fonts.conf
 toolforge build start https://github.com/gmoulard/wikipedia2book
 toolforge webservice buildservice start --mount=none --mem 2Gi --cpu 1
 ```

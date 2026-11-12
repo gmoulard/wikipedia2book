@@ -573,6 +573,8 @@ Pour Toolforge (Wikimedia Cloud), qui construit l'image avec des buildpacks et n
 
 * Un fichier `.python-version` (Python 3.12).
 
+* Un fichier `toolforge-fonts.conf` : les polices de l'`Aptfile` (dont Noto CJK pour le chinois et le japonais) sont installées hors des dossiers lus par fontconfig; ce fichier les y ajoute et place le cache fontconfig dans `/tmp`. Il est activé par la variable d'environnement `FONTCONFIG_FILE=/workspace/toolforge-fonts.conf` (`toolforge envvars create FONTCONFIG_FILE /workspace/toolforge-fonts.conf`).
+
 Déploiement depuis `login.toolforge.org`, dans le compte de l'outil (`become wikipedia2book`) :
 
 ```bash
@@ -693,6 +695,7 @@ Wikipedia2Book/
 ├── Procfile
 ├── Aptfile
 ├── .python-version
+├── toolforge-fonts.conf
 ├── requirements.txt
 ├── .gitignore
 ├── CLAUDE.md
@@ -757,5 +760,6 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 0.24.0  | 2026-11-11 | Le titre du livre et la note de couverture ne sont plus affichés au-dessus des étapes Sources et Organisation : ils se saisissent dans l'étape Édition, partie A « Identité du livre ». Si le titre est laissé vide, le PDF (couverture, signet, nom de fichier) et le fichier JSON prennent le titre du premier article du livre, affiché en grisé dans le champ (section 12). |
 | 0.25.0  | 2026-11-11 | Interface restylée selon le système de design Codex de Wikimedia (bleu progressif #36c, gris Wikipédia, coins 2 px, titres serif), thème sombre aligné sur le mode nuit de Wikipédia ; Google Fonts supprimé (polices système). |
 | 0.25.1  | 2026-11-11 | Déploiement sur Toolforge : ajout d'un `Procfile`, d'un `Aptfile` et d'un `.python-version` pour le Build Service (buildpacks), documentés en section 13.4. |
+| 0.25.2  | 2026-11-12 | Correction : le téléchargement du PDF par l'API (`/api/pdf`, `/api/books/generate`, etc.) échouait avec une erreur 500 quand le titre du livre contenait des caractères non latins (japonais, chinois, arabe…) ; le nom de fichier est désormais transmis encodé en UTF-8 (RFC 5987). Toolforge : ajout de `toolforge-fonts.conf` pour que les polices installées par l'`Aptfile` (Noto CJK) soient trouvées par WeasyPrint (section 13.4). |
 
 Fin du document — Wikipedia2Book, spécifications version 1.1.

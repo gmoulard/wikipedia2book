@@ -3,6 +3,7 @@ import json
 import subprocess
 from io import BytesIO
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.responses import FileResponse, StreamingResponse
@@ -45,7 +46,7 @@ from app.wikipedia_api import (
 )
 
 
-app = FastAPI(title="Wikipedia2Book", version="0.25.1")
+app = FastAPI(title="Wikipedia2Book", version="0.25.2")
 static_directory = Path(__file__).parent / "static"
 PDF_LANGUAGE_PATTERN = "^(" + "|".join(PDF_LABELS) + ")$"
 app.mount("/static", StaticFiles(directory=static_directory), name="static")
@@ -340,8 +341,13 @@ async def _create_pdf_response(project: Project, language: str) -> Response:
     return Response(
         content=pdf_data,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{project.book_title or project.name}.pdf"'},
+        headers={"Content-Disposition": _attachment_header(f"{project.book_title or project.name}.pdf")},
     )
+
+
+def _attachment_header(filename: str) -> str:
+    fallback = "".join(c if c.isascii() and c.isprintable() and c not in '"\\' else "_" for c in filename)
+    return f"attachment; filename=\"{fallback}\"; filename*=UTF-8''{quote(filename, safe='')}"
 
 
 @app.post("/api/books/generate", response_class=Response)

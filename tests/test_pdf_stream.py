@@ -122,6 +122,13 @@ class PdfStreamTest(unittest.TestCase):
         self.assertEqual(response.headers["content-type"], "application/pdf")
         self.assertEqual(len(PdfReader(BytesIO(response.content)).pages), 1 + 1 + 2 + 2 + 1)
 
+    def test_non_latin_book_title_gives_a_valid_download_name(self):
+        response = self.client.post("/api/pdf", json=_project(book_title='東京 "タワー"'))
+        self.assertEqual(response.status_code, 200)
+        disposition = response.headers["content-disposition"]
+        self.assertIn('filename="__ _____.pdf"', disposition)
+        self.assertIn("filename*=UTF-8''%E6%9D%B1%E4%BA%AC%20%22%E3%82%BF%E3%83%AF%E3%83%BC%22.pdf", disposition)
+
     def test_high_level_generation_accepts_article_references(self):
         response = self.client.post(
             "/api/books/generate",
