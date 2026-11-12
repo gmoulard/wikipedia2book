@@ -59,22 +59,6 @@ The application is then reachable at `http://localhost:8000`.
 
 - [Toolforge](https://wikipedia2book.toolforge.org)
 
-Toolforge builds the image with buildpacks (`Procfile`, `Aptfile`, `.python-version`), not with the `Dockerfile`. From `login.toolforge.org`, after `become wikipedia2book`:
-
-```bash
-toolforge envvars create FONTCONFIG_FILE /workspace/toolforge-fonts.conf
-toolforge build start --use-latest-versions --ref production-toolforge https://github.com/gmoulard/wikipedia2book
-toolforge webservice buildservice start --mount=none --mem 2Gi --cpu 1
-```
-
-Toolforge deploys the `production-toolforge` branch, not `main`: pushes to `main` and pull requests only run the tests, while Railway and Northflank keep following `main`. To publish `main` on Toolforge:
-
-```bash
-git push origin main:production-toolforge
-```
-
-Deployment is then automatic: on every push to `production-toolforge`, the GitHub Actions workflow `.github/workflows/deploy-toolforge.yml` runs the tests, then connects over SSH (secret `TOOLFORGE_SSH_KEY`) and runs `toolforge-deploy.sh` in the tool account: build, restart, and a check that `/api/version` serves the new commit.
-
 - [Northflank](https://prod--wikipedia2book--wkvpbnfj6h4v.code.run) 
 - [Railway](https://wikipedia2book-production.up.railway.app/)
 
