@@ -1,12 +1,13 @@
-name: Deploy Toolforge
+name: Tests and Toolforge deploy
 
 on:
   push:
-    branches: [main]
+    branches: [main, production-toolforge]
+  pull_request:
   workflow_dispatch:
 
 concurrency:
-  group: toolforge-deploy
+  group: ${{ github.ref == 'refs/heads/production-toolforge' && 'toolforge-deploy' || github.run_id }}
   cancel-in-progress: false
 
 jobs:
@@ -22,6 +23,7 @@ jobs:
 
   deploy:
     needs: test
+    if: github.ref == 'refs/heads/production-toolforge' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:

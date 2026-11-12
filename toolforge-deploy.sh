@@ -3,7 +3,7 @@ set -euo pipefail
 repo="https://github.com/gmoulard/wikipedia2book"
 json_field() { python3 -c "import json,sys; d=json.load(sys.stdin); print(d$1)"; }
 
-started=$(toolforge build start --detach --json --use-latest-versions "$repo")
+started=$(toolforge build start --detach --json --use-latest-versions --ref production-toolforge "$repo")
 build=$(echo "$started" | json_field '["new_build"]["name"]')
 commit=$(echo "$started" | json_field '["new_build"]["resolved_ref"]')
 echo "build $build, commit $commit"
