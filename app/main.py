@@ -40,6 +40,7 @@ from app.models import (
 )
 from app.pdf_generator import fit_pdf_to_format, generate_pdf, image_to_pdf, stamp_page_numbers
 from app.wikipedia_api import (
+    WIKIPEDIA_PDF_PAPERS,
     MediaWikiClient,
     MediaWikiError,
     MediaWikiPageNotFound,
@@ -49,7 +50,7 @@ from app.wikipedia_api import (
 )
 
 
-app = FastAPI(title="Wikipedia2Book", version="1.3.0")
+app = FastAPI(title="Wikipedia2Book", version="1.4.0")
 static_directory = Path(__file__).parent / "static"
 PDF_LANGUAGE_PATTERN = "^(" + "|".join(PDF_LABELS) + ")$"
 app.mount("/static", StaticFiles(directory=static_directory), name="static")
@@ -255,11 +256,12 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
         return image_to_pdf(data, page_width_mm, page_height_mm)
 
     item_pdfs: dict[str, bytes] = {}
+    paper = WIKIPEDIA_PDF_PAPERS.get(project.page_format, "a4")
     async with MediaWikiClient() as client:
         for item in unique_items:
             if isinstance(item, Article):
                 yield progress("fetch_article", title=item.title)
-                item_pdfs[item.key] = await client.get_article_pdf(item.title, item.language)
+                item_pdfs[item.key] = await client.get_article_pdf(item.title, item.language, paper)
             else:
                 yield progress("prepare_document", title=item.title)
                 item_pdfs[item.key] = document_pdf(item)

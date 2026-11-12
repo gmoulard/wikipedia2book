@@ -1,6 +1,6 @@
 import asyncio
 import unittest
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 from app.wikipedia_api import MediaWikiClient, MediaWikiPageNotFound
 
@@ -53,6 +53,26 @@ class GetBookTest(unittest.TestCase):
         client._get = AsyncMock(return_value={"query": {"pages": [{"missing": True}]}})
         with self.assertRaises(MediaWikiPageNotFound):
             asyncio.run(client.get_book("Titre", "fr"))
+
+
+class GetArticlePdfTest(unittest.TestCase):
+    def test_requests_the_given_paper_format(self):
+        client = MediaWikiClient()
+        client._client = AsyncMock()
+        client._client.get.return_value = Mock(content=b"%PDF-1.7 ...", raise_for_status=Mock())
+        pdf = asyncio.run(client.get_article_pdf("Montagne Pelée", "fr", "letter"))
+        self.assertTrue(pdf.startswith(b"%PDF-"))
+        self.assertEqual(
+            client._client.get.call_args.args[0],
+            "https://fr.wikipedia.org/api/rest_v1/page/pdf/Montagne_Pel%C3%A9e/letter",
+        )
+
+    def test_rejects_an_unknown_paper_format(self):
+        client = MediaWikiClient()
+        client._client = AsyncMock()
+        with self.assertRaises(ValueError):
+            asyncio.run(client.get_article_pdf("Chat", "fr", "a5"))
+        client._client.get.assert_not_called()
 
 
 class GetIntroAndCreatorTest(unittest.TestCase):

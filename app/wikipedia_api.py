@@ -9,7 +9,8 @@ from app.models import Article
 
 
 _LANGUAGE_RE = re.compile(r"^[a-z0-9-]{2,12}$")
-_USER_AGENT = "Wikipedia2Book/0.1 (https://github.com/gmoulard/wikipedia2book; MediaWiki API client)"
+WIKIPEDIA_PDF_PAPERS = {"A4": "a4", "Letter": "letter", "Legal": "legal"}
+_USER_AGENT ="Wikipedia2Book/0.1 (https://github.com/gmoulard/wikipedia2book; MediaWiki API client)"
 
 
 class MediaWikiError(Exception):
@@ -128,12 +129,14 @@ class MediaWikiClient:
 
         return introduction, creator
 
-    async def get_article_pdf(self, title: str, language: str = "fr") -> bytes:
+    async def get_article_pdf(self, title: str, language: str, paper: str) -> bytes:
         language = validate_language(language)
+        if paper not in WIKIPEDIA_PDF_PAPERS.values():
+            raise ValueError("Format de PDF Wikipédia invalide.")
         if self._client is None:
             raise RuntimeError("MediaWikiClient doit être utilisé dans un bloc async with.")
         page_path = quote(title.replace(" ", "_"), safe="")
-        url = f"https://{language}.wikipedia.org/api/rest_v1/page/pdf/{page_path}"
+        url = f"https://{language}.wikipedia.org/api/rest_v1/page/pdf/{page_path}/{paper}"
         try:
             response = await self._client.get(url, timeout=120)
             response.raise_for_status()

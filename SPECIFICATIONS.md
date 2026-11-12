@@ -245,7 +245,7 @@ Dans l'étape Organisation, l'utilisateur peut aussi importer ses propres fichie
 
 ## 7\. Récupération du contenu Wikipédia
 
-L'ajout et l'exploration ne téléchargent pas le contenu complet des pages. Au moment de générer le PDF, chaque article sélectionné est récupéré via l'endpoint PDF officiel de Wikimedia (`/api/rest_v1/page/pdf/{titre}`), équivalent à la fonction « Télécharger comme PDF » de Wikipédia.
+L'ajout et l'exploration ne téléchargent pas le contenu complet des pages. Au moment de générer le PDF, chaque article sélectionné est récupéré via l'endpoint PDF officiel de Wikimedia (`/api/rest_v1/page/pdf/{titre}/{format}`), équivalent à la fonction « Télécharger comme PDF » de Wikipédia. Wikipédia ne compose ses PDF qu'en trois formats (`a4`, `letter`, `legal`, toujours en portrait) : le logiciel demande `letter` pour un livre au format Letter, `legal` pour un livre au format Legal, et `a4` pour tous les autres formats (A0 à A6, personnalisé). Pour Letter et Legal, les pages des articles sont donc composées par Wikipédia directement au bon format, sans marges blanches dues à un changement de proportions.
 
 Le contenu de chaque article (texte, structure, images, références) n'est jamais reconstruit : c'est exactement celui du PDF officiel Wikipédia. Seule sa mise en page physique change : chaque page est recomposée (mise à l'échelle et centrée, sans déformation) sur le format et l'orientation choisis pour le livre — voir section 10.1.
 
@@ -495,7 +495,7 @@ Le logiciel utilise les interfaces officielles de MediaWiki pour :
 
 * Récupérer le résumé introductif et l'auteur de la création d'un article (`prop=extracts&exintro=1` et `prop=revisions&rvdir=newer&rvlimit=1`), pour la proposition automatique d'introduction et d'auteur (section 3.3).
 
-* Télécharger le PDF officiel de chaque article sélectionné, au moment de l'export (`/api/rest_v1/page/pdf/{titre}`).
+* Télécharger le PDF officiel de chaque article sélectionné, au moment de l'export (`/api/rest_v1/page/pdf/{titre}/{format}`, `format` = `a4`, `letter` ou `legal` selon le format du livre — section 7).
 
 Chaque requête utilise un en-tête `User-Agent` dédié; les délais d'attente sont bornés (20 secondes pour les appels à l'API, 120 secondes pour le téléchargement d'un PDF).
 
@@ -848,5 +848,6 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 1.2.0   | 2026-11-12 | Toolforge ne se déploie plus à chaque push sur `main` mais sur la branche `production-toolforge` (`git push origin main:production-toolforge`); `main` et les pull requests lancent seulement les tests. Railway et Northflank suivent toujours `main` (section 13.5). |
 | 1.2.1   | 2026-11-12 | Documentation : la section 13 décrit désormais l'ensemble du système de déploiement (13.4 exécution locale, 13.5 environnements et branches, 13.6 intégration continue, 13.7 Toolforge). |
 | 1.3.0   | 2026-11-12 | Import et génération depuis une page de livre Wikipédia : le sous-titre (ligne `=== … ===`) et les chapitres (lignes `;`) de la page sont repris, dans l'interface comme dans `/api/books/generate-from-wikipedia-book`. Nouvel endpoint `POST /api/books/structure` (articles, sous-titre, chapitres) utilisé par l'interface; `POST /api/books/import` inchangé. L'ordre de la page de livre est conservé : les articles placés avant le premier chapitre restent en tête du livre, sans page de chapitre (nouveau réglage `unassigned_first`, section 3.1). |
+| 1.4.0   | 2026-11-12 | Le PDF officiel de chaque article est demandé à Wikipédia au format du livre quand il le propose : `letter` pour un livre Letter, `legal` pour un livre Legal, `a4` sinon (auparavant toujours A4, puis remis à l'échelle). |
 
 Fin du document — Wikipedia2Book, spécifications version 1.1.

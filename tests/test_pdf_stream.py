@@ -40,7 +40,10 @@ class FakeClient:
     async def __aexit__(self, *exc):
         return False
 
-    async def get_article_pdf(self, title, language):
+    papers = []
+
+    async def get_article_pdf(self, title, language, paper):
+        FakeClient.papers.append(paper)
         if FakeClient.fail:
             raise MediaWikiError(f"PDF indisponible pour {title}")
         return _make_pdf(2)
@@ -65,7 +68,8 @@ def _project(**extra):
 class PdfStreamTest(unittest.TestCase):
     def setUp(self):
         FakeClient.fail = False
-        FakeClient.book = WikipediaBook(subtitle="", chapters=[("", ["Chien", "Chat"])])
+        FakeClient.papers = []
+        FakeClient.book =WikipediaBook(subtitle="", chapters=[("", ["Chien", "Chat"])])
         self.patches = [
             patch.object(main, "MediaWikiClient", FakeClient),
             patch.object(main, "generate_pdf", lambda html: _make_pdf(1)),
@@ -243,6 +247,13 @@ class PdfStreamTest(unittest.TestCase):
         FakeClient.book = WikipediaBook(subtitle="", chapters=[("Félidés", ["Chat"])])
         response = self.client.post("/api/books/structure", json={"url": "https://fr.wikipedia.org/wiki/Livre:Animaux"})
         self.assertFalse(response.json()["unassigned_first"])
+
+    def test_wikipedia_pdf_paper_follows_the_book_format(self):
+        for page_format, paper in (("A4", "a4"), ("Letter", "letter"), ("Legal", "legal"), ("A5", "a4"), ("custom", "a4")):
+            FakeClient.papers = []
+            response = self.client.post("/api/pdf", json=_project(page_format=page_format, page_numbers=False))
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(FakeClient.papers, [paper, paper])
 
     def test_explicit_subtitle_replaces_the_book_subtitle(self):
         FakeClient.book = WikipediaBook(subtitle="Petit guide", chapters=[("", ["Chien"])])
