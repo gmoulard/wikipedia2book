@@ -655,7 +655,7 @@ Le secret `TOOLFORGE_SSH_KEY` contient une clé privée OpenSSH dédiée au dép
 
 Le second, `.github/workflows/toolviews-stats.yml` (« Toolviews stats »), met à jour chaque jour les statistiques d'utilisation (section 13.8).
 
-Le troisième, `.github/workflows/jekyll-gh-pages.yml`, publie à chaque push sur `main` (et sur lancement manuel) le site de documentation https://gmoulard.github.io/wikipedia2book/ avec GitHub Pages : Jekyll y convertit en HTML les fichiers Markdown de la racine du dépôt (`README.md` en page d'accueil, `SPECIFICATIONS.md` et `SPECIFICATIONS.en.md` en pages). C'est l'adresse déclarée comme documentation utilisateur dans `toolinfo.json`.
+Le troisième, `.github/workflows/jekyll-gh-pages.yml`, publie à chaque push sur `main` (et sur lancement manuel) le site de documentation https://gmoulard.github.io/wikipedia2book/ avec GitHub Pages : Jekyll y convertit en HTML les fichiers Markdown de la racine du dépôt (`README.md` en page d'accueil, `SPECIFICATIONS.fr.md` et `SPECIFICATIONS.en.md` en pages). C'est l'adresse déclarée comme documentation utilisateur dans `toolinfo.json`.
 
 ### 13.7 Toolforge
 
@@ -949,7 +949,7 @@ Wikipedia2Book/
 ├── CLAUDE.md
 ├── LICENSE
 ├── README.md
-├── SPECIFICATIONS.md
+├── SPECIFICATIONS.fr.md
 └── SPECIFICATIONS.en.md
 ```
 

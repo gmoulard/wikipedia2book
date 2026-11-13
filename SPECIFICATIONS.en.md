@@ -2,7 +2,7 @@
 
 Version: 1.1 — Status: aligned with the current implementation — Format: Markdown (`.md`)
 
-This is the English translation of [SPECIFICATIONS.md](SPECIFICATIONS.md). The French document is the reference: if the two ever differ, the French version prevails. Interface labels are quoted as they appear in the English interface.
+This is the English translation of [SPECIFICATIONS.fr.md](SPECIFICATIONS.fr.md). The French document is the reference: if the two ever differ, the French version prevails. Interface labels are quoted as they appear in the English interface.
 
 ## Table of contents
 
@@ -655,7 +655,7 @@ The `TOOLFORGE_SSH_KEY` secret contains an OpenSSH private key dedicated to depl
 
 The second, `.github/workflows/toolviews-stats.yml` ("Toolviews stats"), updates the usage statistics every day (section 13.8).
 
-The third, `.github/workflows/jekyll-gh-pages.yml`, publishes on every push to `main` (and on manual start) the documentation site https://gmoulard.github.io/wikipedia2book/ with GitHub Pages: Jekyll converts the Markdown files at the root of the repository to HTML (`README.md` as the home page, `SPECIFICATIONS.md` and `SPECIFICATIONS.en.md` as pages). This is the address declared as user documentation in `toolinfo.json`.
+The third, `.github/workflows/jekyll-gh-pages.yml`, publishes on every push to `main` (and on manual start) the documentation site https://gmoulard.github.io/wikipedia2book/ with GitHub Pages: Jekyll converts the Markdown files at the root of the repository to HTML (`README.md` as the home page, `SPECIFICATIONS.fr.md` and `SPECIFICATIONS.en.md` as pages). This is the address declared as user documentation in `toolinfo.json`.
 
 ### 13.7 Toolforge
 
@@ -949,7 +949,7 @@ Wikipedia2Book/
 ├── CLAUDE.md
 ├── LICENSE
 ├── README.md
-├── SPECIFICATIONS.md
+├── SPECIFICATIONS.fr.md
 └── SPECIFICATIONS.en.md
 ```
 

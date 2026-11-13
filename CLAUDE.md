@@ -4,7 +4,7 @@ Instructions pour Claude Code (ou tout agent) travaillant sur ce dépôt.
 
 ## Le projet
 
-Wikipedia2Book crée directement un livre PDF imprimable à partir d'articles Wikipédia — il n'y a pas de notion de « projet » dans l'UI ni dans la doc produit (un seul livre, en mémoire, dès l'ouverture de la page). Le comportement de référence est documenté dans [SPECIFICATIONS.md](SPECIFICATIONS.md) : le lire avant toute modification fonctionnelle, et le mettre à jour dans le même changement si le comportement bouge. Ne jamais laisser la spec décrire une fonctionnalité qui n'existe pas dans le code, ni l'inverse.
+Wikipedia2Book crée directement un livre PDF imprimable à partir d'articles Wikipédia — il n'y a pas de notion de « projet » dans l'UI ni dans la doc produit (un seul livre, en mémoire, dès l'ouverture de la page). Le comportement de référence est documenté dans [SPECIFICATIONS.fr.md](SPECIFICATIONS.fr.md) : le lire avant toute modification fonctionnelle, et le mettre à jour dans le même changement si le comportement bouge. Ne jamais laisser la spec décrire une fonctionnalité qui n'existe pas dans le code, ni l'inverse.
 
 ## Principes de conception à préserver
 
@@ -25,9 +25,9 @@ Personne ne lit ce code. En conséquence :
 
 ## Documentation à garder synchronisée
 
-- `SPECIFICATIONS.md` : reflète le comportement réel, pas un objectif futur. Les évolutions non implémentées vont en section 18, pas dans le corps du document.
-- `SPECIFICATIONS.en.md` : traduction anglaise de `SPECIFICATIONS.md`, même structure (sections, sous-sections, lignes d'historique). Toute modification de `SPECIFICATIONS.md` est reportée dans la version anglaise dans le même changement; en cas d'écart, le français fait référence. Libellés d'interface cités tels qu'ils apparaissent dans l'interface anglaise (`i18n.js`, bloc `en`).
-- `README.md` : doit rester cohérent avec `SPECIFICATIONS.md` (pas de doublon contradictoire, même terminologie).
+- `SPECIFICATIONS.fr.md` : reflète le comportement réel, pas un objectif futur. Les évolutions non implémentées vont en section 18, pas dans le corps du document.
+- `SPECIFICATIONS.en.md` : traduction anglaise de `SPECIFICATIONS.fr.md`, même structure (sections, sous-sections, lignes d'historique). Toute modification de `SPECIFICATIONS.fr.md` est reportée dans la version anglaise dans le même changement; en cas d'écart, le français fait référence. Libellés d'interface cités tels qu'ils apparaissent dans l'interface anglaise (`i18n.js`, bloc `en`).
+- `README.md` : doit rester cohérent avec `SPECIFICATIONS.fr.md` (pas de doublon contradictoire, même terminologie).
 
 ## Repères d'architecture
 
@@ -48,7 +48,7 @@ Les boutons « Générer le PDF » (`#topExportButton`, `#exportButton`) ne sont
 
 Pas de `docker-compose.yml` dans ce dépôt : build/run via `Dockerfile` + `docker-build.sh` (injecte commit/date/auteur git pour le pied de page). Ne pas réintroduire Compose sans raison explicite de l'utilisateur.
 
-Système de déploiement complet décrit dans `SPECIFICATIONS.md` sections 13.5 à 13.7. En bref : Railway et Northflank suivent `main` (`Dockerfile`); Toolforge suit la branche `production-toolforge` (buildpacks : `Procfile`, `Aptfile`, `.python-version`, `toolforge-fonts.conf`), déployée par `.github/workflows/deploy-toolforge.yml` + `toolforge-deploy.sh`. Un push sur `main` ne déploie donc jamais Toolforge : ne pousser vers `production-toolforge` (`git push origin main:production-toolforge`) que sur demande explicite de l'utilisateur. Toute dépendance système ajoutée au `Dockerfile` doit l'être aussi dans l'`Aptfile`. `.github/workflows/toolviews-stats.yml` committe chaque jour `toolviews.csv` sur la branche `stats`, jamais sur `main` (sinon Railway/Northflank redéploieraient tous les jours) : ne pas fusionner `stats` dans `main`.
+Système de déploiement complet décrit dans `SPECIFICATIONS.fr.md` sections 13.5 à 13.7. En bref : Railway et Northflank suivent `main` (`Dockerfile`); Toolforge suit la branche `production-toolforge` (buildpacks : `Procfile`, `Aptfile`, `.python-version`, `toolforge-fonts.conf`), déployée par `.github/workflows/deploy-toolforge.yml` + `toolforge-deploy.sh`. Un push sur `main` ne déploie donc jamais Toolforge : ne pousser vers `production-toolforge` (`git push origin main:production-toolforge`) que sur demande explicite de l'utilisateur. Toute dépendance système ajoutée au `Dockerfile` doit l'être aussi dans l'`Aptfile`. `.github/workflows/toolviews-stats.yml` committe chaque jour `toolviews.csv` sur la branche `stats`, jamais sur `main` (sinon Railway/Northflank redéploieraient tous les jours) : ne pas fusionner `stats` dans `main`.
 
 ## Versionnement
 
@@ -60,7 +60,7 @@ Chaque génération/modification de code par un agent doit incrémenter le numé
 
 Ne jamais terminer une génération de code sans ce bump, même minime. Exception : les outils annexes qui ne font pas partie de l'application déployée (ex. `scripts/toolviews_stats.py`) ne changent pas la version et n'ont pas de ligne dans l'historique de la section 19.
 
-Ajouter la nouvelle version dans le tableau de la section 19 de `SPECIFICATIONS.md` (« Historique des versions »), avec la date et un résumé court des modifications — dans le même changement, pas après coup.
+Ajouter la nouvelle version dans le tableau de la section 19 de `SPECIFICATIONS.fr.md` (« Historique des versions »), avec la date et un résumé court des modifications — dans le même changement, pas après coup.
 
 ## Vérification avant de considérer une tâche terminée
 

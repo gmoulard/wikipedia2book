@@ -25,7 +25,7 @@ Wikipedia2Book is a web application for composing a printable PDF book directly 
 - WeasyPrint for the cover, chapter pages, license page (CC BY-SA 4.0, with article sources) and conclusion; pypdf to merge PDFs in memory; reportlab for page numbers and for converting imported images to PDF.
 - Docker for deployment.
 
-Functional and technical details are described in [SPECIFICATIONS.en.md](SPECIFICATIONS.en.md) (English translation) and [SPECIFICATIONS.md](SPECIFICATIONS.md) (French, the reference version).
+Functional and technical details are described in [SPECIFICATIONS.en.md](SPECIFICATIONS.en.md) (English translation) and [SPECIFICATIONS.fr.md](SPECIFICATIONS.fr.md) (French, the reference version).
 
 ## Project status
 
