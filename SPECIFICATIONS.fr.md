@@ -979,7 +979,7 @@ Toute évolution doit préserver les principes fondamentaux du logiciel, notamme
 
 ## 19\. Historique des versions
 
-Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l'application — voir section 12). Mis à jour à chaque génération de code, selon la règle définie dans `CLAUDE.md`.
+Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l'application — voir section 12). Incrémenté sur décision de l'utilisateur avant chaque commit (patch, minor ou major), selon la règle définie dans `CLAUDE.md`.
 
 | Version | Date       | Modifications apportées |
 | ------- | ---------- | ------------------------ |

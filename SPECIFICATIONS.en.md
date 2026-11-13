@@ -979,7 +979,7 @@ Any development must preserve the core principles of the software, in particular
 
 ## 19\. Version history
 
-Application version number (`app/main.py`, shown in the application's footer — see section 12). Updated with every code generation, following the rule defined in `CLAUDE.md`.
+Application version number (`app/main.py`, shown in the application's footer — see section 12). Incremented on the user's decision before each commit (patch, minor or major), following the rule defined in `CLAUDE.md`.
 
 | Version | Date       | Changes |
 | ------- | ---------- | ------- |

@@ -52,15 +52,15 @@ Système de déploiement complet décrit dans `SPECIFICATIONS.fr.md` sections 13
 
 ## Versionnement
 
-Chaque génération/modification de code par un agent doit incrémenter le numéro de version de l'application, dans `app/main.py` (`FastAPI(version="x.y.z")`) :
+Le numéro de version de l'application est dans `app/main.py` (`FastAPI(version="x.y.z")`). Avant chaque commit, **demander à l'utilisateur** s'il veut l'incrémenter, en proposant le niveau qui paraît adapté (ou aucun) :
 
 - Patch (x.y.**Z**) : corrections, nettoyage, petits ajustements.
 - Minor (x.**Y**.0) : nouvelle fonctionnalité ou changement de comportement visible.
 - Major (**X**.0.0) : rupture de compatibilité (ex. format JSON exporté, API publique).
 
-Ne jamais terminer une génération de code sans ce bump, même minime. Exception : les outils annexes qui ne font pas partie de l'application déployée (ex. `scripts/toolviews_stats.py`) ne changent pas la version et n'ont pas de ligne dans l'historique de la section 19.
+Ne jamais incrémenter d'office : préparer les modifications sans toucher à la version, poser la question au moment de committer, et n'appliquer le bump qu'après sa réponse. Les outils annexes qui ne font pas partie de l'application déployée (ex. `scripts/toolviews_stats.py`) et les changements de documentation seule ne justifient en principe pas de nouvelle version.
 
-Ajouter la nouvelle version dans le tableau de la section 19 de `SPECIFICATIONS.fr.md` (« Historique des versions »), avec la date et un résumé court des modifications — dans le même changement, pas après coup.
+Quand la version est incrémentée, ajouter la nouvelle version dans le tableau de la section 19 de `SPECIFICATIONS.fr.md` et de `SPECIFICATIONS.en.md` (« Historique des versions » / « Version history »), avec la date et un résumé court des modifications — dans le même commit, pas après coup.
 
 ## Vérification avant de considérer une tâche terminée
 
