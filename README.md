@@ -1,5 +1,7 @@
 # Wikipedia2Book
 
+<p align="center"><img src="app/static/Wikipedia2bookLogo.png" alt="Wikipedia2Book logo" width="180"></p>
+
 
 Wikipedia2Book is a web application for composing a printable PDF book directly from Wikipedia articles, with no "project" creation step: a book is ready as soon as the page opens. The user picks articles, explores related links, organizes the content into chapters and configures the layout before exporting.
 
