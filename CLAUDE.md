@@ -26,6 +26,7 @@ Personne ne lit ce code. En conséquence :
 ## Documentation à garder synchronisée
 
 - `SPECIFICATIONS.fr.md` : reflète le comportement réel, pas un objectif futur. Les évolutions non implémentées vont en section 18, pas dans le corps du document.
+- Section 13.10 des deux spécifications : schémas Mermaid des modules et de la génération du PDF, à mettre à jour quand un module, un endpoint ou une étape de génération change. Sur GitHub Pages, ils sont dessinés par `_includes/head-custom.html` (Mermaid chargé depuis jsDelivr, version épinglée).
 - `SPECIFICATIONS.en.md` : traduction anglaise de `SPECIFICATIONS.fr.md`, même structure (sections, sous-sections, lignes d'historique). Toute modification de `SPECIFICATIONS.fr.md` est reportée dans la version anglaise dans le même changement; en cas d'écart, le français fait référence. Libellés d'interface cités tels qu'ils apparaissent dans l'interface anglaise (`i18n.js`, bloc `en`).
 - `README.md` : doit rester cohérent avec `SPECIFICATIONS.fr.md` (pas de doublon contradictoire, même terminologie).
 

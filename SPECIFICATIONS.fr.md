@@ -48,6 +48,7 @@ Traduction anglaise : [SPECIFICATIONS.en.md](SPECIFICATIONS.en.md). Ce document 
   - [13.7 Toolforge](#137-toolforge)
   - [13.8 Statistiques d'utilisation (Toolviews)](#138-statistiques-dutilisation-toolviews)
   - [13.9 Modèle de données et fichier de sauvegarde](#139-mod%C3%A8le-de-donn%C3%A9es-et-fichier-de-sauvegarde)
+  - [13.10 Schémas de l'architecture](#1310-sch%C3%A9mas-de-larchitecture)
 - [14. Sécurité et robustesse](#14-s%C3%A9curit%C3%A9-et-robustesse)
 - [15. Respect des licences Wikipédia](#15-respect-des-licences-wikip%C3%A9dia)
 - [16. Critères d'acceptation](#16-crit%C3%A8res-dacceptation)
@@ -655,7 +656,7 @@ Le secret `TOOLFORGE_SSH_KEY` contient une clé privée OpenSSH dédiée au dép
 
 Le second, `.github/workflows/toolviews-stats.yml` (« Toolviews stats »), met à jour chaque jour les statistiques d'utilisation (section 13.8).
 
-Le troisième, `.github/workflows/jekyll-gh-pages.yml`, publie à chaque push sur `main` (et sur lancement manuel) le site de documentation https://gmoulard.github.io/wikipedia2book/ avec GitHub Pages : Jekyll y convertit en HTML les fichiers Markdown de la racine du dépôt (`README.md` en page d'accueil, `SPECIFICATIONS.fr.md` et `SPECIFICATIONS.en.md` en pages). C'est l'adresse déclarée comme documentation utilisateur dans `toolinfo.json`.
+Le troisième, `.github/workflows/jekyll-gh-pages.yml`, publie à chaque push sur `main` (et sur lancement manuel) le site de documentation https://gmoulard.github.io/wikipedia2book/ avec GitHub Pages : Jekyll y convertit en HTML les fichiers Markdown de la racine du dépôt (`README.md` en page d'accueil, `SPECIFICATIONS.fr.md` et `SPECIFICATIONS.en.md` en pages). C'est l'adresse déclarée comme documentation utilisateur dans `toolinfo.json`. GitHub Pages n'affiche pas les blocs Mermaid nativement : `_includes/head-custom.html`, ajouté par Jekyll dans l'en-tête de chaque page (thème par défaut), charge Mermaid 11.4.1 depuis jsDelivr et dessine les blocs ```` ```mermaid ```` (section 13.10).
 
 ### 13.7 Toolforge
 
@@ -823,6 +824,76 @@ Clé d'un article : `<langue>:<page_id>`, ou `<langue>:title:<titre en minuscule
 | `title` | texte | 1 à 120 caractères |
 | `article_keys` | liste de clés | articles et documents du chapitre, dans l'ordre |
 
+### 13.10 Schémas de l'architecture
+
+Schémas Mermaid, affichés directement par GitHub et, sur le site de documentation, par le script `_includes/head-custom.html` (section 13.6). Ils doivent être mis à jour quand un module, un endpoint ou une étape de génération change.
+
+#### Modules et dépendances
+
+```mermaid
+flowchart LR
+    subgraph Browser["Navigateur (état du livre : state.project)"]
+        HTML["index.html"]
+        I18N["i18n.js<br/>I18N, t(), setLanguage()<br/>applyTranslations() (lang/dir)"]
+        APP["app.js<br/>Sources · Organisation · Édition<br/>buildOrgSlots / tocSlotIndex<br/>exportWorkspace / importWorkspace<br/>streamPdf()"]
+        HTML --> I18N --> APP
+    end
+
+    subgraph Server["Serveur FastAPI sans état (app/)"]
+        MAIN["main.py<br/>endpoints /api/*<br/>build_book_pdf() (générateur async)"]
+        MODELS["models.py<br/>Project · Article · UploadedDocument<br/>BookChapter · requêtes Pydantic"]
+        WAPI["wikipedia_api.py<br/>MediaWikiClient : search · get_page<br/>get_links · get_book · get_intro_and_creator<br/>get_article_pdf"]
+        EXPL["explorer.py<br/>discover_related_articles() (profondeur ≤ 3, ≤ 200 articles)"]
+        BB["book_builder.py<br/>ordered_article_groups · book_slots · toc_slot_index<br/>build_cover / toc / chapter / license / conclusion_html<br/>PDF_LABELS"]
+        PDFG["pdf_generator.py<br/>generate_pdf (WeasyPrint)<br/>fit_pdf_to_format (pypdf)<br/>stamp_page_numbers · image_to_pdf (reportlab)"]
+    end
+
+    subgraph Wikimedia["Wikipédia / Wikimedia"]
+        MW["API MediaWiki<br/>action=query · action=parse"]
+        REST["REST page/pdf<br/>a4 · letter · legal"]
+    end
+
+    APP -- "JSON (fetch)" --> MAIN
+    APP -- "NDJSON /api/pdf/stream" --> MAIN
+    APP -. "fichier .json (Enregistrer / Ouvrir)" .-> APP
+    MAIN --> MODELS
+    MAIN --> WAPI
+    MAIN --> EXPL
+    MAIN --> BB
+    MAIN --> PDFG
+    EXPL --> WAPI
+    BB --> MODELS
+    WAPI --> MW
+    WAPI --> REST
+```
+
+#### Génération du PDF (`POST /api/pdf/stream`)
+
+```mermaid
+sequenceDiagram
+    participant U as app.js
+    participant M as main.build_book_pdf
+    participant W as MediaWikiClient
+    participant B as book_builder
+    participant P as pdf_generator
+
+    U->>M: POST /api/pdf/stream?language=xx (Project)
+    M-->>U: 400 si la sélection est vide
+    loop chaque article ou document sélectionné
+        M->>W: get_article_pdf(titre, a4 / letter / legal)
+        W-->>M: PDF officiel
+        M-->>U: progress (step, total, code, title)
+    end
+    M->>B: ordered_article_groups · book_slots · toc_slot_index
+    M->>B: build_cover_html · build_toc_html (numéros de page)
+    B->>P: generate_pdf (WeasyPrint)
+    loop chaque PDF ajouté (couverture, table des matières, chapitres, articles, licence, conclusion)
+        M->>P: fit_pdf_to_format (format et orientation du livre)
+    end
+    M->>P: stamp_page_numbers (si activé)
+    M-->>U: done (pdf_base64) ou error (detail)
+```
+
 ## 14\. Sécurité et robustesse
 
 Le logiciel met en œuvre aujourd'hui :
@@ -944,6 +1015,7 @@ Wikipedia2Book/
 ├── .github/workflows/deploy-toolforge.yml
 ├── .github/workflows/toolviews-stats.yml
 ├── .github/workflows/jekyll-gh-pages.yml
+├── _includes/head-custom.html
 ├── requirements.txt
 ├── .gitignore
 ├── CLAUDE.md
