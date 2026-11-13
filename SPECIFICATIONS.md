@@ -816,14 +816,21 @@ Wikipedia2Book/
 ├── toolforge-fonts.conf
 ├── toolforge-deploy.sh
 ├── toolinfo.json
+├── CITATION.cff
+├── codemeta.json
 ├── .github/workflows/deploy-toolforge.yml
 ├── .github/workflows/toolviews-stats.yml
+├── .github/workflows/jekyll-gh-pages.yml
 ├── requirements.txt
 ├── .gitignore
 ├── CLAUDE.md
+├── CODE_OF_CONDUCT.md
+├── LICENSE
 ├── README.md
 └── SPECIFICATIONS.md
 ```
+
+Chaque fichier de code (`.py`, `.js`, `.css`, `index.html`, scripts shell, `Dockerfile`, workflows GitHub Actions) commence par un en-tête de licence AGPL-3.0 (projet, dépôt, copyright, version 3 de la licence). `CITATION.cff` et `codemeta.json` décrivent la version archivée sur Software Heritage (v1.6.4, SWHID `swh:1:dir:9c7c016d9603a4b0201ad64535767a353031bd91`) ; `CODE_OF_CONDUCT.md` renvoie au code de conduite MediaWiki.
 
 ## 18\. État d'avancement et évolutions futures
 
@@ -897,5 +904,6 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 1.6.2   | 2026-11-13 | Ajout de `toolinfo.json` (fiche Toolhub de l'outil Toolforge, section 13.7). |
 | 1.6.3   | 2026-11-13 | `toolinfo.json` complété (compte Wikimédia de l'auteur, documentation utilisateur, lien de retour) et rendu conforme au schéma Toolhub (`keywords` en chaîne, `$schema` invalide retiré). |
 | 1.6.4   | 2026-11-13 | Commentaires `NE PAS …` d'une ligne au-dessus des pièges connus du code (ordre des liens Wikipédia, alignement Python/JS de l'organisation et de la table des matières, avertissement pypdf, boutons d'export, couleurs fixes, langues) pour les agents qui modifient le code; aucun changement de comportement. |
+| 1.6.5   | 2026-11-13 | En-tête de licence AGPL-3.0 dans tous les fichiers de code, ajout de `CODE_OF_CONDUCT.md`, `CITATION.cff` et `codemeta.json` (version archivée sur Software Heritage), badges et structure du projet dans le README; aucun changement de comportement. |
 
 Fin du document — Wikipedia2Book, spécifications version 1.1.
