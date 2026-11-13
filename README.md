@@ -25,7 +25,7 @@ Wikipedia2Book is a web application for composing a printable PDF book directly 
 - WeasyPrint for the cover, chapter pages, license page (CC BY-SA 4.0, with article sources) and conclusion; pypdf to merge PDFs in memory; reportlab for page numbers and for converting imported images to PDF.
 - Docker for deployment.
 
-Functional and technical details are described in [SPECIFICATIONS.md](SPECIFICATIONS.md) (in French).
+Functional and technical details are described in [SPECIFICATIONS.en.md](SPECIFICATIONS.en.md) (English translation) and [SPECIFICATIONS.fr.md](SPECIFICATIONS.fr.md) (French, the reference version).
 
 ## Project structure
 
@@ -56,7 +56,8 @@ wikipedia2book/
 ├── CITATION.cff                 # Citation metadata
 ├── codemeta.json                # CodeMeta software metadata
 ├── requirements.txt             # Python dependencies
-├── SPECIFICATIONS.md            # Reference behaviour (in French)
+├── SPECIFICATIONS.fr.md         # Reference behaviour (French original)
+├── SPECIFICATIONS.en.md         # English translation of the specifications
 ├── CODE_OF_CONDUCT.md
 └── LICENSE                      # GNU AGPL v3.0
 ```
@@ -92,8 +93,6 @@ The application is then reachable at `http://localhost:8000`.
 ## Deployment Toolforge
 - [web app](https://wikipedia2book.toolforge.org)
 - [API](https://wikipedia2book.toolforge.org/docs)
-- [toolinfo.json](toolinfo.json) (Toolhub metadata)
-- Usage statistics: `python scripts/toolviews_stats.py` appends the daily [Toolviews](https://toolviews.toolforge.org/api/) hits and unique visitors since 2026-11-01 to `toolviews.csv` (missing days only); the `Toolviews stats` GitHub Actions workflow runs it daily and commits the file to the [`stats` branch](https://github.com/gmoulard/wikipedia2book/blob/stats/toolviews.csv)
 
 ## dev
 - [Northflank](https://prod--wikipedia2book--wkvpbnfj6h4v.code.run) 

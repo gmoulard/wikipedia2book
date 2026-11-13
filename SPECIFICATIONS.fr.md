@@ -2,9 +2,13 @@
 
 Version : 1.1 — Statut : aligné sur l'implémentation actuelle — Format : Markdown (`.md`)
 
+Traduction anglaise : [SPECIFICATIONS.en.md](SPECIFICATIONS.en.md). Ce document en français fait référence.
+
 ## Table des matières
 
 - [1. Présentation de Wikipedia2Book](#1-pr%C3%A9sentation-de-wikipedia2book)
+  - [1.1 Objectif](#11-objectif)
+  - [1.2 Principes fondamentaux](#12-principes-fondamentaux)
 - [2. Le livre en mémoire et sa sauvegarde](#2-le-livre-en-m%C3%A9moire-et-sa-sauvegarde)
 - [3. Ajout des articles](#3-ajout-des-articles)
   - [3.1 Méthodes d'ajout](#31-m%C3%A9thodes-dajout)
@@ -12,21 +16,28 @@ Version : 1.1 — Statut : aligné sur l'implémentation actuelle — Format : M
   - [3.3 Introduction et auteur proposés automatiquement](#33-introduction-et-auteur-propos%C3%A9s-automatiquement)
 - [4. Exploration des articles liés](#4-exploration-des-articles-li%C3%A9s)
   - [4.1 Principe](#41-principe)
-  - [4.2 Profondeur d'exploration](#42-profondeur-dexploitation)
+  - [4.2 Profondeur d'exploration](#42-profondeur-dexploration)
   - [4.3 Résultats de l'exploration](#43-r%C3%A9sultats-de-lexploration)
-  - [4.4 Limites de l'exploration](#44-limites-de-lexploration)
+  - [4.4 Lancer l'exploration](#44-lancer-lexploration)
 - [5. Sélection des articles](#5-s%C3%A9lection-des-articles)
 - [6. Organisation du livre](#6-organisation-du-livre)
-  - [6.1 Documents importés](#61-documents-import%C3%A9s)
+  - [6.1 Documents importés (images et PDF)](#61-documents-import%C3%A9s-images-et-pdf)
 - [7. Récupération du contenu Wikipédia](#7-r%C3%A9cup%C3%A9ration-du-contenu-wikip%C3%A9dia)
-- [8. Filtres et recherche](#8-filtres-et-recherche)
-- [9. Génération du livre et export JSON](#9-g%C3%A9n%C3%A9ration-du-livre-et-export-json)
+- [8. Références, images et licences](#8-r%C3%A9f%C3%A9rences-images-et-licences)
+- [9. Paramétrage du format du livre](#9-param%C3%A9trage-du-format-du-livre)
+  - [9.1 Formats standards](#91-formats-standards)
+  - [9.2 Format personnalisé](#92-format-personnalis%C3%A9)
+  - [9.3 Orientation](#93-orientation)
+  - [9.4 Marges](#94-marges)
 - [10. Mise en page du livre](#10-mise-en-page-du-livre)
+  - [10.1 Format et orientation, appliqués à toutes les pages](#101-format-et-orientation-appliqu%C3%A9s-%C3%A0-toutes-les-pages)
+  - [10.2 Numérotation des pages](#102-num%C3%A9rotation-des-pages)
 - [11. Génération du PDF](#11-g%C3%A9n%C3%A9ration-du-pdf)
   - [11.1 Déroulement](#111-d%C3%A9roulement)
   - [11.2 Résultat](#112-r%C3%A9sultat)
   - [11.3 Gestion des erreurs](#113-gestion-des-erreurs)
 - [12. Interface utilisateur](#12-interface-utilisateur)
+  - [12.1 Langues de l'interface](#121-langues-de-linterface)
 - [13. Architecture technique](#13-architecture-technique)
   - [13.1 Technologies](#131-technologies)
   - [13.2 API Wikipédia](#132-api-wikip%C3%A9dia)
@@ -35,6 +46,8 @@ Version : 1.1 — Statut : aligné sur l'implémentation actuelle — Format : M
   - [13.5 Environnements et branches](#135-environnements-et-branches)
   - [13.6 Intégration continue (GitHub Actions)](#136-int%C3%A9gration-continue-github-actions)
   - [13.7 Toolforge](#137-toolforge)
+  - [13.8 Statistiques d'utilisation (Toolviews)](#138-statistiques-dutilisation-toolviews)
+  - [13.9 Modèle de données et fichier de sauvegarde](#139-mod%C3%A8le-de-donn%C3%A9es-et-fichier-de-sauvegarde)
 - [14. Sécurité et robustesse](#14-s%C3%A9curit%C3%A9-et-robustesse)
 - [15. Respect des licences Wikipédia](#15-respect-des-licences-wikip%C3%A9dia)
 - [16. Critères d'acceptation](#16-crit%C3%A8res-dacceptation)
@@ -58,7 +71,7 @@ Le logiciel fonctionne sur toutes les plateformes grâce à une architecture Pyt
 
 * Plusieurs articles principaux peuvent être ajoutés à un même livre.
 
-* L'exploration des liens Wikipédia est paramétrable (profondeur, nombre maximal d'articles).
+* L'exploration des liens Wikipédia part d'un article choisi par l'utilisateur (profondeur et nombre maximal d'articles réglables par l'API).
 
 * Aucun article découvert n'est ajouté automatiquement au livre.
 
@@ -95,6 +108,8 @@ Le livre contient notamment :
 * Les paramètres de mise en page.
 
 * Les informations de couverture (titre, sous-titre, auteur, introduction, conclusion).
+
+Le modèle de données complet et le format du fichier JSON sont décrits en section 13.9.
 
 ## 3\. Ajout des articles
 
@@ -142,7 +157,7 @@ L'utilisateur peut supprimer un article principal sans affecter les autres.
 
 ### 3.3 Introduction et auteur proposés automatiquement
 
-Quand le tout premier article principal du livre est ajouté (y compris le premier article d'une page de livre importée, section 3.1), le logiciel propose automatiquement, dans l'étape Édition (section 11) :
+Quand le tout premier article principal du livre est ajouté (y compris le premier article d'une page de livre importée, section 3.1), le logiciel propose automatiquement, dans l'étape Édition (section 12) :
 
 * L'introduction du livre, à partir du résumé introductif de cet article sur Wikipédia.
 
@@ -487,12 +502,12 @@ Cette langue d'interface est indépendante de la langue des articles Wikipédia 
 | Langage           | Python 3.12                                                   |
 | Backend           | FastAPI + Uvicorn                                             |
 | Client HTTP       | httpx (appels à l'API MediaWiki et à l'endpoint PDF)          |
-| Analyse HTML      | BeautifulSoup4 (extraits de recherche)                        |
+| Analyse HTML      | BeautifulSoup4 (extraits de recherche, liens des articles rendus) |
 | Interface         | HTML, CSS, JavaScript (page unique, sans framework)           |
 | Internationalisation | Dictionnaire JavaScript interne (`i18n.js`), FR/EN/ES/PT/IT/DE/NL/TR/ZH/JA/AR/FA, sans dépendance externe |
-| API Wikipédia     | API MediaWiki (`action=query`) + endpoint REST `page/pdf`     |
+| API Wikipédia     | API MediaWiki (`action=query`, `action=parse`) + endpoint REST `page/pdf` |
 | Échange du livre  | JSON navigateur ↔ API                                         |
-| Génération PDF    | PDF officiel Wikimedia (articles) + WeasyPrint (couverture, chapitres, conclusion) + pypdf (fusion, signets, lecture du nombre de pages) + reportlab (numéros de page, conversion d'une image importée en page PDF) |
+| Génération PDF    | PDF officiel Wikimedia (articles) + WeasyPrint (couverture, table des matières, chapitres, licence, conclusion) + pypdf (fusion, signets, lecture du nombre de pages, recomposition au format du livre) + reportlab (numéros de page, conversion d'une image importée en page PDF) |
 | Conteneurisation  | Docker                                                        |
 
 ### 13.2 API Wikipédia
@@ -624,7 +639,7 @@ Le choix de branche de Railway et Northflank ne fait pas partie du dépôt : il 
 
 ### 13.6 Intégration continue (GitHub Actions)
 
-Deux workflows. Le principal, `.github/workflows/deploy-toolforge.yml` (« Tests and Toolforge deploy »), a deux jobs :
+Trois workflows. Le principal, `.github/workflows/deploy-toolforge.yml` (« Tests and Toolforge deploy »), a deux jobs :
 
 * `test` : à chaque push sur `main` ou `production-toolforge`, à chaque pull request et sur lancement manuel (`workflow_dispatch`). Installe Python 3.12 et `requirements.txt`, puis lance `python -m unittest discover -s tests -v`.
 
@@ -638,7 +653,9 @@ Les déploiements Toolforge sont sérialisés (groupe de concurrence `toolforge-
 
 Le secret `TOOLFORGE_SSH_KEY` contient une clé privée OpenSSH dédiée au déploiement, distincte de la clé personnelle, dont la partie publique est enregistrée sur le compte Wikimedia (idm.wikimedia.org). La révoquer suffit à couper le déploiement automatique sans toucher aux autres accès.
 
-Le second, `.github/workflows/toolviews-stats.yml` (« Toolviews stats »), tourne chaque jour à 06:30 UTC (et sur lancement manuel). Il exécute `scripts/toolviews_stats.py` (section 13.7) sur le `toolviews.csv` de la branche `stats`, créée à son premier passage (branche orpheline, ne contenant que ce fichier), et y committe le fichier s'il a changé, au nom de `github-actions[bot]`. Le CSV n'est jamais committé sur `main` (il y est ignoré), pour qu'aucun push quotidien ne redéploie Railway et Northflank ni ne relance les tests.
+Le second, `.github/workflows/toolviews-stats.yml` (« Toolviews stats »), met à jour chaque jour les statistiques d'utilisation (section 13.8).
+
+Le troisième, `.github/workflows/jekyll-gh-pages.yml`, publie à chaque push sur `main` (et sur lancement manuel) le site de documentation https://gmoulard.github.io/wikipedia2book/ avec GitHub Pages : Jekyll y convertit en HTML les fichiers Markdown de la racine du dépôt (`README.md` en page d'accueil, `SPECIFICATIONS.fr.md` et `SPECIFICATIONS.en.md` en pages). C'est l'adresse déclarée comme documentation utilisateur dans `toolinfo.json`.
 
 ### 13.7 Toolforge
 
@@ -657,8 +674,6 @@ Toolforge construit l'image avec des buildpacks et ignore le `Dockerfile`. Le d�
 * `toolforge-deploy.sh` : script de déploiement, exécuté dans le compte de l'outil.
 
 * `toolinfo.json` : fiche de l'outil au format Toolhub (schéma toolinfo 1.2.2, validé contre le schéma officiel de Toolhub : nom, description, URL, API, dépôt, suivi des bugs, licence AGPL-3.0, auteur et son compte Wikimédia `474D6F756C617264`, documentation utilisateur https://gmoulard.github.io/wikipedia2book/, langues d'interface; `keywords` y est une chaîne séparée par des virgules, pas une liste), à enregistrer sur https://toolhub.wikimedia.org via son URL brute GitHub (`https://raw.githubusercontent.com/gmoulard/wikipedia2book/main/toolinfo.json`). Les langues d'interface qu'elle déclare doivent rester celles de `SUPPORTED_LANGUAGES`.
-
-* `scripts/toolviews_stats.py` : script local (bibliothèque standard Python, hors application) qui complète un fichier CSV séparé par des points-virgules (`date;hits;unique_visitors`, par défaut `toolviews.csv`, ignoré par git) avec la fréquentation quotidienne de l'outil publiée par Toolviews (`https://toolviews.toolforge.org/api/v1/tool/wikipedia2book/daily/…` pour les requêtes, `…/unique/tool/…` pour les adresses IP distinctes). Il ne demande que les jours absents du CSV, du 1er novembre 2026 à la veille (le jour courant est incomplet), Toolviews omet les jours sans visite : ils sont écrits avec 0 jusqu'au dernier jour qu'il publie (ou déjà présent dans le CSV); les jours suivants, pas encore publiés, ne sont pas écrits. Un jour déjà présent n'est jamais recalculé. Un ancien fichier séparé par des virgules est relu puis réécrit avec des points-virgules; un fichier verrouillé (ouvert dans Excel) produit un message d'erreur explicite. Usage : `python scripts/toolviews_stats.py [fichier.csv]`.
 
 #### Script de déploiement
 
@@ -697,6 +712,116 @@ ssh <login>@login.toolforge.org "become wikipedia2book bash -s" < toolforge-depl
 * État et journaux, dans le compte de l'outil : `toolforge webservice status`, `toolforge webservice logs -f`, `toolforge build list`, `toolforge build logs <identifiant>`, `toolforge envvars list`.
 
 * Le port SSH 22 de `login.toolforge.org` peut être bloqué par certains réseaux d'entreprise; les exécuteurs GitHub Actions n'ont pas cette limite.
+
+### 13.8 Statistiques d'utilisation (Toolviews)
+
+L'application ne mesure rien elle-même (serveur sans état, aucun pisteur). La fréquentation vient de Toolviews (https://toolviews.toolforge.org/api/), qui compte les requêtes reçues par le proxy d'entrée de Toolforge pour chaque outil. Ces outils sont annexes : ils ne font pas partie de l'application déployée et ne changent pas sa version.
+
+#### Script `scripts/toolviews_stats.py`
+
+Script local (bibliothèque standard Python uniquement) qui complète un fichier CSV avec la fréquentation quotidienne de l'outil :
+
+```bash
+python scripts/toolviews_stats.py [fichier.csv]
+```
+
+* Fichier : par défaut `toolviews.csv` (ignoré par git sur `main`), séparé par des points-virgules pour s'ouvrir directement dans Excel en français, avec l'en-tête `date;hits;unique_visitors`.
+* Sources : `https://toolviews.toolforge.org/api/v1/tool/wikipedia2book/daily/<début>/<fin>` pour les requêtes (`hits`) et `…/api/v1/unique/tool/wikipedia2book/daily/<début>/<fin>` pour les adresses IP distinctes (`unique_visitors`); deux appels pour toute la période manquante.
+* Jours traités : seulement ceux absents du CSV, du 1er novembre 2026 à la veille; le jour courant, incomplet, n'est jamais écrit. Un jour déjà présent n'est jamais recalculé (pour corriger une valeur, supprimer la ligne et relancer).
+* Jours sans visite : Toolviews ne les renvoie pas; ils sont écrits avec 0 jusqu'au dernier jour publié par Toolviews (ou déjà présent dans le CSV). Les jours suivants, pas encore publiés, ne sont pas écrits, pour ne pas figer un 0 provisoire.
+* Robustesse : un ancien fichier séparé par des virgules est relu puis réécrit avec des points-virgules; un fichier verrouillé (ouvert dans Excel) produit un message explicite; une erreur réseau ou une réponse invalide de Toolviews arrête le script avec un code d'erreur.
+* Tests : `tests/test_toolviews_stats.py` (faux `fetcher`, sans réseau).
+
+#### Mise à jour quotidienne (GitHub Actions)
+
+`.github/workflows/toolviews-stats.yml` (« Toolviews stats ») tourne chaque jour à 06:30 UTC, et sur lancement manuel (`workflow_dispatch`). Il récupère le `toolviews.csv` de la branche `stats` (créée à son premier passage, branche orpheline ne contenant que ce fichier), exécute le script, puis committe le fichier sur `stats` s'il a changé, au nom de `github-actions[bot]`. Le fichier est consultable sur https://github.com/gmoulard/wikipedia2book/blob/stats/toolviews.csv.
+
+Le CSV n'est jamais committé sur `main` : un push quotidien redéploierait Railway et Northflank et relancerait les tests. La branche `stats` ne doit pas être fusionnée dans `main`.
+
+#### Lecture des chiffres
+
+* `hits` compte des requêtes HTTP, pas des personnes : une visite charge la page, les fichiers statiques, `/api/version`, puis chaque recherche ou génération. Il ne distingue pas l'interface web de l'API (seuls les journaux du webservice, `toolforge webservice logs`, le permettent, et ils sont effacés à chaque redéploiement).
+* `unique_visitors` vaut 0 pour tous les outils de Toolforge depuis la mise en place (compteur Toolviews inactif); la colonne est conservée pour le jour où il sera rétabli.
+
+### 13.9 Modèle de données et fichier de sauvegarde
+
+L'état complet du livre est un objet `Project` (`app/models.py`), le même côté navigateur (`state.project`), dans les requêtes à l'API et dans le fichier de sauvegarde. Le nom `Project` est historique et conservé pour la compatibilité des fichiers déjà exportés. Toute valeur hors bornes est refusée par l'API (erreur 422).
+
+#### Fichier de sauvegarde (JSON)
+
+Le bouton de téléchargement produit un fichier `<titre-du-livre>.json` (caractères non alphanumériques retirés, espaces remplacés par des tirets; `livre.json` si le nom obtenu est vide) :
+
+```json
+{
+  "format": "wikipedia2book-workspace",
+  "version": 1,
+  "saved_at": "2026-11-13T12:00:00.000Z",
+  "projects": [ { "id": "…", "name": "…", "main_articles": [], "…": "…" } ]
+}
+```
+
+À l'import, sont acceptés : ce format en version 1 (une autre version est refusée avec un message), un tableau de livres, ou un livre seul (objet avec `id` et `name`). Seul le premier livre est chargé; il remplace le livre en cours, après confirmation si celui-ci a des modifications non téléchargées. Les documents importés y sont inclus en base64, ce qui peut rendre le fichier volumineux.
+
+#### `Project` (le livre)
+
+| Champ | Type, défaut | Contraintes / rôle |
+| --- | --- | --- |
+| `id` | texte, UUID généré | identifiant du livre |
+| `name` | texte | 1 à 120 caractères; nom interne du livre |
+| `description` | texte, `""` | 2000 caractères au plus |
+| `main_articles` | liste d'`Article` | articles ajoutés par l'utilisateur (« Vos articles ») |
+| `discovered_articles` | liste d'`Article` | articles trouvés par l'exploration des liens |
+| `uploaded_documents` | liste d'`UploadedDocument` | images et PDF importés |
+| `book_title` | texte, `""` | 200 caractères au plus |
+| `book_subtitle` | texte, `""` | 300 caractères au plus |
+| `book_author` | texte, `""` | 200 caractères au plus |
+| `introduction` | texte, `""` | 20 000 caractères au plus |
+| `conclusion` | texte, `""` | 20 000 caractères au plus; vide = pas de page de conclusion |
+| `page_format` | `A0`…`A6`, `Letter`, `Legal`, `custom`; `A4` | format de page (section 9.1) |
+| `custom_width_mm`, `custom_height_mm` | nombres, 148 × 210 | 50 à 1000 mm; utilisés si `page_format` = `custom` |
+| `orientation` | `portrait` ou `landscape`; `portrait` | orientation (section 9.3) |
+| `margin_top_mm`, `margin_bottom_mm` | nombres, 18 et 18 | 0 à 100 mm |
+| `margin_inside_mm`, `margin_outside_mm` | nombres, 18 et 16 | 0 à 100 mm |
+| `margin_binding_mm` | nombre, 0 | 0 à 40 mm, ajoutée à la marge intérieure |
+| `article_order` | liste de clés | ordre des articles et documents dans le livre |
+| `chapters` | liste de `BookChapter` | chapitres, dans l'ordre |
+| `unassigned_first` | booléen, faux | place le groupe « Sans chapitre » en tête, sans titre ni page de chapitre |
+| `toc_position` | texte, `start` | `start`, `end` ou `before:<clé>` (clé d'article ou de document, `chapter:<id>`, ou `chapter:` pour le groupe sans chapitre) |
+| `table_of_contents` | booléen, vrai | faux = pas de table des matières |
+| `page_numbers` | booléen, vrai | numérotation des pages |
+| `created_at`, `updated_at` | dates UTC | horodatage |
+
+#### `Article`
+
+| Champ | Type, défaut | Rôle |
+| --- | --- | --- |
+| `page_id` | entier ≥ 1 ou absent | identifiant de page Wikipédia |
+| `title`, `language`, `url` | textes | titre, code de langue, URL de l'article |
+| `summary` | texte, `""` | résumé affiché sur la carte |
+| `origin_title` | texte ou absent | article depuis lequel il a été découvert |
+| `depth` | entier ≥ 0, 0 | profondeur d'exploration (0 = ajouté directement) |
+| `selected` | booléen, faux | inclus dans le livre |
+
+Clé d'un article : `<langue>:<page_id>`, ou `<langue>:title:<titre en minuscules>` sans `page_id`.
+
+#### `UploadedDocument`
+
+| Champ | Type, défaut | Rôle |
+| --- | --- | --- |
+| `id` | texte, UUID généré | identifiant; clé `doc:<id>` |
+| `title` | texte | 1 à 300 caractères |
+| `kind` | `image` ou `pdf` | nature du document |
+| `mime_type` | texte | 1 à 100 caractères |
+| `data_base64` | texte | contenu encodé en base64, 30 000 000 caractères au plus |
+| `selected` | booléen, vrai | inclus dans le livre |
+
+#### `BookChapter`
+
+| Champ | Type, défaut | Rôle |
+| --- | --- | --- |
+| `id` | texte, UUID généré | identifiant; clé `chapter:<id>` |
+| `title` | texte | 1 à 120 caractères |
+| `article_keys` | liste de clés | articles et documents du chapitre, dans l'ordre |
 
 ## 14\. Sécurité et robustesse
 
@@ -742,7 +867,7 @@ La version actuelle est considérée comme fonctionnelle si les points suivants 
 
 * Ajout de plusieurs articles principaux (URL, titre, recherche, page de livre Wikipédia) depuis un champ unique, le type de saisie étant reconnu automatiquement.
 
-* Exploration des liens internes avec profondeur paramétrable.
+* Exploration des liens internes avec profondeur paramétrable (API).
 
 * Détection des doublons parmi les articles découverts.
 
@@ -827,7 +952,8 @@ Wikipedia2Book/
 ├── CODE_OF_CONDUCT.md
 ├── LICENSE
 ├── README.md
-└── SPECIFICATIONS.md
+├── SPECIFICATIONS.fr.md
+└── SPECIFICATIONS.en.md
 ```
 
 Chaque fichier de code (`.py`, `.js`, `.css`, `index.html`, scripts shell, `Dockerfile`, workflows GitHub Actions) commence par un en-tête de licence AGPL-3.0 (projet, dépôt, copyright, version 3 de la licence). `CITATION.cff` et `codemeta.json` décrivent la version archivée sur Software Heritage (v1.6.4, SWHID `swh:1:dir:9c7c016d9603a4b0201ad64535767a353031bd91`) ; `CODE_OF_CONDUCT.md` renvoie au code de conduite MediaWiki.
@@ -844,7 +970,7 @@ L'essentiel du socle fonctionnel décrit dans ce document est implémenté : liv
 
 * Journalisation des erreurs et limitation du débit des requêtes API.
 
-* Couverture de tests automatisés plus large (aujourd'hui : syntaxe Python, numérotation des pages/table des matières, documents importés, API Wikipédia, traductions, et déroulement de `/api/pdf` et `/api/pdf/stream` via `tests/test_pdf_stream.py` — avec Wikipédia et WeasyPrint simulés : le rendu réel des pages par WeasyPrint et l'interface ne sont pas couverts).
+* Couverture de tests automatisés plus large (aujourd'hui : syntaxe Python, numérotation des pages/table des matières, documents importés, API Wikipédia, traductions, script de statistiques Toolviews, et déroulement de `/api/pdf` et `/api/pdf/stream` via `tests/test_pdf_stream.py` — avec Wikipédia et WeasyPrint simulés : le rendu réel des pages par WeasyPrint et l'interface ne sont pas couverts).
 
 * Prévisualisation du livre avant génération.
 
@@ -858,7 +984,7 @@ Toute évolution doit préserver les principes fondamentaux du logiciel, notamme
 
 ## 19\. Historique des versions
 
-Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l'application — voir section 12). Mis à jour à chaque génération de code, selon la règle définie dans `CLAUDE.md`.
+Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l'application — voir section 12). Incrémenté sur décision de l'utilisateur avant chaque commit (patch, minor ou major), selon la règle définie dans `CLAUDE.md`.
 
 | Version | Date       | Modifications apportées |
 | ------- | ---------- | ------------------------ |
