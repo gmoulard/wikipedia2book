@@ -61,7 +61,7 @@ Le numéro de version de l'application est dans `app/main.py` (`FastAPI(version=
 
 Ne jamais incrémenter d'office : préparer les modifications sans toucher à la version, poser la question au moment de committer, et n'appliquer le bump qu'après sa réponse. Les outils annexes qui ne font pas partie de l'application déployée (ex. `scripts/toolviews_stats.py`) et les changements de documentation seule ne justifient en principe pas de nouvelle version.
 
-Quand la version est incrémentée, ajouter la nouvelle version dans le tableau de la section 19 de `SPECIFICATIONS.fr.md` et de `SPECIFICATIONS.en.md` (« Historique des versions » / « Version history »), avec la date et un résumé court des modifications — dans le même commit, pas après coup.
+Quand la version est incrémentée, ajouter la nouvelle version dans le tableau de la section 19 de `SPECIFICATIONS.fr.md` et de `SPECIFICATIONS.en.md` (« Historique des versions » / « Version history »), avec la date, l'auteur (`GMoulard`) et un résumé court des modifications — dans le même commit, pas après coup.
 
 ## Vérification avant de considérer une tâche terminée
 

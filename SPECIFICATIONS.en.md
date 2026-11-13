@@ -7,48 +7,48 @@ This is the English translation of [SPECIFICATIONS.fr.md](SPECIFICATIONS.fr.md).
 ## Table of contents
 
 - [1. Overview of Wikipedia2Book](#1-overview-of-wikipedia2book)
-  - [1.1 Purpose](#11-purpose)
-  - [1.2 Core principles](#12-core-principles)
+	- [1.1 Purpose](#11-purpose)
+	- [1.2 Core principles](#12-core-principles)
 - [2. The in-memory book and how it is saved](#2-the-in-memory-book-and-how-it-is-saved)
 - [3. Adding articles](#3-adding-articles)
-  - [3.1 Ways to add articles](#31-ways-to-add-articles)
-  - [3.2 Information kept for each article](#32-information-kept-for-each-article)
-  - [3.3 Automatically suggested introduction and author](#33-automatically-suggested-introduction-and-author)
+	- [3.1 Ways to add articles](#31-ways-to-add-articles)
+	- [3.2 Information kept for each article](#32-information-kept-for-each-article)
+	- [3.3 Automatically suggested introduction and author](#33-automatically-suggested-introduction-and-author)
 - [4. Exploring related articles](#4-exploring-related-articles)
-  - [4.1 Principle](#41-principle)
-  - [4.2 Exploration depth](#42-exploration-depth)
-  - [4.3 Exploration results](#43-exploration-results)
-  - [4.4 Starting an exploration](#44-starting-an-exploration)
+	- [4.1 Principle](#41-principle)
+	- [4.2 Exploration depth](#42-exploration-depth)
+	- [4.3 Exploration results](#43-exploration-results)
+	- [4.4 Starting an exploration](#44-starting-an-exploration)
 - [5. Selecting articles](#5-selecting-articles)
 - [6. Organizing the book](#6-organizing-the-book)
-  - [6.1 Imported documents (images and PDFs)](#61-imported-documents-images-and-pdfs)
+	- [6.1 Imported documents (images and PDFs)](#61-imported-documents-images-and-pdfs)
 - [7. Retrieving Wikipedia content](#7-retrieving-wikipedia-content)
 - [8. References, images and licenses](#8-references-images-and-licenses)
 - [9. Book format settings](#9-book-format-settings)
-  - [9.1 Standard formats](#91-standard-formats)
-  - [9.2 Custom format](#92-custom-format)
-  - [9.3 Orientation](#93-orientation)
-  - [9.4 Margins](#94-margins)
+	- [9.1 Standard formats](#91-standard-formats)
+	- [9.2 Custom format](#92-custom-format)
+	- [9.3 Orientation](#93-orientation)
+	- [9.4 Margins](#94-margins)
 - [10. Book layout](#10-book-layout)
-  - [10.1 Format and orientation, applied to every page](#101-format-and-orientation-applied-to-every-page)
-  - [10.2 Page numbering](#102-page-numbering)
+	- [10.1 Format and orientation, applied to every page](#101-format-and-orientation-applied-to-every-page)
+	- [10.2 Page numbering](#102-page-numbering)
 - [11. PDF generation](#11-pdf-generation)
-  - [11.1 Process](#111-process)
-  - [11.2 Result](#112-result)
-  - [11.3 Error handling](#113-error-handling)
+	- [11.1 Process](#111-process)
+	- [11.2 Result](#112-result)
+	- [11.3 Error handling](#113-error-handling)
 - [12. User interface](#12-user-interface)
-  - [12.1 Interface languages](#121-interface-languages)
+	- [12.1 Interface languages](#121-interface-languages)
 - [13. Technical architecture](#13-technical-architecture)
-  - [13.1 Technologies](#131-technologies)
-  - [13.2 Wikipedia API](#132-wikipedia-api)
-  - [13.3 HTTP call examples](#133-http-call-examples)
-  - [13.4 Docker and running locally](#134-docker-and-running-locally)
-  - [13.5 Environments and branches](#135-environments-and-branches)
-  - [13.6 Continuous integration (GitHub Actions)](#136-continuous-integration-github-actions)
-  - [13.7 Toolforge](#137-toolforge)
-  - [13.8 Usage statistics (Toolviews)](#138-usage-statistics-toolviews)
-  - [13.9 Data model and save file](#139-data-model-and-save-file)
-  - [13.10 Architecture diagrams](#1310-architecture-diagrams)
+	- [13.1 Technologies](#131-technologies)
+	- [13.2 Wikipedia API](#132-wikipedia-api)
+	- [13.3 HTTP call examples](#133-http-call-examples)
+	- [13.4 Docker and running locally](#134-docker-and-running-locally)
+	- [13.5 Environments and branches](#135-environments-and-branches)
+	- [13.6 Continuous integration (GitHub Actions)](#136-continuous-integration-github-actions)
+	- [13.7 Toolforge](#137-toolforge)
+	- [13.8 Usage statistics (Toolviews)](#138-usage-statistics-toolviews)
+	- [13.9 Data model and save file](#139-data-model-and-save-file)
+	- [13.10 Architecture diagrams](#1310-architecture-diagrams)
 - [14. Security and robustness](#14-security-and-robustness)
 - [15. Compliance with Wikipedia licenses](#15-compliance-with-wikipedia-licenses)
 - [16. Acceptance criteria](#16-acceptance-criteria)
@@ -513,23 +513,27 @@ This interface language is independent of the language of the Wikipedia articles
 
 ### 13.2 Wikipedia API
 
-The software uses the official MediaWiki interfaces to:
+All exchanges with Wikipedia go through the `MediaWikiClient` class in `app/wikipedia_api.py`; no other module calls Wikipedia. Two services are used, on the wiki of the article's language (`<language>` = code validated by `^[a-z0-9-]{2,12}$`):
 
-* Search for articles (`action=query&list=search`).
+* **MediaWiki API (Action API)**: `https://<language>.wikipedia.org/w/api.php`, with GET, always with `format=json&formatversion=2` and, by default, `action=query`.
+* **REST API**: `https://<language>.wikipedia.org/api/rest_v1/page/pdf/<title>/<format>`, for the official PDF of an article (spaces in the title are replaced with `_` and it is URL-encoded).
 
-* Resolve article URLs and validate language codes.
+| Use | Call and parameters | Function | Used by | Section |
+| --- | --- | --- | --- | --- |
+| Search for articles | `list=search&srsearch=<text>&srlimit=<1–20>&srnamespace=0` | `search` | `GET /api/search`, `POST /api/sources/resolve` (fallback when no exact page exists) | 3.1 |
+| Recognize a page (article or book page), following redirects | `prop=info&titles=<title>&redirects=1` (final title and namespace `ns`) | `get_page` | `POST /api/sources/resolve` | 3.1 |
+| Read a book page in its real order, with subtitle and chapters | `prop=revisions&titles=<title>&rvprop=content&rvslots=main` (wikitext) | `get_book` | `POST /api/books/structure`, `/api/books/import`, `/api/sources/resolve`, `/api/books/generate-from-wikipedia-book` | 3.1 |
+| Links of an article, in page order | `action=parse&page=<title>&prop=text&redirects=1&disabletoc=1` (rendered HTML, read with BeautifulSoup) | `get_links` | `POST /api/explore` (through `explorer.py`) | 4.1 |
+| Introduction of an article | `prop=extracts&titles=<title>&exintro=1&explaintext=1` | `get_intro_and_creator` (1st call) | `GET /api/articles/intro` | 3.3 |
+| Creator of a page (first revision) | `prop=revisions&titles=<title>&rvlimit=1&rvdir=newer&rvprop=user` | `get_intro_and_creator` (2nd call) | `GET /api/articles/intro`, `/api/books/generate-from-wikipedia-book` (creator of the book page, used as author when `book_author` is missing) | 3.3 |
+| Official PDF of an article | REST `page/pdf/<title>/<a4, letter or legal>` | `get_article_pdf` | PDF generation (`/api/pdf`, `/api/pdf/stream`, `/api/books/generate*`) | 7 |
 
-* Recognize the type of an input (article or book page) from the page's namespace, following redirects (`prop=info&redirects=1` — section 3.1).
+Common rules:
 
-* Explore internal links, in page order (`action=parse&prop=text`).
-
-* Retrieve the list of articles of a book page, in their real order, with its subtitle and chapters (`prop=revisions&rvprop=content`, reading the wikitext — section 3.1).
-
-* Retrieve the introductory summary and the creator of an article (`prop=extracts&exintro=1` and `prop=revisions&rvdir=newer&rvlimit=1`), for the automatic suggestion of introduction and author (section 3.3).
-
-* Download the official PDF of each selected article, at export time (`/api/rest_v1/page/pdf/{title}/{format}`, `format` = `a4`, `letter` or `legal` depending on the book format — section 7).
-
-Each request uses a dedicated `User-Agent` header; timeouts are bounded (20 seconds for API calls, 120 seconds for downloading a PDF).
+* Dedicated `User-Agent` header: `Wikipedia2Book/0.1 (https://github.com/gmoulard/wikipedia2book; MediaWiki API client)`.
+* Timeouts: 20 seconds for the MediaWiki API, 120 seconds for downloading a PDF.
+* Errors: a network failure, an HTTP error response, a non-JSON response or an `error` field from the MediaWiki API produce an explicit error, returned by the application's API with code 502 (404 for a page not found, 422 for invalid input). A REST response that does not start with `%PDF-` is refused; during generation, any error on an article cancels the whole book (section 8).
+* No data is cached or kept: each operation makes its calls again.
 
 ### 13.3 HTTP call examples
 
@@ -830,67 +834,93 @@ Mermaid diagrams, rendered directly by GitHub and, on the documentation site, by
 
 #### Modules and dependencies
 
+Arrows go from the caller to the module it calls. In blue, the application's code; in orange, Wikipedia's services. `wikipedia_api.py` is the only module that talks to Wikipedia; `models.py` (in grey) is shared by every server module.
+
 ```mermaid
-flowchart LR
-    subgraph Browser["Browser (book state: state.project)"]
-        HTML["index.html"]
-        I18N["i18n.js<br/>I18N, t(), setLanguage()<br/>applyTranslations() (lang/dir)"]
-        APP["app.js<br/>Sources · Organization · Editing<br/>buildOrgSlots / tocSlotIndex<br/>exportWorkspace / importWorkspace<br/>streamPdf()"]
-        HTML --> I18N --> APP
+flowchart TB
+    subgraph Browser["Browser · state.project"]
+        direction LR
+        I18N["i18n.js<br/>translations, lang/dir"]
+        APP["app.js<br/>Sources · Organization · Editing steps"]
+        FILE[(".json file<br/>Save / Open")]
+        I18N --> APP
+        APP <--> FILE
     end
 
-    subgraph Server["Stateless FastAPI server (app/)"]
-        MAIN["main.py<br/>/api/* endpoints<br/>build_book_pdf() (async generator)"]
-        MODELS["models.py<br/>Project · Article · UploadedDocument<br/>BookChapter · Pydantic requests"]
-        WAPI["wikipedia_api.py<br/>MediaWikiClient: search · get_page<br/>get_links · get_book · get_intro_and_creator<br/>get_article_pdf"]
-        EXPL["explorer.py<br/>discover_related_articles() (depth ≤ 3, ≤ 200 articles)"]
-        BB["book_builder.py<br/>ordered_article_groups · book_slots · toc_slot_index<br/>build_cover / toc / chapter / license / conclusion_html<br/>PDF_LABELS"]
-        PDFG["pdf_generator.py<br/>generate_pdf (WeasyPrint)<br/>fit_pdf_to_format (pypdf)<br/>stamp_page_numbers · image_to_pdf (reportlab)"]
+    subgraph Server["Stateless server · app/"]
+        MAIN["main.py<br/>/api/* endpoints · build_book_pdf()"]
+        EXPL["explorer.py<br/>related articles"]
+        BB["book_builder.py<br/>order, chapters, HTML of generated pages"]
+        PDFG["pdf_generator.py<br/>WeasyPrint · pypdf · reportlab"]
+        WAPI["wikipedia_api.py<br/>MediaWikiClient"]
+        MODELS["models.py<br/>Project · Article · UploadedDocument · BookChapter"]
+        MAIN --> EXPL
+        MAIN --> BB
+        MAIN --> PDFG
+        MAIN --> WAPI
+        EXPL --> WAPI
     end
 
-    subgraph Wikimedia["Wikipedia / Wikimedia"]
-        MW["MediaWiki API<br/>action=query · action=parse"]
-        REST["REST page/pdf<br/>a4 · letter · legal"]
+    subgraph Wikipedia["Wikipedia"]
+        direction LR
+        MW["MediaWiki API<br/>search · pages · links · wikitext"]
+        REST["REST page/pdf<br/>official article PDFs"]
     end
 
-    APP -- "JSON (fetch)" --> MAIN
-    APP -- "NDJSON /api/pdf/stream" --> MAIN
-    APP -. ".json file (Save / Open)" .-> APP
-    MAIN --> MODELS
-    MAIN --> WAPI
-    MAIN --> EXPL
-    MAIN --> BB
-    MAIN --> PDFG
-    EXPL --> WAPI
-    BB --> MODELS
+    APP -- "JSON / NDJSON" --> MAIN
     WAPI --> MW
     WAPI --> REST
+    MAIN -.-> MODELS
+    BB -.-> MODELS
+
+    classDef app fill:#eaf3ff,stroke:#3366cc,color:#202122
+    classDef wiki fill:#fef6e7,stroke:#ac6600,color:#202122
+    classDef shared fill:#f8f9fa,stroke:#a2a9b1,color:#202122
+    class I18N,APP,FILE,MAIN,EXPL,BB,PDFG,WAPI app
+    class MW,REST wiki
+    class MODELS shared
 ```
 
 #### PDF generation (`POST /api/pdf/stream`)
 
+The only call to Wikipedia during generation is the download of each article's official PDF (orange frame). Everything else — book order, generated pages, recomposition to the format, numbering — is done by the application, without network access (blue frame).
+
 ```mermaid
 sequenceDiagram
-    participant U as app.js
-    participant M as main.build_book_pdf
-    participant W as MediaWikiClient
-    participant B as book_builder
-    participant P as pdf_generator
+    box rgba(51,102,204,0.10) Application
+        participant U as app.js (browser)
+        participant M as main.build_book_pdf
+        participant W as wikipedia_api
+        participant B as book_builder
+        participant P as pdf_generator
+    end
+    box rgba(172,102,0,0.12) Wikipedia
+        participant R as REST page/pdf
+    end
 
     U->>M: POST /api/pdf/stream?language=xx (Project)
     M-->>U: 400 if the selection is empty
-    loop each selected article or document
-        M->>W: get_article_pdf(title, a4 / letter / legal)
-        W-->>M: official PDF
-        M-->>U: progress (step, total, code, title)
+    rect rgba(172,102,0,0.12)
+        loop each selected article
+            M->>W: get_article_pdf(title, language, a4 / letter / legal)
+            W->>R: GET /api/rest_v1/page/pdf/{title}/{format}
+            R-->>W: official article PDF
+            W-->>M: PDF (or error → generation cancelled)
+            M-->>U: progress fetch_article
+        end
     end
-    M->>B: ordered_article_groups · book_slots · toc_slot_index
-    M->>B: build_cover_html · build_toc_html (page numbers)
-    B->>P: generate_pdf (WeasyPrint)
-    loop each added PDF (cover, table of contents, chapters, articles, license, conclusion)
-        M->>P: fit_pdf_to_format (book format and orientation)
+    rect rgba(51,102,204,0.10)
+        loop each selected imported document
+            M->>P: image_to_pdf (if image)
+            M-->>U: progress prepare_document
+        end
+        M->>B: ordered_article_groups · book_slots · toc_slot_index
+        M->>B: build_cover_html · build_toc_html · build_chapter_page_html · build_license_page_html · build_conclusion_page_html
+        B-->>M: HTML of the generated pages
+        M->>P: generate_pdf (WeasyPrint)
+        M->>P: fit_pdf_to_format on each added PDF (book format and orientation)
+        M->>P: stamp_page_numbers (if enabled)
     end
-    M->>P: stamp_page_numbers (if enabled)
     M-->>U: done (pdf_base64) or error (detail)
 ```
 
@@ -1053,51 +1083,51 @@ Any development must preserve the core principles of the software, in particular
 
 Application version number (`app/main.py`, shown in the application's footer — see section 12). Incremented on the user's decision before each commit (patch, minor or major), following the rule defined in `CLAUDE.md`.
 
-| Version | Date       | Changes |
-| ------- | ---------- | ------- |
-| 0.1.0   | 2026-11-07 | Initial version: single in-memory book, adding and exploring articles, manual selection, organization into chapters, configurable formats and margins, PDF generation with navigation bookmarks. |
-| 0.2.0   | 2026-11-09 | Dead code cleanup (removal of `article_parser.py`, of unused `Article` fields, of the "project" creation flow). Added an automated syntax test (`tests/test_syntax.py`) and the versioning policy. |
-| 0.2.1   | 2026-11-09 | Fix: the "Add" button did nothing when the input field was empty (silent HTML validation) — an explicit error message is shown instead. |
-| 0.3.0   | 2026-11-09 | The application version number is now shown in the footer, in addition to the git commit. |
-| 0.4.0   | 2026-11-09 | Continuous numbering of every page of the generated PDF (including article pages, through a reportlab/pypdf overlay) and display of the page number of each chapter/article in the table of contents. Added `tests/test_pdf_generation.py`. |
-| 0.5.0   | 2026-11-09 | Import of a Wikipedia book page: the real order of the articles is kept (reading the wikitext) instead of the alphabetical order returned by the API. Wider book title field (fix for a layout bug that showed only about 26 characters). New feature: import of images or PDFs as documents included in the book (section 6.1), kept in base64 in the book state and the JSON export. |
-| 0.6.0   | 2026-11-09 | The "Generate PDF" button is never disabled anymore. Every page of the generated PDF (including articles and imported documents) is now recomposed onto the format and orientation chosen for the book (section 10.1) — which also makes page numbering, on by default, more reliable. The JSON save file is named after the book title. The import message for a Wikipedia book points to the matching Wikipedia help page. |
-| 0.7.0   | 2026-11-09 | Multilingual interface: French, English, Chinese, Italian, German, through a selector in the top bar (`app/static/i18n.js`, section 12.1). Language detected automatically and remembered in the browser. Added `tests/test_i18n.py` (parity of keys and `{...}` parameters across the 5 languages). |
-| 0.8.0   | 2026-11-09 | When the very first main article is added, the software automatically suggests (without overwriting an existing entry) the book's introduction from the article's introductory summary, and the author from the creator of the Wikipedia page (section 3.3). New endpoint `/api/articles/intro`. |
-| 0.9.0   | 2026-11-09 | Fix: the position of the table of contents (section 6) was never applied in the generated PDF, it always ended up at the start — the cover and the table of contents are now two separate sections, assembled at the chosen position. Fix for an unresolved Git merge conflict left in the stylesheet, which made the "Generate PDF" button (and notifications) unreadable without mouse hover in some configurations. |
-| 0.10.0  | 2026-11-10 | Status window during PDF generation: current step number, total number of steps, step label (translated into every interface language) and progress bar (section 11.1). New endpoint `/api/pdf/stream` (NDJSON progress stream then base64 PDF), used by the interface; `/api/pdf` remains available. Added `tests/test_pdf_stream.py`. |
-| 0.11.0  | 2026-11-10 | Six new interface languages: Spanish, Portuguese, Dutch, Turkish, Japanese and Persian (11 languages in total, section 12.1). Persian switches the page to right-to-left writing. The language selector shows each language's name in that language. |
-| 0.12.0  | 2026-11-10 | Arabic added as an interface language (12 languages in total), displayed right to left like Persian. |
-| 0.13.0  | 2026-11-10 | New "License" page in the generated PDF, between the last article and the conclusion: CC BY-SA 4.0 license, reuse conditions, and list of source articles with links to the article and its history (section 15). |
-| 0.14.0  | 2026-11-10 | The titles and labels added by the application to the PDF (introduction, table of contents, chapter, no chapter, conclusion, license, sources, edition date, bookmarks) are written in the language chosen for the interface at generation time, with right-to-left writing for Arabic and Persian (section 12.1). Noto CJK fonts added to the Docker image for Chinese and Japanese. |
-| 0.15.0  | 2026-11-10 | The explanatory text of the license page (official license name, link to the localized deed, reuse conditions, notices) is also translated into the interface language (sections 12.1 and 15). |
-| 0.16.0  | 2026-11-10 | Added APIs for directly generating a PDF book from an explicit list of articles or from a Wikipedia book page, keeping the order of the latter's articles. |
-| 0.17.0  | 2026-11-10 | Added a GET endpoint that generates a PDF from the URL of a Wikipedia book page, callable directly in a browser. |
-| 0.19.0  | 2026-11-11 | More intuitive interface: book title editable directly at the top of the page (no more "project" mention nor duplicate title field in the Editing step); labelled "Open" and "Save" buttons in the top bar; "Next step" button at the bottom of the Sources and Organization steps; margin presets (Standard, Narrow, Wide, For binding, Custom) with collapsed millimeter-level settings; "Number the pages" checkbox aligned with its label; "Your articles" and "Suggestions" labels instead of "Main articles" and "Discovered articles", in the 12 languages; the top bar no longer overflows on smartphones. |
-| 0.20.0  | 2026-11-11 | New ergonomics for link exploration (section 4.4): the "Explore links" panel (depth, maximum number of articles) is replaced, in the "Suggestions" section, by a "Find articles related to your articles" button disabled until an article is added, a three-level choice of the number of suggestions, the depth in collapsed advanced options, and a "Related articles" button on each article to explore from it alone. New explorations are added to existing suggestions. Fix: the "Add" button stayed in the old language after an addition followed by a language change. |
-| 0.20.1  | 2026-11-11 | The footer no longer shows "unknown" when the git commit is not known at deployment (the Docker image's default `unknown` value is ignored): only the version and the available information are shown. |
-| 0.21.0  | 2026-11-11 | Simpler related articles: no setting before exploring anymore (depth 1, 30 suggestions per exploration, the following ones by running it again). Each suggestion has an "Add to book" button that visibly moves it into "Your articles" and a "×" button to dismiss it, instead of checkboxes; "Add all" replaces the bulk selection buttons; the depth filter disappears. Checked suggestions from an older JSON file are moved to "Your articles" on opening (sections 4 and 5). |
-| 0.22.0  | 2026-11-11 | Even simpler suggestions: the section is empty and has no button by default; "Related articles" on an article fills the list with the articles it cites, in order of appearance in the page (reading the rendered HTML through `action=parse`, instead of `prop=links` sorted alphabetically), and clicking another article replaces the list. The global exploration button and the origin filter are gone (sections 4 and 5). |
-| 0.23.0  | 2026-11-11 | Free table of contents in the Organization step: it can be dragged anywhere (before any chapter or article, or at the end), not just toggled between start and end; it can be removed and put back. `toc_position` now accepts `before:<key>` in addition to `start`/`end` (existing JSON files remain valid). Page numbers take its position into account. Fix: the organization list showed articles without a chapter before the chapters, whereas the PDF puts them after, under "No chapter" (section 6). |
-| 0.24.0  | 2026-11-11 | The book title and the cover note are no longer shown above the Sources and Organization steps: they are entered in the Editing step, part A "Book identity". If the title is left empty, the PDF (cover, bookmark, file name) and the JSON file take the title of the book's first article, shown greyed out in the field (section 12). |
-| 0.25.0  | 2026-11-11 | Interface restyled following Wikimedia's Codex design system (progressive blue #36c, Wikipedia greys, 2 px corners, serif headings), dark theme aligned with Wikipedia's night mode; Google Fonts removed (system fonts). |
-| 0.25.1  | 2026-11-11 | Deployment on Toolforge: added a `Procfile`, an `Aptfile` and a `.python-version` for the Build Service (buildpacks), documented in section 13.7. |
-| 0.25.2  | 2026-11-12 | Fix: downloading the PDF through the API (`/api/pdf`, `/api/books/generate`, etc.) failed with a 500 error when the book title contained non-Latin characters (Japanese, Chinese, Arabic…); the file name is now sent UTF-8 encoded (RFC 5987). Toolforge: added `toolforge-fonts.conf` so that the fonts installed by the `Aptfile` (Noto CJK) are found by WeasyPrint (section 13.7). |
-| 1.0.0   | 2026-11-12 | First stable version, online at wikipedia2book.toolforge.org. Automatic deployment to Toolforge on every push to `main`: GitHub Actions workflow (tests then SSH deployment) and `toolforge-deploy.sh` script (sections 13.6 and 13.7). |
-| 1.1.0   | 2026-11-12 | Generation from a Wikipedia book page (GET and POST `/api/books/generate-from-wikipedia-book`): new `book_conclusion` parameter, defaulting to "Generated by https://wikipedia2book.toolforge.org/", empty to remove the conclusion; without `book_title`, the book title keeps only the last part of the book page name ("Les épaves…" instead of "Utilisateur:…/Livres/Les épaves…"). |
-| 1.2.0   | 2026-11-12 | Toolforge no longer deploys on every push to `main` but from the `production-toolforge` branch (`git push origin main:production-toolforge`); `main` and pull requests only run the tests. Railway and Northflank still follow `main` (section 13.5). |
-| 1.2.1   | 2026-11-12 | Documentation: section 13 now describes the whole deployment system (13.4 running locally, 13.5 environments and branches, 13.6 continuous integration, 13.7 Toolforge). |
-| 1.3.0   | 2026-11-12 | Import and generation from a Wikipedia book page: the subtitle (`=== … ===` line) and the chapters (`;` lines) of the page are kept, in the interface as in `/api/books/generate-from-wikipedia-book`. New endpoint `POST /api/books/structure` (articles, subtitle, chapters) used by the interface; `POST /api/books/import` unchanged. The order of the book page is kept: articles placed before the first chapter stay at the start of the book, without a chapter page (new `unassigned_first` setting, section 3.1). |
-| 1.4.0   | 2026-11-12 | The official PDF of each article is requested from Wikipedia in the book format when it offers it: `letter` for a Letter book, `legal` for a Legal book, `a4` otherwise (previously always A4, then rescaled). |
-| 1.5.0   | 2026-11-12 | Suggestions: two buttons next to the filter to sort the list in page order (initial choice) or alphabetically, translated into the 12 languages (section 5). |
-| 1.5.1   | 2026-11-12 | Fix: the suggestion sort buttons showed their technical name (`discovered.sortPage`…) when the browser kept the old translation file in cache; the page and its files are now served with `Cache-Control: no-cache` (section 13.4). The filter and the sort buttons stay on the same line, including on smartphones. |
-| 1.5.2   | 2026-11-12 | Footer: link to the project's Git repository (github.com/gmoulard/wikipedia2book), placed before the version number. |
-| 1.6.0   | 2026-11-13 | Sources step: a single field for an article URL, a book page or a title; the "Wikipedia book / Wikipedia URL / Search" tabs are removed. New endpoint `POST /api/sources/resolve` that recognizes the type of page on Wikipedia (namespace, redirects followed) and returns the article, the book or search results (section 3.1); existing endpoints are kept. Added `tests/test_resolve_source.py`. |
-| 1.6.1   | 2026-11-13 | Sources step: permanent label below the single field, explaining that one can enter an article URL, a book page (URL or name) or a Wikipedia page name; status messages are shown on a separate line. |
-| 1.6.2   | 2026-11-13 | Added `toolinfo.json` (Toolhub record of the Toolforge tool, section 13.7). |
-| 1.6.3   | 2026-11-13 | `toolinfo.json` completed (author's Wikimedia account, user documentation, feedback link) and made compliant with the Toolhub schema (`keywords` as a string, invalid `$schema` removed). |
-| 1.6.4   | 2026-11-13 | One-line `NE PAS …` ("DO NOT …") comments above the known pitfalls of the code (order of Wikipedia links, Python/JS alignment of the organization and the table of contents, pypdf warning, export buttons, fixed colors, languages) for agents that modify the code; no change in behavior. |
-| 1.6.5   | 2026-11-13 | Sources step: the Wikipedia language selector is set on opening to the browser language, added to the list if missing (section 3.1). |
-| 1.6.6   | 2026-11-13 | Fallback to English, instead of French, when the browser language is not supported (interface) or not a valid code (Wikipedia language selector) (sections 3.1 and 12.1). Logo at the top of the README and of the documentation site. |
+| Version | Date       | Author    | Changes |
+| ------- | ---------- | --------- | ------------------------ |
+| 0.1.0   | 2026-11-07 | GMoulard  | Initial version: single in-memory book, adding and exploring articles, manual selection, organization into chapters, configurable formats and margins, PDF generation with navigation bookmarks. |
+| 0.2.0   | 2026-11-09 | GMoulard  | Dead code cleanup (removal of `article_parser.py`, of unused `Article` fields, of the "project" creation flow). Added an automated syntax test (`tests/test_syntax.py`) and the versioning policy. |
+| 0.2.1   | 2026-11-09 | GMoulard  | Fix: the "Add" button did nothing when the input field was empty (silent HTML validation) — an explicit error message is shown instead. |
+| 0.3.0   | 2026-11-09 | GMoulard  | The application version number is now shown in the footer, in addition to the git commit. |
+| 0.4.0   | 2026-11-09 | GMoulard  | Continuous numbering of every page of the generated PDF (including article pages, through a reportlab/pypdf overlay) and display of the page number of each chapter/article in the table of contents. Added `tests/test_pdf_generation.py`. |
+| 0.5.0   | 2026-11-09 | GMoulard  | Import of a Wikipedia book page: the real order of the articles is kept (reading the wikitext) instead of the alphabetical order returned by the API. Wider book title field (fix for a layout bug that showed only about 26 characters). New feature: import of images or PDFs as documents included in the book (section 6.1), kept in base64 in the book state and the JSON export. |
+| 0.6.0   | 2026-11-09 | GMoulard  | The "Generate PDF" button is never disabled anymore. Every page of the generated PDF (including articles and imported documents) is now recomposed onto the format and orientation chosen for the book (section 10.1) — which also makes page numbering, on by default, more reliable. The JSON save file is named after the book title. The import message for a Wikipedia book points to the matching Wikipedia help page. |
+| 0.7.0   | 2026-11-09 | GMoulard  | Multilingual interface: French, English, Chinese, Italian, German, through a selector in the top bar (`app/static/i18n.js`, section 12.1). Language detected automatically and remembered in the browser. Added `tests/test_i18n.py` (parity of keys and `{...}` parameters across the 5 languages). |
+| 0.8.0   | 2026-11-09 | GMoulard  | When the very first main article is added, the software automatically suggests (without overwriting an existing entry) the book's introduction from the article's introductory summary, and the author from the creator of the Wikipedia page (section 3.3). New endpoint `/api/articles/intro`. |
+| 0.9.0   | 2026-11-09 | GMoulard  | Fix: the position of the table of contents (section 6) was never applied in the generated PDF, it always ended up at the start — the cover and the table of contents are now two separate sections, assembled at the chosen position. Fix for an unresolved Git merge conflict left in the stylesheet, which made the "Generate PDF" button (and notifications) unreadable without mouse hover in some configurations. |
+| 0.10.0  | 2026-11-10 | GMoulard  | Status window during PDF generation: current step number, total number of steps, step label (translated into every interface language) and progress bar (section 11.1). New endpoint `/api/pdf/stream` (NDJSON progress stream then base64 PDF), used by the interface; `/api/pdf` remains available. Added `tests/test_pdf_stream.py`. |
+| 0.11.0  | 2026-11-10 | GMoulard  | Six new interface languages: Spanish, Portuguese, Dutch, Turkish, Japanese and Persian (11 languages in total, section 12.1). Persian switches the page to right-to-left writing. The language selector shows each language's name in that language. |
+| 0.12.0  | 2026-11-10 | GMoulard  | Arabic added as an interface language (12 languages in total), displayed right to left like Persian. |
+| 0.13.0  | 2026-11-10 | GMoulard  | New "License" page in the generated PDF, between the last article and the conclusion: CC BY-SA 4.0 license, reuse conditions, and list of source articles with links to the article and its history (section 15). |
+| 0.14.0  | 2026-11-10 | GMoulard  | The titles and labels added by the application to the PDF (introduction, table of contents, chapter, no chapter, conclusion, license, sources, edition date, bookmarks) are written in the language chosen for the interface at generation time, with right-to-left writing for Arabic and Persian (section 12.1). Noto CJK fonts added to the Docker image for Chinese and Japanese. |
+| 0.15.0  | 2026-11-10 | GMoulard  | The explanatory text of the license page (official license name, link to the localized deed, reuse conditions, notices) is also translated into the interface language (sections 12.1 and 15). |
+| 0.16.0  | 2026-11-10 | GMoulard  | Added APIs for directly generating a PDF book from an explicit list of articles or from a Wikipedia book page, keeping the order of the latter's articles. |
+| 0.17.0  | 2026-11-10 | GMoulard  | Added a GET endpoint that generates a PDF from the URL of a Wikipedia book page, callable directly in a browser. |
+| 0.19.0  | 2026-11-11 | GMoulard  | More intuitive interface: book title editable directly at the top of the page (no more "project" mention nor duplicate title field in the Editing step); labelled "Open" and "Save" buttons in the top bar; "Next step" button at the bottom of the Sources and Organization steps; margin presets (Standard, Narrow, Wide, For binding, Custom) with collapsed millimeter-level settings; "Number the pages" checkbox aligned with its label; "Your articles" and "Suggestions" labels instead of "Main articles" and "Discovered articles", in the 12 languages; the top bar no longer overflows on smartphones. |
+| 0.20.0  | 2026-11-11 | GMoulard  | New ergonomics for link exploration (section 4.4): the "Explore links" panel (depth, maximum number of articles) is replaced, in the "Suggestions" section, by a "Find articles related to your articles" button disabled until an article is added, a three-level choice of the number of suggestions, the depth in collapsed advanced options, and a "Related articles" button on each article to explore from it alone. New explorations are added to existing suggestions. Fix: the "Add" button stayed in the old language after an addition followed by a language change. |
+| 0.20.1  | 2026-11-11 | GMoulard  | The footer no longer shows "unknown" when the git commit is not known at deployment (the Docker image's default `unknown` value is ignored): only the version and the available information are shown. |
+| 0.21.0  | 2026-11-11 | GMoulard  | Simpler related articles: no setting before exploring anymore (depth 1, 30 suggestions per exploration, the following ones by running it again). Each suggestion has an "Add to book" button that visibly moves it into "Your articles" and a "×" button to dismiss it, instead of checkboxes; "Add all" replaces the bulk selection buttons; the depth filter disappears. Checked suggestions from an older JSON file are moved to "Your articles" on opening (sections 4 and 5). |
+| 0.22.0  | 2026-11-11 | GMoulard  | Even simpler suggestions: the section is empty and has no button by default; "Related articles" on an article fills the list with the articles it cites, in order of appearance in the page (reading the rendered HTML through `action=parse`, instead of `prop=links` sorted alphabetically), and clicking another article replaces the list. The global exploration button and the origin filter are gone (sections 4 and 5). |
+| 0.23.0  | 2026-11-11 | GMoulard  | Free table of contents in the Organization step: it can be dragged anywhere (before any chapter or article, or at the end), not just toggled between start and end; it can be removed and put back. `toc_position` now accepts `before:<key>` in addition to `start`/`end` (existing JSON files remain valid). Page numbers take its position into account. Fix: the organization list showed articles without a chapter before the chapters, whereas the PDF puts them after, under "No chapter" (section 6). |
+| 0.24.0  | 2026-11-11 | GMoulard  | The book title and the cover note are no longer shown above the Sources and Organization steps: they are entered in the Editing step, part A "Book identity". If the title is left empty, the PDF (cover, bookmark, file name) and the JSON file take the title of the book's first article, shown greyed out in the field (section 12). |
+| 0.25.0  | 2026-11-11 | GMoulard  | Interface restyled following Wikimedia's Codex design system (progressive blue #36c, Wikipedia greys, 2 px corners, serif headings), dark theme aligned with Wikipedia's night mode; Google Fonts removed (system fonts). |
+| 0.25.1  | 2026-11-11 | GMoulard  | Deployment on Toolforge: added a `Procfile`, an `Aptfile` and a `.python-version` for the Build Service (buildpacks), documented in section 13.7. |
+| 0.25.2  | 2026-11-12 | GMoulard  | Fix: downloading the PDF through the API (`/api/pdf`, `/api/books/generate`, etc.) failed with a 500 error when the book title contained non-Latin characters (Japanese, Chinese, Arabic…); the file name is now sent UTF-8 encoded (RFC 5987). Toolforge: added `toolforge-fonts.conf` so that the fonts installed by the `Aptfile` (Noto CJK) are found by WeasyPrint (section 13.7). |
+| 1.0.0   | 2026-11-12 | GMoulard  | First stable version, online at wikipedia2book.toolforge.org. Automatic deployment to Toolforge on every push to `main`: GitHub Actions workflow (tests then SSH deployment) and `toolforge-deploy.sh` script (sections 13.6 and 13.7). |
+| 1.1.0   | 2026-11-12 | GMoulard  | Generation from a Wikipedia book page (GET and POST `/api/books/generate-from-wikipedia-book`): new `book_conclusion` parameter, defaulting to "Generated by https://wikipedia2book.toolforge.org/", empty to remove the conclusion; without `book_title`, the book title keeps only the last part of the book page name ("Les épaves…" instead of "Utilisateur:…/Livres/Les épaves…"). |
+| 1.2.0   | 2026-11-12 | GMoulard  | Toolforge no longer deploys on every push to `main` but from the `production-toolforge` branch (`git push origin main:production-toolforge`); `main` and pull requests only run the tests. Railway and Northflank still follow `main` (section 13.5). |
+| 1.2.1   | 2026-11-12 | GMoulard  | Documentation: section 13 now describes the whole deployment system (13.4 running locally, 13.5 environments and branches, 13.6 continuous integration, 13.7 Toolforge). |
+| 1.3.0   | 2026-11-12 | GMoulard  | Import and generation from a Wikipedia book page: the subtitle (`=== … ===` line) and the chapters (`;` lines) of the page are kept, in the interface as in `/api/books/generate-from-wikipedia-book`. New endpoint `POST /api/books/structure` (articles, subtitle, chapters) used by the interface; `POST /api/books/import` unchanged. The order of the book page is kept: articles placed before the first chapter stay at the start of the book, without a chapter page (new `unassigned_first` setting, section 3.1). |
+| 1.4.0   | 2026-11-12 | GMoulard  | The official PDF of each article is requested from Wikipedia in the book format when it offers it: `letter` for a Letter book, `legal` for a Legal book, `a4` otherwise (previously always A4, then rescaled). |
+| 1.5.0   | 2026-11-12 | GMoulard  | Suggestions: two buttons next to the filter to sort the list in page order (initial choice) or alphabetically, translated into the 12 languages (section 5). |
+| 1.5.1   | 2026-11-12 | GMoulard  | Fix: the suggestion sort buttons showed their technical name (`discovered.sortPage`…) when the browser kept the old translation file in cache; the page and its files are now served with `Cache-Control: no-cache` (section 13.4). The filter and the sort buttons stay on the same line, including on smartphones. |
+| 1.5.2   | 2026-11-12 | GMoulard  | Footer: link to the project's Git repository (github.com/gmoulard/wikipedia2book), placed before the version number. |
+| 1.6.0   | 2026-11-13 | GMoulard  | Sources step: a single field for an article URL, a book page or a title; the "Wikipedia book / Wikipedia URL / Search" tabs are removed. New endpoint `POST /api/sources/resolve` that recognizes the type of page on Wikipedia (namespace, redirects followed) and returns the article, the book or search results (section 3.1); existing endpoints are kept. Added `tests/test_resolve_source.py`. |
+| 1.6.1   | 2026-11-13 | GMoulard  | Sources step: permanent label below the single field, explaining that one can enter an article URL, a book page (URL or name) or a Wikipedia page name; status messages are shown on a separate line. |
+| 1.6.2   | 2026-11-13 | GMoulard  | Added `toolinfo.json` (Toolhub record of the Toolforge tool, section 13.7). |
+| 1.6.3   | 2026-11-13 | GMoulard  | `toolinfo.json` completed (author's Wikimedia account, user documentation, feedback link) and made compliant with the Toolhub schema (`keywords` as a string, invalid `$schema` removed). |
+| 1.6.4   | 2026-11-13 | GMoulard  | One-line `NE PAS …` ("DO NOT …") comments above the known pitfalls of the code (order of Wikipedia links, Python/JS alignment of the organization and the table of contents, pypdf warning, export buttons, fixed colors, languages) for agents that modify the code; no change in behavior. |
+| 1.6.5   | 2026-11-13 | GMoulard  | Sources step: the Wikipedia language selector is set on opening to the browser language, added to the list if missing (section 3.1). |
+| 1.6.6   | 2026-11-13 | GMoulard  | Fallback to English, instead of French, when the browser language is not supported (interface) or not a valid code (Wikipedia language selector) (sections 3.1 and 12.1). Logo at the top of the README and of the documentation site. |
 
 End of document — Wikipedia2Book, specifications version 1.1.
