@@ -113,6 +113,13 @@ class MediaWikiClient:
             for item in items
         ]
 
+    async def get_page(self, title: str, language: str = "fr") -> tuple[str, int] | None:
+        result = await self._get(language, {"prop": "info", "titles": title, "redirects": 1})
+        pages = result.get("query", {}).get("pages", [])
+        if not pages or pages[0].get("missing") or pages[0].get("invalid"):
+            return None
+        return pages[0]["title"], pages[0]["ns"]
+
     async def get_intro_and_creator(self, title: str, language: str = "fr") -> tuple[str, str]:
         extract_result = await self._get(
             language, {"prop": "extracts", "exintro": 1, "explaintext": 1, "titles": title}

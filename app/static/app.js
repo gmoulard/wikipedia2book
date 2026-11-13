@@ -2,7 +2,6 @@ const API = '';
 const state = {
   project: null,
   activeView: 'sources',
-  sourceMode: 'book',
   suggestionSort: 'page',
   searchTimer: null,
   toastTimer: null,
@@ -445,35 +444,47 @@ async function suggestIntroAndAuthor(article) {
   } catch { /* suggestion non critique */ }
 }
 
-async function addArticle(source) {
+async function withAddButton(label, task) {
   if (!state.project) return;
   const button = $('#addArticleButton');
   button.disabled = true;
-  button.textContent = t('export.addingLabel');
-  try {
-    const article = await getJson('/api/articles', { method: 'POST', body: JSON.stringify(source) });
-    if (activeArticles().some((item) => sameArticle(item, article))) throw new Error(t('sources.alreadyInBook'));
-    article.selected = true;
-    const wasFirst = state.project.main_articles.length === 0;
-    state.project.main_articles.push(article);
-    queueSave({ main_articles: state.project.main_articles });
-    renderWorkspace();
-    if (wasFirst) await suggestIntroAndAuthor(article);
-    $('#articleQuery').value = '';
-    $('#searchResults').hidden = true;
-    $('#entryHint').textContent = t('sources.addedToMain');
-    showToast(t('sources.articleAdded'));
-  } catch (error) { showToast(error.message, true); }
+  button.textContent = label;
+  try { await task(); }
+  catch (error) { showToast(error.message, true); }
   finally { button.disabled = false; button.innerHTML = `<span data-i18n="sources.addButton">${escapeHtml(t('sources.addButton'))}</span> <span aria-hidden="true">+</span>`; }
 }
 
-async function importWikipediaBook(url) {
-  if (!state.project) return;
-  const button = $('#addArticleButton');
-  button.disabled = true;
-  button.textContent = t('export.importingLabel');
+function addArticle(source) {
+  return withAddButton(t('export.addingLabel'), async () => {
+    await addArticleToBook(await getJson('/api/articles', { method: 'POST', body: JSON.stringify(source) }));
+  });
+}
+
+function addSource(value) {
+  return withAddButton(t('export.addingLabel'), async () => {
+    const resolved = await getJson('/api/sources/resolve', { method: 'POST', body: JSON.stringify({ input: value, language: $('#articleLanguage').value }) });
+    if (resolved.kind === 'article') await addArticleToBook(resolved.article);
+    else if (resolved.kind === 'book') await importBook(resolved.book, resolved.book_title);
+    else showSearchResults(resolved.results, t('sources.noExactPage', { query: value }));
+  });
+}
+
+async function addArticleToBook(article) {
+  if (activeArticles().some((item) => sameArticle(item, article))) throw new Error(t('sources.alreadyInBook'));
+  article.selected = true;
+  const wasFirst = state.project.main_articles.length === 0;
+  state.project.main_articles.push(article);
+  queueSave({ main_articles: state.project.main_articles });
+  renderWorkspace();
+  if (wasFirst) await suggestIntroAndAuthor(article);
+  $('#articleQuery').value = '';
+  $('#searchResults').hidden = true;
+  $('#entryHint').textContent = t('sources.addedToMain');
+  showToast(t('sources.articleAdded'));
+}
+
+async function importBook(book, bookName) {
   try {
-    const book = await getJson('/api/books/structure', { method: 'POST', body: JSON.stringify({ url }) });
     const newArticles = book.articles.filter((a) => !activeArticles().some((e) => sameArticle(e, a)));
     if (!newArticles.length) throw new Error(t('sources.allBookPagesAlready'));
     const wasFirst = state.project.main_articles.length === 0;
@@ -485,14 +496,10 @@ async function importWikipediaBook(url) {
       if (keys.length) state.project.chapters.push({ ...chapter, article_keys: keys });
     }
     if (book.subtitle && !state.project.book_subtitle) state.project.book_subtitle = book.subtitle;
-    // Extraire le titre du livre depuis l'URL (partie après le dernier /)
-    try {
-      const bookName = decodeURIComponent(url.split('/').pop()).replace(/_/g, ' ').trim();
-      if (bookName) {
-        state.project.name = bookName;
-        state.project.book_title = bookName;
-      }
-    } catch { /* titre non critique */ }
+    if (bookName) {
+      state.project.name = bookName;
+      state.project.book_title = bookName;
+    }
     queueSave({ main_articles: state.project.main_articles, chapters: state.project.chapters, unassigned_first: state.project.unassigned_first, book_subtitle: state.project.book_subtitle, name: state.project.name, book_title: state.project.book_title });
     renderWorkspace();
     if (wasFirst) await suggestIntroAndAuthor(newArticles[0]);
@@ -500,13 +507,21 @@ async function importWikipediaBook(url) {
     const bookLink = `<a href="https://fr.wikipedia.org/wiki/Aide:Livres" target="_blank" rel="noopener noreferrer">${escapeHtml(t('sources.bookLinkText'))}</a>`;
     $('#entryHint').innerHTML = t('sources.pagesAddedHint', { n: newArticles.length, link: bookLink });
     showToast(t('sources.pagesAddedToast', { n: newArticles.length }));
-  } catch (error) { showToast(t('sources.bookImportFailed', { error: error.message }), true); }
-  finally { button.disabled = false; button.innerHTML = `<span data-i18n="sources.addButton">${escapeHtml(t('sources.addButton'))}</span> <span aria-hidden="true">+</span>`; }
+  } catch (error) { throw new Error(t('sources.bookImportFailed', { error: error.message })); }
+}
+
+function showSearchResults(items, hint) {
+  const results = $('#searchResults');
+  results.hidden = false;
+  results.innerHTML = items.length
+    ? items.map((item) => `<button class="search-result" type="button" data-add-title="${escapeHtml(item.title)}" data-page-id="${item.page_id}"><span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(t('sources.wikipediaArticleLabel'))} \u00b7 ${escapeHtml($('#articleLanguage').value.toUpperCase())}</small></span><span class="search-add" aria-hidden="true">+</span></button>`).join('')
+    : `<div class="search-result"><span><strong>${escapeHtml(t('sources.noResultsTitle'))}</strong><small>${escapeHtml(t('sources.noResultsDesc'))}</small></span></div>`;
+  if (hint) $('#entryHint').textContent = hint;
 }
 
 async function searchArticles(query) {
   clearTimeout(state.searchTimer);
-  if (state.sourceMode !== 'search' || query.trim().length < 2) { $('#searchResults').hidden = true; return; }
+  if (query.trim().length < 2 || /^[a-z]+:\/\//i.test(query.trim())) { $('#searchResults').hidden = true; return; }
   state.searchTimer = setTimeout(async () => {
     const results = $('#searchResults');
     results.hidden = false;
@@ -515,9 +530,7 @@ async function searchArticles(query) {
       const params = new URLSearchParams({ query: query.trim(), language: $('#articleLanguage').value, limit: '8' });
       const items = await getJson(`/api/search?${params}`);
       if ($('#articleQuery').value.trim() !== query.trim()) return;
-      results.innerHTML = items.length
-        ? items.map((item) => `<button class="search-result" type="button" data-add-title="${escapeHtml(item.title)}" data-page-id="${item.page_id}"><span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(t('sources.wikipediaArticleLabel'))} \u00b7 ${escapeHtml($('#articleLanguage').value.toUpperCase())}</small></span><span class="search-add" aria-hidden="true">+</span></button>`).join('')
-        : `<div class="search-result"><span><strong>${escapeHtml(t('sources.noResultsTitle'))}</strong><small>${escapeHtml(t('sources.noResultsDesc'))}</small></span></div>`;
+      showSearchResults(items);
     } catch (error) {
       results.innerHTML = `<div class="search-result"><span><strong>${escapeHtml(t('sources.searchUnavailable'))}</strong><small>${escapeHtml(error.message)}</small></span></div>`;
     }
@@ -788,30 +801,11 @@ async function importWorkspace(file) {
 
 // ── Event listeners ──────────────────────────────────────────────────────────
 
-function sourceModeDefaults(mode) {
-  return {
-    book:   { placeholder: 'https://fr.wikipedia.org/wiki/Utilisateur:…/Livres/…', hint: t('sources.hintBook'), value: 'https://fr.wikipedia.org/wiki/Utilisateur:474D6F756C617264/Livres/Les_%C3%A9paves_de_la_rade_de_Saint-Pierre_suite_a_l%27%C3%A9ruption_de_la_montagne_Pel%C3%A9e_en_1902' },
-    url:    { placeholder: 'https://fr.wikipedia.org/wiki/…', hint: t('sources.hintUrl'), value: 'https://fr.wikipedia.org/wiki/%C3%89paves_de_la_rade_de_Saint-Pierre' },
-    search: { placeholder: t('sources.placeholderSearch'), hint: t('sources.hintSearch'), value: 'Épaves de la rade de Saint-Pierre' },
-  }[mode];
-}
-
 document.addEventListener('click', async (event) => {
   const viewButton = event.target.closest('[data-view]');
   if (viewButton) {
     setView(viewButton.dataset.view);
     if (viewButton.closest('.step-footer')) window.scrollTo({ top: 0, behavior: 'smooth' });
-    return;
-  }
-  const modeButton = event.target.closest('[data-source-mode]');
-  if (modeButton) {
-    state.sourceMode = modeButton.dataset.sourceMode;
-    $$('.entry-tab').forEach((tab) => tab.classList.toggle('active', tab === modeButton));
-    const d = sourceModeDefaults(state.sourceMode);
-    $('#articleQuery').placeholder = d.placeholder;
-    $('#articleQuery').value = d.value;
-    $('#entryHint').textContent = d.hint;
-    $('#searchResults').hidden = true;
     return;
   }
   const result = event.target.closest('[data-add-title]');
@@ -869,7 +863,7 @@ document.addEventListener('change', async (event) => {
 });
 
 document.addEventListener('input', (event) => {
-  if (event.target.matches('#articleQuery') && state.sourceMode === 'search') searchArticles(event.target.value);
+  if (event.target.matches('#articleQuery')) searchArticles(event.target.value);
   if (event.target.matches('#articleFilter')) renderArticles();
   const chapterNameEl = event.target.closest('.chapter-name');
   if (chapterNameEl && state.project) {
@@ -885,9 +879,9 @@ $('#articleForm').addEventListener('submit', async (event) => {
   event.preventDefault();
   const value = $('#articleQuery').value.trim();
   if (!value) { showToast(t('sources.emptyField'), true); return; }
-  if (state.sourceMode === 'book') await importWikipediaBook(value);
-  else if (state.sourceMode === 'url') await addArticle({ url: value, language: $('#articleLanguage').value });
-  else await addArticle({ title: value, language: $('#articleLanguage').value });
+  clearTimeout(state.searchTimer);
+  $('#searchResults').hidden = true;
+  await addSource(value);
 });
 $('#documentFileInput').addEventListener('change', async (event) => {
   const files = [...(event.target.files || [])];
@@ -903,9 +897,6 @@ window.addEventListener('beforeunload', (event) => {
 });
 $('#languageSelect').addEventListener('change', (event) => {
   setLanguage(event.target.value);
-  const d = sourceModeDefaults(state.sourceMode);
-  $('#articleQuery').placeholder = d.placeholder;
-  if (!$('#articleQuery').value.trim()) $('#entryHint').textContent = d.hint;
   if (state.project) renderWorkspace();
 });
 

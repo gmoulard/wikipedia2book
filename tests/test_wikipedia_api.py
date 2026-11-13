@@ -117,3 +117,17 @@ class GetLinksPageOrderTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class GetPageTest(unittest.TestCase):
+    def test_returns_normalized_title_and_namespace(self):
+        client = MediaWikiClient()
+        client._get = AsyncMock(return_value={"query": {"pages": [{"title": "Chat", "ns": 0}]}})
+        self.assertEqual(asyncio.run(client.get_page("chat", "fr")), ("Chat", 0))
+        self.assertEqual(client._get.call_args.args[1]["redirects"], 1)
+
+    def test_missing_or_invalid_page_returns_none(self):
+        for page in ({"title": "Xyz", "missing": True}, {"title": "[[", "invalid": True}):
+            client = MediaWikiClient()
+            client._get = AsyncMock(return_value={"query": {"pages": [page]}})
+            self.assertIsNone(asyncio.run(client.get_page("Xyz", "fr")))

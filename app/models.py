@@ -102,6 +102,19 @@ class WikipediaBookImport(BaseModel):
     unassigned_first: bool = False
 
 
+class SourceRequest(BaseModel):
+    input: str = Field(min_length=1, max_length=2048)
+    language: str = Field(default="fr", pattern=r"^[a-z0-9-]{2,12}$")
+
+
+class SourceResolution(BaseModel):
+    kind: Literal["article", "book", "search"]
+    article: Article | None = None
+    book: WikipediaBookImport | None = None
+    book_title: str = ""
+    results: list[dict] = []
+
+
 class WikipediaBookGenerationRequest(BookImportRequest):
     book_title: str | None = Field(default=None, max_length=200)
     book_subtitle: str | None = Field(default=None, max_length=300)

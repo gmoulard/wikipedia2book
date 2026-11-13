@@ -44,22 +44,18 @@
           </div>
           <div class="source-tools">
             <div class="source-entry">
-              <div class="entry-tabs" role="group" aria-label="Méthode d'ajout" data-i18n-aria-label="sources.methodAria">
-                <button class="entry-tab active" type="button" data-source-mode="book" data-i18n="sources.modeBook">Livre Wikipédia</button>
-                <button class="entry-tab" type="button" data-source-mode="url" data-i18n="sources.modeUrl">URL Wikipédia</button>
-                <button class="entry-tab" type="button" data-source-mode="search" data-i18n="sources.modeSearch">Rechercher</button>
-              </div>
               <form id="articleForm" class="article-form">
-                <label class="visually-hidden" for="articleQuery" data-i18n="sources.queryLabel">Titre ou recherche Wikipédia</label>
-                <input id="articleQuery" type="search" placeholder="https://fr.wikipedia.org/wiki/Utilisateur:…/Livres/…" autocomplete="off">
+                <label class="visually-hidden" for="articleQuery" data-i18n="sources.queryLabel">URL, page de livre ou titre Wikipédia</label>
+                <input id="articleQuery" type="search" placeholder="URL, page de livre ou titre d'article Wikipédia…" data-i18n-placeholder="sources.placeholder" autocomplete="off">
                 <label class="visually-hidden" for="articleLanguage" data-i18n="sources.wikiLangAria">Langue de Wikipédia</label>
                 <select id="articleLanguage" aria-label="Langue de Wikipédia" data-i18n-aria-label="sources.wikiLangAria">
                   <option value="fr">FR</option><option value="en">EN</option><option value="de">DE</option><option value="es">ES</option><option value="it">IT</option><option value="pt">PT</option><option value="nl">NL</option>
                 </select>
                 <button class="button button-teal" id="addArticleButton" type="submit"><span data-i18n="sources.addButton">Ajouter</span> <span aria-hidden="true">+</span></button>
               </form>
+              <p class="field-label-help" data-i18n="sources.hint">Saisissez au choix l'URL d'un article Wikipédia, une page de livre Wikipédia (URL ou nom) ou le nom d'une page Wikipédia.</p>
               <div id="searchResults" class="search-results" hidden></div>
-              <p class="field-hint" id="entryHint" data-i18n="sources.hintBook">Collez l'URL d'une page de livre Wikipédia pour importer ses liens d'articles.</p>
+              <p class="field-hint" id="entryHint" aria-live="polite"></p>
             </div>
           </div>
           <div class="article-columns">

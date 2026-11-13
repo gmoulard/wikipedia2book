@@ -1,5 +1,6 @@
 import base64
 import json
+import re
 import subprocess
 from io import BytesIO
 from pathlib import Path
@@ -33,6 +34,8 @@ from app.models import (
     BookGenerationRequest,
     Project,
     ProjectExplorationRequest,
+    SourceRequest,
+    SourceResolution,
     UploadedDocument,
     WikipediaBookGenerationRequest,
     WikipediaBookImport,
@@ -50,7 +53,7 @@ from app.wikipedia_api import (
 )
 
 
-app = FastAPI(title="Wikipedia2Book", version="1.5.2")
+app = FastAPI(title="Wikipedia2Book", version="1.6.1")
 static_directory = Path(__file__).parent / "static"
 PDF_LANGUAGE_PATTERN = "^(" + "|".join(PDF_LABELS) + ")$"
 app.mount("/static", StaticFiles(directory=static_directory), name="static")
@@ -164,9 +167,40 @@ async def read_wikipedia_book(payload: BookImportRequest) -> WikipediaBookImport
     try:
         language, title = parse_article_url(payload.url)
         async with MediaWikiClient() as client:
-            book = await client.get_book(title, language, limit=200)
+            return await _wikipedia_book(client, language, title)
     except (MediaWikiError, ValueError) as error:
         raise _mediawiki_error(error) from error
+
+
+@app.post("/api/sources/resolve", response_model=SourceResolution)
+async def resolve_source(payload: SourceRequest) -> SourceResolution:
+    text = payload.input.strip()
+    is_url = bool(re.match(r"^[a-z]+://", text, re.IGNORECASE))
+    try:
+        if not text:
+            raise ValueError("Saisissez une URL, une page de livre ou un titre Wikipédia.")
+        language, title = parse_article_url(text) if is_url else (validate_language(payload.language), text)
+        async with MediaWikiClient() as client:
+            page = await client.get_page(title, language)
+            if page is None:
+                if is_url:
+                    raise MediaWikiPageNotFound(f"La page Wikipédia « {title} » est introuvable.")
+                return SourceResolution(kind="search", results=await client.search(text, language, 8))
+            title, namespace = page
+            if namespace == 0:
+                return SourceResolution(
+                    kind="article",
+                    article=Article(title=title, language=language, url=article_url(language, title), selected=True),
+                )
+            return SourceResolution(
+                kind="book", book=await _wikipedia_book(client, language, title), book_title=_book_name(title)
+            )
+    except (MediaWikiError, ValueError) as error:
+        raise _mediawiki_error(error) from error
+
+
+async def _wikipedia_book(client: MediaWikiClient, language: str, title: str) -> WikipediaBookImport:
+    book = await client.get_book(title, language, limit=200)
     if not book.chapters:
         raise HTTPException(
             status_code=422,

@@ -100,7 +100,17 @@ Le livre contient notamment :
 
 ### 3.1 Méthodes d'ajout
 
-L'utilisateur ajoute des articles à son livre par l'un des moyens suivants :
+Un seul champ de saisie, dans l'étape Sources, sert à tous les moyens d'ajout : l'utilisateur n'indique pas le type de ce qu'il saisit, le logiciel le reconnaît en interrogeant Wikipédia (`POST /api/sources/resolve`, qui reçoit `input` et `language`) :
+
+* une URL `https://<langue>.wikipedia.org/wiki/…` est lue avec la langue de l'URL; sinon, le texte saisi est pris comme un titre de page, dans la langue de Wikipédia choisie à côté du champ;
+
+* la page est recherchée sur Wikipédia, redirections suivies : une page de l'espace principal (un article) est ajoutée comme article; une page d'un autre espace de noms (`Utilisateur:…/Livres/…`, `Livre:…`, etc.) est importée comme page de livre;
+
+* si aucune page ne porte exactement ce titre, les résultats de la recherche Wikipédia sont proposés sous le champ, à ajouter d'un clic; une URL vers une page inexistante est signalée comme introuvable.
+
+Sous le champ, un libellé permanent rappelle ce qu'on peut y saisir : l'URL d'un article, une page de livre (URL ou nom) ou le nom d'une page Wikipédia. Les messages d'état (article ajouté, pages importées, aucune page exacte) s'affichent sur une ligne distincte en dessous, sans remplacer ce libellé. Pendant la saisie d'un texte qui n'est pas une URL, des résultats de recherche sont proposés au fil de la frappe. Les endpoints précédents (`POST /api/articles`, `POST /api/books/structure`, `GET /api/search`) restent disponibles.
+
+L'utilisateur ajoute ainsi des articles à son livre par l'un des moyens suivants :
 
 * URL d'un article Wikipédia.
 
@@ -493,6 +503,8 @@ Le logiciel utilise les interfaces officielles de MediaWiki pour :
 
 * Résoudre les URL d'article et valider les codes de langue.
 
+* Reconnaître le type d'une saisie (article ou page de livre) d'après l'espace de noms de la page, redirections suivies (`prop=info&redirects=1` — section 3.1).
+
 * Explorer les liens internes, dans l'ordre de la page (`action=parse&prop=text`).
 
 * Récupérer la liste des articles d'une page de livre, dans leur ordre réel, avec son sous-titre et ses chapitres (`prop=revisions&rvprop=content`, lecture du wikitexte — section 3.1).
@@ -524,6 +536,14 @@ Les endpoints GET peuvent être ouverts directement dans la barre d'adresse :
 L'endpoint GET de génération depuis une page de livre Wikipédia peut être appelé directement dans le navigateur. Les autres endpoints de génération de PDF utilisent POST; pour ceux-ci, utiliser `curl` ou la documentation interactive `/docs`.
 
 #### Avec curl
+
+Reconnaître une saisie (URL, page de livre ou titre) et obtenir l'article, le livre ou les résultats de recherche correspondants (`kind` = `article`, `book` ou `search`) :
+
+```bash
+curl --fail --show-error --request POST 'http://localhost:8000/api/sources/resolve' \
+	--header 'Content-Type: application/json' \
+	--data '{"input":"Albert Einstein","language":"fr"}'
+```
 
 Générer un PDF à partir d'une liste explicite de références d'articles :
 
@@ -714,7 +734,7 @@ Les images et médias intégrés par Wikipédia à son export PDF conservent leu
 
 La version actuelle est considérée comme fonctionnelle si les points suivants sont validés :
 
-* Ajout de plusieurs articles principaux (URL, titre, recherche, page de livre Wikipédia).
+* Ajout de plusieurs articles principaux (URL, titre, recherche, page de livre Wikipédia) depuis un champ unique, le type de saisie étant reconnu automatiquement.
 
 * Exploration des liens internes avec profondeur paramétrable.
 
@@ -774,6 +794,8 @@ Wikipedia2Book/
 │   ├── test_pdf_generation.py
 │   ├── test_uploaded_documents.py
 │   ├── test_wikipedia_api.py
+│   ├── test_pdf_stream.py
+│   ├── test_resolve_source.py
 │   └── test_i18n.py
 │
 ├── Dockerfile
@@ -858,5 +880,7 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 1.5.0   | 2026-11-12 | Suggestions : deux boutons à côté du filtre pour trier la liste dans l'ordre de la page (choix initial) ou par ordre alphabétique, traduits dans les 12 langues (section 5). |
 | 1.5.1   | 2026-11-12 | Correction : les boutons de tri des suggestions affichaient leur nom technique (`discovered.sortPage`…) quand le navigateur gardait en cache l'ancien fichier de traductions; la page et ses fichiers sont désormais servis avec `Cache-Control: no-cache` (section 13.4). Le filtre et les boutons de tri restent sur la même ligne, y compris sur smartphone. |
 | 1.5.2   | 2026-11-12 | Pied de page : lien vers le dépôt Git du projet (github.com/gmoulard/wikipedia2book), placé avant le numéro de version. |
+| 1.6.0   | 2026-11-13 | Étape Sources : un seul champ pour une URL d'article, une page de livre ou un titre; les onglets « Livre Wikipédia / URL Wikipédia / Rechercher » sont supprimés. Nouvel endpoint `POST /api/sources/resolve` qui reconnaît le type de page sur Wikipédia (espace de noms, redirections suivies) et renvoie l'article, le livre ou des résultats de recherche (section 3.1); les endpoints existants sont conservés. Ajout de `tests/test_resolve_source.py`. |
+| 1.6.1   | 2026-11-13 | Étape Sources : libellé permanent sous le champ unique, expliquant qu'on peut saisir une URL d'article, une page de livre (URL ou nom) ou un nom de page Wikipédia; les messages d'état s'affichent sur une ligne séparée. |
 
 Fin du document — Wikipedia2Book, spécifications version 1.1.
