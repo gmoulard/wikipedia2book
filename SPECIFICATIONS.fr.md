@@ -117,7 +117,7 @@ Le modèle de données complet et le format du fichier JSON sont décrits en sec
 
 Un seul champ de saisie, dans l'étape Sources, sert à tous les moyens d'ajout : l'utilisateur n'indique pas le type de ce qu'il saisit, le logiciel le reconnaît en interrogeant Wikipédia (`POST /api/sources/resolve`, qui reçoit `input` et `language`) :
 
-* une URL `https://<langue>.wikipedia.org/wiki/…` est lue avec la langue de l'URL; sinon, le texte saisi est pris comme un titre de page, dans la langue de Wikipédia choisie à côté du champ;
+* une URL `https://<langue>.wikipedia.org/wiki/…` est lue avec la langue de l'URL; sinon, le texte saisi est pris comme un titre de page, dans la langue de Wikipédia choisie à côté du champ. Ce sélecteur propose FR, EN, DE, ES, IT, PT et NL; à l'ouverture de l'application, il est positionné sur la langue du navigateur (partie principale du code, par exemple `pt` pour `pt-BR`, `no` pour `nb`), ajoutée à la liste si elle n'y figure pas (par exemple JA). Si la langue du navigateur n'est pas un code valide, FR reste sélectionné. Ce choix n'est enregistré ni dans le livre ni dans le navigateur;
 
 * la page est recherchée sur Wikipédia, redirections suivies : une page de l'espace principal (un article) est ajoutée comme article; une page d'un autre espace de noms (`Utilisateur:…/Livres/…`, `Livre:…`, etc.) est importée comme page de livre;
 
@@ -1025,5 +1025,6 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 1.6.2   | 2026-11-13 | Ajout de `toolinfo.json` (fiche Toolhub de l'outil Toolforge, section 13.7). |
 | 1.6.3   | 2026-11-13 | `toolinfo.json` complété (compte Wikimédia de l'auteur, documentation utilisateur, lien de retour) et rendu conforme au schéma Toolhub (`keywords` en chaîne, `$schema` invalide retiré). |
 | 1.6.4   | 2026-11-13 | Commentaires `NE PAS …` d'une ligne au-dessus des pièges connus du code (ordre des liens Wikipédia, alignement Python/JS de l'organisation et de la table des matières, avertissement pypdf, boutons d'export, couleurs fixes, langues) pour les agents qui modifient le code; aucun changement de comportement. |
+| 1.6.5   | 2026-11-13 | Étape Sources : le sélecteur de langue Wikipédia est positionné à l'ouverture sur la langue du navigateur, ajoutée à la liste si elle n'y figure pas (section 3.1). |
 
 Fin du document — Wikipedia2Book, spécifications version 1.1.

@@ -117,7 +117,7 @@ The full data model and the format of the JSON file are described in section 13.
 
 A single input field, in the Sources step, is used for every way of adding content: the user does not say what kind of thing they are typing, the software recognizes it by querying Wikipedia (`POST /api/sources/resolve`, which receives `input` and `language`):
 
-* a `https://<language>.wikipedia.org/wiki/…` URL is read with the language of the URL; otherwise, the text is taken as a page title, in the Wikipedia language chosen next to the field;
+* a `https://<language>.wikipedia.org/wiki/…` URL is read with the language of the URL; otherwise, the text is taken as a page title, in the Wikipedia language chosen next to the field. This selector offers FR, EN, DE, ES, IT, PT and NL; when the application opens, it is set to the browser language (main part of the code, for example `pt` for `pt-BR`, `no` for `nb`), added to the list if missing (for example JA). If the browser language is not a valid code, FR stays selected. This choice is saved neither in the book nor in the browser;
 
 * the page is looked up on Wikipedia, following redirects: a page in the main namespace (an article) is added as an article; a page in another namespace (`User:…/Books/…`, `Book:…`, etc.) is imported as a book page;
 
@@ -1025,5 +1025,6 @@ Application version number (`app/main.py`, shown in the application's footer —
 | 1.6.2   | 2026-11-13 | Added `toolinfo.json` (Toolhub record of the Toolforge tool, section 13.7). |
 | 1.6.3   | 2026-11-13 | `toolinfo.json` completed (author's Wikimedia account, user documentation, feedback link) and made compliant with the Toolhub schema (`keywords` as a string, invalid `$schema` removed). |
 | 1.6.4   | 2026-11-13 | One-line `NE PAS …` ("DO NOT …") comments above the known pitfalls of the code (order of Wikipedia links, Python/JS alignment of the organization and the table of contents, pypdf warning, export buttons, fixed colors, languages) for agents that modify the code; no change in behavior. |
+| 1.6.5   | 2026-11-13 | Sources step: the Wikipedia language selector is set on opening to the browser language, added to the list if missing (section 3.1). |
 
 End of document — Wikipedia2Book, specifications version 1.1.
