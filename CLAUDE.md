@@ -26,6 +26,7 @@ Personne ne lit ce code. En conséquence :
 ## Documentation à garder synchronisée
 
 - `SPECIFICATIONS.md` : reflète le comportement réel, pas un objectif futur. Les évolutions non implémentées vont en section 18, pas dans le corps du document.
+- `SPECIFICATIONS.en.md` : traduction anglaise de `SPECIFICATIONS.md`, même structure (sections, sous-sections, lignes d'historique). Toute modification de `SPECIFICATIONS.md` est reportée dans la version anglaise dans le même changement; en cas d'écart, le français fait référence. Libellés d'interface cités tels qu'ils apparaissent dans l'interface anglaise (`i18n.js`, bloc `en`).
 - `README.md` : doit rester cohérent avec `SPECIFICATIONS.md` (pas de doublon contradictoire, même terminologie).
 
 ## Repères d'architecture
