@@ -909,7 +909,7 @@ function selectBrowserWikiLanguage() {
   const select = $('#articleLanguage');
   const base = (navigator.language || '').toLowerCase().split('-')[0];
   const code = base === 'nb' ? 'no' : base;
-  if (!/^[a-z]{2,3}$/.test(code)) return;
+  if (!/^[a-z]{2,3}$/.test(code)) { select.value = 'en'; return; }
   if (![...select.options].some((option) => option.value === code)) select.add(new Option(code.toUpperCase(), code));
   select.value = code;
 }

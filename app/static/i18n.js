@@ -2182,8 +2182,8 @@ function detectLanguage() {
     const stored = localStorage.getItem("w2b-lang");
     if (stored && SUPPORTED_LANGUAGES.includes(stored)) return stored;
   } catch { /* localStorage indisponible */ }
-  const browserLang = (navigator.language || "fr").slice(0, 2).toLowerCase();
-  return SUPPORTED_LANGUAGES.includes(browserLang) ? browserLang : "fr";
+  const browserLang = (navigator.language || "en").slice(0, 2).toLowerCase();
+  return SUPPORTED_LANGUAGES.includes(browserLang) ? browserLang : "en";
 }
 
 const state_i18n = { lang: detectLanguage() };
