@@ -624,7 +624,7 @@ Le choix de branche de Railway et Northflank ne fait pas partie du dépôt : il 
 
 ### 13.6 Intégration continue (GitHub Actions)
 
-Un seul workflow, `.github/workflows/deploy-toolforge.yml` (« Tests and Toolforge deploy »), avec deux jobs :
+Deux workflows. Le principal, `.github/workflows/deploy-toolforge.yml` (« Tests and Toolforge deploy »), a deux jobs :
 
 * `test` : à chaque push sur `main` ou `production-toolforge`, à chaque pull request et sur lancement manuel (`workflow_dispatch`). Installe Python 3.12 et `requirements.txt`, puis lance `python -m unittest discover -s tests -v`.
 
@@ -637,6 +637,8 @@ ssh <login>@login.toolforge.org "become wikipedia2book bash -s" < toolforge-depl
 Les déploiements Toolforge sont sérialisés (groupe de concurrence `toolforge-deploy`, sans annulation du déploiement en cours); les autres exécutions sont indépendantes.
 
 Le secret `TOOLFORGE_SSH_KEY` contient une clé privée OpenSSH dédiée au déploiement, distincte de la clé personnelle, dont la partie publique est enregistrée sur le compte Wikimedia (idm.wikimedia.org). La révoquer suffit à couper le déploiement automatique sans toucher aux autres accès.
+
+Le second, `.github/workflows/toolviews-stats.yml` (« Toolviews stats »), tourne chaque jour à 06:30 UTC (et sur lancement manuel). Il exécute `scripts/toolviews_stats.py` (section 13.7) sur le `toolviews.csv` de la branche `stats`, créée à son premier passage (branche orpheline, ne contenant que ce fichier), et y committe le fichier s'il a changé, au nom de `github-actions[bot]`. Le CSV n'est jamais committé sur `main` (il y est ignoré), pour qu'aucun push quotidien ne redéploie Railway et Northflank ni ne relance les tests.
 
 ### 13.7 Toolforge
 
@@ -655,6 +657,8 @@ Toolforge construit l'image avec des buildpacks et ignore le `Dockerfile`. Le d�
 * `toolforge-deploy.sh` : script de déploiement, exécuté dans le compte de l'outil.
 
 * `toolinfo.json` : fiche de l'outil au format Toolhub (schéma toolinfo 1.2.2, validé contre le schéma officiel de Toolhub : nom, description, URL, API, dépôt, suivi des bugs, licence AGPL-3.0, auteur et son compte Wikimédia `474D6F756C617264`, documentation utilisateur https://gmoulard.github.io/wikipedia2book/, langues d'interface; `keywords` y est une chaîne séparée par des virgules, pas une liste), à enregistrer sur https://toolhub.wikimedia.org via son URL brute GitHub (`https://raw.githubusercontent.com/gmoulard/wikipedia2book/main/toolinfo.json`). Les langues d'interface qu'elle déclare doivent rester celles de `SUPPORTED_LANGUAGES`.
+
+* `scripts/toolviews_stats.py` : script local (bibliothèque standard Python, hors application) qui complète un fichier CSV séparé par des points-virgules (`date;hits;unique_visitors`, par défaut `toolviews.csv`, ignoré par git) avec la fréquentation quotidienne de l'outil publiée par Toolviews (`https://toolviews.toolforge.org/api/v1/tool/wikipedia2book/daily/…` pour les requêtes, `…/unique/tool/…` pour les adresses IP distinctes). Il ne demande que les jours absents du CSV, du 1er novembre 2026 à la veille (le jour courant est incomplet), Toolviews omet les jours sans visite : ils sont écrits avec 0 jusqu'au dernier jour qu'il publie (ou déjà présent dans le CSV); les jours suivants, pas encore publiés, ne sont pas écrits. Un jour déjà présent n'est jamais recalculé. Un ancien fichier séparé par des virgules est relu puis réécrit avec des points-virgules; un fichier verrouillé (ouvert dans Excel) produit un message d'erreur explicite. Usage : `python scripts/toolviews_stats.py [fichier.csv]`.
 
 #### Script de déploiement
 
@@ -791,6 +795,9 @@ Wikipedia2Book/
 │       ├── i18n.js
 │       └── Wikipedia2bookLogo.png
 │
+├── scripts/
+│   └── toolviews_stats.py
+│
 ├── tests/
 │   ├── test_syntax.py
 │   ├── test_pdf_generation.py
@@ -798,6 +805,7 @@ Wikipedia2Book/
 │   ├── test_wikipedia_api.py
 │   ├── test_pdf_stream.py
 │   ├── test_resolve_source.py
+│   ├── test_toolviews_stats.py
 │   └── test_i18n.py
 │
 ├── Dockerfile
@@ -809,6 +817,7 @@ Wikipedia2Book/
 ├── toolforge-deploy.sh
 ├── toolinfo.json
 ├── .github/workflows/deploy-toolforge.yml
+├── .github/workflows/toolviews-stats.yml
 ├── requirements.txt
 ├── .gitignore
 ├── CLAUDE.md

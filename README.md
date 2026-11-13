@@ -59,6 +59,7 @@ The application is then reachable at `http://localhost:8000`.
 - [web app](https://wikipedia2book.toolforge.org)
 - [API](https://wikipedia2book.toolforge.org/docs)
 - [toolinfo.json](toolinfo.json) (Toolhub metadata)
+- Usage statistics: `python scripts/toolviews_stats.py` appends the daily [Toolviews](https://toolviews.toolforge.org/api/) hits and unique visitors since 2026-11-01 to `toolviews.csv` (missing days only); the `Toolviews stats` GitHub Actions workflow runs it daily and commits the file to the [`stats` branch](https://github.com/gmoulard/wikipedia2book/blob/stats/toolviews.csv)
 
 ## dev
 - [Northflank](https://prod--wikipedia2book--wkvpbnfj6h4v.code.run) 

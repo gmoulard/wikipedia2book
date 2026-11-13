@@ -46,7 +46,7 @@ Les boutons « Générer le PDF » (`#topExportButton`, `#exportButton`) ne sont
 
 Pas de `docker-compose.yml` dans ce dépôt : build/run via `Dockerfile` + `docker-build.sh` (injecte commit/date/auteur git pour le pied de page). Ne pas réintroduire Compose sans raison explicite de l'utilisateur.
 
-Système de déploiement complet décrit dans `SPECIFICATIONS.md` sections 13.5 à 13.7. En bref : Railway et Northflank suivent `main` (`Dockerfile`); Toolforge suit la branche `production-toolforge` (buildpacks : `Procfile`, `Aptfile`, `.python-version`, `toolforge-fonts.conf`), déployée par `.github/workflows/deploy-toolforge.yml` + `toolforge-deploy.sh`. Un push sur `main` ne déploie donc jamais Toolforge : ne pousser vers `production-toolforge` (`git push origin main:production-toolforge`) que sur demande explicite de l'utilisateur. Toute dépendance système ajoutée au `Dockerfile` doit l'être aussi dans l'`Aptfile`.
+Système de déploiement complet décrit dans `SPECIFICATIONS.md` sections 13.5 à 13.7. En bref : Railway et Northflank suivent `main` (`Dockerfile`); Toolforge suit la branche `production-toolforge` (buildpacks : `Procfile`, `Aptfile`, `.python-version`, `toolforge-fonts.conf`), déployée par `.github/workflows/deploy-toolforge.yml` + `toolforge-deploy.sh`. Un push sur `main` ne déploie donc jamais Toolforge : ne pousser vers `production-toolforge` (`git push origin main:production-toolforge`) que sur demande explicite de l'utilisateur. Toute dépendance système ajoutée au `Dockerfile` doit l'être aussi dans l'`Aptfile`. `.github/workflows/toolviews-stats.yml` committe chaque jour `toolviews.csv` sur la branche `stats`, jamais sur `main` (sinon Railway/Northflank redéploieraient tous les jours) : ne pas fusionner `stats` dans `main`.
 
 ## Versionnement
 
@@ -56,7 +56,7 @@ Chaque génération/modification de code par un agent doit incrémenter le numé
 - Minor (x.**Y**.0) : nouvelle fonctionnalité ou changement de comportement visible.
 - Major (**X**.0.0) : rupture de compatibilité (ex. format JSON exporté, API publique).
 
-Ne jamais terminer une génération de code sans ce bump, même minime.
+Ne jamais terminer une génération de code sans ce bump, même minime. Exception : les outils annexes qui ne font pas partie de l'application déployée (ex. `scripts/toolviews_stats.py`) ne changent pas la version et n'ont pas de ligne dans l'historique de la section 19.
 
 Ajouter la nouvelle version dans le tableau de la section 19 de `SPECIFICATIONS.md` (« Historique des versions »), avec la date et un résumé court des modifications — dans le même changement, pas après coup.
 
@@ -75,6 +75,8 @@ Des tests automatisés existent sous `tests/` (stdlib `unittest`, lancés avec l
 - `test_i18n.py` : lit `i18n.js` comme du texte (regex, pas de moteur JS) et vérifie que toutes les langues (liste `LANGUAGES`, à garder identique à `SUPPORTED_LANGUAGES` dans `i18n.js`) définissent exactement les mêmes clés, sans doublon, et que les paramètres `{n}`/`{error}`/etc. correspondent entre langues pour chaque clé. Ajouter toute nouvelle clé dans tous les blocs de langue sous peine de faire échouer ce test — c'est le but.
 
 - `test_resolve_source.py` : `POST /api/sources/resolve` via `TestClient` et un faux `MediaWikiClient` (`get_page`, `get_book`, `search`) — URL d'article, URL/titre de page de livre (espace de noms ≠ 0), redirection de titre, repli sur la recherche, 404/422/502.
+
+- `test_toolviews_stats.py` : `scripts/toolviews_stats.py` (hors `app/`) avec un faux `fetcher` — seuls les jours absents du CSV sont demandés, le jour courant n'est jamais écrit, les jours sans visite valent 0 jusqu'au dernier jour publié par Toolviews, rien au-delà.
 
 - `test_pdf_stream.py` : déroulement complet de `/api/pdf` et `/api/pdf/stream` via `TestClient`, avec `main.MediaWikiClient` et `main.generate_pdf` remplacés par des faux (PDF reportlab) — vérifie la numérotation des étapes de progression, l'événement `done` (PDF valide), l'événement `error` sur échec Wikipédia et le refus 400 d'une sélection vide.
 

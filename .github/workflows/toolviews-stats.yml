@@ -1,0 +1,44 @@
+name: Toolviews stats
+
+on:
+  schedule:
+    - cron: "30 6 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: toolviews-stats
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  stats:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Update toolviews.csv on the stats branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin stats >/dev/null; then
+            git fetch origin stats
+            git worktree add -B stats ../stats origin/stats
+          else
+            git worktree add --orphan -b stats ../stats
+          fi
+          if [ -f ../stats/toolviews.csv ]; then cp ../stats/toolviews.csv toolviews.csv; fi
+          python scripts/toolviews_stats.py toolviews.csv
+          cp toolviews.csv ../stats/toolviews.csv
+          cd ../stats
+          git add toolviews.csv
+          if git diff --cached --quiet; then
+            echo "Aucun changement"
+          else
+            git commit -m "stats: toolviews $(date -u +%F)"
+            git push origin stats
+          fi
