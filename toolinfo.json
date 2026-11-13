@@ -1,0 +1,22 @@
+{
+  "$schema": "https://toolhub.wikimedia.org/static/toolinfo-1.2.2.json",
+  "name": "wikipedia2book",
+  "title": "Wikipedia2Book",
+  "description": "Builds a printable PDF book from Wikipedia articles or from a Wikipedia book page: cover, introduction, chapters, table of contents, page numbers and license page. Each article is included through the official Wikipedia PDF, fitted to the chosen print format (A4, Letter, Legal, A5, etc.).",
+  "url": "https://wikipedia2book.toolforge.org/",
+  "api_url": "https://wikipedia2book.toolforge.org/docs",
+  "repository": "https://github.com/gmoulard/wikipedia2book",
+  "bugtracker_url": "https://github.com/gmoulard/wikipedia2book/issues",
+  "license": "AGPL-3.0-only",
+  "author": [
+    {
+      "name": "Gmoulard",
+      "url": "https://github.com/gmoulard"
+    }
+  ],
+  "tool_type": "web app",
+  "technology_used": ["Python", "FastAPI", "WeasyPrint", "pypdf", "JavaScript"],
+  "keywords": ["book", "PDF", "print", "export", "Collection", "Book creator"],
+  "for_wikis": ["*.wikipedia.org"],
+  "available_ui_languages": ["fr", "en", "es", "pt", "it", "de", "nl", "tr", "zh", "ja", "ar", "fa"]
+}

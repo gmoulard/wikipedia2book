@@ -58,6 +58,7 @@ The application is then reachable at `http://localhost:8000`.
 ## Deployment Toolforge
 - [web app](https://wikipedia2book.toolforge.org)
 - [API](https://wikipedia2book.toolforge.org/docs)
+- [toolinfo.json](toolinfo.json) (Toolhub metadata)
 
 ## dev
 - [Northflank](https://prod--wikipedia2book--wkvpbnfj6h4v.code.run) 
