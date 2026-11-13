@@ -1026,5 +1026,6 @@ Application version number (`app/main.py`, shown in the application's footer —
 | 1.6.3   | 2026-11-13 | `toolinfo.json` completed (author's Wikimedia account, user documentation, feedback link) and made compliant with the Toolhub schema (`keywords` as a string, invalid `$schema` removed). |
 | 1.6.4   | 2026-11-13 | One-line `NE PAS …` ("DO NOT …") comments above the known pitfalls of the code (order of Wikipedia links, Python/JS alignment of the organization and the table of contents, pypdf warning, export buttons, fixed colors, languages) for agents that modify the code; no change in behavior. |
 | 1.6.5   | 2026-11-13 | Sources step: the Wikipedia language selector is set on opening to the browser language, added to the list if missing (section 3.1). |
+| 1.6.6   | 2026-11-13 | Fallback to English, instead of French, when the browser language is not supported (interface) or not a valid code (Wikipedia language selector) (sections 3.1 and 12.1). Logo at the top of the README and of the documentation site. |
 
 End of document — Wikipedia2Book, specifications version 1.1.
