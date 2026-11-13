@@ -181,6 +181,7 @@ function orderedSelectedArticles() {
   return ordered;
 }
 
+// NE PAS modifier sans aligner ordered_article_groups/book_slots dans book_builder.py.
 function buildOrgSlots() {
   const project = state.project;
   const chapterByArticle = new Map();
@@ -208,6 +209,7 @@ function slotAnchor(slot) {
   return slot.type === 'chapter' ? `chapter:${slot.chapter.id}` : articleKey(slot.article);
 }
 
+// NE PAS modifier sans aligner toc_slot_index dans book_builder.py.
 function tocSlotIndex(slots) {
   const position = state.project.toc_position || 'start';
   if (position === 'end') return slots.length;
@@ -428,6 +430,7 @@ async function loadProjects() {
   setView('sources');
 }
 
+// NE PAS écraser introduction/book_author déjà renseignés ni appeler ailleurs qu'au passage de 0 à 1 article (wasFirst capturé avant le push).
 async function suggestIntroAndAuthor(article) {
   if (!state.project || (state.project.introduction && state.project.book_author)) return;
   try {
@@ -722,6 +725,7 @@ async function streamPdf(project) {
   }
 }
 
+// NE PAS désactiver les boutons pour une sélection vide : seulement pendant une génération (message ci-dessous sinon).
 async function exportPdf() {
   if (!state.project || !selectedArticles().length) {
     showToast(t('export.noSelection'), true);
@@ -752,6 +756,7 @@ async function exportPdf() {
   }
 }
 
+// NE PAS revenir à un nom de fichier fixe : il dérive du titre du livre.
 function bookFileName(project) {
   return (project.book_title || defaultBookTitle() || project.name).replace(/[^a-z0-9-_ ]/gi, '').trim().replace(/\s+/g, '-') || 'livre';
 }

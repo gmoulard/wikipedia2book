@@ -92,6 +92,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .button:hover:not(:disabled) { background: var(--paper); border-color: var(--ink-soft); }
 .button:active:not(:disabled) { background: var(--interactive); border-color: var(--ink-soft); }
 .button:disabled { border-color: var(--line); background: var(--interactive); color: var(--disabled); cursor: not-allowed; }
+/* NE PAS remplacer ces couleurs fixes par var(--ink) ou une variable de thème : texte #fff fixe, illisible dans un des thèmes. */
 .button-dark, .button-teal { border-color: #36c; background: #36c; color: #fff; }
 .button-dark:hover:not(:disabled), .button-teal:hover:not(:disabled) { border-color: #3056a9; background: #3056a9; color: #fff; }
 .button-dark:active:not(:disabled), .button-teal:active:not(:disabled) { border-color: #233566; background: #233566; color: #fff; }
@@ -267,6 +268,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .pdf-progress-card .pdf-progress-label { min-height: 3em; margin-top: 4px; color: var(--ink-soft); font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
 .pdf-progress-bar { height: 8px; margin-top: 14px; overflow: hidden; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--subtle); }
 .pdf-progress-bar span { display: block; width: 0; height: 100%; background: var(--accent); transition: width .3s ease; }
+/* NE PAS remplacer ces couleurs fixes par var(--ink) ou une variable de thème : texte #fff fixe, illisible dans un des thèmes. */
 .toast { position: fixed; z-index: 10; right: 24px; bottom: 24px; max-width: min(440px, calc(100vw - 48px)); padding: 12px 16px; border: 1px solid #202122; border-radius: var(--radius); background: #202122; box-shadow: var(--shadow-large); color: #fff; font-size: 14px; line-height: 1.5; opacity: 0; pointer-events: none; transform: translateY(8px); transition: opacity .2s ease, transform .2s ease; }
 .toast.visible { opacity: 1; transform: translateY(0); }
 .toast.error { border-color: #9f3526; background: #bf3c2c; }

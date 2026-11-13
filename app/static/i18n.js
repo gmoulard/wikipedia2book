@@ -2173,6 +2173,7 @@ const I18N = {
   },
 };
 
+// NE PAS ajouter de langue sans le bloc I18N complet, PDF_LABELS (book_builder.py) et LANGUAGES (test_i18n.py).
 const SUPPORTED_LANGUAGES = ["fr", "en", "es", "pt", "it", "de", "nl", "tr", "zh", "ja", "ar", "fa"];
 const RTL_LANGUAGES = ["ar", "fa"];
 
@@ -2206,6 +2207,7 @@ function setLanguage(lang) {
 }
 
 function applyTranslations() {
+  // NE PAS positionner lang/dir ailleurs : seul endroit qui le fait.
   document.documentElement.lang = state_i18n.lang;
   document.documentElement.dir = RTL_LANGUAGES.includes(state_i18n.lang) ? "rtl" : "ltr";
   document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n); });

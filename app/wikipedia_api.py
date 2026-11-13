@@ -120,6 +120,7 @@ class MediaWikiClient:
             return None
         return pages[0]["title"], pages[0]["ns"]
 
+    # NE PAS fusionner en un seul appel : MediaWiki ne renvoie pas extracts + première révision ensemble de façon exploitable.
     async def get_intro_and_creator(self, title: str, language: str = "fr") -> tuple[str, str]:
         extract_result = await self._get(
             language, {"prop": "extracts", "exintro": 1, "explaintext": 1, "titles": title}
@@ -156,6 +157,7 @@ class MediaWikiClient:
     async def get_links(self, title: str, language: str = "fr") -> list[str]:
         result = await self._get(
             language,
+            # NE PAS passer à prop=links : tri alphabétique, l'ordre d'apparition dans la page serait perdu.
             {"action": "parse", "page": title, "prop": "text", "redirects": 1, "disabletoc": 1},
         )
         parsed = result.get("parse", {})
@@ -176,6 +178,7 @@ class MediaWikiClient:
         limit = min(max(limit, 1), 500)
         result = await self._get(
             language,
+            # NE PAS passer à prop=links ni parse&prop=links : tri alphabétique, l'ordre réel du livre serait perdu.
             {"prop": "revisions", "titles": title, "rvprop": "content", "rvslots": "main"},
         )
         pages = result.get("query", {}).get("pages", [])

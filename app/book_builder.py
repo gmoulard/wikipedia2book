@@ -11,6 +11,7 @@ _PAGE_SIZES = {
     "A6": (105, 148), "Letter": (216, 279), "Legal": (216, 356),
 }
 
+# NE PAS ajouter de langue ici sans l'ajouter à SUPPORTED_LANGUAGES dans i18n.js (et inversement) : test_i18n.PdfLabelsTest.
 PDF_LABELS = {
     "fr": {"introduction": "Introduction", "toc": "Table des matières", "chapter": "Chapitre", "conclusion": "Conclusion", "license": "Licence", "no_chapter": "Sans chapitre", "edition": "Édition du {date}", "sources": "Sources et auteurs", "history": "Historique et auteurs :", "license_name": "Creative Commons Attribution – Partage dans les mêmes conditions 4.0 International (CC BY-SA 4.0)", "license_url": "https://creativecommons.org/licenses/by-sa/4.0/deed.fr", "license_intro": "Les textes des articles Wikipédia reproduits dans ce livre sont publiés sous licence {license} :", "license_terms": "Vous êtes libre de partager et d'adapter ce contenu, y compris à des fins commerciales, à condition de créditer les auteurs, d'indiquer la licence et si des modifications ont été apportées, et de diffuser toute adaptation sous la même licence.", "license_media": "Les images et médias conservent leurs propres licences, indiquées dans chaque article.", "license_documents": "Les documents importés ({titles}) ne proviennent pas de Wikipédia et ne sont pas couverts par cette licence.", "license_unofficial": "Ce livre n'est pas une publication officielle de Wikipédia ni de la Wikimedia Foundation."},
     "en": {"introduction": "Introduction", "toc": "Table of contents", "chapter": "Chapter", "conclusion": "Conclusion", "license": "License", "no_chapter": "No chapter", "edition": "Edition of {date}", "sources": "Sources and authors", "history": "History and authors:", "license_name": "Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)", "license_url": "https://creativecommons.org/licenses/by-sa/4.0/deed.en", "license_intro": "The texts of the Wikipedia articles reproduced in this book are published under the {license} license:", "license_terms": "You are free to share and adapt this content, including for commercial purposes, provided that you credit the authors, indicate the license and whether changes were made, and distribute any adaptation under the same license.", "license_media": "Images and media keep their own licenses, indicated in each article.", "license_documents": "The imported documents ({titles}) do not come from Wikipedia and are not covered by this license.", "license_unofficial": "This book is not an official publication of Wikipedia or of the Wikimedia Foundation."},
@@ -38,6 +39,7 @@ def _html_attrs(language: str) -> str:
 
 
 
+# NE PAS modifier sans aligner buildOrgSlots dans app.js (groupe sans chapitre en tête si unassigned_first).
 def ordered_article_groups(
     project: Project, items: list[BookItem], language: str = "fr"
 ) -> list[tuple[str, list[BookItem]]]:
@@ -73,6 +75,7 @@ def book_slots(groups: list[tuple[str, list[BookItem]]]) -> list[tuple[str, int 
     return slots
 
 
+# NE PAS modifier sans aligner tocSlotIndex dans app.js : la position de la TOC doit être la même à l'écran et dans le PDF.
 def toc_slot_index(
     project: Project, groups: list[tuple[str, list[BookItem]]], slots: list[tuple[str, int | BookItem]]
 ) -> int | None:

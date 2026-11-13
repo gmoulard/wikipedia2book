@@ -53,7 +53,7 @@ from app.wikipedia_api import (
 )
 
 
-app = FastAPI(title="Wikipedia2Book", version="1.6.3")
+app = FastAPI(title="Wikipedia2Book", version="1.6.4")
 static_directory = Path(__file__).parent / "static"
 PDF_LANGUAGE_PATTERN = "^(" + "|".join(PDF_LABELS) + ")$"
 app.mount("/static", StaticFiles(directory=static_directory), name="static")
@@ -285,6 +285,7 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
         return {"type": "progress", "step": step, "total": total, "code": code, **params}
 
     def append_pdf(pdf_data: bytes) -> int:
+        # NE PAS sauter les pages déjà au bon format : fit_pdf_to_format est idempotent et appliqué à toutes.
         stream = BytesIO(fit_pdf_to_format(pdf_data, page_width_mm, page_height_mm))
         streams.append(stream)
         page_number = len(writer.pages)

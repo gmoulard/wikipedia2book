@@ -12,6 +12,7 @@ def generate_pdf(html_document: str) -> bytes:
 
 
 def fit_page_to_format(source_page, width_pt: float, height_pt: float) -> PageObject:
+    # NE PAS corriger le DeprecationWarning pypdf de cette ligne : attendu avec pypdf<7 (voir CLAUDE.md).
     source_page.transfer_rotation_to_content()
     source_width = float(source_page.mediabox.width)
     source_height = float(source_page.mediabox.height)
@@ -58,6 +59,7 @@ def image_to_pdf(image_bytes: bytes, page_width_mm: float, page_height_mm: float
     return buffer.read()
 
 
+# NE PAS appeler avant fit_pdf_to_format : chaque page doit déjà avoir une origine (0,0) propre.
 def stamp_page_numbers(writer: PdfWriter, skip_first: bool = True) -> None:
     for index, page in enumerate(writer.pages):
         if skip_first and index == 0:

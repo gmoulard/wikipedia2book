@@ -896,5 +896,6 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 1.6.1   | 2026-11-13 | Étape Sources : libellé permanent sous le champ unique, expliquant qu'on peut saisir une URL d'article, une page de livre (URL ou nom) ou un nom de page Wikipédia; les messages d'état s'affichent sur une ligne séparée. |
 | 1.6.2   | 2026-11-13 | Ajout de `toolinfo.json` (fiche Toolhub de l'outil Toolforge, section 13.7). |
 | 1.6.3   | 2026-11-13 | `toolinfo.json` complété (compte Wikimédia de l'auteur, documentation utilisateur, lien de retour) et rendu conforme au schéma Toolhub (`keywords` en chaîne, `$schema` invalide retiré). |
+| 1.6.4   | 2026-11-13 | Commentaires `NE PAS …` d'une ligne au-dessus des pièges connus du code (ordre des liens Wikipédia, alignement Python/JS de l'organisation et de la table des matières, avertissement pypdf, boutons d'export, couleurs fixes, langues) pour les agents qui modifient le code; aucun changement de comportement. |
 
 Fin du document — Wikipedia2Book, spécifications version 1.1.
