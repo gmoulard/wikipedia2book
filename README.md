@@ -55,14 +55,13 @@ The `docker-build.sh` script automatically injects the git commit, date and auth
 
 The application is then reachable at `http://localhost:8000`.
 
-## Deployment
+## Deployment Toolforge
+- [web app](https://wikipedia2book.toolforge.org)
+- [API](https://wikipedia2book.toolforge.org/docs)
 
-- [Toolforge](https://wikipedia2book.toolforge.org)
-
+## dev
 - [Northflank](https://prod--wikipedia2book--wkvpbnfj6h4v.code.run) 
 - [Railway](https://wikipedia2book-production.up.railway.app/)
-
-The production API documentation is available on [Railway](https://wikipedia2book-production.up.railway.app/docs).
 
 ## License
 
