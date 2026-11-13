@@ -654,7 +654,7 @@ Toolforge construit l'image avec des buildpacks et ignore le `Dockerfile`. Le d�
 
 * `toolforge-deploy.sh` : script de déploiement, exécuté dans le compte de l'outil.
 
-* `toolinfo.json` : fiche de l'outil au format Toolhub (schéma toolinfo 1.2.2 : nom, description, URL, dépôt, licence AGPL-3.0, langues d'interface), à enregistrer sur https://toolhub.wikimedia.org via son URL brute GitHub (`https://raw.githubusercontent.com/gmoulard/wikipedia2book/main/toolinfo.json`). Les langues d'interface qu'elle déclare doivent rester celles de `SUPPORTED_LANGUAGES`.
+* `toolinfo.json` : fiche de l'outil au format Toolhub (schéma toolinfo 1.2.2, validé contre le schéma officiel de Toolhub : nom, description, URL, API, dépôt, suivi des bugs, licence AGPL-3.0, auteur et son compte Wikimédia `474D6F756C617264`, documentation utilisateur https://gmoulard.github.io/wikipedia2book/, langues d'interface; `keywords` y est une chaîne séparée par des virgules, pas une liste), à enregistrer sur https://toolhub.wikimedia.org via son URL brute GitHub (`https://raw.githubusercontent.com/gmoulard/wikipedia2book/main/toolinfo.json`). Les langues d'interface qu'elle déclare doivent rester celles de `SUPPORTED_LANGUAGES`.
 
 #### Script de déploiement
 
@@ -886,5 +886,6 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 1.6.0   | 2026-11-13 | Étape Sources : un seul champ pour une URL d'article, une page de livre ou un titre; les onglets « Livre Wikipédia / URL Wikipédia / Rechercher » sont supprimés. Nouvel endpoint `POST /api/sources/resolve` qui reconnaît le type de page sur Wikipédia (espace de noms, redirections suivies) et renvoie l'article, le livre ou des résultats de recherche (section 3.1); les endpoints existants sont conservés. Ajout de `tests/test_resolve_source.py`. |
 | 1.6.1   | 2026-11-13 | Étape Sources : libellé permanent sous le champ unique, expliquant qu'on peut saisir une URL d'article, une page de livre (URL ou nom) ou un nom de page Wikipédia; les messages d'état s'affichent sur une ligne séparée. |
 | 1.6.2   | 2026-11-13 | Ajout de `toolinfo.json` (fiche Toolhub de l'outil Toolforge, section 13.7). |
+| 1.6.3   | 2026-11-13 | `toolinfo.json` complété (compte Wikimédia de l'auteur, documentation utilisateur, lien de retour) et rendu conforme au schéma Toolhub (`keywords` en chaîne, `$schema` invalide retiré). |
 
 Fin du document — Wikipedia2Book, spécifications version 1.1.
