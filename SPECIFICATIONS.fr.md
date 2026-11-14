@@ -1,6 +1,5 @@
 # Wikipedia2Book — Spécifications fonctionnelles et techniques
 
-Version : 1.1 — Statut : aligné sur l'implémentation actuelle — Format : Markdown (`.md`)
 
 Traduction anglaise : [SPECIFICATIONS.en.md](SPECIFICATIONS.en.md). Ce document en français fait référence.
 
@@ -1145,4 +1144,4 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 1.6.6   | 2026-11-13 | GMoulard  | Repli sur l'anglais, au lieu du français, quand la langue du navigateur n'est pas prise en charge (interface) ou n'est pas un code valide (sélecteur de langue Wikipédia) (sections 3.1 et 12.1). Logo en tête du README et du site de documentation. |
 | 1.6.7   | 2026-11-14 | GMoulard  | Versions des dépendances Python figées dans `requirements.txt` (`==`), `pydantic` listé explicitement (section 13.4). Code de conduite, métadonnées de citation (`CITATION.cff`, `codemeta.json`) et en-têtes de licence AGPL-3.0 dans les fichiers de code (contribution de ftosoni, section 17). |
 
-Fin du document — Wikipedia2Book, spécifications version 1.1.
+Fin du document
