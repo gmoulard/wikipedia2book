@@ -29,6 +29,8 @@ Wikipedia2Book is a web application for composing a printable PDF book directly 
 
 Documentation site (GitHub Pages): https://gmoulard.github.io/wikipedia2book/
 
+[Wikipedia usage](https://gmoulard.github.io/wikipedia2book/stats.html)
+
 Functional and technical details are described in [SPECIFICATIONS.en.md](docs/SPECIFICATIONS.en.md) (English translation) and [SPECIFICATIONS.fr.md](docs/SPECIFICATIONS.fr.md) (French, the reference version).
 
 ## Repository structure
