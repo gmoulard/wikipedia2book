@@ -85,6 +85,27 @@ class ToolviewsStatsTest(unittest.TestCase):
             self.assertEqual(toolviews_stats.update(path, date(2026, 11, 2), fake_fetcher([], {}, {})), [])
             self.assertEqual(path.read_text(encoding="utf-8").splitlines(), ["date;hits;unique_visitors", "2026-11-01;1;1"])
 
+    def test_unexpected_response_raises_and_writes_nothing(self):
+        bad_responses = [
+            {},
+            {"results": []},
+            {"results": {"2026-11-01": {"autre-outil": 3}}},
+            {"results": {"2026-11-01": 3}},
+            {"results": {"2026-11-01": {"wikipedia2book": "3"}}},
+            {"results": {"hier": {"wikipedia2book": 3}}},
+        ]
+        for response in bad_responses:
+            with self.subTest(response=response), tempfile.TemporaryDirectory() as tmp:
+                path = Path(tmp) / "stats.csv"
+                with self.assertRaises(toolviews_stats.UnexpectedResponse):
+                    toolviews_stats.update(path, date(2026, 11, 2), lambda url: response)
+                self.assertFalse(path.exists())
+
+    def test_empty_day_counts_as_zero(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "stats.csv"
+            fetch = lambda url: {"results": {"2026-11-01": {} if "/unique/" in url else {"wikipedia2book": 4}}}
+            self.assertEqual(toolviews_stats.update(path, date(2026, 11, 2), fetch), ["2026-11-01"])
 
 if __name__ == "__main__":
     unittest.main()

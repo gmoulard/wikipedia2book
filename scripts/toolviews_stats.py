@@ -37,10 +37,29 @@ def fetch(url):
         return json.load(response)
 
 
+class UnexpectedResponse(ValueError):
+    pass
+
+
 def daily(kind, start, end, fetcher):
     prefix = f"{API}/unique/tool" if kind == "unique" else f"{API}/tool"
-    data = fetcher(f"{prefix}/{TOOL}/daily/{start.isoformat()}/{end.isoformat()}")
-    return {day: values.get(TOOL, 0) for day, values in data.get("results", {}).items()}
+    url = f"{prefix}/{TOOL}/daily/{start.isoformat()}/{end.isoformat()}"
+    data = fetcher(url)
+    if not isinstance(data, dict) or not isinstance(data.get("results"), dict):
+        raise UnexpectedResponse(f"{url} : pas de dictionnaire « results » dans la réponse : {str(data)[:300]}")
+    counts = {}
+    for day, values in data["results"].items():
+        try:
+            date.fromisoformat(day)
+        except (TypeError, ValueError):
+            raise UnexpectedResponse(f"{url} : date invalide {day!r}") from None
+        if not isinstance(values, dict) or (values and TOOL not in values):
+            raise UnexpectedResponse(f"{url} : valeur inattendue pour {day} (clé « {TOOL} » absente) : {str(values)[:300]}")
+        count = values.get(TOOL, 0)
+        if isinstance(count, bool) or not isinstance(count, int) or count < 0:
+            raise UnexpectedResponse(f"{url} : compte invalide pour {day} : {count!r}")
+        counts[day] = count
+    return counts
 
 
 def read_rows(path):
@@ -93,7 +112,7 @@ def main():
     args = parser.parse_args()
     try:
         added = update(args.csv, date.today())
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as error:
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, UnexpectedResponse) as error:
         print(f"Erreur Toolviews : {error}", file=sys.stderr)
         return 1
     except PermissionError:
