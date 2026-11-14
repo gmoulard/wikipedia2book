@@ -599,12 +599,12 @@ The software ships with:
 
 * A `requirements.txt` file with pinned versions (`==`) for the direct dependencies, including `pydantic` (imported by `app/models.py`): every build installs exactly the versions the tests pass with.
 
-* A `docker-build.sh` script that builds the image while injecting the current git commit, date and author, shown in the application's footer.
+* A `scripts/docker-build.sh` script that builds the image while injecting the current git commit, date and author, shown in the application's footer.
 
 Example:
 
 ```bash
-sh docker-build.sh
+sh scripts/docker-build.sh
 docker run --rm -p 8000:8000 wikipedia2book
 ```
 
@@ -655,10 +655,10 @@ Three workflows. The main one, `.github/workflows/deploy-toolforge.yml` ("Tests 
 
 * `test`: on every push to `main` or `production-toolforge`, on every pull request and on manual start (`workflow_dispatch`). Installs Python 3.12 and `requirements.txt`, then runs `python -m unittest discover -s tests -v`.
 
-* `deploy`: only after `test` succeeds, and only for a push (or a manual start) on `production-toolforge`; it is skipped everywhere else. It writes the SSH key from the GitHub secret `TOOLFORGE_SSH_KEY`, pins the ED25519 fingerprint of `login.toolforge.org` in `known_hosts` (no blind trust on first contact), then runs `toolforge-deploy.sh` in the tool account:
+* `deploy`: only after `test` succeeds, and only for a push (or a manual start) on `production-toolforge`; it is skipped everywhere else. It writes the SSH key from the GitHub secret `TOOLFORGE_SSH_KEY`, pins the ED25519 fingerprint of `login.toolforge.org` in `known_hosts` (no blind trust on first contact), then runs `scripts/toolforge-deploy.sh` in the tool account:
 
 ```bash
-ssh <login>@login.toolforge.org "become wikipedia2book bash -s" < toolforge-deploy.sh
+ssh <login>@login.toolforge.org "become wikipedia2book bash -s" < scripts/toolforge-deploy.sh
 ```
 
 Toolforge deployments are serialized (concurrency group `toolforge-deploy`, without cancelling the deployment in progress); other runs are independent.
@@ -683,13 +683,13 @@ Toolforge builds the image with buildpacks and ignores the `Dockerfile`. The rep
 
 * `toolforge-fonts.conf`: the fonts from the `Aptfile` (including Noto CJK for Chinese and Japanese) are installed in `/layers/fagiani_apt/apt/usr/share/fonts`, outside the folders read by fontconfig; this file adds them and puts the fontconfig cache in `/tmp` (without it, WeasyPrint does not find Noto CJK and the log shows "Fontconfig error: No writable cache directories").
 
-* `toolforge-deploy.sh`: deployment script, run in the tool account.
+* `scripts/toolforge-deploy.sh`: deployment script, run in the tool account.
 
 * `toolinfo.json`: the tool's record in Toolhub format (toolinfo schema 1.2.2, validated against Toolhub's official schema: name, description, URL, API, repository, bug tracker, AGPL-3.0 license, author and their Wikimedia account `474D6F756C617264`, user documentation https://gmoulard.github.io/wikipedia2book/, interface languages; `keywords` is a comma-separated string there, not a list), to be registered on https://toolhub.wikimedia.org through its raw GitHub URL (`https://raw.githubusercontent.com/gmoulard/wikipedia2book/main/toolinfo.json`). The interface languages it declares must remain those of `SUPPORTED_LANGUAGES`.
 
 #### Deployment script
 
-`toolforge-deploy.sh`:
+`scripts/toolforge-deploy.sh`:
 
 1. starts the build of the `production-toolforge` branch (`toolforge build start --detach --json --use-latest-versions --ref production-toolforge`) and reads from the response the build identifier and the commit actually built (`resolved_ref`);
 2. follows that specific build by its identifier until it ends (15 minutes at most), and prints its logs on failure;
@@ -718,7 +718,7 @@ toolforge webservice buildservice start --mount=none --mem 2Gi --cpu 1
 * Redeploy without a new commit: restart the workflow on the `production-toolforge` branch from GitHub's Actions tab, or run the script by hand:
 
 ```bash
-ssh <login>@login.toolforge.org "become wikipedia2book bash -s" < toolforge-deploy.sh
+ssh <login>@login.toolforge.org "become wikipedia2book bash -s" < scripts/toolforge-deploy.sh
 ```
 
 * Status and logs, in the tool account: `toolforge webservice status`, `toolforge webservice logs -f`, `toolforge build list`, `toolforge build logs <identifier>`, `toolforge envvars list`.
@@ -1034,6 +1034,8 @@ Wikipedia2Book/
 │       └── Wikipedia2bookLogo.png
 │
 ├── scripts/
+│   ├── docker-build.sh
+│   ├── toolforge-deploy.sh
 │   ├── toolviews_stats.py
 │   └── toolviews_chart.py
 │
@@ -1049,12 +1051,10 @@ Wikipedia2Book/
 │   └── test_i18n.py
 │
 ├── Dockerfile
-├── docker-build.sh
 ├── Procfile
 ├── Aptfile
 ├── .python-version
 ├── toolforge-fonts.conf
-├── toolforge-deploy.sh
 ├── toolinfo.json
 ├── CITATION.cff
 ├── codemeta.json

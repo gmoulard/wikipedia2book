@@ -49,14 +49,14 @@ wikipedia2book/
 │       ├── styles.css
 │       └── Wikipedia2bookLogo.png
 ├── scripts/
+│   ├── docker-build.sh          # Docker build with git commit/date/author injected
+│   ├── toolforge-deploy.sh      # Deployment script run in the Toolforge tool account
 │   ├── toolviews_stats.py       # Daily Toolviews usage statistics (not part of the app)
 │   └── toolviews_chart.py       # Usage charts page for GitHub Pages
 ├── tests/                       # unittest suite (no network, WeasyPrint stubbed when missing)
 ├── .github/workflows/           # Toolforge deployment, Toolviews stats, GitHub Pages
 ├── Dockerfile                   # Image used by Railway and Northflank
-├── docker-build.sh              # Docker build with git commit/date/author injected
 ├── Procfile, Aptfile, .python-version, toolforge-fonts.conf  # Toolforge buildpacks
-├── toolforge-deploy.sh          # Deployment script run in the Toolforge tool account
 ├── toolinfo.json                # Toolhub metadata
 ├── CITATION.cff                 # Citation metadata
 ├── codemeta.json                # CodeMeta software metadata
@@ -90,11 +90,11 @@ The web interface is available at `http://localhost:8000` and the interactive AP
 The container can be run directly:
 
 ```bash
-sh docker-build.sh
+sh scripts/docker-build.sh
 docker run --rm -p 8000:8000 wikipedia2book
 ```
 
-The `docker-build.sh` script automatically injects the git commit, date and author into the image via `--build-arg`, so the footer displays the correct version.
+The `scripts/docker-build.sh` script automatically injects the git commit, date and author into the image via `--build-arg`, so the footer displays the correct version.
 
 The application is then reachable at `http://localhost:8000`.
 

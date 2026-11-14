@@ -49,9 +49,9 @@ Les boutons « Générer le PDF » (`#topExportButton`, `#exportButton`) ne sont
 
 ## Déploiement
 
-Pas de `docker-compose.yml` dans ce dépôt : build/run via `Dockerfile` + `docker-build.sh` (injecte commit/date/auteur git pour le pied de page). Ne pas réintroduire Compose sans raison explicite de l'utilisateur.
+Pas de `docker-compose.yml` dans ce dépôt : build/run via `Dockerfile` + `scripts/docker-build.sh` (injecte commit/date/auteur git pour le pied de page). Ne pas réintroduire Compose sans raison explicite de l'utilisateur.
 
-Système de déploiement complet décrit dans `docs/SPECIFICATIONS.fr.md` sections 13.5 à 13.7. En bref : Railway et Northflank suivent `main` (`Dockerfile`); Toolforge suit la branche `production-toolforge` (buildpacks : `Procfile`, `Aptfile`, `.python-version`, `toolforge-fonts.conf`), déployée par `.github/workflows/deploy-toolforge.yml` + `toolforge-deploy.sh`. Un push sur `main` ne déploie donc jamais Toolforge : ne pousser vers `production-toolforge` (`git push origin main:production-toolforge`) que sur demande explicite de l'utilisateur. Toute dépendance système ajoutée au `Dockerfile` doit l'être aussi dans l'`Aptfile`. `.github/workflows/toolviews-stats.yml` committe chaque jour `docs/toolviews.csv` et `docs/stats.md` sur `main` (il n'y a plus de branche `stats`) : Railway et Northflank redéploient donc une fois par jour, choix accepté par l'utilisateur. Ces deux fichiers sont générés : ne pas les modifier à la main, modifier `scripts/toolviews_stats.py`/`scripts/toolviews_chart.py`.
+Système de déploiement complet décrit dans `docs/SPECIFICATIONS.fr.md` sections 13.5 à 13.7. En bref : Railway et Northflank suivent `main` (`Dockerfile`); Toolforge suit la branche `production-toolforge` (buildpacks : `Procfile`, `Aptfile`, `.python-version`, `toolforge-fonts.conf`), déployée par `.github/workflows/deploy-toolforge.yml` + `scripts/toolforge-deploy.sh`. Un push sur `main` ne déploie donc jamais Toolforge : ne pousser vers `production-toolforge` (`git push origin main:production-toolforge`) que sur demande explicite de l'utilisateur. Toute dépendance système ajoutée au `Dockerfile` doit l'être aussi dans l'`Aptfile`. `.github/workflows/toolviews-stats.yml` committe chaque jour `docs/toolviews.csv` et `docs/stats.md` sur `main` (il n'y a plus de branche `stats`) : Railway et Northflank redéploient donc une fois par jour, choix accepté par l'utilisateur. Ces deux fichiers sont générés : ne pas les modifier à la main, modifier `scripts/toolviews_stats.py`/`scripts/toolviews_chart.py`.
 
 ## Versionnement
 
@@ -92,7 +92,7 @@ Reste un angle mort : le rendu réel par WeasyPrint et l'assemblage avec de vrai
 - `python`/`py` dans le PATH par défaut pointent vers l'alias cassé du Microsoft Store. Le vrai interpréteur est `C:\Users\<utilisateur>\AppData\Local\Programs\Python\Python312\python.exe`.
 - Un virtualenv `.venv/` existe à la racine (ignoré par git) avec `requirements.txt` déjà installé : `.venv/Scripts/python.exe`.
 - `import app.main` échoue nativement sur cette machine Windows : WeasyPrint a besoin des libs GTK/Pango/Cairo (`libgobject-2.0-0`, etc.) que seul le conteneur Docker installe (via `apt-get`, voir `Dockerfile`). Ce n'est pas un bug du code — ne pas essayer de « corriger » ça côté app. Pour vérifier le code qui ne dépend pas de `pdf_generator`/WeasyPrint (`models`, `book_builder`, `wikipedia_api`, `explorer`), importer ces modules directement, ils fonctionnent dans ce `.venv`.
-- Pour tester la génération PDF de bout en bout (WeasyPrint inclus), il faut lancer l'app dans le conteneur Docker (`sh docker-build.sh && docker run --rm -p 8000:8000 wikipedia2book`) et dérouler le flux Sources → Organisation → Édition → export PDF.
+- Pour tester la génération PDF de bout en bout (WeasyPrint inclus), il faut lancer l'app dans le conteneur Docker (`sh scripts/docker-build.sh && docker run --rm -p 8000:8000 wikipedia2book`) et dérouler le flux Sources → Organisation → Édition → export PDF.
 
 ### Déboguer un bug frontend (JS/HTML) sans pouvoir lancer le backend localement
 

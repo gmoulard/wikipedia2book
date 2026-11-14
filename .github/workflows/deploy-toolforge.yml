@@ -56,4 +56,4 @@ jobs:
         run: |
           ssh -i ~/.ssh/toolforge -o IdentitiesOnly=yes -o BatchMode=yes -o ServerAliveInterval=30 \
             gm474d6f756c617264@login.toolforge.org \
-            "become wikipedia2book bash -s" < toolforge-deploy.sh
+            "become wikipedia2book bash -s" < scripts/toolforge-deploy.sh

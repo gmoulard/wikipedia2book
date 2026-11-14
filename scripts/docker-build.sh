@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+cd "$(dirname "$0")/.." || exit 1
 docker build \
   --build-arg GIT_COMMIT="$(git log -1 --format=%H)" \
   --build-arg GIT_DATE="$(git log -1 --format=%ci)" \
