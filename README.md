@@ -100,7 +100,7 @@ The application is then reachable at `http://localhost:8000`.
 - [Northflank](https://prod--wikipedia2book--wkvpbnfj6h4v.code.run) 
 - [Railway](https://wikipedia2book-production.up.railway.app/)
 
-## Technology stack & project status
+## Technology stack
 
 <p align="left">
   <!-- Project status, license & archive -->
