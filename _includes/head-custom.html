@@ -1,5 +1,5 @@
 <script type="module">
-  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.esm.min.mjs";
 
   const blocks = document.querySelectorAll("div.language-mermaid, pre > code.language-mermaid");
   blocks.forEach((block) => {
@@ -12,5 +12,14 @@
   if (blocks.length) {
     mermaid.initialize({ startOnLoad: false, theme: window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "default" });
     await mermaid.run({ querySelector: ".mermaid" });
+    // NE PAS retirer : Mermaid calcule la taille des étiquettes d'après la largeur des barres (-1px s'il y a une barre à 0, énorme pour une seule barre)
+    document.querySelectorAll('svg[aria-roledescription="xychart"]').forEach((svg) => {
+      const bar = svg.querySelector('g[class^="bar-plot"] rect');
+      const labels = [...svg.querySelectorAll('g[class^="bar-plot"] text')];
+      if (!bar || !labels.length) return;
+      const longest = Math.max(...labels.map((label) => label.textContent.length));
+      const size = Math.max(6, Math.min(12, bar.width.baseVal.value / (longest * 0.62)));
+      labels.forEach((label) => label.setAttribute("font-size", `${size}px`));
+    });
   }
 </script>

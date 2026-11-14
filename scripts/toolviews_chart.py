@@ -15,6 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import argparse
+import math
 import sys
 from collections import defaultdict
 from datetime import date
@@ -22,19 +23,20 @@ from pathlib import Path
 
 from toolviews_stats import read_rows
 
-DAILY_DAYS = 90
+DAILY_DAYS = 31
 SOURCE = "https://github.com/gmoulard/wikipedia2book/blob/stats/toolviews.csv"
 
 
-def xychart(title, labels, values):
+def xychart(title, labels, values, width):
     axis = ", ".join(f'"{label}"' for label in labels)
     return "\n".join([
         "```mermaid",
-        '%%{init: {"themeVariables": {"xyChart": {"plotColorPalette": "#3366cc"}}}}%%',
+        f'%%{{init: {{"xyChart": {{"width": {width}, "showDataLabel": true, "showDataLabelOutsideBar": true}}, '
+        '"themeVariables": {"xyChart": {"plotColorPalette": "#3366cc"}}}}%%',
         "xychart-beta",
         f'    title "{title}"',
         f"    x-axis [{axis}]",
-        f'    y-axis "Hits" 0 --> {max(max(values), 1)}',
+        f'    y-axis "Hits" 0 --> {math.ceil(max(max(values), 1) * 1.15)}',
         f"    bar [{', '.join(str(value) for value in values)}]",
         "```",
     ])
@@ -54,13 +56,17 @@ def build_page(rows):
         "# Usage statistics / Statistiques d'utilisation",
         f"Wikipedia2Book on Toolforge, {days[0]} → {days[-1]}: **{sum(hits.values())}** hits.",
         "Source: [Toolviews](https://toolviews.toolforge.org/), updated daily "
-        f"([toolviews.csv]({SOURCE})). Hits are HTTP requests, not people (page, static files, API calls); "
-        "Toolviews does not currently count unique visitors.",
+        f"([toolviews.csv]({SOURCE})). Hits are HTTP requests, not people (page, static files, API calls).",
         "Les hits sont des requêtes HTTP, pas des personnes. Mise à jour quotidienne.",
         f"## Daily hits / Hits par jour ({len(recent)} days)",
-        xychart("Daily hits", [date.fromisoformat(day).strftime("%d/%m") for day in recent], [hits[day] for day in recent]),
+        xychart(
+            f"Daily hits {date.fromisoformat(recent[0]):%d/%m/%Y} - {date.fromisoformat(recent[-1]):%d/%m/%Y}",
+            [str(date.fromisoformat(day).day) for day in recent],
+            [hits[day] for day in recent],
+            1000,
+        ),
         "## Monthly hits / Hits par mois",
-        xychart("Monthly hits", months, [monthly[month] for month in months]),
+        xychart("Monthly hits", months, [monthly[month] for month in months], 700),
     ]) + "\n"
 
 

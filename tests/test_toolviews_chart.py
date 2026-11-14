@@ -27,7 +27,7 @@ import toolviews_chart
 
 
 def rows(pairs):
-    return {day: {"date": day, "hits": str(hits), "unique_visitors": "0"} for day, hits in pairs}
+    return {day: {"date": day, "hits": str(hits)} for day, hits in pairs}
 
 
 class ToolviewsChartTest(unittest.TestCase):
@@ -35,12 +35,15 @@ class ToolviewsChartTest(unittest.TestCase):
         page = toolviews_chart.build_page(rows([("2026-11-30", 5), ("2026-12-01", 7), ("2026-12-02", 1)]))
         charts = re.findall(r"```mermaid\n(.*?)```", page, re.S)
         self.assertEqual(len(charts), 2)
-        self.assertIn('x-axis ["30/11", "01/12", "02/12"]', charts[0])
+        self.assertIn('x-axis ["30", "1", "2"]', charts[0])
+        self.assertIn("Daily hits 30/11/2026 - 02/12/2026", charts[0])
         self.assertIn("bar [5, 7, 1]", charts[0])
-        self.assertIn("0 --> 7", charts[0])
+        self.assertIn("0 --> 9", charts[0])
         self.assertIn('x-axis ["2026-11", "2026-12"]', charts[1])
         self.assertIn("bar [5, 8]", charts[1])
         self.assertIn("**13**", page)
+        self.assertIn('"showDataLabel": true', charts[0])
+        self.assertNotIn("unique", page.lower())
 
     def test_daily_chart_keeps_last_days_only(self):
         days = [(f"2026-{month:02d}-{day:02d}", 1) for month in (1, 2, 3, 4) for day in range(1, 29)]
@@ -48,11 +51,12 @@ class ToolviewsChartTest(unittest.TestCase):
         daily = re.findall(r"```mermaid\n(.*?)```", page, re.S)[0]
         labels = re.search(r"x-axis \[(.*)\]", daily).group(1).split(", ")
         self.assertEqual(len(labels), toolviews_chart.DAILY_DAYS)
-        self.assertEqual(labels[-1], '"28/04"')
+        self.assertEqual(labels[-1], '"28"')
+        self.assertEqual(labels[0], '"26"')
 
     def test_all_zero_axis_is_valid(self):
         page = toolviews_chart.build_page(rows([("2026-11-01", 0)]))
-        self.assertIn("0 --> 1", page)
+        self.assertIn("0 --> 2", page)
 
     def test_empty_or_missing_csv_fails(self):
         with self.assertRaises(ValueError):

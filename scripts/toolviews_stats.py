@@ -26,7 +26,7 @@ from pathlib import Path
 API = "https://toolviews.toolforge.org/api/v1"
 TOOL = "wikipedia2book"
 START = date(2026, 11, 1)
-FIELDS = ["date", "hits", "unique_visitors"]
+FIELDS = ["date", "hits"]
 DELIMITER = ";"
 USER_AGENT = "Wikipedia2Book-stats/1.0 (https://github.com/gmoulard/wikipedia2book)"
 
@@ -41,9 +41,8 @@ class UnexpectedResponse(ValueError):
     pass
 
 
-def daily(kind, start, end, fetcher):
-    prefix = f"{API}/unique/tool" if kind == "unique" else f"{API}/tool"
-    url = f"{prefix}/{TOOL}/daily/{start.isoformat()}/{end.isoformat()}"
+def daily(start, end, fetcher):
+    url = f"{API}/tool/{TOOL}/daily/{start.isoformat()}/{end.isoformat()}"
     data = fetcher(url)
     if not isinstance(data, dict) or not isinstance(data.get("results"), dict):
         raise UnexpectedResponse(f"{url} : pas de dictionnaire « results » dans la réponse : {str(data)[:300]}")
@@ -69,7 +68,9 @@ def read_rows(path):
         header = handle.readline()
         handle.seek(0)
         delimiter = "," if "," in header and DELIMITER not in header else DELIMITER
-        return {row["date"]: row for row in csv.DictReader(handle, delimiter=delimiter)}, delimiter != DELIMITER
+        reader = csv.DictReader(handle, delimiter=delimiter)
+        rows = {row["date"]: row for row in reader}
+        return rows, delimiter != DELIMITER or reader.fieldnames != FIELDS
 
 
 def write_rows(path, rows):
@@ -89,9 +90,8 @@ def update(path, today, fetcher=fetch):
         if outdated:
             write_rows(path, rows)
         return []
-    hits = daily("hits", missing[0], missing[-1], fetcher)
-    unique = daily("unique", missing[0], missing[-1], fetcher)
-    published = set(hits) | set(unique) | set(rows)
+    hits = daily(missing[0], missing[-1], fetcher)
+    published = set(hits) | set(rows)
     if not published:
         return []
     last = max(published)
@@ -99,7 +99,7 @@ def update(path, today, fetcher=fetch):
     for day in missing:
         key = day.isoformat()
         if key <= last:
-            rows[key] = {"date": key, "hits": hits.get(key, 0), "unique_visitors": unique.get(key, 0)}
+            rows[key] = {"date": key, "hits": hits.get(key, 0)}
             added.append(key)
     if added or outdated:
         write_rows(path, rows)

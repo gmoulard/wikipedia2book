@@ -667,7 +667,7 @@ The `TOOLFORGE_SSH_KEY` secret contains an OpenSSH private key dedicated to depl
 
 The second, `.github/workflows/toolviews-stats.yml` ("Toolviews stats"), updates the usage statistics every day (section 13.8).
 
-The third, `.github/workflows/jekyll-gh-pages.yml`, publishes on every push to `main` (and on manual start) the documentation site https://gmoulard.github.io/wikipedia2book/ with GitHub Pages: Jekyll converts the Markdown files at the root of the repository to HTML (`README.md` as the home page, `SPECIFICATIONS.fr.md` and `SPECIFICATIONS.en.md` as pages). This is the address declared as user documentation in `toolinfo.json`. GitHub Pages does not render Mermaid blocks natively: `_includes/head-custom.html`, added by Jekyll to the head of every page (default theme), loads Mermaid 11.4.1 from jsDelivr and draws the ```` ```mermaid ```` blocks (section 13.10). The site is also rebuilt after each successful run of "Toolviews stats" (`workflow_run` trigger), and every build adds the usage statistics page https://gmoulard.github.io/wikipedia2book/stats.html (section 13.8).
+The third, `.github/workflows/jekyll-gh-pages.yml`, publishes on every push to `main` (and on manual start) the documentation site https://gmoulard.github.io/wikipedia2book/ with GitHub Pages: Jekyll converts the Markdown files at the root of the repository to HTML (`README.md` as the home page, `SPECIFICATIONS.fr.md` and `SPECIFICATIONS.en.md` as pages). This is the address declared as user documentation in `toolinfo.json`. GitHub Pages does not render Mermaid blocks natively: `_includes/head-custom.html`, added by Jekyll to the head of every page (default theme), loads Mermaid 11.17.2 from jsDelivr and draws the ```` ```mermaid ```` blocks (section 13.10). The site is also rebuilt after each successful run of "Toolviews stats" (`workflow_run` trigger), and every build adds the usage statistics page https://gmoulard.github.io/wikipedia2book/stats.html (section 13.8).
 
 ### 13.7 Toolforge
 
@@ -737,8 +737,8 @@ Local script (Python standard library only) that fills a CSV file with the tool'
 python scripts/toolviews_stats.py [file.csv]
 ```
 
-* File: `toolviews.csv` by default, separated by semicolons so that it opens directly in a French-locale Excel, with the header `date;hits;unique_visitors`.
-* Sources: `https://toolviews.toolforge.org/api/v1/tool/wikipedia2book/daily/<start>/<end>` for requests (`hits`) and `…/api/v1/unique/tool/wikipedia2book/daily/<start>/<end>` for distinct IP addresses (`unique_visitors`); two calls for the whole missing period.
+* File: `toolviews.csv` by default, separated by semicolons so that it opens directly in a French-locale Excel, with the header `date;hits`. An older file that still contains the `unique_visitors` column is rewritten without it.
+* Sources: `https://toolviews.toolforge.org/api/v1/tool/wikipedia2book/daily/<start>/<end>` for requests (`hits`); a single call for the whole missing period. The Toolviews count of distinct visitors (`…/api/v1/unique/…`) is not collected: it is 0 for every Toolforge tool (inactive counter), a wrong value.
 * Days processed: only those missing from the CSV, from 1 November 2026 to the day before; the current day, incomplete, is never written. A day already present is never recomputed (to correct a value, delete the line and run again).
 * Days without visits: Toolviews does not return them; they are written as 0 up to the last day published by Toolviews (or already in the CSV). Later days, not yet published, are not written, so as not to freeze a provisional 0.
 * Robustness: an older comma-separated file is read and rewritten with semicolons; a locked file (open in Excel) produces an explicit message; a network error or an invalid Toolviews response stops the script with an error code, without writing anything. Invalid means: unreadable JSON, no `results` dictionary, a key that is not a date, or a day whose value is not a dictionary, lacks the `wikipedia2book` key while not empty, or whose count is not a non-negative integer. An empty day (`{}`) counts as 0.
@@ -752,12 +752,11 @@ The CSV is never committed to `main`: a daily push would redeploy Railway and No
 
 #### Charts on GitHub Pages
 
-Before the Jekyll build, `.github/workflows/jekyll-gh-pages.yml` fetches `toolviews.csv` from the `stats` branch and runs `scripts/toolviews_chart.py toolviews.csv stats.md`, which writes the page `stats.md` (not committed, published as `stats.html`): total hits and period covered, then two Mermaid bar charts (`xychart-beta`, drawn by `_includes/head-custom.html`) — hits per day over the last 90 days, and hits per month since the start. `unique_visitors` is not shown (always 0). A missing or empty CSV stops the site build with an error message. Tests: `tests/test_toolviews_chart.py`.
+Before the Jekyll build, `.github/workflows/jekyll-gh-pages.yml` fetches `toolviews.csv` from the `stats` branch and runs `scripts/toolviews_chart.py toolviews.csv stats.md`, which writes the page `stats.md` (not committed, published as `stats.html`): total hits and period covered, then two Mermaid bar charts (`xychart-beta`, drawn by `_includes/head-custom.html`) — hits per day over the last 31 days (axis: day of the month, period in the title, chart 1000 px wide), and hits per month since the start. The number of hits is shown above each bar (`showDataLabel`, `showDataLabelOutsideBar`); the vertical axis goes up to 115% of the maximum to leave room for the highest label. Mermaid sizes these labels from the bar width in an unusable way (-1 px as soon as a bar is 0, huge for a single bar): `head-custom.html` recomputes the size after rendering, from the bar width and the length of the largest number, between 6 and 12 px. A missing or empty CSV stops the site build with an error message. Tests: `tests/test_toolviews_chart.py`.
 
 #### Reading the figures
 
 * `hits` counts HTTP requests, not people: one visit loads the page, the static files, `/api/version`, then each search or generation. It does not distinguish the web interface from the API (only the webservice logs, `toolforge webservice logs`, do, and they are erased on each redeployment).
-* `unique_visitors` has been 0 for every Toolforge tool since the setup (Toolviews counter inactive); the column is kept for the day it is restored.
 
 ### 13.9 Data model and save file
 
