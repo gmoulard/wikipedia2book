@@ -784,28 +784,39 @@ function pdfStreamEvent(line) {
   const event = JSON.parse(line);
   if (event.type === 'progress') { showPdfProgress(event); return null; }
   if (event.type === 'error') throw new Error(event.detail);
-  if (event.type === 'done') {
-    const bytes = Uint8Array.from(atob(event.pdf_base64), (c) => c.charCodeAt(0));
-    return new Blob([bytes], { type: 'application/pdf' });
-  }
+  if (event.type === 'done') return event;
   return null;
 }
 
+// NE PAS décoder le flux entier en texte : après le message « done », la suite est le PDF en binaire (event.size octets).
 async function streamPdf(project) {
   const response = await request(`/api/pdf/stream?language=${encodeURIComponent(lang())}`, { method: 'POST', body: JSON.stringify(project) });
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
-  let buffer = '';
+  let pending = new Uint8Array(0);
+  let done = null;
+  const parts = [];
+  let received = 0;
   for (;;) {
-    const { value, done } = await reader.read();
-    buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
-    const lines = buffer.split('\n');
-    buffer = done ? '' : lines.pop();
-    for (const line of lines) {
-      const blob = pdfStreamEvent(line);
-      if (blob) return blob;
+    const { value, done: finished } = await reader.read();
+    if (value) {
+      if (done) { parts.push(value); received += value.length; }
+      else {
+        const merged = new Uint8Array(pending.length + value.length);
+        merged.set(pending);
+        merged.set(value, pending.length);
+        pending = merged;
+        let newline = pending.indexOf(10);
+        while (!done && newline !== -1) {
+          done = pdfStreamEvent(decoder.decode(pending.subarray(0, newline)));
+          pending = pending.subarray(newline + 1);
+          newline = pending.indexOf(10);
+        }
+        if (done && pending.length) { parts.push(pending); received += pending.length; pending = new Uint8Array(0); }
+      }
     }
-    if (done) throw new Error(t('progress.interrupted'));
+    if (done && received >= done.size) return new Blob(parts, { type: 'application/pdf' });
+    if (finished) throw new Error(t('progress.interrupted'));
   }
 }
 

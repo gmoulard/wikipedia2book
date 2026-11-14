@@ -37,6 +37,22 @@ import app.main as main
 from app.wikipedia_api import MediaWikiError, WikipediaBook
 
 
+def _parse_stream(content):
+    events = []
+    while content:
+        line, _, content = content.partition(b"\n")
+        if not line.strip():
+            continue
+        event = json.loads(line)
+        if event["type"] == "done":
+            event["pdf"] = content[:event["size"]]
+            event["trailing"] = len(content) - event["size"]
+            events.append(event)
+            break
+        events.append(event)
+    return events
+
+
 def _make_pdf(num_pages=1):
     buffer = BytesIO()
     pdf_canvas = canvas.Canvas(buffer, pagesize=(400, 600))
@@ -101,7 +117,7 @@ class PdfStreamTest(unittest.TestCase):
     def _events(self, project):
         response = self.client.post("/api/pdf/stream", json=project)
         self.assertEqual(response.status_code, 200)
-        return [json.loads(line) for line in response.text.splitlines() if line.strip()]
+        return _parse_stream(response.content)
 
     def test_progress_steps_are_numbered_and_end_with_the_pdf(self):
         events = self._events(_project(conclusion="Fin"))
@@ -116,7 +132,7 @@ class PdfStreamTest(unittest.TestCase):
         )
         self.assertEqual([e.get("title") for e in progress[:2]], ["Chat", "Chien"])
         self.assertEqual(events[-1]["type"], "done")
-        pdf = PdfReader(BytesIO(base64.b64decode(events[-1]["pdf_base64"])))
+        pdf = PdfReader(BytesIO(events[-1]["pdf"]))
         self.assertEqual(len(pdf.pages), 1 + 1 + 2 + 2 + 1 + 1)
         self.assertIn("Licence", [item.title for item in pdf.outline[1]])
 
@@ -306,8 +322,8 @@ class PdfStreamTest(unittest.TestCase):
     def test_generated_titles_follow_the_requested_language(self):
         project = _project(conclusion="Ende", chapters=[{"title": "Tiere", "article_keys": ["fr:title:chat"]}])
         response = self.client.post("/api/pdf/stream?language=de", json=project)
-        events = [json.loads(line) for line in response.text.splitlines() if line.strip()]
-        pdf = PdfReader(BytesIO(base64.b64decode(events[-1]["pdf_base64"])))
+        events = _parse_stream(response.content)
+        pdf = PdfReader(BytesIO(events[-1]["pdf"]))
         titles = [item.title for item in pdf.outline[1] if not isinstance(item, list)]
         self.assertEqual(titles, ["Inhaltsverzeichnis", "Tiere", "Ohne Kapitel", "Lizenz", "Schlusswort"])
 
@@ -408,7 +424,7 @@ class PdfStreamTest(unittest.TestCase):
 
         class SlowClient(FakeClient):
             async def get_article_pdf(self, title, language, paper):
-                await asyncio.sleep(0.2)
+                await asyncio.sleep(0.05 if title == "Chat" else 0.4)
                 timeline.append(("downloaded", title, time.perf_counter()))
                 return _make_pdf(2)
 
@@ -428,6 +444,48 @@ class PdfStreamTest(unittest.TestCase):
         last_download = max(moment for kind, _, moment in timeline if kind == "downloaded")
         first_fit = min(moment for kind, _, moment in timeline if kind == "fit")
         self.assertLess(first_fit, last_download)
+
+    def test_pdf_follows_the_done_line_as_raw_bytes(self):
+        events = self._events(_project())
+        self.assertEqual(events[-1]["type"], "done")
+        self.assertEqual(events[-1]["trailing"], 0)
+        self.assertEqual(len(events[-1]["pdf"]), events[-1]["size"])
+        self.assertTrue(events[-1]["pdf"].startswith(b"%PDF-"))
+
+    def test_downloads_run_in_parallel_up_to_the_limit_and_keep_book_order(self):
+        import asyncio
+        from app.models import Project
+
+        running = 0
+        peak = 0
+
+        class ParallelClient(FakeClient):
+            async def get_article_pdf(self, title, language, paper):
+                nonlocal running, peak
+                running += 1
+                peak = max(peak, running)
+                await asyncio.sleep(0.05)
+                running -= 1
+                return _make_pdf(2)
+
+        articles = [
+            {"title": f"Article {index}", "language": "fr", "url": f"https://fr.wikipedia.org/wiki/Article_{index}", "selected": True}
+            for index in range(10)
+        ]
+        project = Project(name="Parallèle", main_articles=articles, page_numbers=False)
+
+        async def scenario():
+            return [event async for event in main.build_book_pdf(project, main._selected_items(project), "fr")]
+
+        with patch.object(main, "MediaWikiClient", ParallelClient), patch.object(main, "generate_pdf", lambda html: _make_pdf(1)):
+            events = asyncio.run(scenario())
+        self.assertEqual(peak, main.DOWNLOAD_CONCURRENCY)
+        fetches = [event for event in events if event.get("code") == "fetch_article"]
+        self.assertEqual(len(fetches), 10)
+        self.assertEqual([event["step"] for event in events if event["type"] == "progress"], list(range(1, len(events))))
+        pdf = PdfReader(BytesIO(events[-1]["pdf"]))
+        titles = [item.title for item in pdf.outline[1] if not isinstance(item, list)]
+        self.assertEqual([title for title in titles if title.startswith("Article")], [f"Article {index}" for index in range(10)])
 
     def test_table_of_contents_entries_link_to_their_pages(self):
         import re

@@ -78,7 +78,10 @@ from app.wikipedia_api import (
 )
 
 
-app = FastAPI(title="Wikipedia2Book", version="1.7.0")
+DOWNLOAD_CONCURRENCY = 4
+PDF_STREAM_CHUNK = 256 * 1024
+
+app = FastAPI(title="Wikipedia2Book", version="1.7.1")
 static_directory = Path(__file__).parent / "static"
 PDF_LANGUAGE_PATTERN = "^(" + "|".join(PDF_LABELS) + ")$"
 app.mount("/static", StaticFiles(directory=static_directory), name="static")
@@ -330,29 +333,57 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
     def page_count(pdf_data: bytes) -> int:
         return len(PdfReader(BytesIO(pdf_data)).pages)
 
+    def fit_and_count(pdf_data: bytes) -> tuple[bytes, int]:
+        fitted = fit_pdf_to_format(pdf_data, page_width_mm, page_height_mm)
+        return fitted, page_count(fitted)
+
     def document_pdf(document: UploadedDocument) -> bytes:
         data = base64.b64decode(document.data_base64)
         if document.kind == "pdf":
             return data
         return image_to_pdf(data, page_width_mm, page_height_mm)
 
-    item_pdfs: dict[str, bytes] = {}
-    fitted_items: dict[str, asyncio.Future[bytes]] = {}
+    fitted_items: dict[str, asyncio.Future[tuple[bytes, int]]] = {}
     paper = WIKIPEDIA_PDF_PAPERS.get(project.page_format, "a4")
-    try:
-        async with MediaWikiClient() as client:
-            for item in unique_items:
-                if isinstance(item, Article):
-                    yield progress("fetch_article", title=item.title)
-                    item_pdfs[item.key] = await client.get_article_pdf(item.title, item.language, paper)
+    started: asyncio.Queue[tuple[str, str]] = asyncio.Queue()
+    # NE PAS dépasser DOWNLOAD_CONCURRENCY : le service PDF de Wikimédia est coûteux, il faut rester raisonnable envers lui.
+    slots_free = asyncio.Semaphore(DOWNLOAD_CONCURRENCY)
+
+    async def load(client: MediaWikiClient, item: Article | UploadedDocument) -> None:
+        async with slots_free:
+            if isinstance(item, Article):
+                await started.put(("fetch_article", item.title))
+                data = await client.get_article_pdf(item.title, item.language, paper)
+            else:
+                await started.put(("prepare_document", item.title))
+                data = await asyncio.to_thread(document_pdf, item)
+        fitted_items[item.key] = asyncio.ensure_future(asyncio.to_thread(fit_and_count, data))
+
+    async with MediaWikiClient() as client:
+        downloads = [asyncio.ensure_future(load(client, item)) for item in unique_items]
+        try:
+            pending = set(downloads)
+            while pending or not started.empty():
+                if not started.empty():
+                    code, title = started.get_nowait()
+                    yield progress(code, title=title)
+                    continue
+                waiter = asyncio.ensure_future(started.get())
+                finished, _ = await asyncio.wait(pending | {waiter}, return_when=asyncio.FIRST_COMPLETED)
+                if waiter in finished:
+                    code, title = waiter.result()
+                    yield progress(code, title=title)
                 else:
-                    yield progress("prepare_document", title=item.title)
-                    item_pdfs[item.key] = await asyncio.to_thread(document_pdf, item)
-                fitted_items[item.key] = fit(item_pdfs[item.key])
-    except BaseException:
-        for task in fitted_items.values():
-            task.cancel()
-        raise
+                    waiter.cancel()
+                for task in sorted(finished - {waiter}, key=downloads.index):
+                    pending.discard(task)
+                    task.result()
+        except BaseException:
+            for task in downloads:
+                task.cancel()
+            for task in fitted_items.values():
+                task.cancel()
+            raise
 
     slots = book_slots(groups)
     toc_at = toc_slot_index(project, groups, slots)
@@ -377,7 +408,7 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
                 cursor += 1
             else:
                 article_pages[value.key] = cursor
-                cursor += await asyncio.to_thread(page_count, item_pdfs[value.key])
+                cursor += (await fitted_items[value.key])[1]
 
     yield progress("cover_and_toc")
     toc = (
@@ -406,7 +437,7 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
             targets[f"chapter:{value}"] = await append_pdf(chapter_page)
             chapter_outline = writer.add_outline_item(chapter_title, targets[f"chapter:{value}"], parent=root_outline)
         else:
-            item_page = await append_fitted(await fitted_items[value.key])
+            item_page = await append_fitted((await fitted_items[value.key])[0])
             targets.setdefault(value.key, item_page)
             writer.add_outline_item(value.title, item_page, parent=chapter_outline)
     if toc_at == len(slots):
@@ -593,7 +624,11 @@ async def create_pdf_stream(
         try:
             async for event in build_book_pdf(project, selected, language):
                 if event["type"] == "done":
-                    event = {"type": "done", "pdf_base64": base64.b64encode(event["pdf"]).decode("ascii")}
+                    pdf = event["pdf"]
+                    yield json.dumps({"type": "done", "size": len(pdf)}) + "\n"
+                    for start in range(0, len(pdf), PDF_STREAM_CHUNK):
+                        yield pdf[start:start + PDF_STREAM_CHUNK]
+                    return
                 yield json.dumps(event, ensure_ascii=False) + "\n"
         except Exception as error:
             yield json.dumps({"type": "error", "detail": _pdf_error_detail(error)}, ensure_ascii=False) + "\n"
