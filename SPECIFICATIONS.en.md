@@ -599,7 +599,7 @@ The software ships with:
 
 * A `Dockerfile` (Python 3.12-slim image with WeasyPrint's system dependencies and the DejaVu and Noto CJK fonts).
 
-* A `requirements.txt` file.
+* A `requirements.txt` file with pinned versions (`==`) for the direct dependencies, including `pydantic` (imported by `app/models.py`): every build installs exactly the versions the tests pass with.
 
 * A `docker-build.sh` script that builds the image while injecting the current git commit, date and author, shown in the application's footer.
 
@@ -1143,5 +1143,6 @@ Application version number (`app/main.py`, shown in the application's footer —
 | 1.6.4   | 2026-11-13 | GMoulard  | One-line `NE PAS …` ("DO NOT …") comments above the known pitfalls of the code (order of Wikipedia links, Python/JS alignment of the organization and the table of contents, pypdf warning, export buttons, fixed colors, languages) for agents that modify the code; no change in behavior. |
 | 1.6.5   | 2026-11-13 | GMoulard  | Sources step: the Wikipedia language selector is set on opening to the browser language, added to the list if missing (section 3.1). |
 | 1.6.6   | 2026-11-13 | GMoulard  | Fallback to English, instead of French, when the browser language is not supported (interface) or not a valid code (Wikipedia language selector) (sections 3.1 and 12.1). Logo at the top of the README and of the documentation site. |
+| 1.6.7   | 2026-11-14 | GMoulard  | Python dependency versions pinned in `requirements.txt` (`==`), `pydantic` listed explicitly (section 13.4). Code of conduct, citation metadata (`CITATION.cff`, `codemeta.json`) and AGPL-3.0 licence headers in code files (contribution by ftosoni, section 17). |
 
 End of document — Wikipedia2Book, specifications version 1.1.

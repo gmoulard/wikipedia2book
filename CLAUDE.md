@@ -44,7 +44,7 @@ Personne ne lit ce code. En conséquence :
 
 Les boutons « Générer le PDF » (`#topExportButton`, `#exportButton`) ne sont **jamais** désactivés pour cause de sélection vide — seulement pendant une génération en cours (double-soumission). Le cas « rien de sélectionné » est géré par un message dans `exportPdf()`, pas par `disabled`.
 
-`fit_page_to_format` déclenche un `pypdf.DeprecationWarning` sur `transfer_rotation_to_content()` (appelé sur une page pas encore attachée à un writer) : attendu avec `pypdf` 5/6.x, inoffensif, et hors de portée tant que `requirements.txt` épingle `pypdf<7` — ne pas « corriger » sans qu'une migration pypdf 7 soit explicitement demandée.
+`fit_page_to_format` déclenche un `pypdf.DeprecationWarning` sur `transfer_rotation_to_content()` (appelé sur une page pas encore attachée à un writer) : attendu avec `pypdf` 5/6.x, inoffensif, et hors de portée tant que `requirements.txt` épingle `pypdf` en 6.x (versions des dépendances directes figées, `==`) — ne pas « corriger » sans qu'une migration pypdf 7 soit explicitement demandée.
 
 ## Déploiement
 
