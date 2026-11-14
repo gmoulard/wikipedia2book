@@ -640,6 +640,15 @@ git push origin main:production-toolforge
 
 `production-toolforge` ne reçoit pas de commits propres : elle ne fait qu'avancer vers un commit déjà présent sur `main`. Revenir à une version antérieure sur Toolforge se fait en y poussant un commit plus ancien de `main` (`git push --force origin <commit>:production-toolforge`).
 
+Chaque version de l'application est repérée dans Git par un **tag annoté** `vX.Y.Z` (par exemple `v1.6.6`), posé sur le commit qui fait passer `app/main.py` à cette version, puis poussé sur GitHub :
+
+```bash
+git tag -a v1.6.6 -m "Wikipedia2Book 1.6.6"
+git push origin v1.6.6
+```
+
+Les tags servent à retrouver le code d'une version (`git checkout v1.4.0`), à comparer deux versions (`git diff v1.5.2 v1.6.6`) ou à republier une version antérieure sur Toolforge (`git push --force origin v1.6.5^{}:production-toolforge`). Pousser un tag ne déclenche aucun déploiement ni aucun workflow : seuls les pushs de branches le font. Les versions 0.16.0, 0.17.0 et 1.6.0 de l'historique (section 19) n'ont jamais été écrites dans `app/main.py` et n'ont donc pas de tag; à l'inverse, `v0.18.0` existe dans le code (l'API de haut niveau, décrite dans l'historique sous 0.16.0 et 0.17.0).
+
 Le choix de branche de Railway et Northflank ne fait pas partie du dépôt : il se modifie dans leurs interfaces (Railway : service, Settings, Source, Branch; Northflank : service de build, Build settings, Branch).
 
 ### 13.6 Intégration continue (GitHub Actions)
@@ -1081,7 +1090,7 @@ Toute évolution doit préserver les principes fondamentaux du logiciel, notamme
 
 ## 19\. Historique des versions
 
-Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l'application — voir section 12). Incrémenté sur décision de l'utilisateur avant chaque commit (patch, minor ou major), selon la règle définie dans `CLAUDE.md`.
+Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l'application — voir section 12). Incrémenté sur décision de l'utilisateur avant chaque commit (patch, minor ou major), selon la règle définie dans `CLAUDE.md`. Chaque version correspond au tag Git `vX.Y.Z` (section 13.5).
 
 | Version | Date       | Auteur    | Modifications apportées |
 | ------- | ---------- | --------- | ------------------------ |

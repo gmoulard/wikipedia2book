@@ -61,7 +61,7 @@ Le numéro de version de l'application est dans `app/main.py` (`FastAPI(version=
 
 Ne jamais incrémenter d'office : préparer les modifications sans toucher à la version, poser la question au moment de committer, et n'appliquer le bump qu'après sa réponse. Les outils annexes qui ne font pas partie de l'application déployée (ex. `scripts/toolviews_stats.py`) et les changements de documentation seule ne justifient en principe pas de nouvelle version.
 
-Quand la version est incrémentée, ajouter la nouvelle version dans le tableau de la section 19 de `SPECIFICATIONS.fr.md` et de `SPECIFICATIONS.en.md` (« Historique des versions » / « Version history »), avec la date, l'auteur (`GMoulard`) et un résumé court des modifications — dans le même commit, pas après coup.
+Quand la version est incrémentée, ajouter la nouvelle version dans le tableau de la section 19 de `SPECIFICATIONS.fr.md` et de `SPECIFICATIONS.en.md` (« Historique des versions » / « Version history »), avec la date, l'auteur (`GMoulard`) et un résumé court des modifications — dans le même commit, pas après coup. Après ce commit, poser le tag annoté `vX.Y.Z` dessus (`git tag -a vX.Y.Z -m "Wikipedia2Book X.Y.Z"`) et le pousser avec le commit (`git push origin main vX.Y.Z`). Un commit sans changement de version ne reçoit pas de tag; ne jamais déplacer ni supprimer un tag déjà poussé.
 
 ## Vérification avant de considérer une tâche terminée
 

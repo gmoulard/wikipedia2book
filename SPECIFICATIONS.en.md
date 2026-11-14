@@ -640,6 +640,15 @@ git push origin main:production-toolforge
 
 `production-toolforge` receives no commits of its own: it only moves forward to a commit already on `main`. Going back to an earlier version on Toolforge is done by pushing an older `main` commit to it (`git push --force origin <commit>:production-toolforge`).
 
+Each version of the application is marked in Git by an **annotated tag** `vX.Y.Z` (for example `v1.6.6`), placed on the commit that sets `app/main.py` to that version, then pushed to GitHub:
+
+```bash
+git tag -a v1.6.6 -m "Wikipedia2Book 1.6.6"
+git push origin v1.6.6
+```
+
+Tags make it possible to get the code of a version (`git checkout v1.4.0`), compare two versions (`git diff v1.5.2 v1.6.6`) or republish an earlier version on Toolforge (`git push --force origin v1.6.5^{}:production-toolforge`). Pushing a tag triggers no deployment and no workflow: only branch pushes do. Versions 0.16.0, 0.17.0 and 1.6.0 of the history (section 19) were never written in `app/main.py` and therefore have no tag; conversely, `v0.18.0` exists in the code (the high-level API, described in the history under 0.16.0 and 0.17.0).
+
 The branch choice for Railway and Northflank is not part of the repository: it is changed in their interfaces (Railway: service, Settings, Source, Branch; Northflank: build service, Build settings, Branch).
 
 ### 13.6 Continuous integration (GitHub Actions)
@@ -1081,7 +1090,7 @@ Any development must preserve the core principles of the software, in particular
 
 ## 19\. Version history
 
-Application version number (`app/main.py`, shown in the application's footer — see section 12). Incremented on the user's decision before each commit (patch, minor or major), following the rule defined in `CLAUDE.md`.
+Application version number (`app/main.py`, shown in the application's footer — see section 12). Incremented on the user's decision before each commit (patch, minor or major), following the rule defined in `CLAUDE.md`. Each version matches the Git tag `vX.Y.Z` (section 13.5).
 
 | Version | Date       | Author    | Changes |
 | ------- | ---------- | --------- | ------------------------ |
