@@ -753,6 +753,8 @@ Le CSV n'est jamais committé sur `main` : un push quotidien redéploierait Rail
 
 #### Graphiques sur GitHub Pages
 
+Page publiée : https://gmoulard.github.io/wikipedia2book/stats.html (statistiques d'utilisation de l'instance Toolforge, mises à jour chaque jour).
+
 Avant la construction Jekyll, `.github/workflows/jekyll-gh-pages.yml` récupère `toolviews.csv` de la branche `stats` et exécute `scripts/toolviews_chart.py toolviews.csv stats.md`, qui écrit la page `stats.md` (non committée, publiée en `stats.html`) : total des hits et période couverte, puis deux histogrammes Mermaid (`xychart-beta`, dessinés par `_includes/head-custom.html`) — hits par jour sur les 31 derniers jours (axe : numéro du jour, période dans le titre, graphique de 1000 px de large), et hits par mois depuis le début. Le nombre de hits est affiché au-dessus de chaque barre (`showDataLabel`, `showDataLabelOutsideBar`); l'axe vertical va jusqu'à 115 % du maximum pour laisser la place à l'étiquette la plus haute. Mermaid calcule la taille de ces étiquettes d'après la largeur des barres, de façon inutilisable (-1 px dès qu'une barre vaut 0, énorme pour une barre seule) : `head-custom.html` la recalcule après le rendu, d'après la largeur des barres et la longueur du plus grand nombre, entre 6 et 12 px. Un CSV absent ou vide arrête la construction du site avec un message d'erreur. Tests : `tests/test_toolviews_chart.py`.
 
 #### Lecture des chiffres

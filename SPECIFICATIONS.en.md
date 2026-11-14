@@ -752,6 +752,8 @@ The CSV is never committed to `main`: a daily push would redeploy Railway and No
 
 #### Charts on GitHub Pages
 
+Published page: https://gmoulard.github.io/wikipedia2book/stats.html (usage statistics of the Toolforge instance, updated daily).
+
 Before the Jekyll build, `.github/workflows/jekyll-gh-pages.yml` fetches `toolviews.csv` from the `stats` branch and runs `scripts/toolviews_chart.py toolviews.csv stats.md`, which writes the page `stats.md` (not committed, published as `stats.html`): total hits and period covered, then two Mermaid bar charts (`xychart-beta`, drawn by `_includes/head-custom.html`) — hits per day over the last 31 days (axis: day of the month, period in the title, chart 1000 px wide), and hits per month since the start. The number of hits is shown above each bar (`showDataLabel`, `showDataLabelOutsideBar`); the vertical axis goes up to 115% of the maximum to leave room for the highest label. Mermaid sizes these labels from the bar width in an unusable way (-1 px as soon as a bar is 0, huge for a single bar): `head-custom.html` recomputes the size after rendering, from the bar width and the length of the largest number, between 6 and 12 px. A missing or empty CSV stops the site build with an error message. Tests: `tests/test_toolviews_chart.py`.
 
 #### Reading the figures

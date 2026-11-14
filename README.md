@@ -27,6 +27,8 @@ Wikipedia2Book is a web application for composing a printable PDF book directly 
 - WeasyPrint for the cover, chapter pages, license page (CC BY-SA 4.0, with article sources) and conclusion; pypdf to merge PDFs in memory; reportlab for page numbers and for converting imported images to PDF.
 - Docker for deployment.
 
+Documentation site (GitHub Pages): https://gmoulard.github.io/wikipedia2book/
+
 Functional and technical details are described in [SPECIFICATIONS.en.md](SPECIFICATIONS.en.md) (English translation) and [SPECIFICATIONS.fr.md](SPECIFICATIONS.fr.md) (French, the reference version).
 
 ## Repository structure
@@ -68,8 +70,6 @@ wikipedia2book/
 ## Project status
 
 The repository contains the FastAPI backend and the matching web interface. It lets you build the book in browser memory, search for or add references without downloading the full content, explore Wikipedia links, control the selection, organize chapters and set up the cover. At generation time, the full PDFs of the selected articles are fetched from Wikipedia and merged in memory. The server stores neither the book nor the PDFs: the user explicitly imports and downloads a JSON file from the interface.
-
-Usage statistics of the Toolforge instance, updated daily: https://gmoulard.github.io/wikipedia2book/stats.html
 
 ## Running the application
 
