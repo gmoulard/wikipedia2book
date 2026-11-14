@@ -49,14 +49,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Usage statistics page
-        run: python3 scripts/toolviews_chart.py toolviews.csv stats.md
+      - name: Usage statistics page and home page
+        run: |
+          python3 scripts/toolviews_chart.py docs/toolviews.csv docs/stats.md
+          sed -E -e 's#\]\(docs/#](#g' -e 's#\]\((CODE_OF_CONDUCT\.md|LICENSE|CITATION\.cff|codemeta\.json)\)#](https://github.com/gmoulard/wikipedia2book/blob/main/\1)#g' README.md > docs/index.md
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Build with Jekyll
         uses: actions/jekyll-build-pages@v1
         with:
-          source: ./
+          source: ./docs
           destination: ./_site
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

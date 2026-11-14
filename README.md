@@ -29,7 +29,7 @@ Wikipedia2Book is a web application for composing a printable PDF book directly 
 
 Documentation site (GitHub Pages): https://gmoulard.github.io/wikipedia2book/
 
-Functional and technical details are described in [SPECIFICATIONS.en.md](SPECIFICATIONS.en.md) (English translation) and [SPECIFICATIONS.fr.md](SPECIFICATIONS.fr.md) (French, the reference version).
+Functional and technical details are described in [SPECIFICATIONS.en.md](docs/SPECIFICATIONS.en.md) (English translation) and [SPECIFICATIONS.fr.md](docs/SPECIFICATIONS.fr.md) (French, the reference version).
 
 ## Repository structure
 
@@ -61,9 +61,11 @@ wikipedia2book/
 ├── CITATION.cff                 # Citation metadata
 ├── codemeta.json                # CodeMeta software metadata
 ├── requirements.txt             # Python dependencies
-├── toolviews.csv, stats.md      # Daily usage statistics and their charts (generated)
-├── SPECIFICATIONS.fr.md         # Reference behaviour (French original)
-├── SPECIFICATIONS.en.md         # English translation of the specifications
+├── docs/                        # Documentation site (GitHub Pages source)
+│   ├── SPECIFICATIONS.fr.md     # Reference behaviour (French original)
+│   ├── SPECIFICATIONS.en.md     # English translation of the specifications
+│   ├── toolviews.csv, stats.md  # Daily usage statistics and their charts (generated)
+│   └── _includes/head-custom.html  # Mermaid rendering on the site
 ├── CODE_OF_CONDUCT.md
 └── LICENSE                      # GNU AGPL v3.0
 ```

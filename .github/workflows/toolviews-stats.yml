@@ -37,13 +37,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Update toolviews.csv and stats.md on main
+      - name: Update docs/toolviews.csv and docs/stats.md on main
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          python scripts/toolviews_stats.py toolviews.csv
-          python scripts/toolviews_chart.py toolviews.csv stats.md
-          git add toolviews.csv stats.md
+          python scripts/toolviews_stats.py docs/toolviews.csv
+          python scripts/toolviews_chart.py docs/toolviews.csv docs/stats.md
+          git add docs/toolviews.csv docs/stats.md
           if git diff --cached --quiet; then
             echo "Aucun changement"
           else

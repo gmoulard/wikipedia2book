@@ -108,7 +108,7 @@ def update(path, today, fetcher=fetch):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("csv", nargs="?", default="toolviews.csv", type=Path)
+    parser.add_argument("csv", nargs="?", default="docs/toolviews.csv", type=Path)
     args = parser.parse_args()
     try:
         added = update(args.csv, date.today())

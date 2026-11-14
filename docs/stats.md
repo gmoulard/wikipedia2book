@@ -2,7 +2,7 @@
 
 Wikipedia2Book on Toolforge, 2026-11-01 → 2026-11-13: **2440** hits.
 
-Source: [Toolviews](https://toolviews.toolforge.org/), updated daily ([toolviews.csv](https://github.com/gmoulard/wikipedia2book/blob/main/toolviews.csv)). Hits are HTTP requests, not people (page, static files, API calls).
+Source: [Toolviews](https://toolviews.toolforge.org/), updated daily ([toolviews.csv](https://github.com/gmoulard/wikipedia2book/blob/main/docs/toolviews.csv)). Hits are HTTP requests, not people (page, static files, API calls).
 
 Les hits sont des requêtes HTTP, pas des personnes. Mise à jour quotidienne.
 

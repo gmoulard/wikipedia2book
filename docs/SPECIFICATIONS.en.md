@@ -667,7 +667,7 @@ The `TOOLFORGE_SSH_KEY` secret contains an OpenSSH private key dedicated to depl
 
 The second, `.github/workflows/toolviews-stats.yml` ("Toolviews stats"), updates the usage statistics every day (section 13.8).
 
-The third, `.github/workflows/jekyll-gh-pages.yml`, publishes on every push to `main` (and on manual start) the documentation site https://gmoulard.github.io/wikipedia2book/ with GitHub Pages: Jekyll converts the Markdown files at the root of the repository to HTML (`README.md` as the home page, `SPECIFICATIONS.fr.md` and `SPECIFICATIONS.en.md` as pages). This is the address declared as user documentation in `toolinfo.json`. GitHub Pages does not render Mermaid blocks natively: `_includes/head-custom.html`, added by Jekyll to the head of every page (default theme), loads Mermaid 11.17.2 from jsDelivr and draws the ```` ```mermaid ```` blocks (section 13.10). The site is also rebuilt after each successful run of "Toolviews stats" (`workflow_run` trigger), and every build adds the usage statistics page https://gmoulard.github.io/wikipedia2book/stats.html (section 13.8).
+The third, `.github/workflows/jekyll-gh-pages.yml`, publishes on every push to `main` (and on manual start) the documentation site https://gmoulard.github.io/wikipedia2book/ with GitHub Pages: The site is built from the `docs/` folder: Jekyll converts its Markdown files to HTML (`SPECIFICATIONS.fr.md`, `SPECIFICATIONS.en.md`, `stats.md`). The home page `docs/index.md` is copied from `README.md` at each build (not committed), with its links adapted: `docs/…` becomes relative to the site, and `LICENSE`, `CODE_OF_CONDUCT.md`, `CITATION.cff` and `codemeta.json`, which stay at the root of the repository, point to GitHub. This is the address declared as user documentation in `toolinfo.json`. GitHub Pages does not render Mermaid blocks natively: `docs/_includes/head-custom.html`, added by Jekyll to the head of every page (default theme), loads Mermaid 11.17.2 from jsDelivr and draws the ```` ```mermaid ```` blocks (section 13.10). The site is also rebuilt after each successful run of "Toolviews stats" (`workflow_run` trigger), and every build adds the usage statistics page https://gmoulard.github.io/wikipedia2book/stats.html (section 13.8).
 
 ### 13.7 Toolforge
 
@@ -737,7 +737,7 @@ Local script (Python standard library only) that fills a CSV file with the tool'
 python scripts/toolviews_stats.py [file.csv]
 ```
 
-* File: `toolviews.csv` by default, separated by semicolons so that it opens directly in a French-locale Excel, with the header `date;hits`. An older file that still contains the `unique_visitors` column is rewritten without it.
+* File: `docs/toolviews.csv` by default, separated by semicolons so that it opens directly in a French-locale Excel, with the header `date;hits`. An older file that still contains the `unique_visitors` column is rewritten without it.
 * Sources: `https://toolviews.toolforge.org/api/v1/tool/wikipedia2book/daily/<start>/<end>` for requests (`hits`); a single call for the whole missing period. The Toolviews count of distinct visitors (`…/api/v1/unique/…`) is not collected: it is 0 for every Toolforge tool (inactive counter), a wrong value.
 * Days processed: only those missing from the CSV, from 1 November 2026 to the day before; the current day, incomplete, is never written. A day already present is never recomputed (to correct a value, delete the line and run again).
 * Days without visits: Toolviews does not return them; they are written as 0 up to the last day published by Toolviews (or already in the CSV). Later days, not yet published, are not written, so as not to freeze a provisional 0.
@@ -746,7 +746,7 @@ python scripts/toolviews_stats.py [file.csv]
 
 #### Daily update (GitHub Actions)
 
-`.github/workflows/toolviews-stats.yml` ("Toolviews stats") runs every day at 06:30 UTC, and on manual start (`workflow_dispatch`). It runs the script on the `toolviews.csv` of `main`, regenerates `stats.md` with `scripts/toolviews_chart.py`, then commits both files to `main` if they changed, as `github-actions[bot]` (after a `git pull --rebase` so as not to fail if `main` moved during the run). The files can be viewed at https://github.com/gmoulard/wikipedia2book/blob/main/toolviews.csv and https://github.com/gmoulard/wikipedia2book/blob/main/stats.md (GitHub also draws the Mermaid charts there).
+`.github/workflows/toolviews-stats.yml` ("Toolviews stats") runs every day at 06:30 UTC, and on manual start (`workflow_dispatch`). It runs the script on the `docs/toolviews.csv` of `main`, regenerates `docs/stats.md` with `scripts/toolviews_chart.py`, then commits both files to `main` if they changed, as `github-actions[bot]` (after a `git pull --rebase` so as not to fail if `main` moved during the run). The files can be viewed at https://github.com/gmoulard/wikipedia2book/blob/main/docs/toolviews.csv and https://github.com/gmoulard/wikipedia2book/blob/main/docs/stats.md (GitHub also draws the Mermaid charts there).
 
 Accepted consequence: this daily commit to `main` makes Railway and Northflank redeploy once a day. It does not rerun the other GitHub Actions workflows (a push made with the `GITHUB_TOKEN` token triggers none): the GitHub Pages site is rebuilt by the `workflow_run` trigger. Toolforge is not affected (`production-toolforge` branch).
 
@@ -754,7 +754,7 @@ Accepted consequence: this daily commit to `main` makes Railway and Northflank r
 
 Published page: https://gmoulard.github.io/wikipedia2book/stats.html (usage statistics of the Toolforge instance, updated daily).
 
-`stats.md` (published as `stats.html`) is written by `scripts/toolviews_chart.py toolviews.csv stats.md`, during the daily update and again before each Jekyll build (`.github/workflows/jekyll-gh-pages.yml`), so that a change to the script shows without waiting for the next day: total hits and period covered, then two Mermaid bar charts (`xychart-beta`, drawn by `_includes/head-custom.html`) — hits per day over the last 31 days (axis: day of the month, period in the title, chart 1000 px wide), and hits per month since the start. The number of hits is shown above each bar (`showDataLabel`, `showDataLabelOutsideBar`); the vertical axis goes up to 115% of the maximum to leave room for the highest label. Mermaid sizes these labels from the bar width in an unusable way (-1 px as soon as a bar is 0, huge for a single bar): `head-custom.html` recomputes the size after rendering, from the bar width and the length of the largest number, between 6 and 12 px. A missing or empty CSV stops the site build with an error message. Tests: `tests/test_toolviews_chart.py`.
+`docs/stats.md` (published as `stats.html`) is written by `scripts/toolviews_chart.py docs/toolviews.csv docs/stats.md`, during the daily update and again before each Jekyll build (`.github/workflows/jekyll-gh-pages.yml`), so that a change to the script shows without waiting for the next day: total hits and period covered, then two Mermaid bar charts (`xychart-beta`, drawn by `_includes/head-custom.html`) — hits per day over the last 31 days (axis: day of the month, period in the title, chart 1000 px wide), and hits per month since the start. The number of hits is shown above each bar (`showDataLabel`, `showDataLabelOutsideBar`); the vertical axis goes up to 115% of the maximum to leave room for the highest label. Mermaid sizes these labels from the bar width in an unusable way (-1 px as soon as a bar is 0, huge for a single bar): `head-custom.html` recomputes the size after rendering, from the bar width and the length of the largest number, between 6 and 12 px. A missing or empty CSV stops the site build with an error message. Tests: `tests/test_toolviews_chart.py`.
 
 #### Reading the figures
 
@@ -842,7 +842,7 @@ Article key: `<language>:<page_id>`, or `<language>:title:<lowercase title>` wit
 
 ### 13.10 Architecture diagrams
 
-Mermaid diagrams, rendered directly by GitHub and, on the documentation site, by the `_includes/head-custom.html` script (section 13.6). They must be updated when a module, an endpoint or a generation step changes.
+Mermaid diagrams, rendered directly by GitHub and, on the documentation site, by the `docs/_includes/head-custom.html` script (section 13.6). They must be updated when a module, an endpoint or a generation step changes.
 
 #### Modules and dependencies
 
@@ -1058,20 +1058,21 @@ Wikipedia2Book/
 ├── toolinfo.json
 ├── CITATION.cff
 ├── codemeta.json
-├── toolviews.csv                 (generated daily)
-├── stats.md                      (generated daily)
 ├── .github/workflows/deploy-toolforge.yml
 ├── .github/workflows/toolviews-stats.yml
 ├── .github/workflows/jekyll-gh-pages.yml
-├── _includes/head-custom.html
 ├── requirements.txt
 ├── .gitignore
 ├── CLAUDE.md
 ├── CODE_OF_CONDUCT.md
 ├── LICENSE
 ├── README.md
-├── SPECIFICATIONS.fr.md
-└── SPECIFICATIONS.en.md
+└── docs/                         (GitHub Pages site source)
+    ├── SPECIFICATIONS.fr.md
+    ├── SPECIFICATIONS.en.md
+    ├── toolviews.csv             (generated daily)
+    ├── stats.md                  (generated daily)
+    └── _includes/head-custom.html
 ```
 
 Every code file (`.py`, `.js`, `.css`, `index.html`, shell scripts, `Dockerfile`, GitHub Actions workflows) starts with an AGPL-3.0 license header (project, repository, copyright, license version 3). `CITATION.cff` and `codemeta.json` describe the release archived on Software Heritage (v1.6.4, SWHID `swh:1:dir:9c7c016d9603a4b0201ad64535767a353031bd91`); `CODE_OF_CONDUCT.md` points to the MediaWiki Code of Conduct.

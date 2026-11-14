@@ -668,7 +668,7 @@ Le secret `TOOLFORGE_SSH_KEY` contient une clé privée OpenSSH dédiée au dép
 
 Le second, `.github/workflows/toolviews-stats.yml` (« Toolviews stats »), met à jour chaque jour les statistiques d'utilisation (section 13.8).
 
-Le troisième, `.github/workflows/jekyll-gh-pages.yml`, publie à chaque push sur `main` (et sur lancement manuel) le site de documentation https://gmoulard.github.io/wikipedia2book/ avec GitHub Pages : Jekyll y convertit en HTML les fichiers Markdown de la racine du dépôt (`README.md` en page d'accueil, `SPECIFICATIONS.fr.md` et `SPECIFICATIONS.en.md` en pages). C'est l'adresse déclarée comme documentation utilisateur dans `toolinfo.json`. GitHub Pages n'affiche pas les blocs Mermaid nativement : `_includes/head-custom.html`, ajouté par Jekyll dans l'en-tête de chaque page (thème par défaut), charge Mermaid 11.17.2 depuis jsDelivr et dessine les blocs ```` ```mermaid ```` (section 13.10). Le site est aussi reconstruit après chaque exécution réussie de « Toolviews stats » (déclencheur `workflow_run`), et chaque construction ajoute la page de statistiques d'utilisation https://gmoulard.github.io/wikipedia2book/stats.html (section 13.8).
+Le troisième, `.github/workflows/jekyll-gh-pages.yml`, publie à chaque push sur `main` (et sur lancement manuel) le site de documentation https://gmoulard.github.io/wikipedia2book/ avec GitHub Pages : Le site est construit à partir du dossier `docs/` : Jekyll y convertit en HTML les fichiers Markdown (`SPECIFICATIONS.fr.md`, `SPECIFICATIONS.en.md`, `stats.md`). La page d'accueil `docs/index.md` est recopiée depuis `README.md` à chaque construction (non committée), avec ses liens adaptés : `docs/…` devient relatif au site, et `LICENSE`, `CODE_OF_CONDUCT.md`, `CITATION.cff` et `codemeta.json`, restés à la racine du dépôt, pointent vers GitHub. C'est l'adresse déclarée comme documentation utilisateur dans `toolinfo.json`. GitHub Pages n'affiche pas les blocs Mermaid nativement : `docs/_includes/head-custom.html`, ajouté par Jekyll dans l'en-tête de chaque page (thème par défaut), charge Mermaid 11.17.2 depuis jsDelivr et dessine les blocs ```` ```mermaid ```` (section 13.10). Le site est aussi reconstruit après chaque exécution réussie de « Toolviews stats » (déclencheur `workflow_run`), et chaque construction ajoute la page de statistiques d'utilisation https://gmoulard.github.io/wikipedia2book/stats.html (section 13.8).
 
 ### 13.7 Toolforge
 
@@ -738,7 +738,7 @@ Script local (bibliothèque standard Python uniquement) qui complète un fichier
 python scripts/toolviews_stats.py [fichier.csv]
 ```
 
-* Fichier : par défaut `toolviews.csv`, séparé par des points-virgules pour s'ouvrir directement dans Excel en français, avec l'en-tête `date;hits`. Un ancien fichier qui contient encore la colonne `unique_visitors` est réécrit sans elle.
+* Fichier : par défaut `docs/toolviews.csv`, séparé par des points-virgules pour s'ouvrir directement dans Excel en français, avec l'en-tête `date;hits`. Un ancien fichier qui contient encore la colonne `unique_visitors` est réécrit sans elle.
 * Sources : `https://toolviews.toolforge.org/api/v1/tool/wikipedia2book/daily/<début>/<fin>` pour les requêtes (`hits`); un seul appel pour toute la période manquante. Le nombre de visiteurs distincts de Toolviews (`…/api/v1/unique/…`) n'est pas relevé : il vaut 0 pour tous les outils de Toolforge (compteur inactif), une valeur erronée.
 * Jours traités : seulement ceux absents du CSV, du 1er novembre 2026 à la veille; le jour courant, incomplet, n'est jamais écrit. Un jour déjà présent n'est jamais recalculé (pour corriger une valeur, supprimer la ligne et relancer).
 * Jours sans visite : Toolviews ne les renvoie pas; ils sont écrits avec 0 jusqu'au dernier jour publié par Toolviews (ou déjà présent dans le CSV). Les jours suivants, pas encore publiés, ne sont pas écrits, pour ne pas figer un 0 provisoire.
@@ -747,7 +747,7 @@ python scripts/toolviews_stats.py [fichier.csv]
 
 #### Mise à jour quotidienne (GitHub Actions)
 
-`.github/workflows/toolviews-stats.yml` (« Toolviews stats ») tourne chaque jour à 06:30 UTC, et sur lancement manuel (`workflow_dispatch`). Il exécute le script sur le `toolviews.csv` de `main`, régénère `stats.md` avec `scripts/toolviews_chart.py`, puis committe les deux fichiers sur `main` s'ils ont changé, au nom de `github-actions[bot]` (après un `git pull --rebase` pour ne pas échouer si `main` a bougé pendant l'exécution). Les fichiers sont consultables sur https://github.com/gmoulard/wikipedia2book/blob/main/toolviews.csv et https://github.com/gmoulard/wikipedia2book/blob/main/stats.md (GitHub y dessine aussi les graphiques Mermaid).
+`.github/workflows/toolviews-stats.yml` (« Toolviews stats ») tourne chaque jour à 06:30 UTC, et sur lancement manuel (`workflow_dispatch`). Il exécute le script sur le `docs/toolviews.csv` de `main`, régénère `docs/stats.md` avec `scripts/toolviews_chart.py`, puis committe les deux fichiers sur `main` s'ils ont changé, au nom de `github-actions[bot]` (après un `git pull --rebase` pour ne pas échouer si `main` a bougé pendant l'exécution). Les fichiers sont consultables sur https://github.com/gmoulard/wikipedia2book/blob/main/docs/toolviews.csv et https://github.com/gmoulard/wikipedia2book/blob/main/docs/stats.md (GitHub y dessine aussi les graphiques Mermaid).
 
 Conséquence acceptée : ce commit quotidien sur `main` fait redéployer Railway et Northflank une fois par jour. Il ne relance pas les autres workflows GitHub Actions (un push fait avec le jeton `GITHUB_TOKEN` n'en déclenche aucun) : le site GitHub Pages est reconstruit par le déclencheur `workflow_run`. Toolforge n'est pas concerné (branche `production-toolforge`).
 
@@ -755,7 +755,7 @@ Conséquence acceptée : ce commit quotidien sur `main` fait redéployer Railway
 
 Page publiée : https://gmoulard.github.io/wikipedia2book/stats.html (statistiques d'utilisation de l'instance Toolforge, mises à jour chaque jour).
 
-`stats.md` (publiée en `stats.html`) est écrite par `scripts/toolviews_chart.py toolviews.csv stats.md`, lors de la mise à jour quotidienne et à nouveau avant chaque construction Jekyll (`.github/workflows/jekyll-gh-pages.yml`), pour qu'une modification du script soit visible sans attendre le lendemain : total des hits et période couverte, puis deux histogrammes Mermaid (`xychart-beta`, dessinés par `_includes/head-custom.html`) — hits par jour sur les 31 derniers jours (axe : numéro du jour, période dans le titre, graphique de 1000 px de large), et hits par mois depuis le début. Le nombre de hits est affiché au-dessus de chaque barre (`showDataLabel`, `showDataLabelOutsideBar`); l'axe vertical va jusqu'à 115 % du maximum pour laisser la place à l'étiquette la plus haute. Mermaid calcule la taille de ces étiquettes d'après la largeur des barres, de façon inutilisable (-1 px dès qu'une barre vaut 0, énorme pour une barre seule) : `head-custom.html` la recalcule après le rendu, d'après la largeur des barres et la longueur du plus grand nombre, entre 6 et 12 px. Un CSV absent ou vide arrête la construction du site avec un message d'erreur. Tests : `tests/test_toolviews_chart.py`.
+`docs/stats.md` (publiée en `stats.html`) est écrite par `scripts/toolviews_chart.py docs/toolviews.csv docs/stats.md`, lors de la mise à jour quotidienne et à nouveau avant chaque construction Jekyll (`.github/workflows/jekyll-gh-pages.yml`), pour qu'une modification du script soit visible sans attendre le lendemain : total des hits et période couverte, puis deux histogrammes Mermaid (`xychart-beta`, dessinés par `_includes/head-custom.html`) — hits par jour sur les 31 derniers jours (axe : numéro du jour, période dans le titre, graphique de 1000 px de large), et hits par mois depuis le début. Le nombre de hits est affiché au-dessus de chaque barre (`showDataLabel`, `showDataLabelOutsideBar`); l'axe vertical va jusqu'à 115 % du maximum pour laisser la place à l'étiquette la plus haute. Mermaid calcule la taille de ces étiquettes d'après la largeur des barres, de façon inutilisable (-1 px dès qu'une barre vaut 0, énorme pour une barre seule) : `head-custom.html` la recalcule après le rendu, d'après la largeur des barres et la longueur du plus grand nombre, entre 6 et 12 px. Un CSV absent ou vide arrête la construction du site avec un message d'erreur. Tests : `tests/test_toolviews_chart.py`.
 
 #### Lecture des chiffres
 
@@ -843,7 +843,7 @@ Clé d'un article : `<langue>:<page_id>`, ou `<langue>:title:<titre en minuscule
 
 ### 13.10 Schémas de l'architecture
 
-Schémas Mermaid, affichés directement par GitHub et, sur le site de documentation, par le script `_includes/head-custom.html` (section 13.6). Ils doivent être mis à jour quand un module, un endpoint ou une étape de génération change.
+Schémas Mermaid, affichés directement par GitHub et, sur le site de documentation, par le script `docs/_includes/head-custom.html` (section 13.6). Ils doivent être mis à jour quand un module, un endpoint ou une étape de génération change.
 
 #### Modules et dépendances
 
@@ -1059,20 +1059,21 @@ Wikipedia2Book/
 ├── toolinfo.json
 ├── CITATION.cff
 ├── codemeta.json
-├── toolviews.csv                 (généré chaque jour)
-├── stats.md                      (généré chaque jour)
 ├── .github/workflows/deploy-toolforge.yml
 ├── .github/workflows/toolviews-stats.yml
 ├── .github/workflows/jekyll-gh-pages.yml
-├── _includes/head-custom.html
 ├── requirements.txt
 ├── .gitignore
 ├── CLAUDE.md
 ├── CODE_OF_CONDUCT.md
 ├── LICENSE
 ├── README.md
-├── SPECIFICATIONS.fr.md
-└── SPECIFICATIONS.en.md
+└── docs/                         (source du site GitHub Pages)
+    ├── SPECIFICATIONS.fr.md
+    ├── SPECIFICATIONS.en.md
+    ├── toolviews.csv             (généré chaque jour)
+    ├── stats.md                  (généré chaque jour)
+    └── _includes/head-custom.html
 ```
 
 Chaque fichier de code (`.py`, `.js`, `.css`, `index.html`, scripts shell, `Dockerfile`, workflows GitHub Actions) commence par un en-tête de licence AGPL-3.0 (projet, dépôt, copyright, version 3 de la licence). `CITATION.cff` et `codemeta.json` décrivent la version archivée sur Software Heritage (v1.6.4, SWHID `swh:1:dir:9c7c016d9603a4b0201ad64535767a353031bd91`) ; `CODE_OF_CONDUCT.md` renvoie au code de conduite MediaWiki.

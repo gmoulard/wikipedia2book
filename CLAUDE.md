@@ -4,7 +4,7 @@ Instructions pour Claude Code (ou tout agent) travaillant sur ce dépôt.
 
 ## L'application
 
-Wikipedia2Book crée directement un livre PDF imprimable à partir d'articles Wikipédia : un seul livre à la fois, en mémoire dans le navigateur, prêt dès l'ouverture de la page. Ne jamais parler de « projet » dans l'interface ni dans la documentation (le mot ne subsiste que dans le nom technique du modèle `Project`, voir plus bas). Le comportement de référence est documenté dans [SPECIFICATIONS.fr.md](SPECIFICATIONS.fr.md) : le lire avant toute modification fonctionnelle, et le mettre à jour dans le même changement si le comportement bouge. Ne jamais laisser la spec décrire une fonctionnalité qui n'existe pas dans le code, ni l'inverse.
+Wikipedia2Book crée directement un livre PDF imprimable à partir d'articles Wikipédia : un seul livre à la fois, en mémoire dans le navigateur, prêt dès l'ouverture de la page. Ne jamais parler de « projet » dans l'interface ni dans la documentation (le mot ne subsiste que dans le nom technique du modèle `Project`, voir plus bas). Le comportement de référence est documenté dans [docs/SPECIFICATIONS.fr.md](docs/SPECIFICATIONS.fr.md) : le lire avant toute modification fonctionnelle, et le mettre à jour dans le même changement si le comportement bouge. Ne jamais laisser la spec décrire une fonctionnalité qui n'existe pas dans le code, ni l'inverse.
 
 ## Principes de conception à préserver
 
@@ -25,10 +25,12 @@ Personne ne lit ce code. En conséquence :
 
 ## Documentation à garder synchronisée
 
-- `SPECIFICATIONS.fr.md` : reflète le comportement réel, pas un objectif futur. Les évolutions non implémentées vont en section 18, pas dans le corps du document.
-- Section 13.10 des deux spécifications : schémas Mermaid des modules et de la génération du PDF, à mettre à jour quand un module, un endpoint ou une étape de génération change. Sur GitHub Pages, ils sont dessinés par `_includes/head-custom.html` (Mermaid chargé depuis jsDelivr, version épinglée).
-- `SPECIFICATIONS.en.md` : traduction anglaise de `SPECIFICATIONS.fr.md`, même structure (sections, sous-sections, lignes d'historique). Toute modification de `SPECIFICATIONS.fr.md` est reportée dans la version anglaise dans le même changement; en cas d'écart, le français fait référence. Libellés d'interface cités tels qu'ils apparaissent dans l'interface anglaise (`i18n.js`, bloc `en`).
-- `README.md` : doit rester cohérent avec `SPECIFICATIONS.fr.md` (pas de doublon contradictoire, même terminologie).
+Toute la documentation publiée est dans `docs/`, source du site GitHub Pages (`docs/index.md` y est recopié depuis `README.md` à chaque construction, liens adaptés : ne pas le committer). `README.md`, `CLAUDE.md`, `LICENSE`, `CODE_OF_CONDUCT.md`, `CITATION.cff` et `codemeta.json` restent à la racine, où GitHub et Software Heritage les cherchent.
+
+- `docs/SPECIFICATIONS.fr.md` : reflète le comportement réel, pas un objectif futur. Les évolutions non implémentées vont en section 18, pas dans le corps du document.
+- Section 13.10 des deux spécifications : schémas Mermaid des modules et de la génération du PDF, à mettre à jour quand un module, un endpoint ou une étape de génération change. Sur GitHub Pages, ils sont dessinés par `docs/_includes/head-custom.html` (Mermaid chargé depuis jsDelivr, version épinglée).
+- `docs/SPECIFICATIONS.en.md` : traduction anglaise de `docs/SPECIFICATIONS.fr.md`, même structure (sections, sous-sections, lignes d'historique). Toute modification de `docs/SPECIFICATIONS.fr.md` est reportée dans la version anglaise dans le même changement; en cas d'écart, le français fait référence. Libellés d'interface cités tels qu'ils apparaissent dans l'interface anglaise (`i18n.js`, bloc `en`).
+- `README.md` : doit rester cohérent avec `docs/SPECIFICATIONS.fr.md` (pas de doublon contradictoire, même terminologie).
 
 ## Repères d'architecture
 
@@ -49,7 +51,7 @@ Les boutons « Générer le PDF » (`#topExportButton`, `#exportButton`) ne sont
 
 Pas de `docker-compose.yml` dans ce dépôt : build/run via `Dockerfile` + `docker-build.sh` (injecte commit/date/auteur git pour le pied de page). Ne pas réintroduire Compose sans raison explicite de l'utilisateur.
 
-Système de déploiement complet décrit dans `SPECIFICATIONS.fr.md` sections 13.5 à 13.7. En bref : Railway et Northflank suivent `main` (`Dockerfile`); Toolforge suit la branche `production-toolforge` (buildpacks : `Procfile`, `Aptfile`, `.python-version`, `toolforge-fonts.conf`), déployée par `.github/workflows/deploy-toolforge.yml` + `toolforge-deploy.sh`. Un push sur `main` ne déploie donc jamais Toolforge : ne pousser vers `production-toolforge` (`git push origin main:production-toolforge`) que sur demande explicite de l'utilisateur. Toute dépendance système ajoutée au `Dockerfile` doit l'être aussi dans l'`Aptfile`. `.github/workflows/toolviews-stats.yml` committe chaque jour `toolviews.csv` et `stats.md` sur `main` (il n'y a plus de branche `stats`) : Railway et Northflank redéploient donc une fois par jour, choix accepté par l'utilisateur. Ces deux fichiers sont générés : ne pas les modifier à la main, modifier `scripts/toolviews_stats.py`/`scripts/toolviews_chart.py`.
+Système de déploiement complet décrit dans `docs/SPECIFICATIONS.fr.md` sections 13.5 à 13.7. En bref : Railway et Northflank suivent `main` (`Dockerfile`); Toolforge suit la branche `production-toolforge` (buildpacks : `Procfile`, `Aptfile`, `.python-version`, `toolforge-fonts.conf`), déployée par `.github/workflows/deploy-toolforge.yml` + `toolforge-deploy.sh`. Un push sur `main` ne déploie donc jamais Toolforge : ne pousser vers `production-toolforge` (`git push origin main:production-toolforge`) que sur demande explicite de l'utilisateur. Toute dépendance système ajoutée au `Dockerfile` doit l'être aussi dans l'`Aptfile`. `.github/workflows/toolviews-stats.yml` committe chaque jour `docs/toolviews.csv` et `docs/stats.md` sur `main` (il n'y a plus de branche `stats`) : Railway et Northflank redéploient donc une fois par jour, choix accepté par l'utilisateur. Ces deux fichiers sont générés : ne pas les modifier à la main, modifier `scripts/toolviews_stats.py`/`scripts/toolviews_chart.py`.
 
 ## Versionnement
 
@@ -61,7 +63,7 @@ Le numéro de version de l'application est dans `app/main.py` (`FastAPI(version=
 
 Ne jamais incrémenter d'office : préparer les modifications sans toucher à la version, poser la question au moment de committer, et n'appliquer le bump qu'après sa réponse. Les outils annexes qui ne font pas partie de l'application déployée (ex. `scripts/toolviews_stats.py`) et les changements de documentation seule ne justifient en principe pas de nouvelle version.
 
-Quand la version est incrémentée, ajouter la nouvelle version dans le tableau de la section 19 de `SPECIFICATIONS.fr.md` et de `SPECIFICATIONS.en.md` (« Historique des versions » / « Version history »), avec la date, l'auteur (`GMoulard`) et un résumé court des modifications — dans le même commit, pas après coup. Après ce commit, poser le tag annoté `vX.Y.Z` dessus (`git tag -a vX.Y.Z -m "Wikipedia2Book X.Y.Z"`) et le pousser avec le commit (`git push origin main vX.Y.Z`). Un commit sans changement de version ne reçoit pas de tag; ne jamais déplacer ni supprimer un tag déjà poussé.
+Quand la version est incrémentée, ajouter la nouvelle version dans le tableau de la section 19 de `docs/SPECIFICATIONS.fr.md` et de `docs/SPECIFICATIONS.en.md` (« Historique des versions » / « Version history »), avec la date, l'auteur (`GMoulard`) et un résumé court des modifications — dans le même commit, pas après coup. Après ce commit, poser le tag annoté `vX.Y.Z` dessus (`git tag -a vX.Y.Z -m "Wikipedia2Book X.Y.Z"`) et le pousser avec le commit (`git push origin main vX.Y.Z`). Un commit sans changement de version ne reçoit pas de tag; ne jamais déplacer ni supprimer un tag déjà poussé.
 
 ## Vérification avant de considérer une tâche terminée
 
