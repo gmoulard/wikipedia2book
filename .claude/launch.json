@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "pages-preview",
+      "runtimeExecutable": "C:\\tmp\\git\\wikipedia2book\\.venv\\Scripts\\python.exe",
+      "runtimeArgs": ["-m", "http.server", "4000", "--directory", "C:\\Users\\gaym6331\\AppData\\Local\\Temp\\claude\\3f1535eb68528c25\\858151ea-e005-4f7a-93c7-a7dbb17ea07e\\scratchpad\\pages_site"],
+      "port": 4000
+    }
+  ]
+}
