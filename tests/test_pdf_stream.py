@@ -361,8 +361,44 @@ class PdfStreamTest(unittest.TestCase):
         with patch.object(main, "generate_pdf", fake_generate):
             self.client.post("/api/pdf", json=_project(toc_position="before:fr:title:chien"))
         toc_html = [html for html in rendered if "<nav>" in html][-1]
-        self.assertIn('<span>Chat</span><span class="page-no">2</span>', toc_html)
-        self.assertIn('<span>Chien</span><span class="page-no">5</span>', toc_html)
+        self.assertIn('<span class="toc-title">Chat</span><span class="page-no">2</span>', toc_html)
+        self.assertIn('<span class="toc-title">Chien</span><span class="page-no">5</span>', toc_html)
+
+    def test_table_of_contents_entries_link_to_their_pages(self):
+        import re
+        from app.book_builder import TOC_LINK_PREFIX
+
+        def fake_generate(html):
+            if "<nav>" not in html:
+                return _make_pdf(1)
+            buffer = BytesIO()
+            pdf_canvas = canvas.Canvas(buffer, pagesize=(400, 600))
+            for index, href in enumerate(re.findall(r'href="([^"]+)"', html)):
+                pdf_canvas.linkURL(href, (40, 500 - 30 * index, 360, 520 - 30 * index))
+            pdf_canvas.drawString(50, 550, "toc")
+            pdf_canvas.save()
+            return buffer.getvalue()
+
+        chapters = [{"id": "c1", "title": "Félins", "article_keys": ["fr:title:chat"]}]
+        with patch.object(main, "generate_pdf", fake_generate):
+            response = self.client.post("/api/pdf", json=_project(chapters=chapters, toc_position="start"))
+        self.assertEqual(response.status_code, 200, response.text)
+        pdf = PdfReader(BytesIO(response.content))
+        pages_by_title = {}
+
+        def walk(items):
+            for item in items:
+                if isinstance(item, list):
+                    walk(item)
+                else:
+                    pages_by_title[item.title] = pdf.get_destination_page_number(item)
+
+        walk(pdf.outline)
+        toc_page = pdf.pages[pages_by_title["Table des matières"]]
+        annotations = [reference.get_object() for reference in toc_page.get("/Annots", [])]
+        self.assertFalse([a for a in annotations if str((a.get("/A") or {}).get("/URI", "")).startswith(TOC_LINK_PREFIX)])
+        targets = [pdf.get_page_number(a["/Dest"][0].get_object()) for a in annotations if "/Dest" in a]
+        self.assertEqual(targets, [pages_by_title["Félins"], pages_by_title["Chat"], pages_by_title["Sans chapitre"], pages_by_title["Chien"]])
 
     def test_table_of_contents_can_be_placed_before_the_articles_without_chapter(self):
         chapters = [{"id": "c1", "title": "Félins", "article_keys": ["fr:title:chat"]}]

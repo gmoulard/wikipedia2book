@@ -32,6 +32,7 @@ from app.book_builder import (
     build_conclusion_page_html,
     build_cover_html,
     PDF_LABELS,
+    TOC_LINK_PREFIX,
     build_license_page_html,
     book_slots,
     build_toc_html,
@@ -57,7 +58,14 @@ from app.models import (
     WikipediaBookImport,
     utc_now,
 )
-from app.pdf_generator import fit_pdf_to_format, generate_pdf, image_to_pdf, stamp_page_numbers
+from app.pdf_generator import (
+    add_internal_links,
+    fit_pdf_to_format,
+    generate_pdf,
+    image_to_pdf,
+    internal_links,
+    stamp_page_numbers,
+)
 from app.wikipedia_api import (
     WIKIPEDIA_PDF_PAPERS,
     MediaWikiClient,
@@ -69,7 +77,7 @@ from app.wikipedia_api import (
 )
 
 
-app = FastAPI(title="Wikipedia2Book", version="1.6.7")
+app = FastAPI(title="Wikipedia2Book", version="1.6.8")
 static_directory = Path(__file__).parent / "static"
 PDF_LANGUAGE_PATTERN = "^(" + "|".join(PDF_LABELS) + ")$"
 app.mount("/static", StaticFiles(directory=static_directory), name="static")
@@ -362,17 +370,33 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
         append_pdf(cover),
     )
     chapter_outline = root_outline
+    toc_start: int | None = None
+    targets: dict[str, int] = {}
     for index, (kind, value) in enumerate(slots):
         if index == toc_at:
-            writer.add_outline_item(pdf_label(language, "toc"), append_pdf(toc), parent=root_outline)
+            toc_start = append_pdf(toc)
+            writer.add_outline_item(pdf_label(language, "toc"), toc_start, parent=root_outline)
         if kind == "chapter":
             chapter_title = groups[value][0]
             chapter_page = generate_pdf(build_chapter_page_html(project, chapter_title, language))
-            chapter_outline = writer.add_outline_item(chapter_title, append_pdf(chapter_page), parent=root_outline)
+            targets[f"chapter:{value}"] = append_pdf(chapter_page)
+            chapter_outline = writer.add_outline_item(chapter_title, targets[f"chapter:{value}"], parent=root_outline)
         else:
-            writer.add_outline_item(value.title, append_pdf(item_pdfs[value.key]), parent=chapter_outline)
+            item_page = append_pdf(item_pdfs[value.key])
+            targets.setdefault(value.key, item_page)
+            writer.add_outline_item(value.title, item_page, parent=chapter_outline)
     if toc_at == len(slots):
-        writer.add_outline_item(pdf_label(language, "toc"), append_pdf(toc), parent=root_outline)
+        toc_start = append_pdf(toc)
+        writer.add_outline_item(pdf_label(language, "toc"), toc_start, parent=root_outline)
+    if toc_start is not None:
+        add_internal_links(
+            writer,
+            toc_start,
+            len(PdfReader(BytesIO(toc)).pages),
+            TOC_LINK_PREFIX,
+            internal_links(toc, TOC_LINK_PREFIX, page_width_mm, page_height_mm),
+            targets,
+        )
 
     writer.add_outline_item(
         pdf_label(language, "license"),

@@ -95,6 +95,17 @@ class TableOfContentsPageNumbersTest(unittest.TestCase):
         html = build_toc_html(project, [article], article_pages={article.key: 5})
         self.assertIn('<span class="page-no">5</span>', html)
 
+    def test_chapters_are_blocks_with_their_articles_below_and_every_line_is_a_link(self):
+        from app.book_builder import TOC_LINK_PREFIX
+        from app.models import BookChapter
+        chat = Article(title="Chat", language="fr", url="https://fr.wikipedia.org/wiki/Chat", selected=True)
+        chien = Article(title="Chien", language="fr", url="https://fr.wikipedia.org/wiki/Chien", selected=True)
+        project = Project(name="Test", chapters=[BookChapter(title="Félins", article_keys=[chat.key])])
+        html = build_toc_html(project, [chat, chien], {chat.key: 4, chien.key: 9}, [3, 8])
+        self.assertIn(f'<li class="toc-chapter"><a class="toc-line" href="{TOC_LINK_PREFIX}chapter%3A0"><span class="toc-title">Félins</span><span class="page-no">3</span></a><ol>', html)
+        self.assertIn(f'href="{TOC_LINK_PREFIX}fr%3Atitle%3Achat"><span class="toc-title">Chat</span><span class="page-no">4</span>', html)
+        self.assertNotIn("nav li { display: flex", html)
+
     def test_no_page_number_markup_when_not_provided(self):
         project = Project(name="Test")
         article = Article(title="Chat", language="fr", url="https://fr.wikipedia.org/wiki/Chat", selected=True)

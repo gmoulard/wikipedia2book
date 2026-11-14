@@ -16,6 +16,7 @@
 
 from datetime import date
 from html import escape
+from urllib.parse import quote
 
 from app.models import Article, Project, UploadedDocument
 
@@ -167,6 +168,13 @@ h2 {{ font-size: 18pt; }}
     </html>"""
 
 
+TOC_LINK_PREFIX = "https://wikipedia2book.invalid/toc/"
+
+
+def toc_link_key(key: str) -> str:
+    return TOC_LINK_PREFIX + quote(key, safe="")
+
+
 def build_toc_html(
     project: Project,
     items: list[BookItem],
@@ -178,21 +186,23 @@ def build_toc_html(
     article_pages = article_pages or {}
     chapter_pages = chapter_pages or [None] * len(groups)
 
-    def entry(label: str, page: int | None) -> str:
+    def line(label: str, page: int | None, key: str) -> str:
         page_span = f'<span class="page-no">{page}</span>' if page else ""
-        return f"<li><span>{label}</span>{page_span}</li>"
+        return f'<a class="toc-line" href="{toc_link_key(key)}"><span class="toc-title">{label}</span>{page_span}</a>'
 
     contents: list[str] = []
     for index, (chapter_title, chapter_items) in enumerate(groups):
-        titles = [entry(escape(item.title), article_pages.get(item.key)) for item in chapter_items]
+        titles = "".join(
+            f'<li class="toc-item">{line(escape(item.title), article_pages.get(item.key), item.key)}</li>'
+            for item in chapter_items
+        )
         if chapter_title:
             chapter_page = chapter_pages[index] if index < len(chapter_pages) else None
-            page_span = f'<span class="page-no">{chapter_page}</span>' if chapter_page else ""
             contents.append(
-                f'<li><span>{escape(chapter_title)}</span>{page_span}<ol>{"".join(titles)}</ol></li>'
+                f'<li class="toc-chapter">{line(escape(chapter_title), chapter_page, f"chapter:{index}")}<ol>{titles}</ol></li>'
             )
         else:
-            contents.extend(titles)
+            contents.append(titles)
 
     page_width, page_height, margin_top, margin_bottom, inner, outer = _page_layout(project)
     return f"""<!doctype html>
@@ -203,13 +213,18 @@ def build_toc_html(
 @page {{ size: {page_width:g}mm {page_height:g}mm; margin: {margin_top:g}mm {outer:g}mm {margin_bottom:g}mm {inner:g}mm; }}
 @page :left {{ margin-left: {inner:g}mm; margin-right: {outer:g}mm; }}
 @page :right {{ margin-left: {outer:g}mm; margin-right: {inner:g}mm; }}
-    body {{ color: #202020; font: 10pt serif; line-height: 1.5; }}
-    h2 {{ font-size: 18pt; line-height: 1.2; }}
-nav ol {{ padding-left: 18pt; list-style: none; }}
-[dir=rtl] nav ol {{ padding-left: 0; padding-right: 18pt; }}
-nav ol ol {{ margin: 2pt 0 5pt; }}
-nav li {{ display: flex; justify-content: space-between; gap: 8pt; }}
-.page-no {{ flex: 0 0 auto; color: #555; }}
+body {{ color: #202020; font: 10pt serif; line-height: 1.4; }}
+nav h2 {{ font-size: 18pt; line-height: 1.2; margin: 0 0 18pt; padding-bottom: 4pt; border-bottom: 0.75pt solid #202020; }}
+nav ol {{ list-style: none; margin: 0; padding: 0; }}
+nav li {{ display: block; }}
+.toc-line {{ display: flex; align-items: baseline; justify-content: space-between; gap: 12pt; color: inherit; text-decoration: none; padding: 2.5pt 0; }}
+.toc-title {{ flex: 1 1 auto; }}
+.page-no {{ flex: 0 0 auto; min-width: 2.5em; text-align: right; color: #444; }}
+.toc-chapter {{ margin-top: 14pt; }}
+.toc-chapter > .toc-line {{ font-size: 13pt; font-weight: bold; padding-bottom: 4pt; }}
+.toc-chapter > ol {{ padding-left: 16pt; }}
+[dir=rtl] .toc-chapter > ol {{ padding-left: 0; padding-right: 16pt; }}
+[dir=rtl] .page-no {{ text-align: left; }}
     </style>
     </head>
     <body>

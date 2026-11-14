@@ -15,8 +15,10 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from io import BytesIO
+from urllib.parse import unquote
 
 from pypdf import PageObject, PdfReader, PdfWriter, Transformation
+from pypdf.annotations import Link
 from reportlab.lib.units import mm
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
@@ -51,6 +53,51 @@ def fit_pdf_to_format(pdf_data: bytes, width_mm: float, height_mm: float) -> byt
     writer.write(buffer)
     buffer.seek(0)
     return buffer.read()
+
+
+def internal_links(pdf_data: bytes, prefix: str, width_mm: float, height_mm: float) -> list[tuple[int, list[float], str]]:
+    width_pt, height_pt = width_mm * mm, height_mm * mm
+    links: list[tuple[int, list[float], str]] = []
+    for index, page in enumerate(PdfReader(BytesIO(pdf_data)).pages):
+        source_width = float(page.mediabox.width)
+        source_height = float(page.mediabox.height)
+        scale = min(width_pt / source_width, height_pt / source_height)
+        tx = (width_pt - source_width * scale) / 2
+        ty = (height_pt - source_height * scale) / 2
+        left, bottom = float(page.mediabox.left), float(page.mediabox.bottom)
+        for reference in page.get("/Annots") or []:
+            annotation = reference.get_object()
+            uri = str((annotation.get("/A") or {}).get("/URI") or "")
+            if annotation.get("/Subtype") != "/Link" or not uri.startswith(prefix):
+                continue
+            x1, y1, x2, y2 = (float(value) for value in annotation["/Rect"])
+            rect = [tx + (x1 - left) * scale, ty + (y1 - bottom) * scale, tx + (x2 - left) * scale, ty + (y2 - bottom) * scale]
+            links.append((index, rect, unquote(uri[len(prefix):])))
+    return links
+
+
+def add_internal_links(
+    writer: PdfWriter,
+    first_page: int,
+    page_count: int,
+    prefix: str,
+    links: list[tuple[int, list[float], str]],
+    targets: dict[str, int],
+) -> None:
+    for page in writer.pages[first_page:first_page + page_count]:
+        annotations = page.get("/Annots")
+        if annotations is None:
+            continue
+        kept = [
+            reference
+            for reference in annotations
+            if not str((reference.get_object().get("/A") or {}).get("/URI") or "").startswith(prefix)
+        ]
+        annotations.clear()
+        annotations.extend(kept)
+    for offset, rect, key in links:
+        if key in targets:
+            writer.add_annotation(first_page + offset, Link(rect=rect, target_page_index=targets[key]))
 
 
 def image_to_pdf(image_bytes: bytes, page_width_mm: float, page_height_mm: float) -> bytes:
