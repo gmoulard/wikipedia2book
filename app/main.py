@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import asyncio
 import base64
 import json
 import re
@@ -77,7 +78,7 @@ from app.wikipedia_api import (
 )
 
 
-app = FastAPI(title="Wikipedia2Book", version="1.6.8")
+app = FastAPI(title="Wikipedia2Book", version="1.6.9")
 static_directory = Path(__file__).parent / "static"
 PDF_LANGUAGE_PATTERN = "^(" + "|".join(PDF_LABELS) + ")$"
 app.mount("/static", StaticFiles(directory=static_directory), name="static")
@@ -308,13 +309,20 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
         step += 1
         return {"type": "progress", "step": step, "total": total, "code": code, **params}
 
-    def append_pdf(pdf_data: bytes) -> int:
+    # NE PAS appeler WeasyPrint ni pypdf directement ici : un calcul bloquant gèle le serveur et retarde l'envoi des messages de progression.
+    async def render(html: str) -> bytes:
+        return await asyncio.to_thread(generate_pdf, html)
+
+    async def append_pdf(pdf_data: bytes) -> int:
         # NE PAS sauter les pages déjà au bon format : fit_pdf_to_format est idempotent et appliqué à toutes.
-        stream = BytesIO(fit_pdf_to_format(pdf_data, page_width_mm, page_height_mm))
+        stream = BytesIO(await asyncio.to_thread(fit_pdf_to_format, pdf_data, page_width_mm, page_height_mm))
         streams.append(stream)
         page_number = len(writer.pages)
-        writer.append(stream)
+        await asyncio.to_thread(writer.append, stream)
         return page_number
+
+    def page_count(pdf_data: bytes) -> int:
+        return len(PdfReader(BytesIO(pdf_data)).pages)
 
     def document_pdf(document: UploadedDocument) -> bytes:
         data = base64.b64decode(document.data_base64)
@@ -331,18 +339,20 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
                 item_pdfs[item.key] = await client.get_article_pdf(item.title, item.language, paper)
             else:
                 yield progress("prepare_document", title=item.title)
-                item_pdfs[item.key] = document_pdf(item)
+                item_pdfs[item.key] = await asyncio.to_thread(document_pdf, item)
 
     slots = book_slots(groups)
     toc_at = toc_slot_index(project, groups, slots)
 
     article_pages: dict[str, int] = {}
     chapter_pages: list[int | None] = [None] * len(groups)
+    cover: bytes | None = None
     if project.page_numbers:
         yield progress("compute_page_numbers")
-        cursor = len(PdfReader(BytesIO(generate_pdf(build_cover_html(project, language)))).pages) + 1
+        cover = await render(build_cover_html(project, language))
+        cursor = page_count(cover) + 1
         toc_pages = (
-            len(PdfReader(BytesIO(generate_pdf(build_toc_html(project, selected, language=language)))).pages)
+            page_count(await render(build_toc_html(project, selected, language=language)))
             if toc_at is not None and toc_at < len(slots)
             else 0
         )
@@ -354,45 +364,46 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
                 cursor += 1
             else:
                 article_pages[value.key] = cursor
-                cursor += len(PdfReader(BytesIO(item_pdfs[value.key])).pages)
+                cursor += await asyncio.to_thread(page_count, item_pdfs[value.key])
 
     yield progress("cover_and_toc")
     toc = (
-        generate_pdf(build_toc_html(project, selected, article_pages, chapter_pages, language))
+        await render(build_toc_html(project, selected, article_pages, chapter_pages, language))
         if project.table_of_contents
         else None
     )
-    cover = generate_pdf(build_cover_html(project, language))
+    if cover is None:
+        cover = await render(build_cover_html(project, language))
 
     yield progress("assemble")
     root_outline = writer.add_outline_item(
         project.book_title or project.name,
-        append_pdf(cover),
+        await append_pdf(cover),
     )
     chapter_outline = root_outline
     toc_start: int | None = None
     targets: dict[str, int] = {}
     for index, (kind, value) in enumerate(slots):
         if index == toc_at:
-            toc_start = append_pdf(toc)
+            toc_start = await append_pdf(toc)
             writer.add_outline_item(pdf_label(language, "toc"), toc_start, parent=root_outline)
         if kind == "chapter":
             chapter_title = groups[value][0]
-            chapter_page = generate_pdf(build_chapter_page_html(project, chapter_title, language))
-            targets[f"chapter:{value}"] = append_pdf(chapter_page)
+            chapter_page = await render(build_chapter_page_html(project, chapter_title, language))
+            targets[f"chapter:{value}"] = await append_pdf(chapter_page)
             chapter_outline = writer.add_outline_item(chapter_title, targets[f"chapter:{value}"], parent=root_outline)
         else:
-            item_page = append_pdf(item_pdfs[value.key])
+            item_page = await append_pdf(item_pdfs[value.key])
             targets.setdefault(value.key, item_page)
             writer.add_outline_item(value.title, item_page, parent=chapter_outline)
     if toc_at == len(slots):
-        toc_start = append_pdf(toc)
+        toc_start = await append_pdf(toc)
         writer.add_outline_item(pdf_label(language, "toc"), toc_start, parent=root_outline)
     if toc_start is not None:
         add_internal_links(
             writer,
             toc_start,
-            len(PdfReader(BytesIO(toc)).pages),
+            page_count(toc),
             TOC_LINK_PREFIX,
             internal_links(toc, TOC_LINK_PREFIX, page_width_mm, page_height_mm),
             targets,
@@ -400,25 +411,25 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
 
     writer.add_outline_item(
         pdf_label(language, "license"),
-        append_pdf(generate_pdf(build_license_page_html(project, selected, language))),
+        await append_pdf(await render(build_license_page_html(project, selected, language))),
         parent=root_outline,
     )
 
     if project.conclusion:
-        conclusion_page = generate_pdf(build_conclusion_page_html(project, language))
+        conclusion_page = await render(build_conclusion_page_html(project, language))
         writer.add_outline_item(
             pdf_label(language, "conclusion"),
-            append_pdf(conclusion_page),
+            await append_pdf(conclusion_page),
             parent=root_outline,
         )
 
     if project.page_numbers:
         yield progress("stamp_page_numbers")
-        stamp_page_numbers(writer)
+        await asyncio.to_thread(stamp_page_numbers, writer)
 
     yield progress("finalize")
     output = BytesIO()
-    writer.write(output)
+    await asyncio.to_thread(writer.write, output)
     yield {"type": "done", "pdf": output.getvalue()}
 
 

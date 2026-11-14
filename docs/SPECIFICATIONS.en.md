@@ -398,7 +398,7 @@ When it is on:
 
 * The table of contents shows, for each chapter and each article, the number of the page where it starts.
 
-* To compute these numbers before assembling the book, the software first generates the cover and, unless it is placed at the end, the table of contents, in order to measure their page count (the numbers of the items placed after the table of contents take it into account); it then regenerates the table of contents with the correct numbers. In rare cases (very dense book), adding the numbers to the table of contents may shift this pagination slightly by one page.
+* To compute these numbers before assembling the book, the software generates the cover (which does not depend on the numbers and is used as is in the book, without being generated a second time) and a first version of the table of contents unless it is placed at the end, in order to measure their page count (the numbers of the items placed after the table of contents take it into account); it then regenerates the table of contents with the correct numbers. In rare cases (very dense book), adding the numbers to the table of contents may shift this pagination slightly by one page.
 
 No preview feature is currently offered.
 
@@ -432,7 +432,7 @@ Once the PDF is started, the software:
 
 * Merges everything into a single PDF file and makes it available for download, named after the book title.
 
-Throughout generation, a status window shows the current step as "Step n / total", with its label (in the interface language) and a progress bar. The steps are, in order: downloading each article (one step per article, with its title) or preparing each imported document, computing page numbers (if numbering is on), composing the cover and the table of contents, assembling the pages in the book format, numbering the pages (if enabled), then finalizing the file. The total is known from the start. The window closes at the end, on success as well as on failure.
+Throughout generation, a status window shows the current step as "Step n / total", with its label (in the interface language) and a progress bar. The steps are, in order: downloading each article (one step per article, with its title) or preparing each imported document, computing page numbers (if numbering is on), composing the cover and the table of contents, assembling the pages in the book format, numbering the pages (if enabled), then finalizing the file. The total is known from the start. Each message is sent when its step begins: WeasyPrint renders, page recomposition, numbering and writing the file run in a separate thread (`asyncio.to_thread`), which leaves the server free to send progress and to answer other users during a generation. The window closes at the end, on success as well as on failure.
 
 On the server side, this progress is sent by the `POST /api/pdf/stream` endpoint, which returns an NDJSON stream (one JSON line per event): `{"type": "progress", "step", "total", "code", "title"?}` for each step, then `{"type": "done", "pdf_base64"}` with the base64-encoded PDF, or `{"type": "error", "detail"}` if generation fails along the way. An empty selection is refused before the stream starts (HTTP error 400). The `POST /api/pdf` endpoint, which returns the PDF file directly without progress, remains available for direct use of the API.
 
@@ -1153,5 +1153,6 @@ Application version number (`app/main.py`, shown in the application's footer —
 | 1.6.6   | 2026-11-13 | GMoulard  | Fallback to English, instead of French, when the browser language is not supported (interface) or not a valid code (Wikipedia language selector) (sections 3.1 and 12.1). Logo at the top of the README and of the documentation site. |
 | 1.6.7   | 2026-11-14 | GMoulard  | Python dependency versions pinned in `requirements.txt` (`==`), `pydantic` listed explicitly (section 13.4). Code of conduct, citation metadata (`CITATION.cff`, `codemeta.json`) and AGPL-3.0 licence headers in code files (contribution by ftosoni, section 17). |
 | 1.6.8   | 2026-11-14 | GMoulard  | PDF table of contents: chapters as bold blocks with their articles indented below and page numbers aligned on the right (instead of three columns), and each line becomes a clickable internal link to the chapter's or article's page (section 10). |
+| 1.6.9   | 2026-11-14 | GMoulard  | PDF generation: WeasyPrint renders, page recomposition, numbering and file writing run in a separate thread; progress messages arrive when each step begins (the "cover and table of contents" step no longer accumulates the time of neighbouring steps) and the server stays responsive during a generation. The cover is no longer generated twice (sections 10.2 and 11.1). |
 
 End of document

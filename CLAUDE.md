@@ -85,7 +85,7 @@ Des tests automatisés existent sous `tests/` (stdlib `unittest`, lancés avec l
 
 - `test_pdf_stream.py` : déroulement complet de `/api/pdf` et `/api/pdf/stream` via `TestClient`, avec `main.MediaWikiClient` et `main.generate_pdf` remplacés par des faux (PDF reportlab) — vérifie la numérotation des étapes de progression, l'événement `done` (PDF valide), l'événement `error` sur échec Wikipédia et le refus 400 d'une sélection vide.
 
-`main.build_book_pdf` est un générateur asynchrone qui produit les événements de progression puis `{"type": "done", "pdf": bytes}` : `/api/pdf` le consomme en ignorant la progression, `/api/pdf/stream` le sérialise en NDJSON. Toute nouvelle étape de génération doit y ajouter un `yield progress("code")`, incrémenter `total` en conséquence et ajouter la clé `progress.<code>` dans toutes les langues de `i18n.js`.
+`main.build_book_pdf` est un générateur asynchrone qui produit les événements de progression; tout calcul bloquant y passe par `asyncio.to_thread` (`render`, `append_pdf`, numérotation, écriture), sinon le serveur entier est gelé et les messages de progression n'arrivent qu'au prochain `await` (le libellé affiché ne correspond plus à l'étape réelle). Il produit enfin `{"type": "done", "pdf": bytes}` : `/api/pdf` le consomme en ignorant la progression, `/api/pdf/stream` le sérialise en NDJSON. Toute nouvelle étape de génération doit y ajouter un `yield progress("code")`, incrémenter `total` en conséquence et ajouter la clé `progress.<code>` dans toutes les langues de `i18n.js`.
 
 Reste un angle mort : le rendu réel par WeasyPrint et l'assemblage avec de vraies pages générées ne sont vérifiables que dans le conteneur Docker.
 

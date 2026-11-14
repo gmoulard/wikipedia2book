@@ -364,6 +364,41 @@ class PdfStreamTest(unittest.TestCase):
         self.assertIn('<span class="toc-title">Chat</span><span class="page-no">2</span>', toc_html)
         self.assertIn('<span class="toc-title">Chien</span><span class="page-no">5</span>', toc_html)
 
+    def test_generation_does_not_block_the_server_and_renders_the_cover_once(self):
+        import asyncio
+        import time
+        from app.models import Project
+
+        rendered = []
+
+        def slow_generate(html):
+            time.sleep(0.2)
+            rendered.append(html)
+            return _make_pdf(1)
+
+        async def scenario():
+            ticks = 0
+            done = False
+
+            async def ticker():
+                nonlocal ticks
+                while not done:
+                    ticks += 1
+                    await asyncio.sleep(0.02)
+
+            ticking = asyncio.create_task(ticker())
+            project = Project(**_project(chapters=[{"id": "c1", "title": "Félins", "article_keys": ["fr:title:chat"]}]))
+            events = [event async for event in main.build_book_pdf(project, main._selected_items(project), "fr")]
+            done = True
+            await ticking
+            return ticks, events
+
+        with patch.object(main, "generate_pdf", slow_generate):
+            ticks, events = asyncio.run(scenario())
+        self.assertEqual(events[-1]["type"], "done")
+        self.assertGreater(ticks, len(rendered) * 5)
+        self.assertEqual(sum('class="cover"' in html for html in rendered), 1)
+
     def test_table_of_contents_entries_link_to_their_pages(self):
         import re
         from app.book_builder import TOC_LINK_PREFIX
