@@ -150,8 +150,9 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .source-tools { margin-bottom: 28px; }
 .source-entry { position: relative; padding: 14px 16px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--subtle); }
 .article-form { display: flex; gap: 8px; }
-.article-form input { width: 100%; min-width: 80px; height: 32px; padding: 4px 8px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--paper); color: var(--ink); font-size: 14px; }
-.article-form input::placeholder { color: var(--placeholder); }
+.article-form { align-items: flex-start; }
+.article-form textarea { width: 100%; min-width: 80px; min-height: 32px; max-height: 200px; padding: 5px 8px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--paper); color: var(--ink); font-size: 14px; line-height: 20px; resize: vertical; overflow-y: auto; }
+.article-form textarea::placeholder { color: var(--placeholder); }
 .article-form select { width: 64px; flex: 0 0 auto; height: 32px; padding: 0 6px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--paper); color: var(--ink); font-size: 14px; }
 .article-form .button { flex: 0 0 auto; }
 .field-label-help { margin: 6px 0 0; color: var(--ink); font-size: 13px; }

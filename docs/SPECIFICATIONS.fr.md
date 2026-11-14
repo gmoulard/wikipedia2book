@@ -123,6 +123,16 @@ Un seul champ de saisie, dans l'étape Sources, sert à tous les moyens d'ajout 
 
 * si aucune page ne porte exactement ce titre, les résultats de la recherche Wikipédia sont proposés sous le champ, à ajouter d'un clic; une URL vers une page inexistante est signalée comme introuvable.
 
+Le champ accepte aussi une **liste de pages, une par ligne** (collée, ou saisie avec Maj+Entrée; Entrée seule lance l'ajout). Chaque ligne est reconnue puis recherchée sur Wikipédia l'une après l'autre, avec un message « Ajout de la liste : n / total — titre » :
+
+* les puces et numéros en début de ligne (`1.`, `2)`, `#`, `*`, `-`, `•`) sont ignorés, ainsi que les lignes vides;
+* lien wiki `[[Titre]]`, `[[:fr:Titre]]` ou `[[nl:Titre|texte]]` : le titre, dans la langue indiquée par le préfixe s'il y en a un;
+* lien Markdown `[texte](https://…)` : l'URL, parenthèses comprises (`…/Suchet%20(navire)`);
+* préfixe de langue `nl:Titre` (2 ou 3 lettres minuscules, éventuellement suivies d'une variante, par exemple `zh-yue`) : la page de ce titre sur cette Wikipédia, ce qui permet des listes multilingues;
+* URL Wikipédia : lue avec sa langue; titre seul : dans la langue choisie à côté du champ.
+
+Chaque page trouvée est ajoutée comme un article (ou, pour une page de livre, tous ses articles); une page déjà dans le livre est ignorée. Les lignes sans page exacte, ou en erreur, restent dans le champ pour être corrigées, et sont rappelées sous le champ. Un message final indique le nombre de pages ajoutées, déjà présentes et introuvables. La recherche au fil de la frappe est désactivée dès que le champ contient plusieurs lignes.
+
 Sous le champ, un libellé permanent rappelle ce qu'on peut y saisir : l'URL d'un article, une page de livre (URL ou nom) ou le nom d'une page Wikipédia. Les messages d'état (article ajouté, pages importées, aucune page exacte) s'affichent sur une ligne distincte en dessous, sans remplacer ce libellé. Pendant la saisie d'un texte qui n'est pas une URL, des résultats de recherche sont proposés au fil de la frappe. Les endpoints précédents (`POST /api/articles`, `POST /api/books/structure`, `GET /api/search`) restent disponibles.
 
 L'utilisateur ajoute ainsi des articles à son livre par l'un des moyens suivants :
@@ -1156,5 +1166,6 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 1.6.8   | 2026-11-14 | GMoulard  | Table des matières du PDF : chapitres en blocs en gras avec leurs articles en retrait dessous et numéros de page alignés à droite (au lieu de trois colonnes), et chaque ligne devient un lien interne cliquable vers la page du chapitre ou de l'article (section 10). |
 | 1.6.9   | 2026-11-14 | GMoulard  | Génération du PDF : rendus WeasyPrint, recomposition des pages, numérotation et écriture exécutés dans un fil séparé; les messages de progression arrivent au début de chaque étape (l'étape « couverture et table des matières » ne cumule plus le temps des étapes voisines) et le serveur reste disponible pendant une génération. La couverture n'est plus générée deux fois (sections 10.2 et 11.1). |
 | 1.6.10  | 2026-11-14 | GMoulard  | Assemblage du PDF plus rapide : une page déjà au format du livre (à 1 point près, sans rotation) n'est plus recomposée, seule sa taille est ajustée — environ 8 fois plus rapide pour les livres A4, Letter et Legal; les articles sont recomposés en arrière-plan pendant le téléchargement des suivants (sections 10.1 et 11.1). |
+| 1.7.0   | 2026-11-14 | GMoulard  | Étape Sources : le champ accepte une liste de pages, une par ligne (liens wiki `[[…]]` avec préfixe de langue, liens Markdown, URL, titres, puces et numéros ignorés), recherchées et ajoutées une par une; les lignes introuvables restent dans le champ; livres multilingues possibles (section 3.1). Textes traduits dans les 12 langues. |
 
 Fin du document

@@ -122,6 +122,16 @@ A single input field, in the Sources step, is used for every way of adding conte
 
 * if no page has exactly that title, the Wikipedia search results are offered below the field, to be added with one click; a URL pointing to a page that does not exist is reported as not found.
 
+The field also accepts a **list of pages, one per line** (pasted, or typed with Shift+Enter; Enter alone starts the addition). Each line is recognized and then looked up on Wikipedia one after the other, with a message "Adding the list: n / total — title":
+
+* bullets and numbers at the start of a line (`1.`, `2)`, `#`, `*`, `-`, `•`) are ignored, as are empty lines;
+* wiki link `[[Title]]`, `[[:fr:Title]]` or `[[nl:Title|text]]`: the title, in the language given by the prefix if any;
+* Markdown link `[text](https://…)`: the URL, parentheses included (`…/Suchet%20(navire)`);
+* language prefix `nl:Title` (2 or 3 lowercase letters, optionally followed by a variant, for example `zh-yue`): the page with that title on that Wikipedia, which allows multilingual lists;
+* Wikipedia URL: read with its language; plain title: in the language chosen next to the field.
+
+Each page found is added as an article (or, for a book page, all its articles); a page already in the book is skipped. Lines without an exact page, or in error, stay in the field to be corrected and are listed below it. A final message gives the number of pages added, already present and not found. Search-as-you-type is turned off as soon as the field contains several lines.
+
 Below the field, a permanent label reminds the user what can be typed: the URL of an article, a book page (URL or name) or the name of a Wikipedia page. Status messages (article added, pages imported, no exact page) are shown on a separate line underneath, without replacing that label. While typing text that is not a URL, search results are suggested as you type. The previous endpoints (`POST /api/articles`, `POST /api/books/structure`, `GET /api/search`) remain available.
 
 The user can therefore add articles to the book in any of the following ways:
@@ -1155,5 +1165,6 @@ Application version number (`app/main.py`, shown in the application's footer —
 | 1.6.8   | 2026-11-14 | GMoulard  | PDF table of contents: chapters as bold blocks with their articles indented below and page numbers aligned on the right (instead of three columns), and each line becomes a clickable internal link to the chapter's or article's page (section 10). |
 | 1.6.9   | 2026-11-14 | GMoulard  | PDF generation: WeasyPrint renders, page recomposition, numbering and file writing run in a separate thread; progress messages arrive when each step begins (the "cover and table of contents" step no longer accumulates the time of neighbouring steps) and the server stays responsive during a generation. The cover is no longer generated twice (sections 10.2 and 11.1). |
 | 1.6.10  | 2026-11-14 | GMoulard  | Faster PDF assembly: a page already at the book format (within 1 point, no rotation) is no longer recomposed, only its size is adjusted — about 8 times faster for A4, Letter and Legal books; articles are recomposed in the background while the next ones download (sections 10.1 and 11.1). |
+| 1.7.0   | 2026-11-14 | GMoulard  | Sources step: the field accepts a list of pages, one per line (wiki links `[[…]]` with language prefix, Markdown links, URLs, titles, bullets and numbers ignored), looked up and added one by one; lines not found stay in the field; multilingual books possible (section 3.1). Texts translated into the 12 languages. |
 
 End of document

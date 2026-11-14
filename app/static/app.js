@@ -490,15 +490,21 @@ function addSource(value) {
   });
 }
 
-async function addArticleToBook(article) {
-  if (activeArticles().some((item) => sameArticle(item, article))) throw new Error(t('sources.alreadyInBook'));
+async function pushArticle(article) {
+  if (activeArticles().some((item) => sameArticle(item, article))) return false;
   article.selected = true;
+  // NE PAS calculer wasFirst après le push : la proposition d'introduction ne doit partir qu'au premier article.
   const wasFirst = state.project.main_articles.length === 0;
   state.project.main_articles.push(article);
   queueSave({ main_articles: state.project.main_articles });
   renderWorkspace();
   if (wasFirst) await suggestIntroAndAuthor(article);
-  $('#articleQuery').value = '';
+  return true;
+}
+
+async function addArticleToBook(article) {
+  if (!(await pushArticle(article))) throw new Error(t('sources.alreadyInBook'));
+  setQuery('');
   $('#searchResults').hidden = true;
   $('#entryHint').textContent = t('sources.addedToMain');
   showToast(t('sources.articleAdded'));
@@ -524,11 +530,71 @@ async function importBook(book, bookName) {
     queueSave({ main_articles: state.project.main_articles, chapters: state.project.chapters, unassigned_first: state.project.unassigned_first, book_subtitle: state.project.book_subtitle, name: state.project.name, book_title: state.project.book_title });
     renderWorkspace();
     if (wasFirst) await suggestIntroAndAuthor(newArticles[0]);
-    $('#articleQuery').value = '';
+    setQuery('');
     const bookLink = `<a href="https://fr.wikipedia.org/wiki/Aide:Livres" target="_blank" rel="noopener noreferrer">${escapeHtml(t('sources.bookLinkText'))}</a>`;
     $('#entryHint').innerHTML = t('sources.pagesAddedHint', { n: newArticles.length, link: bookLink });
     showToast(t('sources.pagesAddedToast', { n: newArticles.length }));
   } catch (error) { throw new Error(t('sources.bookImportFailed', { error: error.message })); }
+}
+
+function setQuery(value) {
+  const field = $('#articleQuery');
+  field.value = value;
+  field.style.height = '';
+  if (value.includes('\n')) field.style.height = `${Math.min(field.scrollHeight + 2, 200)}px`;
+}
+
+function markdownLinkUrl(text) {
+  const start = text.match(/^\[[^\]]*\]\(/);
+  if (!start) return null;
+  let depth = 1;
+  for (let index = start[0].length; index < text.length; index += 1) {
+    if (text[index] === '(') depth += 1;
+    if (text[index] === ')') depth -= 1;
+    if (depth === 0) return text.slice(start[0].length, index).trim() || null;
+  }
+  return null;
+}
+
+function parseSourceLine(line, defaultLanguage) {
+  let text = line.trim().replace(/^(?:\d+[.)]|[#*•\-–]+)\s*/, '').trim();
+  if (!text) return null;
+  const markdownUrl = markdownLinkUrl(text);
+  if (markdownUrl) return { label: text, input: markdownUrl, language: defaultLanguage };
+  const wikilink = text.match(/^\[\[\s*:?([^\]|]+?)\s*(?:\|[^\]]*)?\]\]/);
+  if (wikilink) text = wikilink[1];
+  if (/^[a-z]+:\/\//i.test(text)) return { label: text, input: text, language: defaultLanguage };
+  const prefixed = text.match(/^([a-z]{2,3}(?:-[a-z]{2,8})?):(.+)$/);
+  if (prefixed) {
+    const language = prefixed[1];
+    return { label: text, input: `https://${language}.wikipedia.org/wiki/${encodeURIComponent(prefixed[2].trim().replace(/ /g, '_'))}`, language };
+  }
+  return { label: text, input: text, language: defaultLanguage };
+}
+
+async function addSourceList(lines) {
+  const sources = lines.map((line) => ({ line, source: parseSourceLine(line, $('#articleLanguage').value) })).filter((item) => item.source);
+  let added = 0;
+  let already = 0;
+  const missing = [];
+  await withAddButton(t('export.addingLabel'), async () => {
+    for (const [index, { line, source }] of sources.entries()) {
+      $('#entryHint').textContent = t('sources.listProgress', { n: index + 1, total: sources.length, title: source.label });
+      try {
+        const resolved = await getJson('/api/sources/resolve', { method: 'POST', body: JSON.stringify({ input: source.input, language: source.language }) });
+        if (resolved.kind === 'article') {
+          if (await pushArticle(resolved.article)) added += 1; else already += 1;
+        } else if (resolved.kind === 'book') {
+          for (const article of resolved.book.articles) {
+            if (await pushArticle(article)) added += 1; else already += 1;
+          }
+        } else missing.push(line.trim());
+      } catch { missing.push(line.trim()); }
+    }
+  });
+  setQuery(missing.join('\n'));
+  $('#entryHint').textContent = missing.length ? t('sources.listMissing', { titles: missing.join(' · ') }) : '';
+  showToast(t('sources.listSummary', { added, already, missing: missing.length }), missing.length > 0);
 }
 
 function showSearchResults(items, hint) {
@@ -886,7 +952,10 @@ document.addEventListener('change', async (event) => {
 });
 
 document.addEventListener('input', (event) => {
-  if (event.target.matches('#articleQuery')) searchArticles(event.target.value);
+  if (event.target.matches('#articleQuery')) {
+    if (event.target.value.includes('\n')) { $('#searchResults').hidden = true; setQuery(event.target.value); }
+    else searchArticles(event.target.value);
+  }
   if (event.target.matches('#articleFilter')) renderArticles();
   const chapterNameEl = event.target.closest('.chapter-name');
   if (chapterNameEl && state.project) {
@@ -904,7 +973,15 @@ $('#articleForm').addEventListener('submit', async (event) => {
   if (!value) { showToast(t('sources.emptyField'), true); return; }
   clearTimeout(state.searchTimer);
   $('#searchResults').hidden = true;
-  await addSource(value);
+  const lines = value.split(/\r?\n/).filter((line) => line.trim());
+  if (lines.length > 1) await addSourceList(lines);
+  else await addSource(value);
+});
+$('#articleQuery').addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+    event.preventDefault();
+    $('#articleForm').requestSubmit();
+  }
 });
 $('#documentFileInput').addEventListener('change', async (event) => {
   const files = [...(event.target.files || [])];
