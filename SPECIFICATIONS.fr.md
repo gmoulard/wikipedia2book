@@ -1051,6 +1051,8 @@ Wikipedia2Book/
 ├── toolforge-fonts.conf
 ├── toolforge-deploy.sh
 ├── toolinfo.json
+├── CITATION.cff
+├── codemeta.json
 ├── .github/workflows/deploy-toolforge.yml
 ├── .github/workflows/toolviews-stats.yml
 ├── .github/workflows/jekyll-gh-pages.yml
@@ -1058,11 +1060,14 @@ Wikipedia2Book/
 ├── requirements.txt
 ├── .gitignore
 ├── CLAUDE.md
+├── CODE_OF_CONDUCT.md
 ├── LICENSE
 ├── README.md
 ├── SPECIFICATIONS.fr.md
 └── SPECIFICATIONS.en.md
 ```
+
+Chaque fichier de code (`.py`, `.js`, `.css`, `index.html`, scripts shell, `Dockerfile`, workflows GitHub Actions) commence par un en-tête de licence AGPL-3.0 (projet, dépôt, copyright, version 3 de la licence). `CITATION.cff` et `codemeta.json` décrivent la version archivée sur Software Heritage (v1.6.4, SWHID `swh:1:dir:9c7c016d9603a4b0201ad64535767a353031bd91`) ; `CODE_OF_CONDUCT.md` renvoie au code de conduite MediaWiki.
 
 ## 18\. État d'avancement et évolutions futures
 

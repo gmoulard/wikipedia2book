@@ -1,0 +1,39 @@
+{
+    "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
+    "type": "SoftwareSourceCode",
+    "applicationCategory": "Printable PDF book generation from Wikipedia articles",
+    "author": [
+        {
+            "type": "Person",
+            "familyName": "Moulard",
+            "givenName": "Guillaume"
+        }
+    ],
+    "codeRepository": "https://github.com/gmoulard/wikipedia2book",
+    "datePublished": "2026-11-13",
+    "description": "Wikipedia2Book is a web application that builds a printable PDF book from Wikipedia articles or from a Wikipedia book page: cover, introduction, chapters, table of contents, page numbers and license page. Each article is included through the official Wikipedia PDF, fitted to the chosen print format, and the server keeps no state.",
+    "keywords": [
+        "Wikipedia",
+        "MediaWiki",
+        "book",
+        "PDF",
+        "print",
+        "Book creator",
+        "Toolforge"
+    ],
+    "license": "https://spdx.org/licenses/AGPL-3.0-only",
+    "name": "Wikipedia2Book",
+    "programmingLanguage": [
+        "Python",
+        "JavaScript"
+    ],
+    "runtimePlatform": "Python 3.12",
+    "softwareRequirements": "https://github.com/gmoulard/wikipedia2book/blob/main/requirements.txt",
+    "developmentStatus": "active",
+    "issueTracker": "https://github.com/gmoulard/wikipedia2book/issues",
+    "softwareHelp": "https://gmoulard.github.io/wikipedia2book/",
+    "softwareVersion": "v1.6.4",
+    "version": "v1.6.4",
+    "identifier": "swh:1:dir:9c7c016d9603a4b0201ad64535767a353031bd91;origin=https://github.com/gmoulard/wikipedia2book;visit=swh:1:snp:3b1fa78021c1ad7819b82a6f38f200a9f3bfa85e;anchor=swh:1:rev:d0cd2a14a00fb848f2555a9ee62c4147230e6080",
+    "url": "https://wikipedia2book.toolforge.org/"
+}

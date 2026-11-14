@@ -1,0 +1,37 @@
+cff-version: 1.2.0
+title: Wikipedia2Book
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Guillaume
+    family-names: Moulard
+    alias: gmoulard
+identifiers:
+  - type: swh
+    value: 'swh:1:dir:9c7c016d9603a4b0201ad64535767a353031bd91;origin=https://github.com/gmoulard/wikipedia2book;visit=swh:1:snp:3b1fa78021c1ad7819b82a6f38f200a9f3bfa85e;anchor=swh:1:rev:d0cd2a14a00fb848f2555a9ee62c4147230e6080'
+    description: The SWHID of the v1.6.4 release
+  - type: url
+    value: 'https://wikipedia2book.toolforge.org/'
+    description: The Toolforge URL of the tool
+repository-code: 'https://github.com/gmoulard/wikipedia2book'
+url: 'https://wikipedia2book.toolforge.org/'
+abstract: >-
+  Wikipedia2Book is a web application that builds a printable PDF book
+  from Wikipedia articles or from a Wikipedia book page: cover,
+  introduction, chapters, table of contents, page numbers and license
+  page. Each article is included through the official Wikipedia PDF,
+  fitted to the chosen print format, and the server keeps no state.
+keywords:
+  - Wikipedia
+  - MediaWiki
+  - book
+  - PDF
+  - print
+  - Book creator
+  - Toolforge
+license: AGPL-3.0-only
+commit: d0cd2a14a00fb848f2555a9ee62c4147230e6080
+version: v1.6.4
+date-released: '2026-11-13'
