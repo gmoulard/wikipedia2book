@@ -61,6 +61,7 @@ wikipedia2book/
 ├── CITATION.cff                 # Citation metadata
 ├── codemeta.json                # CodeMeta software metadata
 ├── requirements.txt             # Python dependencies
+├── toolviews.csv, stats.md      # Daily usage statistics and their charts (generated)
 ├── SPECIFICATIONS.fr.md         # Reference behaviour (French original)
 ├── SPECIFICATIONS.en.md         # English translation of the specifications
 ├── CODE_OF_CONDUCT.md

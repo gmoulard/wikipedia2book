@@ -50,10 +50,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Usage statistics page
-        run: |
-          git fetch --depth=1 origin stats
-          git show FETCH_HEAD:toolviews.csv > toolviews.csv
-          python3 scripts/toolviews_chart.py toolviews.csv stats.md
+        run: python3 scripts/toolviews_chart.py toolviews.csv stats.md
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Build with Jekyll

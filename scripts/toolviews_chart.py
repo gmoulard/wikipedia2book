@@ -24,7 +24,7 @@ from pathlib import Path
 from toolviews_stats import read_rows
 
 DAILY_DAYS = 31
-SOURCE = "https://github.com/gmoulard/wikipedia2book/blob/stats/toolviews.csv"
+SOURCE = "https://github.com/gmoulard/wikipedia2book/blob/main/toolviews.csv"
 
 
 def xychart(title, labels, values, width):

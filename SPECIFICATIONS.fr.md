@@ -747,15 +747,15 @@ python scripts/toolviews_stats.py [fichier.csv]
 
 #### Mise à jour quotidienne (GitHub Actions)
 
-`.github/workflows/toolviews-stats.yml` (« Toolviews stats ») tourne chaque jour à 06:30 UTC, et sur lancement manuel (`workflow_dispatch`). Il récupère le `toolviews.csv` de la branche `stats` (créée à son premier passage, branche orpheline ne contenant que ce fichier), exécute le script, puis committe le fichier sur `stats` s'il a changé, au nom de `github-actions[bot]`. Le fichier est consultable sur https://github.com/gmoulard/wikipedia2book/blob/stats/toolviews.csv.
+`.github/workflows/toolviews-stats.yml` (« Toolviews stats ») tourne chaque jour à 06:30 UTC, et sur lancement manuel (`workflow_dispatch`). Il exécute le script sur le `toolviews.csv` de `main`, régénère `stats.md` avec `scripts/toolviews_chart.py`, puis committe les deux fichiers sur `main` s'ils ont changé, au nom de `github-actions[bot]` (après un `git pull --rebase` pour ne pas échouer si `main` a bougé pendant l'exécution). Les fichiers sont consultables sur https://github.com/gmoulard/wikipedia2book/blob/main/toolviews.csv et https://github.com/gmoulard/wikipedia2book/blob/main/stats.md (GitHub y dessine aussi les graphiques Mermaid).
 
-Le CSV n'est jamais committé sur `main` : un push quotidien redéploierait Railway et Northflank et relancerait les tests. La branche `stats` ne doit pas être fusionnée dans `main`.
+Conséquence acceptée : ce commit quotidien sur `main` fait redéployer Railway et Northflank une fois par jour. Il ne relance pas les autres workflows GitHub Actions (un push fait avec le jeton `GITHUB_TOKEN` n'en déclenche aucun) : le site GitHub Pages est reconstruit par le déclencheur `workflow_run`. Toolforge n'est pas concerné (branche `production-toolforge`).
 
 #### Graphiques sur GitHub Pages
 
 Page publiée : https://gmoulard.github.io/wikipedia2book/stats.html (statistiques d'utilisation de l'instance Toolforge, mises à jour chaque jour).
 
-Avant la construction Jekyll, `.github/workflows/jekyll-gh-pages.yml` récupère `toolviews.csv` de la branche `stats` et exécute `scripts/toolviews_chart.py toolviews.csv stats.md`, qui écrit la page `stats.md` (non committée, publiée en `stats.html`) : total des hits et période couverte, puis deux histogrammes Mermaid (`xychart-beta`, dessinés par `_includes/head-custom.html`) — hits par jour sur les 31 derniers jours (axe : numéro du jour, période dans le titre, graphique de 1000 px de large), et hits par mois depuis le début. Le nombre de hits est affiché au-dessus de chaque barre (`showDataLabel`, `showDataLabelOutsideBar`); l'axe vertical va jusqu'à 115 % du maximum pour laisser la place à l'étiquette la plus haute. Mermaid calcule la taille de ces étiquettes d'après la largeur des barres, de façon inutilisable (-1 px dès qu'une barre vaut 0, énorme pour une barre seule) : `head-custom.html` la recalcule après le rendu, d'après la largeur des barres et la longueur du plus grand nombre, entre 6 et 12 px. Un CSV absent ou vide arrête la construction du site avec un message d'erreur. Tests : `tests/test_toolviews_chart.py`.
+`stats.md` (publiée en `stats.html`) est écrite par `scripts/toolviews_chart.py toolviews.csv stats.md`, lors de la mise à jour quotidienne et à nouveau avant chaque construction Jekyll (`.github/workflows/jekyll-gh-pages.yml`), pour qu'une modification du script soit visible sans attendre le lendemain : total des hits et période couverte, puis deux histogrammes Mermaid (`xychart-beta`, dessinés par `_includes/head-custom.html`) — hits par jour sur les 31 derniers jours (axe : numéro du jour, période dans le titre, graphique de 1000 px de large), et hits par mois depuis le début. Le nombre de hits est affiché au-dessus de chaque barre (`showDataLabel`, `showDataLabelOutsideBar`); l'axe vertical va jusqu'à 115 % du maximum pour laisser la place à l'étiquette la plus haute. Mermaid calcule la taille de ces étiquettes d'après la largeur des barres, de façon inutilisable (-1 px dès qu'une barre vaut 0, énorme pour une barre seule) : `head-custom.html` la recalcule après le rendu, d'après la largeur des barres et la longueur du plus grand nombre, entre 6 et 12 px. Un CSV absent ou vide arrête la construction du site avec un message d'erreur. Tests : `tests/test_toolviews_chart.py`.
 
 #### Lecture des chiffres
 
@@ -1059,6 +1059,8 @@ Wikipedia2Book/
 ├── toolinfo.json
 ├── CITATION.cff
 ├── codemeta.json
+├── toolviews.csv                 (généré chaque jour)
+├── stats.md                      (généré chaque jour)
 ├── .github/workflows/deploy-toolforge.yml
 ├── .github/workflows/toolviews-stats.yml
 ├── .github/workflows/jekyll-gh-pages.yml

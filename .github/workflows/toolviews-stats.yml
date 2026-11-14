@@ -37,24 +37,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Update toolviews.csv on the stats branch
+      - name: Update toolviews.csv and stats.md on main
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if git ls-remote --exit-code --heads origin stats >/dev/null; then
-            git fetch origin stats
-            git worktree add -B stats ../stats origin/stats
-          else
-            git worktree add --orphan -b stats ../stats
-          fi
-          if [ -f ../stats/toolviews.csv ]; then cp ../stats/toolviews.csv toolviews.csv; fi
           python scripts/toolviews_stats.py toolviews.csv
-          cp toolviews.csv ../stats/toolviews.csv
-          cd ../stats
-          git add toolviews.csv
+          python scripts/toolviews_chart.py toolviews.csv stats.md
+          git add toolviews.csv stats.md
           if git diff --cached --quiet; then
             echo "Aucun changement"
           else
             git commit -m "stats: toolviews $(date -u +%F)"
-            git push origin stats
+            git pull --rebase origin main
+            git push origin HEAD:main
           fi

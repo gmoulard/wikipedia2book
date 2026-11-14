@@ -746,15 +746,15 @@ python scripts/toolviews_stats.py [file.csv]
 
 #### Daily update (GitHub Actions)
 
-`.github/workflows/toolviews-stats.yml` ("Toolviews stats") runs every day at 06:30 UTC, and on manual start (`workflow_dispatch`). It fetches `toolviews.csv` from the `stats` branch (created on its first run, an orphan branch containing only that file), runs the script, then commits the file to `stats` if it changed, as `github-actions[bot]`. The file can be viewed at https://github.com/gmoulard/wikipedia2book/blob/stats/toolviews.csv.
+`.github/workflows/toolviews-stats.yml` ("Toolviews stats") runs every day at 06:30 UTC, and on manual start (`workflow_dispatch`). It runs the script on the `toolviews.csv` of `main`, regenerates `stats.md` with `scripts/toolviews_chart.py`, then commits both files to `main` if they changed, as `github-actions[bot]` (after a `git pull --rebase` so as not to fail if `main` moved during the run). The files can be viewed at https://github.com/gmoulard/wikipedia2book/blob/main/toolviews.csv and https://github.com/gmoulard/wikipedia2book/blob/main/stats.md (GitHub also draws the Mermaid charts there).
 
-The CSV is never committed to `main`: a daily push would redeploy Railway and Northflank and rerun the tests. The `stats` branch must not be merged into `main`.
+Accepted consequence: this daily commit to `main` makes Railway and Northflank redeploy once a day. It does not rerun the other GitHub Actions workflows (a push made with the `GITHUB_TOKEN` token triggers none): the GitHub Pages site is rebuilt by the `workflow_run` trigger. Toolforge is not affected (`production-toolforge` branch).
 
 #### Charts on GitHub Pages
 
 Published page: https://gmoulard.github.io/wikipedia2book/stats.html (usage statistics of the Toolforge instance, updated daily).
 
-Before the Jekyll build, `.github/workflows/jekyll-gh-pages.yml` fetches `toolviews.csv` from the `stats` branch and runs `scripts/toolviews_chart.py toolviews.csv stats.md`, which writes the page `stats.md` (not committed, published as `stats.html`): total hits and period covered, then two Mermaid bar charts (`xychart-beta`, drawn by `_includes/head-custom.html`) — hits per day over the last 31 days (axis: day of the month, period in the title, chart 1000 px wide), and hits per month since the start. The number of hits is shown above each bar (`showDataLabel`, `showDataLabelOutsideBar`); the vertical axis goes up to 115% of the maximum to leave room for the highest label. Mermaid sizes these labels from the bar width in an unusable way (-1 px as soon as a bar is 0, huge for a single bar): `head-custom.html` recomputes the size after rendering, from the bar width and the length of the largest number, between 6 and 12 px. A missing or empty CSV stops the site build with an error message. Tests: `tests/test_toolviews_chart.py`.
+`stats.md` (published as `stats.html`) is written by `scripts/toolviews_chart.py toolviews.csv stats.md`, during the daily update and again before each Jekyll build (`.github/workflows/jekyll-gh-pages.yml`), so that a change to the script shows without waiting for the next day: total hits and period covered, then two Mermaid bar charts (`xychart-beta`, drawn by `_includes/head-custom.html`) — hits per day over the last 31 days (axis: day of the month, period in the title, chart 1000 px wide), and hits per month since the start. The number of hits is shown above each bar (`showDataLabel`, `showDataLabelOutsideBar`); the vertical axis goes up to 115% of the maximum to leave room for the highest label. Mermaid sizes these labels from the bar width in an unusable way (-1 px as soon as a bar is 0, huge for a single bar): `head-custom.html` recomputes the size after rendering, from the bar width and the length of the largest number, between 6 and 12 px. A missing or empty CSV stops the site build with an error message. Tests: `tests/test_toolviews_chart.py`.
 
 #### Reading the figures
 
@@ -1058,6 +1058,8 @@ Wikipedia2Book/
 ├── toolinfo.json
 ├── CITATION.cff
 ├── codemeta.json
+├── toolviews.csv                 (generated daily)
+├── stats.md                      (generated daily)
 ├── .github/workflows/deploy-toolforge.yml
 ├── .github/workflows/toolviews-stats.yml
 ├── .github/workflows/jekyll-gh-pages.yml
