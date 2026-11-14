@@ -668,7 +668,7 @@ Le secret `TOOLFORGE_SSH_KEY` contient une clé privée OpenSSH dédiée au dép
 
 Le second, `.github/workflows/toolviews-stats.yml` (« Toolviews stats »), met à jour chaque jour les statistiques d'utilisation (section 13.8).
 
-Le troisième, `.github/workflows/jekyll-gh-pages.yml`, publie à chaque push sur `main` (et sur lancement manuel) le site de documentation https://gmoulard.github.io/wikipedia2book/ avec GitHub Pages : Jekyll y convertit en HTML les fichiers Markdown de la racine du dépôt (`README.md` en page d'accueil, `SPECIFICATIONS.fr.md` et `SPECIFICATIONS.en.md` en pages). C'est l'adresse déclarée comme documentation utilisateur dans `toolinfo.json`. GitHub Pages n'affiche pas les blocs Mermaid nativement : `_includes/head-custom.html`, ajouté par Jekyll dans l'en-tête de chaque page (thème par défaut), charge Mermaid 11.4.1 depuis jsDelivr et dessine les blocs ```` ```mermaid ```` (section 13.10).
+Le troisième, `.github/workflows/jekyll-gh-pages.yml`, publie à chaque push sur `main` (et sur lancement manuel) le site de documentation https://gmoulard.github.io/wikipedia2book/ avec GitHub Pages : Jekyll y convertit en HTML les fichiers Markdown de la racine du dépôt (`README.md` en page d'accueil, `SPECIFICATIONS.fr.md` et `SPECIFICATIONS.en.md` en pages). C'est l'adresse déclarée comme documentation utilisateur dans `toolinfo.json`. GitHub Pages n'affiche pas les blocs Mermaid nativement : `_includes/head-custom.html`, ajouté par Jekyll dans l'en-tête de chaque page (thème par défaut), charge Mermaid 11.4.1 depuis jsDelivr et dessine les blocs ```` ```mermaid ```` (section 13.10). Le site est aussi reconstruit après chaque exécution réussie de « Toolviews stats » (déclencheur `workflow_run`), et chaque construction ajoute la page de statistiques d'utilisation https://gmoulard.github.io/wikipedia2book/stats.html (section 13.8).
 
 ### 13.7 Toolforge
 
@@ -738,7 +738,7 @@ Script local (bibliothèque standard Python uniquement) qui complète un fichier
 python scripts/toolviews_stats.py [fichier.csv]
 ```
 
-* Fichier : par défaut `toolviews.csv` (ignoré par git sur `main`), séparé par des points-virgules pour s'ouvrir directement dans Excel en français, avec l'en-tête `date;hits;unique_visitors`.
+* Fichier : par défaut `toolviews.csv`, séparé par des points-virgules pour s'ouvrir directement dans Excel en français, avec l'en-tête `date;hits;unique_visitors`.
 * Sources : `https://toolviews.toolforge.org/api/v1/tool/wikipedia2book/daily/<début>/<fin>` pour les requêtes (`hits`) et `…/api/v1/unique/tool/wikipedia2book/daily/<début>/<fin>` pour les adresses IP distinctes (`unique_visitors`); deux appels pour toute la période manquante.
 * Jours traités : seulement ceux absents du CSV, du 1er novembre 2026 à la veille; le jour courant, incomplet, n'est jamais écrit. Un jour déjà présent n'est jamais recalculé (pour corriger une valeur, supprimer la ligne et relancer).
 * Jours sans visite : Toolviews ne les renvoie pas; ils sont écrits avec 0 jusqu'au dernier jour publié par Toolviews (ou déjà présent dans le CSV). Les jours suivants, pas encore publiés, ne sont pas écrits, pour ne pas figer un 0 provisoire.
@@ -750,6 +750,10 @@ python scripts/toolviews_stats.py [fichier.csv]
 `.github/workflows/toolviews-stats.yml` (« Toolviews stats ») tourne chaque jour à 06:30 UTC, et sur lancement manuel (`workflow_dispatch`). Il récupère le `toolviews.csv` de la branche `stats` (créée à son premier passage, branche orpheline ne contenant que ce fichier), exécute le script, puis committe le fichier sur `stats` s'il a changé, au nom de `github-actions[bot]`. Le fichier est consultable sur https://github.com/gmoulard/wikipedia2book/blob/stats/toolviews.csv.
 
 Le CSV n'est jamais committé sur `main` : un push quotidien redéploierait Railway et Northflank et relancerait les tests. La branche `stats` ne doit pas être fusionnée dans `main`.
+
+#### Graphiques sur GitHub Pages
+
+Avant la construction Jekyll, `.github/workflows/jekyll-gh-pages.yml` récupère `toolviews.csv` de la branche `stats` et exécute `scripts/toolviews_chart.py toolviews.csv stats.md`, qui écrit la page `stats.md` (non committée, publiée en `stats.html`) : total des hits et période couverte, puis deux histogrammes Mermaid (`xychart-beta`, dessinés par `_includes/head-custom.html`) — hits par jour sur les 90 derniers jours, et hits par mois depuis le début. `unique_visitors` n'y figure pas (toujours 0). Un CSV absent ou vide arrête la construction du site avec un message d'erreur. Tests : `tests/test_toolviews_chart.py`.
 
 #### Lecture des chiffres
 
@@ -1030,7 +1034,8 @@ Wikipedia2Book/
 │       └── Wikipedia2bookLogo.png
 │
 ├── scripts/
-│   └── toolviews_stats.py
+│   ├── toolviews_stats.py
+│   └── toolviews_chart.py
 │
 ├── tests/
 │   ├── test_syntax.py
@@ -1040,6 +1045,7 @@ Wikipedia2Book/
 │   ├── test_pdf_stream.py
 │   ├── test_resolve_source.py
 │   ├── test_toolviews_stats.py
+│   ├── test_toolviews_chart.py
 │   └── test_i18n.py
 │
 ├── Dockerfile

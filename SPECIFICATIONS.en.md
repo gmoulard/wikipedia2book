@@ -667,7 +667,7 @@ The `TOOLFORGE_SSH_KEY` secret contains an OpenSSH private key dedicated to depl
 
 The second, `.github/workflows/toolviews-stats.yml` ("Toolviews stats"), updates the usage statistics every day (section 13.8).
 
-The third, `.github/workflows/jekyll-gh-pages.yml`, publishes on every push to `main` (and on manual start) the documentation site https://gmoulard.github.io/wikipedia2book/ with GitHub Pages: Jekyll converts the Markdown files at the root of the repository to HTML (`README.md` as the home page, `SPECIFICATIONS.fr.md` and `SPECIFICATIONS.en.md` as pages). This is the address declared as user documentation in `toolinfo.json`. GitHub Pages does not render Mermaid blocks natively: `_includes/head-custom.html`, added by Jekyll to the head of every page (default theme), loads Mermaid 11.4.1 from jsDelivr and draws the ```` ```mermaid ```` blocks (section 13.10).
+The third, `.github/workflows/jekyll-gh-pages.yml`, publishes on every push to `main` (and on manual start) the documentation site https://gmoulard.github.io/wikipedia2book/ with GitHub Pages: Jekyll converts the Markdown files at the root of the repository to HTML (`README.md` as the home page, `SPECIFICATIONS.fr.md` and `SPECIFICATIONS.en.md` as pages). This is the address declared as user documentation in `toolinfo.json`. GitHub Pages does not render Mermaid blocks natively: `_includes/head-custom.html`, added by Jekyll to the head of every page (default theme), loads Mermaid 11.4.1 from jsDelivr and draws the ```` ```mermaid ```` blocks (section 13.10). The site is also rebuilt after each successful run of "Toolviews stats" (`workflow_run` trigger), and every build adds the usage statistics page https://gmoulard.github.io/wikipedia2book/stats.html (section 13.8).
 
 ### 13.7 Toolforge
 
@@ -737,7 +737,7 @@ Local script (Python standard library only) that fills a CSV file with the tool'
 python scripts/toolviews_stats.py [file.csv]
 ```
 
-* File: `toolviews.csv` by default (ignored by git on `main`), separated by semicolons so that it opens directly in a French-locale Excel, with the header `date;hits;unique_visitors`.
+* File: `toolviews.csv` by default, separated by semicolons so that it opens directly in a French-locale Excel, with the header `date;hits;unique_visitors`.
 * Sources: `https://toolviews.toolforge.org/api/v1/tool/wikipedia2book/daily/<start>/<end>` for requests (`hits`) and `…/api/v1/unique/tool/wikipedia2book/daily/<start>/<end>` for distinct IP addresses (`unique_visitors`); two calls for the whole missing period.
 * Days processed: only those missing from the CSV, from 1 November 2026 to the day before; the current day, incomplete, is never written. A day already present is never recomputed (to correct a value, delete the line and run again).
 * Days without visits: Toolviews does not return them; they are written as 0 up to the last day published by Toolviews (or already in the CSV). Later days, not yet published, are not written, so as not to freeze a provisional 0.
@@ -749,6 +749,10 @@ python scripts/toolviews_stats.py [file.csv]
 `.github/workflows/toolviews-stats.yml` ("Toolviews stats") runs every day at 06:30 UTC, and on manual start (`workflow_dispatch`). It fetches `toolviews.csv` from the `stats` branch (created on its first run, an orphan branch containing only that file), runs the script, then commits the file to `stats` if it changed, as `github-actions[bot]`. The file can be viewed at https://github.com/gmoulard/wikipedia2book/blob/stats/toolviews.csv.
 
 The CSV is never committed to `main`: a daily push would redeploy Railway and Northflank and rerun the tests. The `stats` branch must not be merged into `main`.
+
+#### Charts on GitHub Pages
+
+Before the Jekyll build, `.github/workflows/jekyll-gh-pages.yml` fetches `toolviews.csv` from the `stats` branch and runs `scripts/toolviews_chart.py toolviews.csv stats.md`, which writes the page `stats.md` (not committed, published as `stats.html`): total hits and period covered, then two Mermaid bar charts (`xychart-beta`, drawn by `_includes/head-custom.html`) — hits per day over the last 90 days, and hits per month since the start. `unique_visitors` is not shown (always 0). A missing or empty CSV stops the site build with an error message. Tests: `tests/test_toolviews_chart.py`.
 
 #### Reading the figures
 
@@ -1029,7 +1033,8 @@ Wikipedia2Book/
 │       └── Wikipedia2bookLogo.png
 │
 ├── scripts/
-│   └── toolviews_stats.py
+│   ├── toolviews_stats.py
+│   └── toolviews_chart.py
 │
 ├── tests/
 │   ├── test_syntax.py
@@ -1039,6 +1044,7 @@ Wikipedia2Book/
 │   ├── test_pdf_stream.py
 │   ├── test_resolve_source.py
 │   ├── test_toolviews_stats.py
+│   ├── test_toolviews_chart.py
 │   └── test_i18n.py
 │
 ├── Dockerfile

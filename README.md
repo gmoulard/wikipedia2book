@@ -47,7 +47,8 @@ wikipedia2book/
 │       ├── styles.css
 │       └── Wikipedia2bookLogo.png
 ├── scripts/
-│   └── toolviews_stats.py       # Daily Toolviews usage statistics (not part of the app)
+│   ├── toolviews_stats.py       # Daily Toolviews usage statistics (not part of the app)
+│   └── toolviews_chart.py       # Usage charts page for GitHub Pages
 ├── tests/                       # unittest suite (no network, WeasyPrint stubbed when missing)
 ├── .github/workflows/           # Toolforge deployment, Toolviews stats, GitHub Pages
 ├── Dockerfile                   # Image used by Railway and Northflank
@@ -67,6 +68,8 @@ wikipedia2book/
 ## Project status
 
 The repository contains the FastAPI backend and the matching web interface. It lets you build the book in browser memory, search for or add references without downloading the full content, explore Wikipedia links, control the selection, organize chapters and set up the cover. At generation time, the full PDFs of the selected articles are fetched from Wikipedia and merged in memory. The server stores neither the book nor the PDFs: the user explicitly imports and downloads a JSON file from the interface.
+
+Usage statistics of the Toolforge instance, updated daily: https://gmoulard.github.io/wikipedia2book/stats.html
 
 ## Running the application
 
