@@ -2,13 +2,13 @@
 
 Instructions pour Claude Code (ou tout agent) travaillant sur ce dépôt.
 
-## Le projet
+## L'application
 
-Wikipedia2Book crée directement un livre PDF imprimable à partir d'articles Wikipédia — il n'y a pas de notion de « projet » dans l'UI ni dans la doc produit (un seul livre, en mémoire, dès l'ouverture de la page). Le comportement de référence est documenté dans [SPECIFICATIONS.fr.md](SPECIFICATIONS.fr.md) : le lire avant toute modification fonctionnelle, et le mettre à jour dans le même changement si le comportement bouge. Ne jamais laisser la spec décrire une fonctionnalité qui n'existe pas dans le code, ni l'inverse.
+Wikipedia2Book crée directement un livre PDF imprimable à partir d'articles Wikipédia : un seul livre à la fois, en mémoire dans le navigateur, prêt dès l'ouverture de la page. Ne jamais parler de « projet » dans l'interface ni dans la documentation (le mot ne subsiste que dans le nom technique du modèle `Project`, voir plus bas). Le comportement de référence est documenté dans [SPECIFICATIONS.fr.md](SPECIFICATIONS.fr.md) : le lire avant toute modification fonctionnelle, et le mettre à jour dans le même changement si le comportement bouge. Ne jamais laisser la spec décrire une fonctionnalité qui n'existe pas dans le code, ni l'inverse.
 
 ## Principes de conception à préserver
 
-- **Serveur sans état.** Aucune persistance disque côté serveur (pas de DB, pas de fichier projet, pas de PDF stocké). La sauvegarde est entièrement à la charge de l'utilisateur via export/import JSON depuis le navigateur.
+- **Serveur sans état.** Aucune persistance disque côté serveur (pas de DB, pas de livre ni de PDF stocké). La sauvegarde est entièrement à la charge de l'utilisateur via export/import JSON depuis le navigateur.
 - **Le contenu des articles n'est jamais reconstruit, leur format physique si.** Chaque article sélectionné est intégré via le PDF officiel Wikipédia (`/api/rest_v1/page/pdf/{titre}/{format}`, `format` = `a4`/`letter`/`legal` d'après `page_format` via `wikipedia_api.WIKIPEDIA_PDF_PAPERS`, `a4` pour tout autre format — Wikipédia ne propose que ces trois-là, en portrait, et refuse les majuscules) : texte, images, références restent ceux de Wikipédia, jamais reparsés/reconstruits en HTML (c'était du code mort, `article_parser.py`, supprimé). En revanche, depuis que « toutes les pages doivent respecter le format d'impression » a été demandé, chaque page (article, document importé, ou générée par l'app) est recomposée — mise à l'échelle et centrée, sans déformation — sur le format/orientation choisis pour le livre (`pdf_generator.fit_page_to_format`/`fit_pdf_to_format`). Ce n'est pas une régression du principe « PDF officiel conservé » : seul le contenu compte, pas la forme physique de la page source.
 
 ## Style de code — « vibe coding »

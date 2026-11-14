@@ -50,7 +50,7 @@ This is the English translation of [SPECIFICATIONS.fr.md](SPECIFICATIONS.fr.md).
 - [14. Security and robustness](#14-security-and-robustness)
 - [15. Compliance with Wikipedia licenses](#15-compliance-with-wikipedia-licenses)
 - [16. Acceptance criteria](#16-acceptance-criteria)
-- [17. Project structure](#17-project-structure)
+- [17. Repository structure](#17-repository-structure)
 - [18. Status and future developments](#18-status-and-future-developments)
 - [19. Version history](#19-version-history)
 
@@ -58,7 +58,7 @@ This is the English translation of [SPECIFICATIONS.fr.md](SPECIFICATIONS.fr.md).
 
 ### 1.1 Purpose
 
-Wikipedia2Book is software for creating a printable PDF book directly from Wikipedia articles: there is no step for creating or managing a "project", and the user starts building the book right away.
+Wikipedia2Book is software for creating a printable PDF book directly from Wikipedia articles. The user starts building the book right away.
 
 As soon as the application opens, an empty book is ready to use. The user adds one or more main articles, explores the articles linked from them, chooses exactly which content to include, organizes the articles into chapters and generates a structured PDF document.
 
@@ -82,7 +82,7 @@ The software runs on every platform thanks to a Python architecture containerize
 
 ## 2\. The in-memory book and how it is saved
 
-The software does not manage a list of projects: a single book is built at a time, entirely in the browser's memory.
+The software handles a single book at a time, built entirely in the browser's memory.
 
 * When the application opens, an empty book is created automatically; the user can give it a name and a description.
 
@@ -466,7 +466,7 @@ On failure, the software shows an explicit message. Possible errors are:
 
 ## 12\. User interface
 
-The application is a single page, organized in three steps reachable through tabs, with no screen for creating or managing a project. The step tabs are shown directly below the top bar: the book title and the cover note are not shown above the steps, they are entered only in the Editing step (part A, "Book identity").
+The application is a single page, organized in three steps reachable through tabs. The step tabs are shown directly below the top bar: the book title and the cover note are not shown above the steps, they are entered only in the Editing step (part A, "Book identity").
 
 **Default title:** if the book title field is left empty, the title used (cover, root bookmark, name of the PDF and JSON files) is that of the book's first Wikipedia article, in the order defined in the Organization step (failing a Wikipedia article, the first imported document). This default title is shown greyed out in the empty field, so that the user knows what will be printed; it is computed at generation time and is not saved in the book. A title imported from a Wikipedia book page (section 3.1) or entered by the user always takes precedence.
 
@@ -1007,7 +1007,7 @@ The current version is considered functional if the following points are validat
 
 * Automatic, non-destructive suggestion of the book's introduction and author from the first article added.
 
-## 17\. Project structure
+## 17\. Repository structure
 
 ```text
 Wikipedia2Book/
@@ -1089,7 +1089,7 @@ Possible developments, not implemented to date:
 
 * Generation of large books (split into volumes, for example).
 
-Any development must preserve the core principles of the software, in particular the user's full control over the selection of articles and the absence of any notion of project.
+Any development must preserve the core principles of the software, in particular the user's full control over the selection of articles and the handling of a single book at a time.
 
 ## 19\. Version history
 

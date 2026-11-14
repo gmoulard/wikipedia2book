@@ -51,7 +51,7 @@ Traduction anglaise : [SPECIFICATIONS.en.md](SPECIFICATIONS.en.md). Ce document 
 - [14. Sécurité et robustesse](#14-s%C3%A9curit%C3%A9-et-robustesse)
 - [15. Respect des licences Wikipédia](#15-respect-des-licences-wikip%C3%A9dia)
 - [16. Critères d'acceptation](#16-crit%C3%A8res-dacceptation)
-- [17. Structure du projet](#17-structure-du-projet)
+- [17. Structure du dépôt](#17-structure-du-dépôt)
 - [18. État d'avancement et évolutions futures](#18-%C3%A9tat-davancement-et-%C3%A9volutions-futures)
 - [19. Historique des versions](#19-historique-des-versions)
 
@@ -59,7 +59,7 @@ Traduction anglaise : [SPECIFICATIONS.en.md](SPECIFICATIONS.en.md). Ce document 
 
 ### 1.1 Objectif
 
-Wikipedia2Book est un logiciel qui permet de créer directement un livre au format PDF imprimable à partir d'articles Wikipédia : il n'y a pas d'étape de création ou de gestion de « projet », l'utilisateur commence immédiatement à construire son livre.
+Wikipedia2Book est un logiciel qui permet de créer directement un livre au format PDF imprimable à partir d'articles Wikipédia. L'utilisateur commence immédiatement à construire son livre.
 
 Dès l'ouverture de l'application, un livre vide est prêt à l'emploi. L'utilisateur ajoute un ou plusieurs articles principaux, explore les articles qui leur sont liés, choisit précisément les contenus à intégrer, organise les articles en chapitres et génère un document PDF structuré.
 
@@ -83,7 +83,7 @@ Le logiciel fonctionne sur toutes les plateformes grâce à une architecture Pyt
 
 ## 2\. Le livre en mémoire et sa sauvegarde
 
-Le logiciel ne gère pas de liste de projets : un seul livre est construit à la fois, entièrement en mémoire dans le navigateur.
+Le logiciel gère un seul livre à la fois, construit entièrement en mémoire dans le navigateur.
 
 * À l'ouverture de l'application, un livre vide est créé automatiquement; l'utilisateur peut lui donner un nom et une description.
 
@@ -467,7 +467,7 @@ En cas d'échec, le logiciel affiche un message explicite. Les erreurs possibles
 
 ## 12\. Interface utilisateur
 
-L'application est une page unique, organisée en trois étapes accessibles par des onglets, sans écran de création ou de gestion de projet. Les onglets des étapes sont affichés directement sous la barre supérieure : le titre du livre et la note de couverture ne sont pas affichés au-dessus des étapes, ils se saisissent uniquement dans l'étape Édition (partie A, « Identité du livre »).
+L'application est une page unique, organisée en trois étapes accessibles par des onglets. Les onglets des étapes sont affichés directement sous la barre supérieure : le titre du livre et la note de couverture ne sont pas affichés au-dessus des étapes, ils se saisissent uniquement dans l'étape Édition (partie A, « Identité du livre »).
 
 **Titre par défaut :** si le champ « Titre du livre » est laissé vide, le titre utilisé (couverture, signet racine, nom des fichiers PDF et JSON) est celui du premier article Wikipédia du livre, dans l'ordre défini à l'étape Organisation (à défaut d'article Wikipédia, le premier document importé). Ce titre par défaut est affiché en grisé dans le champ vide, pour que l'utilisateur sache ce qui sera imprimé; il est calculé au moment de la génération et n'est pas enregistré dans le livre. Un titre importé d'une page de livre Wikipédia (section 3.1) ou saisi par l'utilisateur est toujours prioritaire.
 
@@ -1008,7 +1008,7 @@ La version actuelle est considérée comme fonctionnelle si les points suivants 
 
 * Proposition automatique, non destructive, de l'introduction et de l'auteur du livre à partir du premier article ajouté.
 
-## 17\. Structure du projet
+## 17\. Structure du dépôt
 
 ```text
 Wikipedia2Book/
@@ -1090,7 +1090,7 @@ L'essentiel du socle fonctionnel décrit dans ce document est implémenté : liv
 
 * Génération de livres volumineux (regroupement par volumes, par exemple).
 
-Toute évolution doit préserver les principes fondamentaux du logiciel, notamment le contrôle total de l'utilisateur sur la sélection des articles et l'absence de toute notion de projet.
+Toute évolution doit préserver les principes fondamentaux du logiciel, notamment le contrôle total de l'utilisateur sur la sélection des articles et la gestion d'un seul livre à la fois.
 
 ## 19\. Historique des versions
 
