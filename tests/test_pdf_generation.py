@@ -88,6 +88,30 @@ class FitPdfToFormatTest(unittest.TestCase):
         self.assertIn("landscape page", reader.pages[1].extract_text())
 
 
+class FitFastPathTest(unittest.TestCase):
+    def _pdf(self, width, height):
+        buffer = BytesIO()
+        pdf_canvas = canvas.Canvas(buffer, pagesize=(width, height))
+        pdf_canvas.drawString(50, 50, "content")
+        pdf_canvas.showPage()
+        pdf_canvas.save()
+        return buffer.getvalue()
+
+    def test_page_within_one_point_keeps_its_content_and_gets_the_exact_format(self):
+        from reportlab.lib.units import mm
+        source = self._pdf(595.92, 841.92)
+        original = PdfReader(BytesIO(source)).pages[0].get_contents().get_data()
+        page = PdfReader(BytesIO(fit_pdf_to_format(source, 210, 297))).pages[0]
+        self.assertEqual((round(float(page.mediabox.width), 3), round(float(page.mediabox.height), 3)), (round(210 * mm, 3), round(297 * mm, 3)))
+        self.assertEqual(page.get_contents().get_data(), original)
+
+    def test_page_with_another_size_is_still_recomposed(self):
+        source = self._pdf(612, 792)
+        original = PdfReader(BytesIO(source)).pages[0].get_contents().get_data()
+        page = PdfReader(BytesIO(fit_pdf_to_format(source, 210, 297))).pages[0]
+        self.assertNotEqual(page.get_contents().get_data(), original)
+
+
 class TableOfContentsPageNumbersTest(unittest.TestCase):
     def test_page_numbers_appear_in_toc_when_provided(self):
         project = Project(name="Test")

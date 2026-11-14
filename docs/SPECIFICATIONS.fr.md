@@ -385,7 +385,7 @@ Toutes les pages du PDF final respectent le format et l'orientation choisis pour
 
 * Les pages générées par l'application (couverture, introduction, table des matières, pages de chapitre, licence, conclusion) sont nativement produites à ce format.
 
-* Chaque page d'article (PDF officiel Wikipédia) et chaque page de document importé est recomposée sur une page de ce même format : son contenu est mis à l'échelle et centré, en conservant ses proportions d'origine (pas de déformation). Si les proportions de la page source diffèrent de celles du livre, des marges blanches apparaissent sur les côtés ou en haut/bas plutôt que de déformer le contenu.
+* Chaque page d'article (PDF officiel Wikipédia) et chaque page de document importé est recomposée sur une page de ce même format : son contenu est mis à l'échelle et centré, en conservant ses proportions d'origine (pas de déformation). Si les proportions de la page source diffèrent de celles du livre, des marges blanches apparaissent sur les côtés ou en haut/bas plutôt que de déformer le contenu. Une page qui a déjà le format du livre à 1 point près (0,35 mm), sans rotation, n'est pas recomposée : sa taille est seulement fixée exactement au format du livre, sans réécrire son contenu. C'est le cas des PDF Wikipédia pour les livres A4, Letter et Legal, demandés directement dans ce format (section 7) : leur assemblage est alors environ sept fois plus rapide.
 
 * Le contenu lui-même (texte, images, références) n'est jamais modifié ni reconstruit — seule sa mise à l'échelle et sa position sur la page changent.
 
@@ -423,7 +423,7 @@ Une fois le PDF lancé, le logiciel :
 
 * Pour chaque chapitre (ou pour l'ensemble des articles s'il n'y a pas de chapitre) : génère une page de titre de chapitre avec son propre signet, puis ajoute le PDF officiel de chaque article du chapitre, avec un signet par article.
 
-* Recompose chaque page ajoutée (couverture, table des matières, chapitres, articles, documents importés) sur le format et l'orientation choisis pour le livre (section 10.1), avant de l'assembler au document final.
+* Recompose chaque page ajoutée (couverture, table des matières, chapitres, articles, documents importés) sur le format et l'orientation choisis pour le livre (section 10.1), avant de l'assembler au document final. Le PDF de chaque article ou document est recomposé en arrière-plan dès qu'il est téléchargé ou préparé, pendant le téléchargement du suivant, si bien qu'au moment de l'assemblage ses pages sont en général déjà prêtes.
 
 * Ajoute une page de licence avec signet « Licence » (section 15), après le dernier chapitre/article et la table des matières éventuellement placée en fin de livre.
 
@@ -1155,5 +1155,6 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 1.6.7   | 2026-11-14 | GMoulard  | Versions des dépendances Python figées dans `requirements.txt` (`==`), `pydantic` listé explicitement (section 13.4). Code de conduite, métadonnées de citation (`CITATION.cff`, `codemeta.json`) et en-têtes de licence AGPL-3.0 dans les fichiers de code (contribution de ftosoni, section 17). |
 | 1.6.8   | 2026-11-14 | GMoulard  | Table des matières du PDF : chapitres en blocs en gras avec leurs articles en retrait dessous et numéros de page alignés à droite (au lieu de trois colonnes), et chaque ligne devient un lien interne cliquable vers la page du chapitre ou de l'article (section 10). |
 | 1.6.9   | 2026-11-14 | GMoulard  | Génération du PDF : rendus WeasyPrint, recomposition des pages, numérotation et écriture exécutés dans un fil séparé; les messages de progression arrivent au début de chaque étape (l'étape « couverture et table des matières » ne cumule plus le temps des étapes voisines) et le serveur reste disponible pendant une génération. La couverture n'est plus générée deux fois (sections 10.2 et 11.1). |
+| 1.6.10  | 2026-11-14 | GMoulard  | Assemblage du PDF plus rapide : une page déjà au format du livre (à 1 point près, sans rotation) n'est plus recomposée, seule sa taille est ajustée — environ 8 fois plus rapide pour les livres A4, Letter et Legal; les articles sont recomposés en arrière-plan pendant le téléchargement des suivants (sections 10.1 et 11.1). |
 
 Fin du document

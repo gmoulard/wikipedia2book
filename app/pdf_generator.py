@@ -18,6 +18,7 @@ from io import BytesIO
 from urllib.parse import unquote
 
 from pypdf import PageObject, PdfReader, PdfWriter, Transformation
+from pypdf.generic import RectangleObject
 from pypdf.annotations import Link
 from reportlab.lib.units import mm
 from reportlab.lib.utils import ImageReader
@@ -29,7 +30,25 @@ def generate_pdf(html_document: str) -> bytes:
     return HTML(string=html_document).write_pdf()
 
 
+FORMAT_TOLERANCE_PT = 1.0
+
+
 def fit_page_to_format(source_page, width_pt: float, height_pt: float) -> PageObject:
+    # NE PAS déplacer ce test après transfer_rotation_to_content : cet appel réécrit tout le contenu de la page, c'est lui qui coûte cher.
+    if (
+        source_page.rotation % 360 == 0
+        and abs(float(source_page.mediabox.width) - width_pt) <= FORMAT_TOLERANCE_PT
+        and abs(float(source_page.mediabox.height) - height_pt) <= FORMAT_TOLERANCE_PT
+        and float(source_page.mediabox.left) == 0
+        and float(source_page.mediabox.bottom) == 0
+    ):
+        box = RectangleObject([0, 0, width_pt, height_pt])
+        source_page.mediabox = box
+        source_page.cropbox = box
+        for name in ("/TrimBox", "/BleedBox", "/ArtBox"):
+            if name in source_page:
+                del source_page[name]
+        return source_page
     # NE PAS corriger le DeprecationWarning pypdf de cette ligne : attendu avec pypdf<7 (voir CLAUDE.md).
     source_page.transfer_rotation_to_content()
     source_width = float(source_page.mediabox.width)

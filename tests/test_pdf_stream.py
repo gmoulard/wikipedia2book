@@ -399,6 +399,36 @@ class PdfStreamTest(unittest.TestCase):
         self.assertGreater(ticks, len(rendered) * 5)
         self.assertEqual(sum('class="cover"' in html for html in rendered), 1)
 
+    def test_articles_are_recomposed_while_the_next_ones_download(self):
+        import asyncio
+        import time
+        from app.models import Project
+
+        timeline = []
+
+        class SlowClient(FakeClient):
+            async def get_article_pdf(self, title, language, paper):
+                await asyncio.sleep(0.2)
+                timeline.append(("downloaded", title, time.perf_counter()))
+                return _make_pdf(2)
+
+        real_fit = main.fit_pdf_to_format
+
+        def recording_fit(data, width, height):
+            timeline.append(("fit", None, time.perf_counter()))
+            return real_fit(data, width, height)
+
+        async def scenario():
+            project = Project(**_project())
+            return [event async for event in main.build_book_pdf(project, main._selected_items(project), "fr")]
+
+        with patch.object(main, "MediaWikiClient", SlowClient), patch.object(main, "fit_pdf_to_format", recording_fit), patch.object(main, "generate_pdf", lambda html: _make_pdf(1)):
+            events = asyncio.run(scenario())
+        self.assertEqual(events[-1]["type"], "done")
+        last_download = max(moment for kind, _, moment in timeline if kind == "downloaded")
+        first_fit = min(moment for kind, _, moment in timeline if kind == "fit")
+        self.assertLess(first_fit, last_download)
+
     def test_table_of_contents_entries_link_to_their_pages(self):
         import re
         from app.book_builder import TOC_LINK_PREFIX

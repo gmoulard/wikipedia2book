@@ -78,7 +78,7 @@ from app.wikipedia_api import (
 )
 
 
-app = FastAPI(title="Wikipedia2Book", version="1.6.9")
+app = FastAPI(title="Wikipedia2Book", version="1.6.10")
 static_directory = Path(__file__).parent / "static"
 PDF_LANGUAGE_PATTERN = "^(" + "|".join(PDF_LABELS) + ")$"
 app.mount("/static", StaticFiles(directory=static_directory), name="static")
@@ -313,13 +313,19 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
     async def render(html: str) -> bytes:
         return await asyncio.to_thread(generate_pdf, html)
 
-    async def append_pdf(pdf_data: bytes) -> int:
-        # NE PAS sauter les pages déjà au bon format : fit_pdf_to_format est idempotent et appliqué à toutes.
-        stream = BytesIO(await asyncio.to_thread(fit_pdf_to_format, pdf_data, page_width_mm, page_height_mm))
+    def fit(pdf_data: bytes) -> "asyncio.Future[bytes]":
+        # NE PAS sauter fit_pdf_to_format, même pour une page déjà au bon format : c'est lui qui décide (recomposition ou simple ajustement de la taille).
+        return asyncio.ensure_future(asyncio.to_thread(fit_pdf_to_format, pdf_data, page_width_mm, page_height_mm))
+
+    async def append_fitted(fitted: bytes) -> int:
+        stream = BytesIO(fitted)
         streams.append(stream)
         page_number = len(writer.pages)
         await asyncio.to_thread(writer.append, stream)
         return page_number
+
+    async def append_pdf(pdf_data: bytes) -> int:
+        return await append_fitted(await fit(pdf_data))
 
     def page_count(pdf_data: bytes) -> int:
         return len(PdfReader(BytesIO(pdf_data)).pages)
@@ -331,15 +337,22 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
         return image_to_pdf(data, page_width_mm, page_height_mm)
 
     item_pdfs: dict[str, bytes] = {}
+    fitted_items: dict[str, asyncio.Future[bytes]] = {}
     paper = WIKIPEDIA_PDF_PAPERS.get(project.page_format, "a4")
-    async with MediaWikiClient() as client:
-        for item in unique_items:
-            if isinstance(item, Article):
-                yield progress("fetch_article", title=item.title)
-                item_pdfs[item.key] = await client.get_article_pdf(item.title, item.language, paper)
-            else:
-                yield progress("prepare_document", title=item.title)
-                item_pdfs[item.key] = await asyncio.to_thread(document_pdf, item)
+    try:
+        async with MediaWikiClient() as client:
+            for item in unique_items:
+                if isinstance(item, Article):
+                    yield progress("fetch_article", title=item.title)
+                    item_pdfs[item.key] = await client.get_article_pdf(item.title, item.language, paper)
+                else:
+                    yield progress("prepare_document", title=item.title)
+                    item_pdfs[item.key] = await asyncio.to_thread(document_pdf, item)
+                fitted_items[item.key] = fit(item_pdfs[item.key])
+    except BaseException:
+        for task in fitted_items.values():
+            task.cancel()
+        raise
 
     slots = book_slots(groups)
     toc_at = toc_slot_index(project, groups, slots)
@@ -393,7 +406,7 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
             targets[f"chapter:{value}"] = await append_pdf(chapter_page)
             chapter_outline = writer.add_outline_item(chapter_title, targets[f"chapter:{value}"], parent=root_outline)
         else:
-            item_page = await append_pdf(item_pdfs[value.key])
+            item_page = await append_fitted(await fitted_items[value.key])
             targets.setdefault(value.key, item_page)
             writer.add_outline_item(value.title, item_page, parent=chapter_outline)
     if toc_at == len(slots):
