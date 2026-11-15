@@ -1014,6 +1014,20 @@ Atelier à jouer avant toute mise en production d'une version (skill `deploy-pro
   | 1.7.5   | 2026-11-15 | Railway     | 2                          | 17,2 s    | 1,6 s       | 1,6 s     | 20,4 s | 117   |
   | 1.7.5   | 2026-11-15 | Toolforge   | 4                          | 10,9 s    | 2,3 s       | 2,8 s     | 16,0 s | 117   |
 
+* **Résultats de l'atelier** : chaque passage de l'atelier est reporté ici (médiane des générations de chaque scénario). Une cible autre que le workflow (Toolforge, Northflank, mesuré depuis un poste client) n'est pas mesurée dans l'environnement de la référence : ses écarts ne sont qu'indicatifs, et son transfert inclut le réseau jusqu'au poste.
+
+  | Date       | Version | Cible | Niveau | Scénario | Pages | Total | Wikipédia | Application | Transfert | Écart application / page | Verdict |
+  |------------|---------|-------|--------|----------|-------|-------|-----------|-------------|-----------|---------------------------|---------|
+  | 2026-11-15 | 1.8.2   | Toolforge | max | `50-pages` | 51 | 9,24 s | 6,88 s | 0,4 s | 1,96 s | −47 % | ok |
+  | 2026-11-15 | 1.8.2   | Toolforge | max | `200-pages` | 200 | 17,38 s | 10,41 s | 0,94 s | 6,04 s | −57 % | ok |
+  | 2026-11-15 | 1.8.2   | Toolforge | max | `1-article` | 5 | 0,9 s | 0,37 s | 0,22 s | 0,31 s | +57 % | à surveiller |
+  | 2026-11-15 | 1.8.2   | Toolforge | max | `50-pages-sans-numerotation` | 50 | 3,69 s | 2,7 s | 0,05 s | 0,94 s | −91 % | ok |
+  | 2026-11-15 | 1.8.2   | Toolforge | max | `200-pages-chapitres` | 205 | 12,18 s | 4,76 s | 1,18 s | 6,24 s | −50 % | ok |
+  | 2026-11-15 | 1.8.2   | Toolforge | max | `200-pages-a5-paysage` | 201 | 53,57 s | 47,03 s | 0,9 s | 5,63 s | −93 % | ok |
+  | 2026-11-15 | 1.8.2   | Toolforge | max | `20-articles` | 253 | 17,89 s | 9,61 s | 1,53 s | 6,75 s | −47 % | ok |
+
+  Passage du 2026-11-15 sur Toolforge (4 téléchargements simultanés) : aucun échec ni régression. Le seul « à surveiller » (`1-article`) porte sur 0,22 s pour 5 pages, un écart de quelques centièmes de seconde, dans le bruit de la mesure. La phase Wikipédia de `200-pages-a5-paysage` (47 s) comprend la recomposition de chaque page au format A5 paysage, faite pendant les téléchargements.
+
 ### 13.12 Test aux limites
 
 Test à jouer à la main pour connaître la taille maximale d'un livre qu'un déploiement sait générer. Contrairement à l'atelier de performance, il pousse le serveur jusqu'à l'échec : un serveur qui manque de mémoire est arrêté et redémarré par sa plateforme, ce qui interrompt les générations en cours des autres utilisateurs et remet à zéro le compteur horaire (section 13.8). Le jouer sur Toolforge seulement, exempté des limites de Wikimédia (section 13.2), et pas aux heures d'usage.

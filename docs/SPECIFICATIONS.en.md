@@ -1013,6 +1013,20 @@ Workshop to run before any production deployment of a version (`deploy-productio
   | 1.7.5   | 2026-11-15 | Railway   | 2                      | 17.2 s    | 1.6 s       | 1.6 s    | 20.4 s | 117   |
   | 1.7.5   | 2026-11-15 | Toolforge | 4                      | 10.9 s    | 2.3 s       | 2.8 s    | 16.0 s | 117   |
 
+* **Workshop results**: every run of the workshop is recorded here (median of the generations of each scenario). A target other than the workflow (Toolforge, Northflank, measured from a client computer) is not measured in the reference environment: its deviations are only indicative, and its transfer includes the network up to the client.
+
+  | Date       | Version | Target | Level | Scenario | Pages | Total | Wikipedia | Application | Transfer | Application per page vs reference | Verdict |
+  |------------|---------|-------|--------|----------|-------|-------|-----------|-------------|-----------|---------------------------|---------|
+  | 2026-11-15 | 1.8.2   | Toolforge | max | `50-pages` | 51 | 9.24 s | 6.88 s | 0.4 s | 1.96 s | -47% | ok |
+  | 2026-11-15 | 1.8.2   | Toolforge | max | `200-pages` | 200 | 17.38 s | 10.41 s | 0.94 s | 6.04 s | -57% | ok |
+  | 2026-11-15 | 1.8.2   | Toolforge | max | `1-article` | 5 | 0.9 s | 0.37 s | 0.22 s | 0.31 s | +57% | to watch |
+  | 2026-11-15 | 1.8.2   | Toolforge | max | `50-pages-sans-numerotation` | 50 | 3.69 s | 2.7 s | 0.05 s | 0.94 s | -91% | ok |
+  | 2026-11-15 | 1.8.2   | Toolforge | max | `200-pages-chapitres` | 205 | 12.18 s | 4.76 s | 1.18 s | 6.24 s | -50% | ok |
+  | 2026-11-15 | 1.8.2   | Toolforge | max | `200-pages-a5-paysage` | 201 | 53.57 s | 47.03 s | 0.9 s | 5.63 s | -93% | ok |
+  | 2026-11-15 | 1.8.2   | Toolforge | max | `20-articles` | 253 | 17.89 s | 9.61 s | 1.53 s | 6.75 s | -47% | ok |
+
+  Run of 2026-11-15 on Toolforge (4 simultaneous downloads): no failure or regression. The only "to watch" (`1-article`) concerns 0.22 s for 5 pages, a gap of a few hundredths of a second, within measurement noise. The Wikipedia phase of `200-pages-a5-paysage` (47 s) includes recomposing every page to A5 landscape, done during the downloads.
+
 ### 13.12 Limit test
 
 Test to run by hand to find the largest book a deployment can generate. Unlike the performance workshop, it pushes the server until it fails: a server that runs out of memory is stopped and restarted by its platform, which interrupts other users' generations in progress and resets the hourly counter (section 13.8). Run it on Toolforge only, which is exempt from the Wikimedia limits (section 13.2), and outside busy hours.
