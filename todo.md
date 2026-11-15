@@ -45,3 +45,22 @@
 - [ ] **Toolviews** ne compte plus les visiteurs distincts (compteur inactif pour tous les outils Toolforge) : à réintégrer s'il est rétabli.
 - [ ] **Pluralisation** des chaînes avec compteur (« 1 Seiten » en allemand) : limitation connue, acceptée.
 - [ ] **Évolutions déjà listées en section 18 des spécifications** : limitation préventive du débit vers l'API Wikipédia, journalisation structurée des erreurs, quotas sur la taille des PDF téléchargés, couverture de tests plus large (rendu WeasyPrint réel).
+
+## 5. Fonctionnalités manquantes par rapport à mediawiki2latex
+
+Première liste, dressée de mémoire : la documentation de mediawiki2latex n'était pas accessible depuis la session cloud.
+
+- [ ] **Compléter et vérifier cette liste** contre la documentation réelle de mediawiki2latex (page MediaWiki de l'outil, options de l'interface web et de la ligne de commande). Confirmer ou retirer les points marqués « incertain », puis décider pour chaque écart : à faire, hors principe, ou sans objet.
+- Compatibles avec le principe « PDF officiel conservé » :
+  - [ ] Liste des **contributeurs** de chaque article sur la page de licence (API MediaWiki `prop=contributors`).
+  - [ ] Page de **crédits des images** : images de chaque article (`prop=images`), auteur et licence (`prop=imageinfo&iiprop=extmetadata`).
+  - [ ] **Autres wikis Wikimédia** (Wikibooks, Wikiversité…), s'ils exposent le même service PDF (à vérifier).
+  - [ ] **Liste des figures** (incertain : dépend de ce qu'on peut extraire des PDF ou de l'API).
+  - [ ] **Renvois internes** : un lien vers un autre article du livre renverrait à sa page plutôt qu'au web (incertain chez mediawiki2latex ; faisable sur le modèle des liens de la table des matières).
+- Contraires au principe actuel (il faudrait reconstruire le contenu) : à ne faire que si l'on change de principe.
+  - [ ] Autres **formats de sortie** : EPUB, ODT, sources LaTeX.
+  - [ ] **Mise en page homogène** : une seule typographie, coupure des mots, formats natifs (A5, B5…) au lieu d'une mise à l'échelle.
+  - [ ] **Qualité des images réglable** (résolution, compression, SVG vectoriels).
+  - [ ] **Formules mathématiques** composées par LaTeX.
+  - [ ] **Choix de l'expansion des modèles** (de mémoire).
+- [ ] Ces ajouts feraient de nouveaux appels à l'API MediaWiki : relire d'abord les règles de la politique robots qui s'y appliquent (section 3).
