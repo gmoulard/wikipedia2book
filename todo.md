@@ -14,6 +14,23 @@
   ```
 - [ ] **Supprimer la branche `stats`**, devenue inutile (les statistiques sont sur `main`) : GitHub, Code → Branches, ou `git push origin --delete stats`.
 
+## 1 bis. Autorisations manquantes dans l'environnement Claude Code cloud (« W2B »)
+
+À régler dans les paramètres de l'environnement : menu de l'environnement cloud dans la barre de titre de la session, puis Edit, puis Network access (doc : https://code.claude.com/docs/en/cloud-environments#network-access). Ajouter les domaines sous « Allowed domains » en laissant cochée la case des gestionnaires de paquets.
+
+- [ ] **Domaines refusés pendant les sessions** :
+  - `wikitech.wikimedia.org` et `foundation.wikimedia.org` : relire la politique robots et la politique User-Agent de Wikimédia ;
+  - `www.mediawiki.org` : documentation de mediawiki2latex (section 5) ;
+  - `toolviews.toolforge.org` : vérifier les réponses de l'API Toolviews ;
+  - `wikipedia2book.toolforge.org` : vérifier la production (`/api/version`, `/api/stats/hourly`) après un déploiement ;
+  - `wikipedia2book-production.up.railway.app` : site Railway, pour le skill `debug-frontend` et les vérifications ;
+  - `gmoulard.github.io` : voir le site de documentation et `stats.html` publiés ;
+  - `cdn.jsdelivr.net` : charger Mermaid comme le fait le site (aujourd'hui contourné en installant Mermaid depuis npm).
+- [ ] **Git** : le proxy de la session ne laisse pousser que `main` et la branche de travail de la session. Les **tags** et la **suppression de branche** sont refusés (HTTP 403). Pas de réglage connu côté environnement : continuer à pousser les tags depuis sa machine.
+- [ ] **Confidentialité** : la session refuse d'écrire l'adresse e-mail de l'auteur (commits de version à `gmoulard <…>`). Option : définir soi-même `GIT_AUTHOR_NAME`/`GIT_AUTHOR_EMAIL` comme variables d'environnement de l'environnement « W2B » (valeurs non secrètes), pour que les commits de version aient le bon auteur sans que Claude écrive l'adresse.
+- [ ] **Connecteur GitHub du plugin** (`plugin:github:github`) : il échoue à la connexion (« Proxy refused to open a tunnel: 403 »). Les outils GitHub intégrés suffisent ; reconnecter GitHub sur https://claude.ai/connect-github si un outil manque.
+- Hors réglages (pour mémoire) : le service PDF de Wikimédia répond HTTP 429 à presque toutes les requêtes venant des sessions cloud. Ce n'est pas une autorisation à ajouter ; l'atelier de performance tourne pour cela sur GitHub Actions.
+
 ## 2. Mise en production
 
 - [ ] **Déployer sur Toolforge** (skill `deploy-production`, seulement sur demande). Toolforge est en 1.7.1 et n'a pas encore :
