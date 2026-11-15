@@ -37,17 +37,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Update docs/toolviews.csv and docs/stats.md on main
+      - name: Configure SSH
+        env:
+          TOOLFORGE_SSH_KEY: ${{ secrets.TOOLFORGE_SSH_KEY }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          python scripts/toolviews_stats.py docs/toolviews.csv
-          python scripts/toolviews_chart.py docs/toolviews.csv docs/stats.md
-          git add docs/toolviews.csv docs/stats.md
-          if git diff --cached --quiet; then
-            echo "Aucun changement"
-          else
-            git commit -m "stats: toolviews $(date -u +%F)"
-            git pull --rebase origin main
-            git push origin HEAD:main
-          fi
+          mkdir -p ~/.ssh
+          printf '%s\n' "$TOOLFORGE_SSH_KEY" > ~/.ssh/toolforge
+          chmod 600 ~/.ssh/toolforge
+          echo "login.toolforge.org ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHHCaBsit1GY3TeucMi3gDEIpQ8uNhokVa0dr/tM6PZa" > ~/.ssh/known_hosts
+      - name: Update daily and hourly statistics on main
+        run: bash scripts/update-stats.sh daily

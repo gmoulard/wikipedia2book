@@ -55,6 +55,8 @@ wikipedia2book/
 │   ├── docker-build.sh          # Docker build with git commit/date/author injected
 │   ├── toolforge-deploy.sh      # Deployment script run in the Toolforge tool account
 │   ├── toolviews_stats.py       # Daily Toolviews usage statistics (not part of the app)
+│   ├── toolforge-hourly.sh, toolforge_hourly.py  # Hits per hour from the Toolforge webservice logs
+│   ├── update-stats.sh          # Statistics update run by GitHub Actions (daily and before each deployment)
 │   └── toolviews_chart.py       # Usage charts page for GitHub Pages
 ├── tests/                       # unittest suite (no network, WeasyPrint stubbed when missing)
 ├── .github/workflows/           # Toolforge deployment, Toolviews stats, GitHub Pages
@@ -67,7 +69,7 @@ wikipedia2book/
 ├── docs/                        # Documentation site (GitHub Pages source)
 │   ├── SPECIFICATIONS.fr.md     # Reference behaviour (French original)
 │   ├── SPECIFICATIONS.en.md     # English translation of the specifications
-│   ├── toolviews.csv, stats.md  # Daily usage statistics and their charts (generated)
+│   ├── toolviews.csv, toolforge_hourly.csv, stats.md  # Usage statistics and their charts (generated)
 │   └── _includes/head-custom.html  # Mermaid rendering on the site
 ├── CODE_OF_CONDUCT.md
 └── LICENSE                      # GNU AGPL v3.0

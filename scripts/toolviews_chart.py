@@ -18,12 +18,15 @@ import argparse
 import math
 import sys
 from collections import defaultdict
-from datetime import date
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
+import toolforge_hourly
 from toolviews_stats import read_rows
 
 DAILY_DAYS = 31
+HOURLY_HOURS = 36
+HOUR = "%Y-%m-%dT%H"
 SOURCE = "https://github.com/gmoulard/wikipedia2book/blob/main/docs/toolviews.csv"
 
 
@@ -42,7 +45,32 @@ def xychart(title, labels, values, width):
     ])
 
 
-def build_page(rows):
+def hourly_section(hourly):
+    totals = defaultdict(int)
+    for (hour, _), hits in hourly.items():
+        totals[hour] += hits
+    if not totals:
+        return []
+    end = datetime.strptime(max(totals), HOUR)
+    first = max(end - timedelta(hours=HOURLY_HOURS - 1), datetime.strptime(min(totals), HOUR))
+    hours = [first + timedelta(hours=i) for i in range((end - first) // timedelta(hours=1) + 1)]
+    return [
+        f"## Hourly hits / Hits par heure ({len(hours)} hours, UTC)",
+        "Source: Toolforge webservice logs, read every day and just before each deployment, since they are "
+        "erased at each restart. Every request seen by the application counts, static files included; "
+        "an hour whose logs were lost before being read shows 0.",
+        "Source : journaux du webservice Toolforge, relevés chaque jour et juste avant chaque déploiement. "
+        "Une heure dont les journaux ont été perdus avant d'être relevés vaut 0.",
+        xychart(
+            f"Hourly hits (UTC) {hours[0]:%d/%m %Hh} - {hours[-1]:%d/%m %Hh}",
+            [f"{hour:%H}" for hour in hours],
+            [totals.get(hour.strftime(HOUR), 0) for hour in hours],
+            1000,
+        ),
+    ]
+
+
+def build_page(rows, hourly=None):
     if not rows:
         raise ValueError("toolviews.csv ne contient aucun jour")
     days = sorted(rows)
@@ -58,6 +86,7 @@ def build_page(rows):
         "Source: [Toolviews](https://toolviews.toolforge.org/), updated daily "
         f"([toolviews.csv]({SOURCE})). Hits are HTTP requests, not people (page, static files, API calls).",
         "Les hits sont des requêtes HTTP, pas des personnes. Mise à jour quotidienne.",
+        *hourly_section(hourly or {}),
         f"## Daily hits / Hits par jour ({len(recent)} days)",
         xychart(
             f"Daily hits {date.fromisoformat(recent[0]):%d/%m/%Y} - {date.fromisoformat(recent[-1]):%d/%m/%Y}",
@@ -74,12 +103,14 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("csv", type=Path)
     parser.add_argument("output", type=Path)
+    parser.add_argument("--hourly", type=Path)
     args = parser.parse_args()
     try:
         if not args.csv.exists():
             raise ValueError(f"{args.csv} introuvable")
         rows, _ = read_rows(args.csv)
-        args.output.write_text(build_page(rows), encoding="utf-8")
+        hourly = toolforge_hourly.read_rows(args.hourly) if args.hourly else {}
+        args.output.write_text(build_page(rows, hourly), encoding="utf-8")
     except (ValueError, KeyError) as error:
         print(f"Erreur statistiques : {error}", file=sys.stderr)
         return 1
