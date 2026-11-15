@@ -82,7 +82,7 @@ from app.wikipedia_api import (
 DOWNLOAD_CONCURRENCY = 4
 PDF_STREAM_CHUNK = 256 * 1024
 
-app = FastAPI(title="Wikipedia2Book", version="1.7.2")
+app = FastAPI(title="Wikipedia2Book", version="1.7.3")
 static_directory = Path(__file__).parent / "static"
 PDF_LANGUAGE_PATTERN = "^(" + "|".join(PDF_LABELS) + ")$"
 app.mount("/static", StaticFiles(directory=static_directory), name="static")

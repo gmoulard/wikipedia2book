@@ -297,7 +297,8 @@ Le logiciel ne reconstruit pas le contenu des articles : chaque article sélecti
 
 * Les crédits et licences des textes et des images sont ceux imprimés par Wikipédia dans son propre PDF; le logiciel ne les extrait pas et ne les réécrit pas séparément.
 
-* Si Wikipédia ne peut pas produire de PDF pour un article sélectionné (page introuvable, service indisponible, réponse invalide), la génération du livre échoue dans son ensemble et un message d'erreur explicite est affiché; aucun livre partiel n'est produit.
+* Quand Wikimédia refuse temporairement une requête parce qu'il reçoit trop de demandes (HTTP 429) ou qu'il est surchargé (HTTP 503), le logiciel attend puis réessaie, jusqu'à 4 fois : le délai indiqué par Wikimédia (en-tête `Retry-After`, borné à 20 s), ou sinon 2, 4, 8 puis 16 s. L'attente est commune à tous les téléchargements en cours d'un même livre (ils reprennent ensemble au lieu de relancer Wikimédia chacun de leur côté) et ne bloque pas le serveur, qui continue de répondre aux autres requêtes. Pendant ce temps, la fenêtre de statut reste sur l'étape de téléchargement en cours. Cela vaut pour toutes les requêtes vers Wikipédia (PDF et API MediaWiki).
+* Si Wikipédia ne peut pas produire de PDF pour un article sélectionné (page introuvable, service indisponible, réponse invalide, ou encore refus après ces 4 nouvelles tentatives, avec le message « Wikipédia limite le nombre de requêtes en ce moment… »), la génération du livre échoue dans son ensemble et un message d'erreur explicite est affiché; aucun livre partiel n'est produit.
 
 * Seule exception à l'intégrité du PDF officiel : lorsque la numérotation des pages est activée (section 10), un numéro de page est superposé en bas de chaque page, y compris les pages d'articles — sans toucher au contenu, aux crédits ni aux licences imprimés par Wikipédia.
 
@@ -996,11 +997,13 @@ Le logiciel met en œuvre aujourd'hui :
 
 * Des délais d'attente bornés sur les appels réseau.
 
+* Une attente avant de réessayer, partagée et asynchrone, quand Wikimédia répond HTTP 429 ou 503 (au plus 4 nouvelles tentatives, section 7), en plus du plafond de 4 téléchargements de PDF simultanés.
+
 * Aucun contenu HTML d'article n'est interprété ni réinjecté par l'application : seuls le PDF officiel Wikipédia (binaire) et les champs texte validés par l'API transitent par le serveur.
 
 Les URL externes ne sont jamais exécutées comme du code.
 
-Points non couverts par l'implémentation actuelle, à considérer pour une version ultérieure : limitation du débit des requêtes vers l'API Wikipédia, journalisation structurée des erreurs, quotas explicites sur la taille des PDFs téléchargés.
+Points non couverts par l'implémentation actuelle, à considérer pour une version ultérieure : limitation préventive du débit des requêtes vers l'API Wikipédia (aujourd'hui, seul un refus 429/503 fait attendre), journalisation structurée des erreurs, quotas explicites sur la taille des PDFs téléchargés.
 
 ## 15\. Respect des licences Wikipédia
 
@@ -1100,6 +1103,7 @@ Wikipedia2Book/
 │   ├── test_toolviews_stats.py
 │   ├── test_toolforge_hourly.py
 │   ├── test_hourly_stats.py
+│   ├── test_rate_limit.py
 │   ├── test_toolviews_chart.py
 │   ├── test_perf_check.py
 │   └── test_i18n.py
@@ -1216,5 +1220,6 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 1.7.0   | 2026-11-14 | GMoulard  | Étape Sources : le champ accepte une liste de pages, une par ligne (liens wiki `[[…]]` avec préfixe de langue, liens Markdown, URL, titres, puces et numéros ignorés), recherchées et ajoutées une par une; les lignes introuvables restent dans le champ; livres multilingues possibles (section 3.1). Textes traduits dans les 12 langues. |
 | 1.7.1   | 2026-11-14 | GMoulard  | Génération du PDF plus rapide : jusqu'à 4 articles téléchargés à la fois depuis Wikipédia (ordre du livre et numérotation des étapes conservés), nombre de pages de chaque PDF calculé dès son arrivée; `/api/pdf/stream` envoie le PDF en octets bruts après la ligne `done` (`size`) au lieu de `pdf_base64` (section 11.1). |
 | 1.7.2   | 2026-11-15 | GMoulard  | Statistiques : l'application compte ses requêtes par heure en mémoire (48 h, sans IP ni chemin, remis à zéro au redémarrage) et les expose sur `GET /api/stats/hourly` (CORS ouvert); la page de statistiques complète en direct le graphique des hits par heure, sans reconstruire le site. |
+| 1.7.3   | 2026-11-15 | GMoulard  | Génération plus fiable quand Wikimédia limite les requêtes : sur un refus HTTP 429 ou 503, attente (délai indiqué par Wikimédia, borné à 20 s, ou 2, 4, 8 puis 16 s) partagée par tous les téléchargements du livre, puis nouvelle tentative, jusqu'à 4 fois ; au-delà, message d'erreur explicite. |
 
 Fin du document

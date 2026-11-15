@@ -14,8 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import asyncio
 import re
 from dataclasses import dataclass
+from email.utils import parsedate_to_datetime
+from datetime import datetime, timezone
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
 import httpx
@@ -27,6 +30,10 @@ from app.models import Article
 _LANGUAGE_RE = re.compile(r"^[a-z0-9-]{2,12}$")
 WIKIPEDIA_PDF_PAPERS = {"A4": "a4", "Letter": "letter", "Legal": "legal"}
 _USER_AGENT ="Wikipedia2Book/0.1 (https://github.com/gmoulard/wikipedia2book; MediaWiki API client)"
+RETRY_STATUSES = {429, 503}
+RETRY_DELAYS_S = (2, 4, 8, 16)
+MAX_RETRY_WAIT_S = 20
+RATE_LIMITED = "Wikipédia limite le nombre de requêtes en ce moment (HTTP {status}) : réessayez dans quelques minutes."
 
 
 class MediaWikiError(Exception):
@@ -74,10 +81,42 @@ def parse_article_url(url: str) -> tuple[str, str]:
     return language, title
 
 
+def retry_delay(response: httpx.Response, attempt: int) -> float:
+    default = RETRY_DELAYS_S[attempt]
+    header = response.headers.get("Retry-After", "").strip()
+    if not header:
+        return default
+    try:
+        delay = float(header)
+    except ValueError:
+        try:
+            delay = (parsedate_to_datetime(header) - datetime.now(timezone.utc)).total_seconds()
+        except (TypeError, ValueError):
+            return default
+    return min(max(delay, 1.0), MAX_RETRY_WAIT_S)
+
+
 class MediaWikiClient:
     def __init__(self, timeout: float = 20.0) -> None:
         self.timeout = timeout
         self._client: httpx.AsyncClient | None = None
+        self._resume_at = 0.0
+
+    async def _send(self, url: str, **kwargs) -> httpx.Response:
+        loop = asyncio.get_running_loop()
+        attempt = 0
+        while True:
+            pause = self._resume_at - loop.time()
+            if pause > 0:
+                await asyncio.sleep(pause)
+            response = await self._client.get(url, **kwargs)
+            if response.status_code not in RETRY_STATUSES:
+                return response
+            if attempt == len(RETRY_DELAYS_S):
+                raise MediaWikiError(RATE_LIMITED.format(status=response.status_code))
+            # NE PAS dormir seulement dans cette tâche : la pause est partagée par tout le client, sinon les téléchargements parallèles relancent aussitôt Wikimédia, qui les refuse encore.
+            self._resume_at = max(self._resume_at, loop.time() + retry_delay(response, attempt))
+            attempt += 1
 
     async def __aenter__(self) -> "MediaWikiClient":
         self._client = httpx.AsyncClient(
@@ -97,9 +136,7 @@ class MediaWikiClient:
             raise RuntimeError("MediaWikiClient doit être utilisé dans un bloc async with.")
         query = {"action": "query", "format": "json", "formatversion": 2, **params}
         try:
-            response = await self._client.get(
-                f"https://{language}.wikipedia.org/w/api.php", params=query
-            )
+            response = await self._send(f"https://{language}.wikipedia.org/w/api.php", params=query)
             response.raise_for_status()
             result = response.json()
         except (httpx.HTTPError, ValueError) as error:
@@ -162,7 +199,7 @@ class MediaWikiClient:
         page_path = quote(title.replace(" ", "_"), safe="")
         url = f"https://{language}.wikipedia.org/api/rest_v1/page/pdf/{page_path}/{paper}"
         try:
-            response = await self._client.get(url, timeout=120)
+            response = await self._send(url, timeout=120)
             response.raise_for_status()
         except httpx.HTTPError as error:
             raise MediaWikiError(f"Impossible de télécharger le PDF Wikipédia pour « {title} ».") from error

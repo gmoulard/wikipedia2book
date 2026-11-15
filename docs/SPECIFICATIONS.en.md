@@ -296,7 +296,8 @@ The software does not rebuild article content: each selected article is included
 
 * Credits and licenses for texts and images are those printed by Wikipedia in its own PDF; the software does not extract them or rewrite them separately.
 
-* If Wikipedia cannot produce a PDF for a selected article (page not found, service unavailable, invalid response), the generation of the whole book fails and an explicit error message is shown; no partial book is produced.
+* When Wikimedia temporarily refuses a request because it receives too many (HTTP 429) or is overloaded (HTTP 503), the software waits and retries, up to 4 times: the delay given by Wikimedia (`Retry-After` header, capped at 20 s), or otherwise 2, 4, 8 then 16 s. The wait is shared by all the ongoing downloads of the same book (they resume together instead of each hitting Wikimedia again) and does not block the server, which keeps answering other requests. Meanwhile the status window stays on the current download step. This applies to every request to Wikipedia (PDF and MediaWiki API).
+* If Wikipedia cannot produce a PDF for a selected article (page not found, service unavailable, invalid response, or still refused after these 4 retries, with the message "Wikipédia limite le nombre de requêtes en ce moment…"), the generation of the whole book fails and an explicit error message is shown; no partial book is produced.
 
 * The only exception to the integrity of the official PDF: when page numbering is on (section 10), a page number is overlaid at the bottom of every page, including article pages — without touching the content, credits or license notices printed by Wikipedia.
 
@@ -995,11 +996,13 @@ The software currently implements:
 
 * Bounded timeouts on network calls.
 
+* A shared, asynchronous wait before retrying when Wikimedia answers HTTP 429 or 503 (at most 4 retries, section 7), on top of the cap of 4 simultaneous PDF downloads.
+
 * No article HTML content is interpreted or re-injected by the application: only the official Wikipedia PDF (binary) and the text fields validated by the API pass through the server.
 
 External URLs are never executed as code.
 
-Not covered by the current implementation, to be considered for a later version: rate limiting of requests to the Wikipedia API, structured error logging, explicit quotas on the size of downloaded PDFs.
+Not covered by the current implementation, to be considered for a later version: preventive rate limiting of requests to the Wikipedia API (today only a 429/503 refusal makes it wait), structured error logging, explicit quotas on the size of downloaded PDFs.
 
 ## 15\. Compliance with Wikipedia licenses
 
@@ -1099,6 +1102,7 @@ Wikipedia2Book/
 │   ├── test_toolviews_stats.py
 │   ├── test_toolforge_hourly.py
 │   ├── test_hourly_stats.py
+│   ├── test_rate_limit.py
 │   ├── test_toolviews_chart.py
 │   ├── test_perf_check.py
 │   └── test_i18n.py
@@ -1215,5 +1219,6 @@ Application version number (`app/main.py`, shown in the application's footer —
 | 1.7.0   | 2026-11-14 | GMoulard  | Sources step: the field accepts a list of pages, one per line (wiki links `[[…]]` with language prefix, Markdown links, URLs, titles, bullets and numbers ignored), looked up and added one by one; lines not found stay in the field; multilingual books possible (section 3.1). Texts translated into the 12 languages. |
 | 1.7.1   | 2026-11-14 | GMoulard  | Faster PDF generation: up to 4 articles downloaded from Wikipedia at a time (book order and step numbering kept), page count of each PDF computed as soon as it arrives; `/api/pdf/stream` sends the PDF as raw bytes after the `done` line (`size`) instead of `pdf_base64` (section 11.1). |
 | 1.7.2   | 2026-11-15 | GMoulard  | Statistics: the application counts its requests per hour in memory (48 h, no IP or path, reset on restart) and exposes them on `GET /api/stats/hourly` (open CORS); the statistics page completes the hits-per-hour chart live, without rebuilding the site. |
+| 1.7.3   | 2026-11-15 | GMoulard  | More reliable generation when Wikimedia rate-limits requests: on an HTTP 429 or 503 refusal, a wait (delay given by Wikimedia, capped at 20 s, or 2, 4, 8 then 16 s) shared by all the book's downloads, then a retry, up to 4 times; beyond that, an explicit error message. |
 
 End of document
