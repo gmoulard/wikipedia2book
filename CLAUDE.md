@@ -55,7 +55,25 @@ Système de déploiement complet décrit dans `docs/SPECIFICATIONS.fr.md` sectio
 
 ## Versionnement
 
-Le numéro de version de l'application est dans `app/main.py` (`FastAPI(version="x.y.z")`). Avant tout commit qui touche l'application déployée, **demander à l'utilisateur** le niveau de version (patch, minor, major ou aucun) et n'appliquer le bump qu'après sa réponse ; le niveau se juge du point de vue de l'utilisateur du service PDF. Procédure complète (critères, historique section 19 FR/EN, commit unique à l'auteur `gmoulard`, tag annoté, push, cas des sessions cloud) : skill `release` (`.claude/skills/release/SKILL.md`). Ne jamais squasher ni réécrire ce qui est déjà poussé (`main`, tags, `production-toolforge`), ni déplacer ou supprimer un tag poussé.
+Le numéro de version de l'application est dans `app/main.py` (`FastAPI(version="x.y.z")`). Avant tout commit qui touche l'application déployée, **demander à l'utilisateur** le niveau de version (patch, minor, major ou aucun) et n'appliquer le bump qu'après sa réponse ; le niveau se juge du point de vue de l'utilisateur du service PDF. Procédure complète : skill `release` (`.claude/skills/release/SKILL.md`), avec les valeurs de la section « Paramètres des skills ». Ne jamais squasher ni réécrire ce qui est déjà poussé (`main`, tags, `production-toolforge`), ni déplacer ou supprimer un tag poussé.
+
+## Paramètres des skills
+
+Valeurs propres à ce dépôt, lues par les skills génériques de `.claude/skills/` :
+
+- **`release`** :
+  - fichier de version : `app/main.py` (`FastAPI(title="Wikipedia2Book", version="x.y.z")`) ;
+  - application déployée (version à demander) : `app/`, `requirements.txt`, `Dockerfile`, `Procfile`, `Aptfile`, `.python-version`, `toolforge-fonts.conf` ; pas de version pour `docs/`, `README.md`, `CLAUDE.md`, `scripts/`, `.github/workflows/`, `tests/`, `.claude/` ;
+  - historique : tableau de la section 19 de `docs/SPECIFICATIONS.fr.md` (« Historique des versions », résumé en français) et de `docs/SPECIFICATIONS.en.md` (« Version history », résumé en anglais), ligne `| X.Y.Z   | AAAA-MM-JJ | GMoulard  | Résumé. |` ;
+  - auteur du commit de version : `gmoulard <gmoulard@gmail.com>` ; message de tag : `Wikipedia2Book X.Y.Z` ;
+  - branche principale : `main` ;
+  - tests : `python3 -m unittest discover -s tests` (Linux, sessions cloud ; `pip install -r requirements.txt` si `fastapi`/`httpx` manquent) ou `.venv/Scripts/python.exe -m unittest discover -s tests -v` (poste Windows) ;
+  - intégration continue : workflow « Tests and Toolforge deploy » ; Railway et Northflank redéploient `main` d'eux-mêmes.
+- **`deploy-toolforge`** :
+  - outil : `wikipedia2book` ; branche principale `main`, branche de production `production-toolforge` ;
+  - workflow : « Tests and Toolforge deploy » (`.github/workflows/deploy-toolforge.yml`), jobs `test` puis `deploy` ; le déploiement lui-même est `scripts/toolforge-deploy.sh` (build, variables d'environnement, redémarrage, puis attente jusqu'à 200 s que `/api/version` renvoie le commit construit : succès = ligne `déployé : <commit>`) ;
+  - étape particulière : « Hourly statistics before restart », avant le redémarrage, relève les hits par heure et les committe sur `main` (`scripts/update-stats.sh deploy`), en `continue-on-error` ; à signaler si elle échoue ;
+  - vérification : `https://wikipedia2book.toolforge.org/api/version` (version et commit) et `https://wikipedia2book.toolforge.org/api/stats/hourly` (répond, compteur reparti de zéro) ; le site GitHub Pages se reconstruit tout seul après le workflow.
 
 ## Vérification avant de considérer une tâche terminée
 
