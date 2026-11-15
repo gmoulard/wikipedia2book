@@ -1,6 +1,6 @@
 # À faire
 
-État au 15/11/2026. Production Toolforge : **1.7.5** (`1c249d3`). `main` : **1.7.9**, tags `v1.7.2` à `v1.7.9` poussés.
+État au 15/11/2026. Production Toolforge et `main` : **1.7.10** (`43c1d85`), tags `v1.7.2` à `v1.7.10` poussés.
 
 Une action réalisée est retirée de cette liste (pas cochée) : l'historique Git garde la trace de ce qui a été fait.
 
@@ -15,7 +15,16 @@ Une action réalisée est retirée de cette liste (pas cochée) : l'historique G
 
 ## 2. Mise en production
 
-- [ ] **Atelier de performance non joué** avant ce déploiement : `gh` n'est pas connecté sur le poste local, et le workflow ne se lance que depuis GitHub. À jouer au niveau `min`, puis refaire la référence (section 3).
+- [ ] **Atelier de performance non joué** depuis la 1.7.5 (assemblage sur disque en 1.7.7, fusion par qpdf en 1.7.9) : `gh` n'est pas connecté sur le poste local, et le workflow ne se lance que depuis GitHub. À jouer au niveau `min`, puis refaire la référence (section 3).
+- [ ] **Test aux limites sur Toolforge en 1.7.10** (`scripts/limit_check.py --steps 300,400`, section 13.12 des spécifications) : 200 articles passent depuis la 1.7.7, 300 faisaient encore redémarrer le serveur en 1.7.9. Le jouer hors des heures d'usage : un échec fait redémarrer la production.
+- [ ] **Cause des redémarrages de Toolforge à 300 articles** (mémoire ou quota d'espace temporaire) : la lire depuis un compte qui a l'accès SSH, juste après un échec (les événements ne sont gardés qu'environ une heure) :
+  ```bash
+  ssh login.toolforge.org
+  become wikipedia2book
+  kubectl get events --sort-by=.lastTimestamp | tail -20
+  kubectl get pods -o name | xargs -n1 kubectl describe | grep -iE "reason|limits|memory|ephemeral|oom" -A1
+  ```
+  `OOMKilled` = mémoire ; `Evicted` / `ephemeral-storage` = espace temporaire. La réponse dit aussi les limites réelles du pod.
 - [ ] **Ligne « en direct » sous le graphique horaire de `stats.html`** : pas encore regardée.
 
 ## 3. Décisions en attente
@@ -25,6 +34,7 @@ Une action réalisée est retirée de cette liste (pas cochée) : l'historique G
 
 ## 4. Améliorations possibles
 
+- [ ] **Mode `--stub` pour `scripts/limit_check.py`** : générer en local, dans le même processus, avec un faux client Wikipédia qui fabrique des PDF d'articles synthétiques (environ 1,8 Mo chacun), et mesurer la mémoire au pic, la durée et l'espace temporaire par palier. Le jouer aussi dans GitHub Actions, dans l'image Docker de production limitée en mémoire et en espace temporaire, pour trouver la limite sans télécharger depuis Wikipédia ni faire redémarrer Toolforge.
 - [ ] **Limite par déploiement** : le plafond de 2 téléchargements vaut pour un processus. Northflank a donc le sien ; Toolforge n'en a pas.
 - [ ] **Mermaid 11.17.2** : un graphique dessiné après un `await` reste en texte, sans erreur. Contourné dans `docs/_includes/head-custom.html` (rendu d'abord, mise à jour ensuite), mais la cause n'est pas comprise.
 - [ ] **GitHub Actions** : avertissement « Node.js 20 is deprecated » sur `actions/checkout@v4`, `actions/setup-python@v5`, `actions/upload-artifact@v4`, `actions/configure-pages@v5`. Passer aux versions majeures suivantes.
