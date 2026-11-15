@@ -777,12 +777,37 @@ function showPdfProgress(event) {
   $('#pdfProgressFill').style.width = event ? `${Math.round((event.step / event.total) * 100)}%` : '0%';
 }
 
-function hidePdfProgress() { $('#pdfProgress').hidden = true; }
+let pdfWaitTimer = null;
+
+function showPdfWait(seconds) {
+  clearInterval(pdfWaitTimer);
+  const end = Date.now() + seconds * 1000;
+  const tick = () => {
+    const left = Math.ceil((end - Date.now()) / 1000);
+    if (left <= 0) { hidePdfWait(); return; }
+    $('#pdfProgressWait').hidden = false;
+    $('#pdfProgressWait').textContent = t('progress.wait', { seconds: left });
+  };
+  tick();
+  pdfWaitTimer = setInterval(tick, 1000);
+}
+
+function hidePdfWait() {
+  clearInterval(pdfWaitTimer);
+  pdfWaitTimer = null;
+  $('#pdfProgressWait').hidden = true;
+}
+
+function hidePdfProgress() {
+  hidePdfWait();
+  $('#pdfProgress').hidden = true;
+}
 
 function pdfStreamEvent(line) {
   if (!line.trim()) return null;
   const event = JSON.parse(line);
   if (event.type === 'progress') { showPdfProgress(event); return null; }
+  if (event.type === 'wait') { showPdfWait(event.seconds); return null; }
   if (event.type === 'error') throw new Error(event.detail);
   if (event.type === 'done') return event;
   return null;

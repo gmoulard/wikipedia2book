@@ -1,26 +1,17 @@
 # À faire
 
-État au 15/11/2026. Production Toolforge et `main` : **1.7.5** (`1c249d3`), tags `v1.7.2` à `v1.7.5` poussés.
+État au 15/11/2026. Production Toolforge : **1.7.5** (`1c249d3`). `main` : **1.7.6**, tags `v1.7.2` à `v1.7.6` poussés.
+
+Une action réalisée est retirée de cette liste (pas cochée) : l'historique Git garde la trace de ce qui a été fait.
 
 ## 1. Actions à faire soi-même (bloquées dans les sessions cloud)
 
 - [ ] **Convention d'auteur** : le commit 1.7.4 (`a8144df`) est à l'identité de la session, pas à `gmoulard`, car la protection de confidentialité refuse d'écrire l'adresse e-mail. Pour les prochaines versions en session cloud : lancer soi-même le `git commit --author=…` avec `!`, ou accepter l'identité de la session.
-- [x] **Tags v1.7.2, v1.7.3 et v1.7.4** posés et poussés depuis le poste local le 15/11/2026 (version de chaque commit vérifiée).
-- [x] **Branche `stats`** : déjà supprimée sur GitHub. Branche de session cloud `ccr-572c60e4-7nccyb` (identique à `main`) supprimée le 15/11/2026.
-- [ ] **Domaines à autoriser dans l'environnement cloud** (claude.ai, paramètres de l'environnement, accès réseau), pour que les sessions cloud puissent lire ces pages elles-mêmes : `wikitech.wikimedia.org`, `foundation.wikimedia.org`, `meta.wikimedia.org`, `www.mediawiki.org`.
 
 ## 1 bis. Autorisations manquantes dans l'environnement Claude Code cloud (« W2B »)
 
 À régler dans les paramètres de l'environnement : menu de l'environnement cloud dans la barre de titre de la session, puis Edit, puis Network access (doc : https://code.claude.com/docs/en/cloud-environments#network-access). Ajouter les domaines sous « Allowed domains » en laissant cochée la case des gestionnaires de paquets.
 
-- [x] **Domaines refusés pendant les sessions** (ajoutés à l'environnement W2B le 15/11/2026, tous vérifiés en HTTP 200) :
-  - `wikitech.wikimedia.org` et `foundation.wikimedia.org` : relire la politique robots et la politique User-Agent de Wikimédia ;
-  - `www.mediawiki.org` : documentation de mediawiki2latex (section 5) ;
-  - `toolviews.toolforge.org` : vérifier les réponses de l'API Toolviews ;
-  - `wikipedia2book.toolforge.org` : vérifier la production (`/api/version`, `/api/stats/hourly`) après un déploiement ;
-  - `wikipedia2book-production.up.railway.app` : site Railway, pour le skill `debug-frontend` et les vérifications ;
-  - `gmoulard.github.io` : voir le site de documentation et `stats.html` publiés ;
-  - `cdn.jsdelivr.net` : charger Mermaid comme le fait le site (aujourd'hui contourné en installant Mermaid depuis npm).
 - [ ] **Git** : le proxy de la session ne laisse pousser que `main` et la branche de travail de la session. Les **tags** et la **suppression de branche** sont refusés (HTTP 403). Pas de réglage connu côté environnement : continuer à pousser les tags depuis sa machine.
 - [ ] **Confidentialité** : la session refuse d'écrire l'adresse e-mail de l'auteur (commits de version à `gmoulard <…>`). Option : définir soi-même `GIT_AUTHOR_NAME`/`GIT_AUTHOR_EMAIL` comme variables d'environnement de l'environnement « W2B » (valeurs non secrètes), pour que les commits de version aient le bon auteur sans que Claude écrive l'adresse.
 - [ ] **Connecteur GitHub du plugin** (`plugin:github:github`) : il échoue à la connexion (« Proxy refused to open a tunnel: 403 »). Les outils GitHub intégrés suffisent ; reconnecter GitHub sur https://claude.ai/connect-github si un outil manque.
@@ -28,28 +19,16 @@
 
 ## 2. Mise en production
 
-- [x] **1.7.5 déployée sur Toolforge** le 15/11/2026 (workflow « Tests and Toolforge deploy » réussi, y compris le relevé horaire avant redémarrage). `/api/version` sert `1c249d3` et `/api/stats/hourly` répond. 4 téléchargements démarrent ensemble : le `Procfile` lève bien les limites. Temps mesurés en section 13.11 des spécifications.
 - [ ] **Atelier de performance non joué** avant ce déploiement : `gh` n'est pas connecté sur le poste local, et le workflow ne se lance que depuis GitHub. À jouer au niveau `min`, puis refaire la référence (section 3).
 - [ ] **Ligne « en direct » sous le graphique horaire de `stats.html`** : pas encore regardée.
 
 ## 3. Décisions en attente
 
-- [ ] **Recalibrer l'atelier de performance.** Relancé sur le même code, « 200 pages » est sorti en « à surveiller » (+41 %) : c'est la variabilité des machines GitHub. Proposition :
-  - seuils : « à surveiller » au-delà de +50 %, « régression » au-delà de +100 % ;
-  - référence : médiane de 9 générations, soit 3 lancements `min`.
+- [ ] **Référence sur 9 générations** (3 lancements `min`) : reste à faire, demande de lancer le workflow sur GitHub.
 - [ ] **Refaire la référence de performance après la 1.7.4** : avec 2 téléchargements au lieu de 4, la phase Wikipédia sera plus longue (le verdict, calculé sur le temps de l'application, ne devrait pas bouger).
-- [x] **Politiques Wikimédia relues** le 15/11/2026, depuis le poste local ([Robot policy](https://wikitech.wikimedia.org/wiki/Robot_policy), [User-Agent Policy](https://foundation.wikimedia.org/wiki/Policy:Wikimedia_Foundation_User-Agent_Policy)) :
-  - **Le service PDF n'est pas concerné par les « Media API rules »**, qui visent `upload.wikimedia.org`. `/api/rest_v1/page/pdf/…` relève des **REST API rules** : sans authentification, au plus 3 requêtes simultanées et moins de 5 par seconde. Le plafond de 2 respecte cette règle ; la limite de 25 Mbit/s n'est pas exigée mais reste sans inconvénient.
-  - **Action API** (`/w/api.php` : recherche, liens, introduction, page de livre) : sans authentification, **1 requête à la fois** et moins de 5 par seconde, pour tout le client. L'exploration est séquentielle avec une pause de 0,1 s, mais aucun plafond global ne s'applique entre plusieurs utilisateurs simultanés.
-  - **Toolforge est exempté de ces limites** (« rate limiting is not enforced on bots in Toolforge »). Elles valent en revanche pour Railway et Northflank.
-  - **User-Agent** : un site web suffit comme contact (« an email address, a website, or a wiki user »). L'actuel est conforme. On peut ajouter un compte wiki, au format `(wikipedia:fr; User:474D6F756C617264)`.
-  - **Accept-Encoding: gzip** est demandé : httpx l'envoie par défaut.
-- [x] **Action API** : pas de plafond, décidé le 15/11/2026 (Toolforge, la production, est exempté).
-- [x] **Plafond des PDF levé sur Toolforge** (4 téléchargements par livre, sans limite de débit), gardé à 2 et 25 Mbit/s sur Railway et Northflank ; justification « Media API rules » corrigée en « REST API rules ». Décidé le 15/11/2026, publié en 1.7.5.
 
 ## 4. Améliorations possibles
 
-- [ ] **Signaler l'attente dans la fenêtre de statut** pendant les pauses dues aux refus 429/503 : aujourd'hui, l'étape de téléchargement reste affichée sans explication.
 - [ ] **Limite par déploiement** : le plafond de 2 téléchargements vaut pour un processus. Railway et Northflank ont donc chacun le leur ; Toolforge n'en a pas.
 - [ ] **Mermaid 11.17.2** : un graphique dessiné après un `await` reste en texte, sans erreur. Contourné dans `docs/_includes/head-custom.html` (rendu d'abord, mise à jour ensuite), mais la cause n'est pas comprise.
 - [ ] **GitHub Actions** : avertissement « Node.js 20 is deprecated » sur `actions/checkout@v4`, `actions/setup-python@v5`, `actions/upload-artifact@v4`, `actions/configure-pages@v5`. Passer aux versions majeures suivantes.

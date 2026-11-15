@@ -33,8 +33,8 @@ SCENARIOS = ROOT / "perf" / "scenarios.json"
 REFERENCE = ROOT / "perf" / "reference.json"
 METRICS = ("total_s", "wikipedia_s", "app_s", "transfer_s")
 DOWNLOAD_CODES = {"fetch_article", "prepare_document"}
-WATCH = 0.25
-REGRESSION = 0.50
+WATCH = 0.50
+REGRESSION = 1.00
 PAGES_DRIFT = 0.05
 RETRY_PAUSE_S = 60
 

@@ -285,6 +285,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .pdf-progress-card p { margin: 0; }
 .pdf-progress-card .pdf-progress-step { margin-top: 10px; font-family: var(--serif); font-size: 21px; }
 .pdf-progress-card .pdf-progress-label { min-height: 3em; margin-top: 4px; color: var(--ink-soft); font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.pdf-progress-card .pdf-progress-wait { margin-top: 6px; color: var(--ink); font-size: 13px; font-weight: 600; line-height: 1.5; }
+.pdf-progress-card .pdf-progress-wait[hidden] { display: none; }
 .pdf-progress-bar { height: 8px; margin-top: 14px; overflow: hidden; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--subtle); }
 .pdf-progress-bar span { display: block; width: 0; height: 100%; background: var(--accent); transition: width .3s ease; }
 /* NE PAS remplacer ces couleurs fixes par var(--ink) ou une variable de thème : texte #fff fixe, illisible dans un des thèmes. */

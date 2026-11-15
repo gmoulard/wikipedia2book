@@ -17,6 +17,7 @@
 import asyncio
 import base64
 import json
+import math
 import re
 import subprocess
 from datetime import datetime, timezone
@@ -374,34 +375,33 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
 
     fitted_items: dict[str, asyncio.Future[tuple[bytes, int]]] = {}
     paper = WIKIPEDIA_PDF_PAPERS.get(project.page_format, "a4")
-    started: asyncio.Queue[tuple[str, str]] = asyncio.Queue()
+    started: asyncio.Queue[dict] = asyncio.Queue()
     # NE PAS dépasser DOWNLOAD_CONCURRENCY : hors Toolforge, la politique robots de Wikimédia est respectée avec 2 téléchargements simultanés (MediaWikiClient l'impose aussi pour tout le serveur) ; sur Toolforge, exempté, 4 par livre.
     slots_free = asyncio.Semaphore(DOWNLOAD_CONCURRENCY)
 
     async def load(client: MediaWikiClient, item: Article | UploadedDocument) -> None:
         async with slots_free:
             if isinstance(item, Article):
-                await started.put(("fetch_article", item.title))
+                await started.put(progress("fetch_article", title=item.title))
                 data = await client.get_article_pdf(item.title, item.language, paper)
             else:
-                await started.put(("prepare_document", item.title))
+                await started.put(progress("prepare_document", title=item.title))
                 data = await asyncio.to_thread(document_pdf, item)
         fitted_items[item.key] = asyncio.ensure_future(asyncio.to_thread(fit_and_count, data))
 
     async with MediaWikiClient() as client:
+        client.on_wait = lambda seconds: started.put_nowait({"type": "wait", "seconds": math.ceil(seconds)})
         downloads = [asyncio.ensure_future(load(client, item)) for item in unique_items]
         try:
             pending = set(downloads)
             while pending or not started.empty():
                 if not started.empty():
-                    code, title = started.get_nowait()
-                    yield progress(code, title=title)
+                    yield started.get_nowait()
                     continue
                 waiter = asyncio.ensure_future(started.get())
                 finished, _ = await asyncio.wait(pending | {waiter}, return_when=asyncio.FIRST_COMPLETED)
                 if waiter in finished:
-                    code, title = waiter.result()
-                    yield progress(code, title=title)
+                    yield waiter.result()
                 else:
                     waiter.cancel()
                 for task in sorted(finished - {waiter}, key=downloads.index):

@@ -19,6 +19,7 @@ import os
 import re
 import weakref
 from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass
 from email.utils import parsedate_to_datetime
 from datetime import datetime, timezone
@@ -145,6 +146,7 @@ class MediaWikiClient:
         self.timeout = timeout
         self._client: httpx.AsyncClient | None = None
         self._resume_at = 0.0
+        self.on_wait: Callable[[float], None] | None = None
 
     async def _media_get(self, url: str, **kwargs) -> httpx.Response:
         limiter = media_limiter()
@@ -169,7 +171,11 @@ class MediaWikiClient:
             if attempt == len(RETRY_DELAYS_S):
                 raise MediaWikiError(RATE_LIMITED.format(status=response.status_code))
             # NE PAS dormir seulement dans cette tâche : la pause est partagée par tout le client, sinon les téléchargements parallèles relancent aussitôt Wikimédia, qui les refuse encore.
-            self._resume_at = max(self._resume_at, _clock() + retry_delay(response, attempt))
+            now = _clock()
+            resume_at = max(self._resume_at, now + retry_delay(response, attempt))
+            if resume_at > self._resume_at and self.on_wait is not None:
+                self.on_wait(resume_at - now)
+            self._resume_at = resume_at
             attempt += 1
 
     async def __aenter__(self) -> "MediaWikiClient":

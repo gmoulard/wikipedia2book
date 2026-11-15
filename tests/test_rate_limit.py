@@ -16,6 +16,7 @@
 
 import asyncio
 import unittest
+from unittest.mock import patch
 from email.utils import format_datetime
 from datetime import datetime, timedelta, timezone
 
@@ -89,6 +90,21 @@ class RateLimitTest(unittest.IsolatedAsyncioTestCase):
         self.client._resume_at = asyncio.get_running_loop().time() + 5
         await self.client.get_article_pdf("D", "fr", "a4")
         self.assertEqual(self.sleeps[-1], 5.0)
+
+    async def test_each_new_pause_is_announced(self):
+        waits = []
+        now = [1000.0]
+        fake_sleep = wikipedia_api.asyncio.sleep
+
+        async def advancing_sleep(delay, *args, **kwargs):
+            now[0] += delay
+            await fake_sleep(delay, *args, **kwargs)
+
+        with patch.object(wikipedia_api, "_clock", lambda: now[0]), patch.object(wikipedia_api.asyncio, "sleep", advancing_sleep):
+            self.client.on_wait = waits.append
+            self.answers = [(429, {"Retry-After": "7"}, b""), (503, {}, b"")]
+            await self.client.get_article_pdf("Paris", "fr", "a4")
+        self.assertEqual(waits, [7.0, 4.0])
 
     async def test_api_calls_are_retried_too(self):
         self.answers = [(429, {}, b""), (200, {"Content-Type": "application/json"}, b'{"query": {"search": []}}')]

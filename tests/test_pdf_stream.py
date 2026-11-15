@@ -65,6 +65,7 @@ def _make_pdf(num_pages=1):
 
 class FakeClient:
     fail = False
+    wait = None
 
     async def __aenter__(self):
         return self
@@ -76,6 +77,8 @@ class FakeClient:
 
     async def get_article_pdf(self, title, language, paper):
         FakeClient.papers.append(paper)
+        if FakeClient.wait is not None and title == "Chat":
+            self.on_wait(FakeClient.wait)
         if FakeClient.fail:
             raise MediaWikiError(f"PDF indisponible pour {title}")
         return _make_pdf(2)
@@ -100,6 +103,7 @@ def _project(**extra):
 class PdfStreamTest(unittest.TestCase):
     def setUp(self):
         FakeClient.fail = False
+        FakeClient.wait = None
         FakeClient.papers = []
         FakeClient.book =WikipediaBook(subtitle="", chapters=[("", ["Chien", "Chat"])])
         self.patches = [
@@ -141,6 +145,14 @@ class PdfStreamTest(unittest.TestCase):
         codes = [e["code"] for e in events if e["type"] == "progress"]
         self.assertEqual(codes, ["fetch_article", "fetch_article", "cover_and_toc", "assemble", "finalize"])
         self.assertEqual(events[0]["total"], 5)
+
+    def test_wikipedia_pause_is_announced_without_counting_as_a_step(self):
+        FakeClient.wait = 4.2
+        events = self._events(_project(page_numbers=False))
+        self.assertIn({"type": "wait", "seconds": 5}, events)
+        progress = [e for e in events if e["type"] == "progress"]
+        self.assertEqual([e["step"] for e in progress], [1, 2, 3, 4, 5])
+        self.assertEqual(events[-1]["type"], "done")
 
     def test_wikipedia_failure_is_reported_as_an_error_event(self):
         FakeClient.fail = True

@@ -112,20 +112,20 @@ class PerfCheckTest(unittest.TestCase):
         reference = {"pages": 100, "app_s": 10.0, "total_s": 40.0}
         def measure(app_s, pages=100):
             return {"pages": pages, "app_s": app_s, "total_s": 99.0}
-        self.assertEqual(perf_check.verdict(measure(12.0), reference)[0], "ok")
-        self.assertEqual(perf_check.verdict(measure(14.0), reference)[0], "à surveiller")
-        self.assertEqual(perf_check.verdict(measure(16.0), reference)[0], "régression")
-        self.assertEqual(perf_check.verdict(measure(16.0, pages=200), reference)[0], "ok")
+        self.assertEqual(perf_check.verdict(measure(15.0), reference)[0], "ok")
+        self.assertEqual(perf_check.verdict(measure(16.0), reference)[0], "à surveiller")
+        self.assertEqual(perf_check.verdict(measure(21.0), reference)[0], "régression")
+        self.assertEqual(perf_check.verdict(measure(21.0, pages=200), reference)[0], "ok")
         self.assertTrue(perf_check.verdict(measure(10.0, pages=120), reference)[1])
         self.assertEqual(perf_check.verdict(measure(10.0), None)[0], "nouveau")
 
     def test_report_marks_failures_and_divergence(self):
         reference = {"created": "2026-11-15", "environment": {"label": "ci"}, "scenarios": {"50-pages": {"pages": 50, "app_s": 5.0, "total_s": 20.0}}}
-        measures = {"50-pages": {"pages": 50, "total_s": 30.0, "wikipedia_s": 22.0, "app_s": 8.0, "transfer_s": 0.0}}
+        measures = {"50-pages": {"pages": 50, "total_s": 30.0, "wikipedia_s": 22.0, "app_s": 11.0, "transfer_s": 0.0}}
         text, verdicts = perf_check.report("min", self.url, measures, reference, {"200-pages": "boom"})
         self.assertEqual(verdicts, {"50-pages": "régression", "200-pages": "échec"})
-        self.assertIn("+60%", text)
-        self.assertIn("+50%", text)
+        self.assertIn("+120%", text)
+        self.assertIn("+100%", text)
         self.assertIn("200-pages : boom", text)
 
     def test_median_run(self):
