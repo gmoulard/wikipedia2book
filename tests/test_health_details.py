@@ -33,6 +33,9 @@ from fastapi.testclient import TestClient
 
 import app.main as main
 
+# NE PAS laisser l'assemblage dans un processus séparé ici : ces tests remplacent generate_pdf et fit_pdf_to_format dans main, ce que le processus enfant ne verrait pas (tests/test_isolation.py couvre le processus séparé).
+main.ISOLATE_ASSEMBLY = False
+
 
 class HealthDetailsTest(unittest.TestCase):
     def setUp(self):

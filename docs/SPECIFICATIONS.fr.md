@@ -458,7 +458,9 @@ Une fois le PDF lancé, le logiciel :
 
 * **Assemblage sur disque temporaire** : chaque PDF recomposé (article, document importé, page générée) est écrit dans un dossier temporaire propre à la génération, au lieu de rester en mémoire. Le livre est assemblé par qpdf (bibliothèque `pikepdf`) en deux temps : fusion des fichiers par qpdf (`--pages`), qui ne lit le contenu des pages qu'au moment d'écrire le fichier fusionné, suppression aussitôt des fichiers des parties, puis réouverture de ce fichier pour y ajouter signets, liens de la table des matières et numéros de page, et écriture du PDF final, lui aussi dans ce dossier, puis envoyé par morceaux à l'utilisateur (`/api/pdf/stream` comme `/api/pdf`, qui annonce sa taille). Le dossier est supprimé dès que l'envoi se termine, que la génération échoue ou que l'utilisateur l'abandonne. Chaque téléchargement garde son créneau jusqu'à ce que son PDF soit recomposé et écrit : au plus 2 ou 4 PDF bruts (section 13.2) sont en mémoire en même temps, même sur un serveur au processeur limité. La mémoire du serveur ne croît donc presque plus avec la taille du livre : sur un livre de test de 100 articles et 197 Mo, le pic passe de 1 100 Mo à 158 Mo, de 2 130 Mo à 200 Mo pour 200 articles et 393 Mo, et à 262 Mo pour 300 articles et 590 Mo (mesures locales, section 13.12). Les flux sont recopiés tels quels, sans décompression ni recompression : le PDF final a la même taille qu'avant.
 
-Pendant toute la génération, une fenêtre de statut indique l'étape en cours sous la forme « Étape n / total », avec son libellé (dans la langue de l'interface) et une barre de progression. Les étapes sont, dans l'ordre : le téléchargement de chaque article (une étape par article, avec son titre; jusqu'à 4 articles sont téléchargés en même temps depuis Wikipédia sur Toolforge, 2 sur les autres hébergements (section 13.2), et chaque étape s'affiche au début de son téléchargement — l'ordre des articles dans le livre n'en dépend pas; si un téléchargement échoue, les autres sont abandonnés et l'erreur du premier article en échec, dans l'ordre du livre, est affichée) ou la préparation de chaque document importé, le calcul des numéros de page (si la numérotation est activée), la composition de la couverture et de la table des matières, l'assemblage des pages au format du livre, la numérotation des pages (si activée), puis la finalisation du fichier. Le total est connu dès le départ. Chaque message est envoyé au moment où l'étape commence : les rendus WeasyPrint, la recomposition des pages, la numérotation et l'écriture du fichier s'exécutent dans un fil d'exécution séparé (`asyncio.to_thread`), ce qui laisse le serveur libre d'envoyer la progression et de répondre aux autres utilisateurs pendant une génération. La fenêtre se ferme à la fin, en cas de succès comme d'échec.
+* **Assemblage dans un processus séparé** : une fois tous les articles téléchargés et recomposés, la suite de la génération (rendus WeasyPrint de la couverture, de la table des matières, des pages de chapitre, de la licence et de la conclusion, puis fusion, signets, liens, numérotation et écriture du PDF final) s'exécute dans un processus séparé, démarré pour cette génération (`app/isolation.py`, méthode `forkserver` : les modules sont chargés une fois pour toutes dans le processus qui démarre les autres). Ce processus envoie la progression au serveur par un tube, écrit le PDF final dans le dossier temporaire, puis se termine : la mémoire de l'assemblage, plusieurs centaines de Mo pour un gros livre (section 13.12), est rendue au système à la fin de chaque génération au lieu de rester au serveur. S'il manque de mémoire et qu'il est arrêté, la génération échoue avec un message explicite (« L'assemblage du livre s'est arrêté (code …), probablement faute de mémoire : essayez avec moins d'articles. ») ; le serveur, lui, n'est arrêté que si la plateforme arrête tout le conteneur. Si l'utilisateur abandonne la génération, le processus est arrêté aussitôt.
+
+Pendant toute la génération, une fenêtre de statut indique l'étape en cours sous la forme « Étape n / total », avec son libellé (dans la langue de l'interface) et une barre de progression. Les étapes sont, dans l'ordre : le téléchargement de chaque article (une étape par article, avec son titre; jusqu'à 4 articles sont téléchargés en même temps depuis Wikipédia sur Toolforge, 2 sur les autres hébergements (section 13.2), et chaque étape s'affiche au début de son téléchargement — l'ordre des articles dans le livre n'en dépend pas; si un téléchargement échoue, les autres sont abandonnés et l'erreur du premier article en échec, dans l'ordre du livre, est affichée) ou la préparation de chaque document importé, le calcul des numéros de page (si la numérotation est activée), la composition de la couverture et de la table des matières, l'assemblage des pages au format du livre, la numérotation des pages (si activée), puis la finalisation du fichier. Le total est connu dès le départ. Chaque message est envoyé au moment où l'étape commence : la recomposition des articles s'exécute dans un fil d'exécution séparé (`asyncio.to_thread`) et l'assemblage dans un processus séparé, ce qui laisse le serveur libre d'envoyer la progression et de répondre aux autres utilisateurs pendant une génération. La fenêtre se ferme à la fin, en cas de succès comme d'échec.
 
 Côté serveur, cette progression est transmise par l'endpoint `POST /api/pdf/stream`, qui renvoie un flux NDJSON (une ligne JSON par événement) : `{"type": "progress", "step", "total", "code", "title"?}` pour chaque étape, `{"type": "wait", "seconds"}` au début de chaque pause imposée par Wikimédia (section 8; durée arrondie à la seconde supérieure, ne compte pas comme une étape), puis `{"type": "done", "size"}` immédiatement suivi des `size` octets du PDF, en binaire et sans encodage (envoyés par morceaux de 256 Ko), ou `{"type": "error", "detail"}` en cas d'échec en cours de génération. Le navigateur lit les lignes JSON jusqu'au message `done`, puis rassemble les octets du PDF; s'il en reçoit moins que `size`, il affiche « la connexion avec le serveur a été interrompue avant la fin ». Une sélection vide est refusée avant le début du flux (erreur HTTP 400). L'endpoint `POST /api/pdf`, qui renvoie directement le fichier PDF sans progression, reste disponible pour un usage direct de l'API.
 
@@ -922,6 +924,8 @@ flowchart TB
         MODELS["models.py<br/>Project · Article · UploadedDocument · BookChapter"]
         MAIN --> EXPL
         MAIN --> BB
+        ISO["isolation.py<br/>assemblage dans un processus séparé"]
+        MAIN --> ISO
         MAIN --> PDFG
         MAIN --> WAPI
         EXPL --> WAPI
@@ -942,7 +946,7 @@ flowchart TB
     classDef app fill:#eaf3ff,stroke:#3366cc,color:#202122
     classDef wiki fill:#fef6e7,stroke:#ac6600,color:#202122
     classDef shared fill:#f8f9fa,stroke:#a2a9b1,color:#202122
-    class I18N,APP,FILE,MAIN,EXPL,BB,PDFG,WAPI app
+    class I18N,APP,FILE,MAIN,EXPL,BB,PDFG,WAPI,ISO app
     class MW,REST wiki
     class MODELS shared
 ```
@@ -981,11 +985,13 @@ sequenceDiagram
             M->>P: image_to_pdf (si image)
             M-->>U: progress prepare_document
         end
+        M->>P: fit_pdf_to_format sur chaque article (fil d'exécution séparé), écrit dans le dossier temporaire
+        Note over M,P: suite dans un processus séparé (app/isolation.py), progression par un tube
         M->>B: ordered_article_groups · book_slots · toc_slot_index
         M->>B: build_cover_html · build_toc_html · build_chapter_page_html · build_license_page_html · build_conclusion_page_html
         B-->>M: HTML des pages générées
         M->>P: generate_pdf (WeasyPrint)
-        M->>P: fit_pdf_to_format sur chaque PDF ajouté (format et orientation du livre), écrit dans le dossier temporaire
+        M->>P: fit_pdf_to_format sur chaque page générée (format et orientation du livre), écrite dans le dossier temporaire
         M->>P: BookAssembly (pikepdf) : pages des fichiers temporaires, signets, liens de la table des matières
         M->>P: stamp_page_numbers (si activé) · save (PDF final dans le dossier temporaire)
     end
@@ -1153,6 +1159,7 @@ Wikipedia2Book/
 │   ├── explorer.py
 │   ├── book_builder.py
 │   ├── pdf_generator.py
+│   ├── isolation.py
 │   │
 │   └── static/
 │       ├── index.html
@@ -1324,5 +1331,6 @@ Numéro de version applicatif (`app/version.py`, repris par `app/main.py` et par
 | 1.8.0   | 2026-11-15 | GMoulard  | Autres projets Wikimédia : pages de Wikilivres, Wikivoyage, Wikiversité, Wikiquote, Wiktionnaire et Wikinews acceptées par URL ou par préfixe interwiki (`b:`, `voy:`, `v:`, `q:`, `wikt:`, `n:`), intégrées avec le PDF officiel du projet; recherche, introduction et exploration sur le site du projet; page de licence nommant chaque projet, 12 langues (sections 3.1, 13.2, 15). |
 | 1.8.1   | 2026-11-15 | GMoulard  | Hors Wikipédia, les pages des espaces propres au projet (numéros pairs à partir de 100) sont acceptées comme des articles, dont les pages d'auteur de Wikisource (`Auteur:…`, `Author:…`, `Autor:…`); les espaces standard et de discussion restent refusés (section 3.1). |
 | 1.8.2   | 2026-11-15 | GMoulard  | Surveillance : `GET /api/health/details` donne en direct la mémoire du conteneur et sa limite (cgroup), la mémoire du processus, l'espace libre du dossier temporaire et le nombre de générations en cours, sans donnée personnelle, CORS ouvert, non compté dans les hits par heure (section 13.3). |
+| 1.8.3   | 2026-11-15 | GMoulard  | Gros livres : une fois les articles téléchargés, l'assemblage (rendus WeasyPrint, fusion, signets, numérotation, écriture) se fait dans un processus séparé qui rend toute sa mémoire au système en se terminant, au lieu de laisser plusieurs centaines de Mo au serveur après chaque génération ; s'il manque de mémoire, la génération échoue avec un message explicite (sections 11.1, 13.10). |
 
 Fin du document

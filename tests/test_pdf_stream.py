@@ -35,6 +35,9 @@ from pypdf import PdfReader
 from reportlab.pdfgen import canvas
 
 import app.main as main
+
+# NE PAS laisser l'assemblage dans un processus séparé ici : ces tests remplacent generate_pdf et fit_pdf_to_format dans main, ce que le processus enfant ne verrait pas (tests/test_isolation.py couvre le processus séparé).
+main.ISOLATE_ASSEMBLY = False
 from app.wikipedia_api import MediaWikiError, WikipediaBook
 
 

@@ -16,6 +16,7 @@
 
 import asyncio
 import base64
+import contextlib
 import itertools
 import json
 import math
@@ -49,6 +50,7 @@ from app.book_builder import (
     toc_slot_index,
 )
 from app.explorer import discover_related_articles
+from app.isolation import IsolatedProcessDied, preload, run_in_thread, run_isolated
 from app.models import (
     DEFAULT_BOOK_CONCLUSION,
     Article,
@@ -107,6 +109,7 @@ PROCESS_STATUS = Path("/proc/self/status")
 TEMPORARY_PREFIX = "wikipedia2book-"
 UNLIMITED_BYTES = 2**60
 generations_in_progress = 0
+ISOLATE_ASSEMBLY = True
 
 
 def _current_hour() -> str:
@@ -424,7 +427,7 @@ def _apply_default_book_title(project: Project, selected: list[Article | Uploade
 
 
 def _pdf_error_detail(error: Exception) -> str:
-    if isinstance(error, (MediaWikiError, ValueError)):
+    if isinstance(error, (MediaWikiError, ValueError, IsolatedProcessDied)):
         return str(error)
     return "La génération du PDF a échoué."
 
@@ -445,6 +448,17 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
         generations_in_progress -= 1
 
 
+def _page_count(pdf_data: bytes) -> int:
+    return len(PdfReader(BytesIO(pdf_data)).pages)
+
+
+def _fit_to_file(pdf_data: bytes, path: Path, page_width_mm: float, page_height_mm: float) -> tuple[Path, int]:
+    # NE PAS sauter fit_pdf_to_format, même pour une page déjà au bon format : c'est lui qui décide (recomposition ou simple ajustement de la taille).
+    fitted = fit_pdf_to_format(pdf_data, page_width_mm, page_height_mm)
+    path.write_bytes(fitted)
+    return path, _page_count(fitted)
+
+
 async def _build_book_pdf(project: Project, selected: list[Article | UploadedDocument], language: str, workdir: Path):
     groups = ordered_article_groups(project, selected, language)
     page_width_mm, page_height_mm = page_size_mm(project)
@@ -458,19 +472,8 @@ async def _build_book_pdf(project: Project, selected: list[Article | UploadedDoc
         step += 1
         return {"type": "progress", "step": step, "total": total, "code": code, **params}
 
-    # NE PAS appeler WeasyPrint, pypdf ni pikepdf directement ici : un calcul bloquant gèle le serveur et retarde l'envoi des messages de progression.
-    async def render(html: str) -> bytes:
-        return await asyncio.to_thread(generate_pdf, html)
-
-    def page_count(pdf_data: bytes) -> int:
-        return len(PdfReader(BytesIO(pdf_data)).pages)
-
     def fit_to_file(pdf_data: bytes) -> tuple[Path, int]:
-        # NE PAS sauter fit_pdf_to_format, même pour une page déjà au bon format : c'est lui qui décide (recomposition ou simple ajustement de la taille).
-        fitted = fit_pdf_to_format(pdf_data, page_width_mm, page_height_mm)
-        path = workdir / f"part-{next(part_numbers)}.pdf"
-        path.write_bytes(fitted)
-        return path, page_count(fitted)
+        return _fit_to_file(pdf_data, workdir / f"part-{next(part_numbers)}.pdf", page_width_mm, page_height_mm)
 
     def document_pdf(document: UploadedDocument) -> bytes:
         data = base64.b64decode(document.data_base64)
@@ -492,6 +495,7 @@ async def _build_book_pdf(project: Project, selected: list[Article | UploadedDoc
             else:
                 await started.put(progress("prepare_document", title=item.title))
                 data = await asyncio.to_thread(document_pdf, item)
+            # NE PAS appeler pypdf directement ici : un calcul bloquant gèle le serveur et retarde l'envoi des messages de progression.
             fitted_items[item.key] = asyncio.ensure_future(asyncio.to_thread(fit_to_file, data))
             # NE PAS libérer le créneau avant la fin de la recomposition : sur un serveur au processeur limité (Toolforge), les PDF bruts téléchargés s'accumuleraient en mémoire en attendant d'être recomposés.
             await fitted_items[item.key]
@@ -521,6 +525,36 @@ async def _build_book_pdf(project: Project, selected: list[Article | UploadedDoc
                 task.cancel()
             raise
 
+    fitted = {key: task.result() for key, task in fitted_items.items()}
+    if ISOLATE_ASSEMBLY:
+        preload(["app.main"])
+    # NE PAS faire la suite dans le processus du serveur : les rendus WeasyPrint et l'assemblage y prennent plusieurs centaines de Mo que l'allocateur ne rend pas au système après la génération (relevé de /api/health/details sur Toolforge) ; un processus séparé rend tout en se terminant, et c'est lui, pas le serveur, qui est arrêté s'il manque de mémoire.
+    runner = run_isolated if ISOLATE_ASSEMBLY else run_in_thread
+    # NE PAS enlever aclosing : sans lui, un client qui abandonne laisse tourner le processus d'assemblage jusqu'au ramasse-miettes, pendant que son dossier temporaire est supprimé.
+    async with contextlib.aclosing(runner(_finish_book, project, selected, language, workdir, fitted)) as messages:
+        async for kind, value in messages:
+            if kind == "report":
+                yield progress(value)
+            else:
+                output, size = value
+                yield {"type": "done", "path": output, "size": size}
+
+
+def _finish_book(
+    project: Project,
+    selected: list[Article | UploadedDocument],
+    language: str,
+    workdir: Path,
+    fitted: dict[str, tuple[Path, int]],
+    report,
+) -> tuple[Path, int]:
+    groups = ordered_article_groups(project, selected, language)
+    page_width_mm, page_height_mm = page_size_mm(project)
+    page_numbers = itertools.count()
+
+    def place_file(pdf_data: bytes) -> tuple[Path, int]:
+        return _fit_to_file(pdf_data, workdir / f"page-{next(page_numbers)}.pdf", page_width_mm, page_height_mm)
+
     slots = book_slots(groups)
     toc_at = toc_slot_index(project, groups, slots)
 
@@ -528,11 +562,11 @@ async def _build_book_pdf(project: Project, selected: list[Article | UploadedDoc
     chapter_pages: list[int | None] = [None] * len(groups)
     cover: bytes | None = None
     if project.page_numbers:
-        yield progress("compute_page_numbers")
-        cover = await render(build_cover_html(project, language))
-        cursor = page_count(cover) + 1
+        report("compute_page_numbers")
+        cover = generate_pdf(build_cover_html(project, language))
+        cursor = _page_count(cover) + 1
         toc_pages = (
-            page_count(await render(build_toc_html(project, selected, language=language)))
+            _page_count(generate_pdf(build_toc_html(project, selected, language=language)))
             if toc_at is not None and toc_at < len(slots)
             else 0
         )
@@ -544,18 +578,18 @@ async def _build_book_pdf(project: Project, selected: list[Article | UploadedDoc
                 cursor += 1
             else:
                 article_pages[value.key] = cursor
-                cursor += (await fitted_items[value.key])[1]
+                cursor += fitted[value.key][1]
 
-    yield progress("cover_and_toc")
+    report("cover_and_toc")
     toc = (
-        await render(build_toc_html(project, selected, article_pages, chapter_pages, language))
+        generate_pdf(build_toc_html(project, selected, article_pages, chapter_pages, language))
         if project.table_of_contents
         else None
     )
     if cover is None:
-        cover = await render(build_cover_html(project, language))
+        cover = generate_pdf(build_cover_html(project, language))
 
-    yield progress("assemble")
+    report("assemble")
     parts: list[Path] = []
     pages_so_far = 0
 
@@ -565,67 +599,58 @@ async def _build_book_pdf(project: Project, selected: list[Article | UploadedDoc
         pages_so_far += count
         return pages_so_far - count
 
-    async def place_pdf(pdf_data: bytes) -> int:
-        return place(*await asyncio.to_thread(fit_to_file, pdf_data))
+    def place_pdf(pdf_data: bytes) -> int:
+        return place(*place_file(pdf_data))
 
-    root = OutlineEntry(project.book_title or project.name, await place_pdf(cover))
+    root = OutlineEntry(project.book_title or project.name, place_pdf(cover))
     chapter_entry = root
     toc_start: int | None = None
     targets: dict[str, int] = {}
     for index, (kind, value) in enumerate(slots):
         if index == toc_at:
-            toc_start = await place_pdf(toc)
+            toc_start = place_pdf(toc)
             root.children.append(OutlineEntry(pdf_label(language, "toc"), toc_start))
         if kind == "chapter":
             chapter_title = groups[value][0]
-            chapter_page = await render(build_chapter_page_html(project, chapter_title, language))
-            targets[f"chapter:{value}"] = await place_pdf(chapter_page)
+            targets[f"chapter:{value}"] = place_pdf(generate_pdf(build_chapter_page_html(project, chapter_title, language)))
             chapter_entry = OutlineEntry(chapter_title, targets[f"chapter:{value}"])
             root.children.append(chapter_entry)
         else:
-            item_page = place(*await fitted_items[value.key])
+            item_page = place(*fitted[value.key])
             targets.setdefault(value.key, item_page)
             chapter_entry.children.append(OutlineEntry(value.title, item_page))
     if toc_at == len(slots):
-        toc_start = await place_pdf(toc)
+        toc_start = place_pdf(toc)
         root.children.append(OutlineEntry(pdf_label(language, "toc"), toc_start))
     root.children.append(OutlineEntry(
         pdf_label(language, "license"),
-        await place_pdf(await render(build_license_page_html(project, selected, language))),
+        place_pdf(generate_pdf(build_license_page_html(project, selected, language))),
     ))
     if project.conclusion:
-        conclusion_page = await render(build_conclusion_page_html(project, language))
-        root.children.append(OutlineEntry(pdf_label(language, "conclusion"), await place_pdf(conclusion_page)))
+        root.children.append(OutlineEntry(
+            pdf_label(language, "conclusion"),
+            place_pdf(generate_pdf(build_conclusion_page_html(project, language))),
+        ))
 
-    def assemble() -> BookAssembly:
-        assembly = BookAssembly(parts, workdir / "merged.pdf")
-        try:
-            assembly.add_outline([root])
-            if toc_start is not None:
-                assembly.link_toc(
-                    toc_start,
-                    page_count(toc),
-                    TOC_LINK_PREFIX,
-                    internal_links(toc, TOC_LINK_PREFIX, page_width_mm, page_height_mm),
-                    targets,
-                )
-        except BaseException:
-            assembly.close()
-            raise
-        return assembly
-
-    assembly = await asyncio.to_thread(assemble)
+    assembly = BookAssembly(parts, workdir / "merged.pdf")
     try:
+        assembly.add_outline([root])
+        if toc_start is not None:
+            assembly.link_toc(
+                toc_start,
+                _page_count(toc),
+                TOC_LINK_PREFIX,
+                internal_links(toc, TOC_LINK_PREFIX, page_width_mm, page_height_mm),
+                targets,
+            )
         if project.page_numbers:
-            yield progress("stamp_page_numbers")
-            await asyncio.to_thread(assembly.stamp_page_numbers)
-
-        yield progress("finalize")
+            report("stamp_page_numbers")
+            assembly.stamp_page_numbers()
+        report("finalize")
         output = workdir / "book.pdf"
-        size = await asyncio.to_thread(assembly.save, output)
+        return output, assembly.save(output)
     finally:
-        await asyncio.to_thread(assembly.close)
-    yield {"type": "done", "path": output, "size": size}
+        assembly.close()
 
 
 async def _pdf_chunks(path: Path):

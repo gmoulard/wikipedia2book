@@ -46,6 +46,7 @@ wikipedia2book/
 │   ├── explorer.py              # Breadth-first exploration of internal links
 │   ├── book_builder.py          # HTML for cover, table of contents, chapters, license and conclusion
 │   ├── pdf_generator.py         # WeasyPrint rendering, page fitting, page numbers, image import
+│   ├── isolation.py             # Runs the book assembly in a separate process (memory given back after each book)
 │   └── static/                  # Single-page web interface (no framework)
 │       ├── index.html
 │       ├── app.js               # Front-end logic

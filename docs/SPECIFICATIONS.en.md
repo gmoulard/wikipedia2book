@@ -457,7 +457,9 @@ Once the PDF is started, the software:
 
 * **Assembly on temporary disk**: each recomposed PDF (article, imported document, generated page) is written to a temporary folder of its own for the generation, instead of staying in memory. The book is assembled by qpdf (`pikepdf` library) in two steps: merging the files with qpdf (`--pages`), which only reads the page contents when writing the merged file, deleting the part files right away, then reopening that file to add bookmarks, table of contents links and page numbers, and writing the final PDF, also in this folder, then sent to the user in chunks (`/api/pdf/stream` as well as `/api/pdf`, which announces its size). The folder is deleted as soon as sending ends, the generation fails or the user abandons it. Each download keeps its slot until its PDF is recomposed and written: at most 2 or 4 raw PDFs (section 13.2) are in memory at the same time, even on a server with limited CPU. Server memory therefore hardly grows with the size of the book any more: on a test book of 100 articles and 197 MB, the peak goes from 1,100 MB to 158 MB, from 2,130 MB to 200 MB for 200 articles and 393 MB, and to 262 MB for 300 articles and 590 MB (local measurements, section 13.12). Streams are copied as they are, without decompression or recompression: the final PDF has the same size as before.
 
-Throughout generation, a status window shows the current step as "Step n / total", with its label (in the interface language) and a progress bar. The steps are, in order: downloading each article (one step per article, with its title; up to 4 articles are downloaded from Wikipedia at the same time on Toolforge, 2 on the other hosts (section 13.2), and each step is shown when its download starts — the order of the articles in the book does not depend on it; if a download fails, the others are abandoned and the error of the first failing article, in book order, is shown) or preparing each imported document, computing page numbers (if numbering is on), composing the cover and the table of contents, assembling the pages in the book format, numbering the pages (if enabled), then finalizing the file. The total is known from the start. Each message is sent when its step begins: WeasyPrint renders, page recomposition, numbering and writing the file run in a separate thread (`asyncio.to_thread`), which leaves the server free to send progress and to answer other users during a generation. The window closes at the end, on success as well as on failure.
+* **Assembly in a separate process**: once all the articles are downloaded and recomposed, the rest of the generation (WeasyPrint renders of the cover, table of contents, chapter pages, license and conclusion, then merging, bookmarks, links, numbering and writing the final PDF) runs in a separate process, started for this generation (`app/isolation.py`, `forkserver` method: the modules are loaded once and for all in the process that starts the others). This process sends progress to the server through a pipe, writes the final PDF to the temporary folder, then exits: the assembly memory, several hundred MB for a large book (section 13.12), is given back to the system at the end of each generation instead of staying with the server. If it runs out of memory and is stopped, the generation fails with an explicit message ("L'assemblage du livre s'est arrêté (code …), probablement faute de mémoire : essayez avec moins d'articles.", server messages are in French); the server itself is stopped only if the platform stops the whole container. If the user abandons the generation, the process is stopped at once.
+
+Throughout generation, a status window shows the current step as "Step n / total", with its label (in the interface language) and a progress bar. The steps are, in order: downloading each article (one step per article, with its title; up to 4 articles are downloaded from Wikipedia at the same time on Toolforge, 2 on the other hosts (section 13.2), and each step is shown when its download starts — the order of the articles in the book does not depend on it; if a download fails, the others are abandoned and the error of the first failing article, in book order, is shown) or preparing each imported document, computing page numbers (if numbering is on), composing the cover and the table of contents, assembling the pages in the book format, numbering the pages (if enabled), then finalizing the file. The total is known from the start. Each message is sent when its step begins: article recomposition runs in a separate thread (`asyncio.to_thread`) and assembly in a separate process, which leaves the server free to send progress and to answer other users during a generation. The window closes at the end, on success as well as on failure.
 
 On the server side, this progress is sent by the `POST /api/pdf/stream` endpoint, which returns an NDJSON stream (one JSON line per event): `{"type": "progress", "step", "total", "code", "title"?}` for each step, `{"type": "wait", "seconds"}` at the start of each pause imposed by Wikimedia (section 8; duration rounded up to the second, not counted as a step), then `{"type": "done", "size"}` immediately followed by the `size` bytes of the PDF, in binary and without encoding (sent in 256 KB chunks), or `{"type": "error", "detail"}` if generation fails along the way. The browser reads the JSON lines up to the `done` message, then gathers the PDF bytes; if it receives fewer than `size`, it shows "the connection to the server was interrupted before the end". An empty selection is refused before the stream starts (HTTP error 400). The `POST /api/pdf` endpoint, which returns the PDF file directly without progress, remains available for direct use of the API.
 
@@ -921,6 +923,8 @@ flowchart TB
         MODELS["models.py<br/>Project · Article · UploadedDocument · BookChapter"]
         MAIN --> EXPL
         MAIN --> BB
+        ISO["isolation.py<br/>assembly in a separate process"]
+        MAIN --> ISO
         MAIN --> PDFG
         MAIN --> WAPI
         EXPL --> WAPI
@@ -941,7 +945,7 @@ flowchart TB
     classDef app fill:#eaf3ff,stroke:#3366cc,color:#202122
     classDef wiki fill:#fef6e7,stroke:#ac6600,color:#202122
     classDef shared fill:#f8f9fa,stroke:#a2a9b1,color:#202122
-    class I18N,APP,FILE,MAIN,EXPL,BB,PDFG,WAPI app
+    class I18N,APP,FILE,MAIN,EXPL,BB,PDFG,WAPI,ISO app
     class MW,REST wiki
     class MODELS shared
 ```
@@ -980,11 +984,13 @@ sequenceDiagram
             M->>P: image_to_pdf (if image)
             M-->>U: progress prepare_document
         end
+        M->>P: fit_pdf_to_format on each article (separate thread), written to the temporary folder
+        Note over M,P: continued in a separate process (app/isolation.py), progress through a pipe
         M->>B: ordered_article_groups · book_slots · toc_slot_index
         M->>B: build_cover_html · build_toc_html · build_chapter_page_html · build_license_page_html · build_conclusion_page_html
         B-->>M: HTML of the generated pages
         M->>P: generate_pdf (WeasyPrint)
-        M->>P: fit_pdf_to_format on each added PDF (book format and orientation), written to the temporary folder
+        M->>P: fit_pdf_to_format on each generated page (book format and orientation), written to the temporary folder
         M->>P: BookAssembly (pikepdf): pages from the temporary files, bookmarks, table of contents links
         M->>P: stamp_page_numbers (if enabled) · save (final PDF in the temporary folder)
     end
@@ -1152,6 +1158,7 @@ Wikipedia2Book/
 │   ├── explorer.py
 │   ├── book_builder.py
 │   ├── pdf_generator.py
+│   ├── isolation.py
 │   │
 │   └── static/
 │       ├── index.html
@@ -1323,5 +1330,6 @@ Application version number (`app/version.py`, used by `app/main.py` and by the U
 | 1.8.0   | 2026-11-15 | GMoulard  | Other Wikimedia projects: pages from Wikibooks, Wikivoyage, Wikiversity, Wikiquote, Wiktionary and Wikinews accepted by URL or interwiki prefix (`b:`, `voy:`, `v:`, `q:`, `wikt:`, `n:`), included with the project's official PDF; search, introduction and exploration on the project's site; license page naming each project, 12 languages (sections 3.1, 13.2, 15). |
 | 1.8.1   | 2026-11-15 | GMoulard  | Outside Wikipedia, pages in project-specific namespaces (even numbers from 100) are accepted as articles, including Wikisource author pages (`Auteur:…`, `Author:…`, `Autor:…`); standard and talk namespaces are still rejected (section 3.1). |
 | 1.8.2   | 2026-11-15 | GMoulard  | Monitoring: `GET /api/health/details` gives live the container's memory and its limit (cgroup), the process memory, the free space of the temporary folder and the number of generations in progress, with no personal data, open CORS, not counted in the hits per hour (section 13.3). |
+| 1.8.3   | 2026-11-15 | GMoulard  | Large books: once the articles are downloaded, assembly (WeasyPrint renders, merging, bookmarks, numbering, writing) runs in a separate process that gives all its memory back to the system when it exits, instead of leaving several hundred MB with the server after each generation; if it runs out of memory, the generation fails with an explicit message (sections 11.1, 13.10). |
 
 End of document

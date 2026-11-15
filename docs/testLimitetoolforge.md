@@ -13,6 +13,32 @@ Réglages communs à toutes les mesures : `scripts/limit_check.py`, pages liées
 | 1.7.9   | non mesurée en dessous de 300 | 300        |
 | 1.7.10  | 100 articles     | 150                     |
 | 1.8.0   | 100 articles     | 150                     |
+| 1.8.2   | 100 articles     | 150                     |
+
+## Version 1.8.2 (15/11/2026, 21:52 UTC)
+
+Premier test suivi en direct par `GET /api/health/details` (relevé toutes les 10 s pendant le test ; mémoire du conteneur limitée à 2 Gio).
+
+| Articles | Pages | Taille du PDF | Wikipédia | Application | Transfert | Total   | Résultat |
+|----------|-------|---------------|-----------|-------------|-----------|---------|----------|
+| 100      | 1 637 | 182,2 Mo      | 119,4 s   | 11,4 s      | 27,1 s    | 158,0 s | réussi   |
+| 150      | —     | —             | —         | —           | —         | 105,3 s | échec    |
+
+Mémoire relevée (Mo) :
+
+| Heure (UTC) | Moment                                   | Conteneur | Processus (RSS) | Fichiers temporaires |
+|-------------|------------------------------------------|-----------|-----------------|----------------------|
+| 21:52:43    | avant le test                            | 572       | 589             | 0                    |
+| 21:54:39    | 100 articles, fin des téléchargements    | 668       | 596             | 85                   |
+| 21:54:55    | 100 articles, assemblage                 | 1 585     | 1 399           | 191                  |
+| 21:55:05    | 100 articles, pic                        | 1 664     | 1 399           | 270                  |
+| 21:55:26    | génération terminée                      | 1 382     | 1 396           | 0                    |
+| 21:57:01    | 150 articles, dernier relevé avant l'arrêt | 1 540   | 1 402           | 147                  |
+
+Deux constats :
+
+1. **Pendant les téléchargements, la mémoire du processus reste stable** (environ 590 Mo, la recomposition des articles ne la fait pas monter). Elle **bondit d'environ 800 Mo en moins de 16 s au début de la phase *Application*** (pages générées par WeasyPrint, fusion, numérotation).
+2. **Cette mémoire n'est pas rendue au système après la génération** : le processus reste à 1,4 Go une fois le livre envoyé, sans cache de l'application qui l'explique ; c'est vraisemblablement l'allocateur (glibc `malloc` : fragmentation, une réserve par fil d'exécution de `asyncio.to_thread`) et les caches des bibliothèques en C (WeasyPrint, Pango, fontconfig, qpdf). Pendant le palier de 150 articles, le processus reste à 1,4 Go pendant les téléchargements : cette mémoire est réutilisée, elle ne s'ajoute pas. Le conteneur est arrêté pendant ce palier (HTTP 503 à 21:57:10 UTC, redémarrage à 21:57:12 UTC). Rien ne permet encore de dire si 150 articles échouent aussi juste après un redémarrage : la part de la mémoire gardée entre deux générations dans la limite reste à mesurer.
 
 ## Version 1.8.0 (15/11/2026, 21:12 UTC)
 
