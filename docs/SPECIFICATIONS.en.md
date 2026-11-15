@@ -555,7 +555,7 @@ For a Wikisource text (section 3.1), the same calls are made on `https://<langua
 Common rules:
 
 * `User-Agent` header following the Wikimedia Foundation User-Agent policy (tool name and version, contact, library and its version): `Wikipedia2Book/<version> (https://wikipedia2book.toolforge.org/; https://github.com/gmoulard/wikipedia2book) httpx/<version>`, the version being the one in `app/version.py`.
-* Compliance with the Wikimedia robot policy (*Robot policy*) for the official PDFs, outside Toolforge: the PDF service falls under the REST API rules (unauthenticated, at most 3 simultaneous requests and fewer than 5 per second), met with **at most 2 simultaneous downloads for the whole server**, whatever the number of books generated at the same time, and **at most 25 Mbps** of download measured over sliding 10 s windows (31.25 MB per window): the PDF is read in chunks and reading waits when the window is full. The count applies per server process (a single uvicorn instance per platform): each deployment (Railway, Northflank) has its own cap. **On Toolforge, these limits are lifted**: the policy exempts tools hosted on Wikimedia Cloud Services; up to 4 simultaneous downloads per book, with no speed cap. Toolforge is recognised by the `WIKIPEDIA2BOOK_PLATFORM=toolforge` environment variable, which only the `Procfile` sets.
+* Compliance with the Wikimedia robot policy (*Robot policy*) for the official PDFs, outside Toolforge: the PDF service falls under the REST API rules (unauthenticated, at most 3 simultaneous requests and fewer than 5 per second), met with **at most 2 simultaneous downloads for the whole server**, whatever the number of books generated at the same time, and **at most 25 Mbps** of download measured over sliding 10 s windows (31.25 MB per window): the PDF is read in chunks and reading waits when the window is full. The count applies per server process (a single uvicorn instance per platform): each deployment outside Toolforge (Northflank) has its own cap. **On Toolforge, these limits are lifted**: the policy exempts tools hosted on Wikimedia Cloud Services; up to 4 simultaneous downloads per book, with no speed cap. Toolforge is recognised by the `WIKIPEDIA2BOOK_PLATFORM=toolforge` environment variable, which only the `Procfile` sets.
 * Timeouts: 20 seconds for the MediaWiki API, 120 seconds for downloading a PDF.
 * Errors: a network failure, an HTTP error response, a non-JSON response or an `error` field from the MediaWiki API produce an explicit error, returned by the application's API with code 502 (404 for a page not found, 422 for invalid input). A REST response that does not start with `%PDF-` is refused; during generation, any error on an article cancels the whole book (section 8).
 * No data is cached or kept: each operation makes its calls again.
@@ -645,20 +645,19 @@ The server stores no book or PDF on disk; all the state is kept in the browser a
 
 ### 13.5 Environments and branches
 
-The application is deployed on three platforms, each linked to a branch of the GitHub repository `gmoulard/wikipedia2book`:
+The application is deployed on two platforms, each linked to a branch of the GitHub repository `gmoulard/wikipedia2book`:
 
 | Platform | URL | Branch followed | Image build | Trigger |
 | --- | --- | --- | --- | --- |
 | Toolforge (Wikimedia Cloud) | https://wikipedia2book.toolforge.org | `production-toolforge` | Toolforge buildpacks (`Procfile`, `Aptfile`, `.python-version`) | The repository's GitHub Actions workflow (section 13.6) |
-| Railway | https://wikipedia2book-production.up.railway.app | `main` | `Dockerfile` | Railway's GitHub integration, set in its interface |
 | Northflank | https://prod--wikipedia2book--wkvpbnfj6h4v.code.run | `main` | `Dockerfile` | Northflank's GitHub integration, set in its interface |
 
-Toolforge is the reference instance, offered to the Wikipedia community. Railway and Northflank receive every change pushed to `main` and serve as pre-production.
+Toolforge is the reference instance, offered to the Wikipedia community. Northflank receives every change pushed to `main` and serves as pre-production.
 
 Release cycle:
 
-1. Develop and push to `main` (or through a pull request to `main`): tests run on GitHub Actions, Railway and Northflank redeploy, Toolforge is not touched.
-2. Check the new version on Railway or Northflank.
+1. Develop and push to `main` (or through a pull request to `main`): tests run on GitHub Actions, Northflank redeploys, Toolforge is not touched.
+2. Check the new version on Northflank.
 3. Publish to Toolforge by moving the production branch forward:
 
 ```bash
@@ -676,7 +675,7 @@ git push origin v1.6.6
 
 Tags make it possible to get the code of a version (`git checkout v1.4.0`), compare two versions (`git diff v1.5.2 v1.6.6`) or republish an earlier version on Toolforge (`git push --force origin v1.6.5^{}:production-toolforge`). Pushing a tag triggers no deployment and no workflow: only branch pushes do. Versions 0.16.0, 0.17.0 and 1.6.0 of the history (section 19) were never written in `app/main.py` and therefore have no tag; conversely, `v0.18.0` exists in the code (the high-level API, described in the history under 0.16.0 and 0.17.0).
 
-The branch choice for Railway and Northflank is not part of the repository: it is changed in their interfaces (Railway: service, Settings, Source, Branch; Northflank: build service, Build settings, Branch).
+The branch choice for Northflank is not part of the repository: it is changed in its interface (build service, Build settings, Branch).
 
 ### 13.6 Continuous integration (GitHub Actions)
 
@@ -783,7 +782,7 @@ python scripts/toolviews_stats.py [file.csv]
 
 `.github/workflows/toolviews-stats.yml` ("Toolviews stats") runs every day at 07:17 UTC, and on manual start (`workflow_dispatch`). The time is deliberately off the round minutes, where GitHub concentrates scheduled runs and delays them most. It is not guaranteed: GitHub can delay a scheduled run by several hours, or skip it, which the script catches up on the next run since it fills in every missing day. It runs the script on the `docs/toolviews.csv` of `main`, regenerates `docs/stats.md` with `scripts/toolviews_chart.py`, then commits both files to `main` if they changed, as `github-actions[bot]` (after a `git pull --rebase` so as not to fail if `main` moved during the run). The files can be viewed at https://github.com/gmoulard/wikipedia2book/blob/main/docs/toolviews.csv and https://github.com/gmoulard/wikipedia2book/blob/main/docs/stats.md (GitHub also draws the Mermaid charts there).
 
-Accepted consequence: this daily commit to `main` makes Railway and Northflank redeploy once a day. It does not rerun the other GitHub Actions workflows (a push made with the `GITHUB_TOKEN` token triggers none): the GitHub Pages site is rebuilt by the `workflow_run` trigger. Toolforge is not affected (`production-toolforge` branch).
+Accepted consequence: this daily commit to `main` makes Northflank redeploy once a day. It does not rerun the other GitHub Actions workflows (a push made with the `GITHUB_TOKEN` token triggers none): the GitHub Pages site is rebuilt by the `workflow_run` trigger. Toolforge is not affected (`production-toolforge` branch).
 
 #### Charts on GitHub Pages
 
@@ -1025,7 +1024,7 @@ Test to run by hand to find the largest book a deployment can generate. Unlike t
   | 150      | —     | —        | —         | —           | —        | 181 s   | failed  |
   | 200      | —     | —        | —         | —           | —        | 266 s   | failed  |
 
-  **Limit found in 1.7.5: about 100 articles, that is 1,600 pages and 180 MB of PDF.** At 150 and 200 articles, the stream stops during generation: the server restarts (start time of `GET /api/stats/hourly` reset to the time of the failure), most likely because it runs out of memory, since the book is assembled entirely in memory. The limit depends mostly on the number of pages and the weight of the articles' images, not on the number of articles itself. Railway and Northflank were not tested. Since 1.7.7, the book is assembled on temporary disk (section 11.1).
+  **Limit found in 1.7.5: about 100 articles, that is 1,600 pages and 180 MB of PDF.** At 150 and 200 articles, the stream stops during generation: the server restarts (start time of `GET /api/stats/hourly` reset to the time of the failure), most likely because it runs out of memory, since the book is assembled entirely in memory. The limit depends mostly on the number of pages and the weight of the articles' images, not on the number of articles itself. Northflank was not tested. Since 1.7.7, the book is assembled on temporary disk (section 11.1).
 
   **Results on Toolforge, version 1.7.7** (2026-11-15, same settings; the Toolforge network was slow that day, hence long transfers, unrelated to the application):
 

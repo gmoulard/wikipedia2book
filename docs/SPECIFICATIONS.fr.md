@@ -556,7 +556,7 @@ Pour un texte de Wikisource (section 3.1), les mêmes appels sont faits sur `htt
 Règles communes :
 
 * En-tête `User-Agent` conforme à la politique User-Agent de la Wikimedia Foundation (nom et version de l'outil, moyen de contact, bibliothèque et sa version) : `Wikipedia2Book/<version> (https://wikipedia2book.toolforge.org/; https://github.com/gmoulard/wikipedia2book) httpx/<version>`, la version étant celle de `app/version.py`.
-* Respect de la politique robots de Wikimédia (*Robot policy*) pour les PDF officiels, hors Toolforge : le service PDF relève des règles de l'API REST (sans authentification, au plus 3 requêtes simultanées et moins de 5 par seconde), respectées avec **au plus 2 téléchargements simultanés pour tout le serveur**, quel que soit le nombre de livres générés en même temps, et **au plus 25 Mbit/s** de téléchargement mesurés sur 10 s glissantes (31,25 Mo par fenêtre) : le PDF est lu par morceaux et la lecture attend quand la fenêtre est pleine. Le compteur vaut pour un processus serveur (une seule instance uvicorn par plateforme) : chaque déploiement (Railway, Northflank) a son propre plafond. **Sur Toolforge, ces limites sont levées** : la politique en exempte les outils hébergés sur Wikimedia Cloud Services ; jusqu'à 4 téléchargements simultanés par livre, sans plafond de débit. Toolforge est reconnu par la variable d'environnement `WIKIPEDIA2BOOK_PLATFORM=toolforge`, que seul le `Procfile` positionne.
+* Respect de la politique robots de Wikimédia (*Robot policy*) pour les PDF officiels, hors Toolforge : le service PDF relève des règles de l'API REST (sans authentification, au plus 3 requêtes simultanées et moins de 5 par seconde), respectées avec **au plus 2 téléchargements simultanés pour tout le serveur**, quel que soit le nombre de livres générés en même temps, et **au plus 25 Mbit/s** de téléchargement mesurés sur 10 s glissantes (31,25 Mo par fenêtre) : le PDF est lu par morceaux et la lecture attend quand la fenêtre est pleine. Le compteur vaut pour un processus serveur (une seule instance uvicorn par plateforme) : chaque déploiement hors Toolforge (Northflank) a son propre plafond. **Sur Toolforge, ces limites sont levées** : la politique en exempte les outils hébergés sur Wikimedia Cloud Services ; jusqu'à 4 téléchargements simultanés par livre, sans plafond de débit. Toolforge est reconnu par la variable d'environnement `WIKIPEDIA2BOOK_PLATFORM=toolforge`, que seul le `Procfile` positionne.
 * Délais d'attente : 20 secondes pour l'API MediaWiki, 120 secondes pour le téléchargement d'un PDF.
 * Erreurs : un échec réseau, une réponse HTTP en erreur, une réponse non JSON ou un champ `error` de l'API MediaWiki produisent une erreur explicite, renvoyée par l'API de l'application avec le code 502 (404 pour une page introuvable, 422 pour une entrée invalide). Une réponse REST qui ne commence pas par `%PDF-` est refusée; pendant la génération, la moindre erreur sur un article annule tout le livre (section 8).
 * Aucune donnée n'est mise en cache ni conservée : chaque opération refait ses appels.
@@ -646,20 +646,19 @@ Le serveur ne stocke aucun livre ni PDF sur disque; tout l'état est conservé d
 
 ### 13.5 Environnements et branches
 
-L'application est déployée sur trois plateformes, chacune reliée à une branche du dépôt GitHub `gmoulard/wikipedia2book` :
+L'application est déployée sur deux plateformes, chacune reliée à une branche du dépôt GitHub `gmoulard/wikipedia2book` :
 
 | Plateforme | URL | Branche suivie | Construction de l'image | Déclenchement |
 | --- | --- | --- | --- | --- |
 | Toolforge (Wikimedia Cloud) | https://wikipedia2book.toolforge.org | `production-toolforge` | Buildpacks Toolforge (`Procfile`, `Aptfile`, `.python-version`) | Workflow GitHub Actions du dépôt (section 13.6) |
-| Railway | https://wikipedia2book-production.up.railway.app | `main` | `Dockerfile` | Intégration GitHub de Railway, réglée dans son interface |
 | Northflank | https://prod--wikipedia2book--wkvpbnfj6h4v.code.run | `main` | `Dockerfile` | Intégration GitHub de Northflank, réglée dans son interface |
 
-Toolforge est l'instance de référence, proposée à la communauté Wikipédia. Railway et Northflank reçoivent chaque changement poussé sur `main` et servent de préproduction.
+Toolforge est l'instance de référence, proposée à la communauté Wikipédia. Northflank reçoit chaque changement poussé sur `main` et sert de préproduction.
 
 Cycle de publication :
 
-1. Développer et pousser sur `main` (ou par pull request vers `main`) : les tests tournent sur GitHub Actions, Railway et Northflank se redéploient, Toolforge n'est pas touché.
-2. Vérifier la nouvelle version sur Railway ou Northflank.
+1. Développer et pousser sur `main` (ou par pull request vers `main`) : les tests tournent sur GitHub Actions, Northflank se redéploie, Toolforge n'est pas touché.
+2. Vérifier la nouvelle version sur Northflank.
 3. Publier sur Toolforge en avançant la branche de production :
 
 ```bash
@@ -677,7 +676,7 @@ git push origin v1.6.6
 
 Les tags servent à retrouver le code d'une version (`git checkout v1.4.0`), à comparer deux versions (`git diff v1.5.2 v1.6.6`) ou à republier une version antérieure sur Toolforge (`git push --force origin v1.6.5^{}:production-toolforge`). Pousser un tag ne déclenche aucun déploiement ni aucun workflow : seuls les pushs de branches le font. Les versions 0.16.0, 0.17.0 et 1.6.0 de l'historique (section 19) n'ont jamais été écrites dans `app/main.py` et n'ont donc pas de tag; à l'inverse, `v0.18.0` existe dans le code (l'API de haut niveau, décrite dans l'historique sous 0.16.0 et 0.17.0).
 
-Le choix de branche de Railway et Northflank ne fait pas partie du dépôt : il se modifie dans leurs interfaces (Railway : service, Settings, Source, Branch; Northflank : service de build, Build settings, Branch).
+Le choix de branche de Northflank ne fait pas partie du dépôt : il se modifie dans son interface (service de build, Build settings, Branch).
 
 ### 13.6 Intégration continue (GitHub Actions)
 
@@ -784,7 +783,7 @@ python scripts/toolviews_stats.py [fichier.csv]
 
 `.github/workflows/toolviews-stats.yml` (« Toolviews stats ») tourne chaque jour à 07:17 UTC, et sur lancement manuel (`workflow_dispatch`). L'heure est volontairement hors des minutes rondes, où GitHub concentre les exécutions programmées et les retarde le plus. Elle n'est pas garantie : GitHub peut retarder une exécution programmée de plusieurs heures, voire la sauter, ce que le script rattrape au passage suivant puisqu'il complète tous les jours manquants. Il exécute le script sur le `docs/toolviews.csv` de `main`, régénère `docs/stats.md` avec `scripts/toolviews_chart.py`, puis committe les deux fichiers sur `main` s'ils ont changé, au nom de `github-actions[bot]` (après un `git pull --rebase` pour ne pas échouer si `main` a bougé pendant l'exécution). Les fichiers sont consultables sur https://github.com/gmoulard/wikipedia2book/blob/main/docs/toolviews.csv et https://github.com/gmoulard/wikipedia2book/blob/main/docs/stats.md (GitHub y dessine aussi les graphiques Mermaid).
 
-Conséquence acceptée : ce commit quotidien sur `main` fait redéployer Railway et Northflank une fois par jour. Il ne relance pas les autres workflows GitHub Actions (un push fait avec le jeton `GITHUB_TOKEN` n'en déclenche aucun) : le site GitHub Pages est reconstruit par le déclencheur `workflow_run`. Toolforge n'est pas concerné (branche `production-toolforge`).
+Conséquence acceptée : ce commit quotidien sur `main` fait redéployer Northflank une fois par jour. Il ne relance pas les autres workflows GitHub Actions (un push fait avec le jeton `GITHUB_TOKEN` n'en déclenche aucun) : le site GitHub Pages est reconstruit par le déclencheur `workflow_run`. Toolforge n'est pas concerné (branche `production-toolforge`).
 
 #### Graphiques sur GitHub Pages
 
@@ -1026,7 +1025,7 @@ Test à jouer à la main pour connaître la taille maximale d'un livre qu'un dé
   | 150      | —     | —             | —         | —           | —         | 181 s  | échec    |
   | 200      | —     | —             | —         | —           | —         | 266 s  | échec    |
 
-  **Limite constatée en 1.7.5 : environ 100 articles, soit 1 600 pages et 180 Mo de PDF.** À 150 et 200 articles, le flux s'interrompt pendant la génération : le serveur redémarre (heure de démarrage de `GET /api/stats/hourly` remise à l'heure de l'échec), très probablement par manque de mémoire, le livre étant assemblé entièrement en mémoire. La limite dépend surtout du nombre de pages et du poids des images des articles, pas du nombre d'articles lui-même. Railway et Northflank n'ont pas été testés. Depuis la 1.7.7, le livre est assemblé sur disque temporaire (section 11.1).
+  **Limite constatée en 1.7.5 : environ 100 articles, soit 1 600 pages et 180 Mo de PDF.** À 150 et 200 articles, le flux s'interrompt pendant la génération : le serveur redémarre (heure de démarrage de `GET /api/stats/hourly` remise à l'heure de l'échec), très probablement par manque de mémoire, le livre étant assemblé entièrement en mémoire. La limite dépend surtout du nombre de pages et du poids des images des articles, pas du nombre d'articles lui-même. Northflank n'a pas été testé. Depuis la 1.7.7, le livre est assemblé sur disque temporaire (section 11.1).
 
   **Résultats sur Toolforge, version 1.7.7** (15/11/2026, mêmes réglages; le réseau de Toolforge était lent ce jour-là, d'où des transferts longs, sans lien avec l'application) :
 

@@ -72,7 +72,7 @@ As of 15 November 2026.
 
 | | Wikipedia2Book | mediawiki2latex |
 |---|---|---|
-| Online service | `wikipedia2book.toolforge.org` (Toolforge), also Railway and Northflank | `mediawiki2latex.wmcloud.org` (Wikimedia Cloud VPS) |
+| Online service | `wikipedia2book.toolforge.org` (Toolforge), also Northflank | `mediawiki2latex.wmcloud.org` (Wikimedia Cloud VPS) |
 | Interface | 3-step application (Sources, Organisation, Editing), 12 languages including Arabic and Persian written right to left, light and dark theme, smartphone | Single form in English: URL, output format, template expansion, paper, tables, vector graphics |
 | Generation time | The time needed to download the Wikipedia PDFs and assemble them, with a step-by-step progress window | About one minute for one article (LaTeX compiled several times), several hours for a large book |
 | Service limits | At most 200 articles per book page; no time limit | 4 hours (about 2,000 pages) and 4 simultaneous conversions; a "large books" service at 12 hours (about 8,000 pages); "Not enough resources" when everything is busy |

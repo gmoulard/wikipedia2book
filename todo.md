@@ -25,7 +25,7 @@ Une action réalisée est retirée de cette liste (pas cochée) : l'historique G
 
 ## 4. Améliorations possibles
 
-- [ ] **Limite par déploiement** : le plafond de 2 téléchargements vaut pour un processus. Railway et Northflank ont donc chacun le leur ; Toolforge n'en a pas.
+- [ ] **Limite par déploiement** : le plafond de 2 téléchargements vaut pour un processus. Northflank a donc le sien ; Toolforge n'en a pas.
 - [ ] **Mermaid 11.17.2** : un graphique dessiné après un `await` reste en texte, sans erreur. Contourné dans `docs/_includes/head-custom.html` (rendu d'abord, mise à jour ensuite), mais la cause n'est pas comprise.
 - [ ] **GitHub Actions** : avertissement « Node.js 20 is deprecated » sur `actions/checkout@v4`, `actions/setup-python@v5`, `actions/upload-artifact@v4`, `actions/configure-pages@v5`. Passer aux versions majeures suivantes.
 - [ ] **GitHub Pages** publie aussi les fichiers bruts (`SPECIFICATIONS.*.md`, `stats.md`, `index.md`, `toolviews.csv`) à côté des pages HTML. C'est sans gravité ; les exclure si on le souhaite.

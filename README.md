@@ -63,7 +63,7 @@ wikipedia2book/
 │   └── limit_check.py           # Limit test: largest book a deployment can generate (section 13.12)
 ├── tests/                       # unittest suite (no network, WeasyPrint stubbed when missing)
 ├── .github/workflows/           # Toolforge deployment, Toolviews stats, GitHub Pages, tag check, performance check
-├── Dockerfile                   # Image used by Railway and Northflank
+├── Dockerfile                   # Image used by Northflank
 ├── Procfile, Aptfile, .python-version, toolforge-fonts.conf  # Toolforge buildpacks
 ├── toolinfo.json                # Toolhub metadata
 ├── CITATION.cff                 # Citation metadata
@@ -114,7 +114,6 @@ The application is then reachable at `http://localhost:8000`.
 
 ## dev
 - [Northflank](https://prod--wikipedia2book--wkvpbnfj6h4v.code.run) 
-- [Railway](https://wikipedia2book-production.up.railway.app/)
 
 ## Technology stack
 

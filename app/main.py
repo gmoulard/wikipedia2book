@@ -156,11 +156,9 @@ def version() -> dict[str, str]:
         return {"version": app.version, "commit": full, "short": short, "date": date, "author": author}
     except Exception:
         import os
-        full = next(
-            (value for value in (os.environ.get("GIT_COMMIT"), os.environ.get("RAILWAY_GIT_COMMIT_SHA"))
-             if value and value != "unknown"),
-            "",
-        )
+        full = os.environ.get("GIT_COMMIT", "")
+        if full == "unknown":
+            full = ""
         return {
             "version": app.version,
             "commit": full,

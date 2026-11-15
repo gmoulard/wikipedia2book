@@ -39,7 +39,7 @@ USER_AGENT = (
     f"Wikipedia2Book/{VERSION} (https://wikipedia2book.toolforge.org/; https://github.com/gmoulard/wikipedia2book) "
     f"httpx/{httpx.__version__}"
 )
-# NE PAS lever les limites ailleurs que sur Toolforge : seuls les outils Toolforge sont exemptés par la politique robots de Wikimédia ; Railway et Northflank y restent soumis.
+# NE PAS lever les limites ailleurs que sur Toolforge : seuls les outils Toolforge sont exemptés par la politique robots de Wikimédia ; Northflank y reste soumis.
 ON_TOOLFORGE = os.environ.get("WIKIPEDIA2BOOK_PLATFORM") == "toolforge"
 MEDIA_CONCURRENCY = 2
 MEDIA_WINDOW_S = 10
