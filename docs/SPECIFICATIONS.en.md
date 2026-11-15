@@ -1096,6 +1096,7 @@ Wikipedia2Book/
 ├── requirements.txt
 ├── .gitignore
 ├── CLAUDE.md
+├── .claude/skills/release/SKILL.md, .claude/skills/deploy-toolforge/SKILL.md   (procedures for Claude Code: publishing a version, Toolforge deployment)
 ├── CODE_OF_CONDUCT.md
 ├── LICENSE
 ├── README.md

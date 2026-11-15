@@ -66,6 +66,7 @@ wikipedia2book/
 ├── CITATION.cff                 # Citation metadata
 ├── codemeta.json                # CodeMeta software metadata
 ├── requirements.txt             # Python dependencies
+├── .claude/skills/              # Claude Code procedures: release, deploy-toolforge
 ├── docs/                        # Documentation site (GitHub Pages source)
 │   ├── SPECIFICATIONS.fr.md     # Reference behaviour (French original)
 │   ├── SPECIFICATIONS.en.md     # English translation of the specifications
