@@ -13,24 +13,11 @@ Wikipedia2Book crée directement un livre PDF imprimable à partir d'articles Wi
 
 ## Style de code — « vibe coding »
 
-Personne ne lit ce code. En conséquence :
-
-- Pas de commentaires (deux exceptions, ci-dessous), pas de docstrings, pas de code mort ou « au cas où » (paramètre toujours appelé avec la même valeur, branche jamais atteinte, champ de modèle jamais lu/écrit). Supprimer plutôt que garder.
-- Exception : les commentaires d'une ligne commençant par `NE PAS` (`# NE PAS …`, `// NE PAS …`, `/* NE PAS … */`), placés juste au-dessus d'un piège (code qui a l'air simplifiable mais dont la « simplification » réintroduit un bug connu). Ils sont là pour l'agent qui modifie cette ligne : ne jamais les supprimer au nom de la règle « pas de commentaires », les mettre à jour si le piège change, et en ajouter un quand un nouveau piège est découvert (avec, si besoin, le détail ici). Jamais de commentaire qui décrit ce que fait le code. Pour les retrouver : `grep -rn "NE PAS" app/`.
-- Seconde exception : l'en-tête de licence AGPL-3.0 (« This file is part of Wikipedia2Book … ») en tête de chaque fichier de code (`.py`, `.js`, `.css`, `index.html`, `.sh`, `Dockerfile`, workflows). Ne jamais le supprimer, et l'ajouter à tout nouveau fichier de code (après le shebang / `<!doctype html>` s'il y en a un). `CITATION.cff`/`codemeta.json` décrivent la dernière version archivée sur Software Heritage, pas la version courante : ne les mettre à jour qu'avec un nouveau SWHID fourni par l'utilisateur.
-- Avant de supprimer un symbole (fonction, champ Pydantic, id HTML, classe CSS), `grep` tout le dépôt (`app/`, `app/static/`) pour confirmer qu'il n'est référencé nulle part — y compris côté JS/HTML pour du code backend et inversement.
-- `styles.css` a déjà contenu un conflit de fusion Git (`<<<<<<< HEAD` / `=======` / `>>>>>>> ...`) resté commité tel quel pendant plusieurs changements, invisible jusqu'à ce qu'il casse le contraste d'un bouton. Avant toute modification notable de `styles.css`/`app.js`/`index.html`, `grep -n "^<<<<<<<\|^=======$\|^>>>>>>>"` sur le fichier pour s'assurer qu'il n'y a pas de marqueur de conflit oublié.
-- Ne jamais utiliser `var(--ink)` (ou toute variable liée au thème clair/sombre) comme `background` d'un élément dont la couleur de texte est fixée en dur (ex. `color: #fff`) : `--ink` est pensé comme couleur de *texte*, qui s'inverse entre thème clair et sombre — en arrière-plan avec un texte fixe, ça rend l'élément illisible dans un des deux thèmes. `.button-dark` et `.toast` utilisent volontairement une couleur sombre fixe (`#1d2927`) pour cette raison, indépendante du thème système.
-- La robustesse fonctionnelle reste non négociable malgré l'absence de lecture humaine : gestion des erreurs réseau Wikipédia, validation des entrées, pas d'échec silencieux. « Personne ne lit le code » ne veut pas dire « la fiabilité n'importe pas ».
+Personne ne lit ce code. Avant toute création ou modification de code, appliquer le skill `code-style` (`.claude/skills/code-style/SKILL.md`) : pas de commentaires sauf `NE PAS` et l'en-tête de licence, pas de code mort, recherche avant suppression, marqueurs de conflit, robustesse, pièges d'édition. `CITATION.cff`/`codemeta.json` décrivent la dernière version archivée sur Software Heritage, pas la version courante : ne les mettre à jour qu'avec un nouveau SWHID fourni par l'utilisateur.
 
 ## Documentation à garder synchronisée
 
-Toute la documentation publiée est dans `docs/`, source du site GitHub Pages (`docs/index.md` y est recopié depuis `README.md` à chaque construction, liens adaptés : ne pas le committer). `README.md`, `CLAUDE.md`, `LICENSE`, `CODE_OF_CONDUCT.md`, `CITATION.cff` et `codemeta.json` restent à la racine, où GitHub et Software Heritage les cherchent.
-
-- `docs/SPECIFICATIONS.fr.md` : reflète le comportement réel, pas un objectif futur. Les évolutions non implémentées vont en section 18, pas dans le corps du document.
-- Section 13.10 des deux spécifications : schémas Mermaid des modules et de la génération du PDF, à mettre à jour quand un module, un endpoint ou une étape de génération change. Sur GitHub Pages, ils sont dessinés par `docs/_includes/head-custom.html` (Mermaid chargé depuis jsDelivr, version épinglée).
-- `docs/SPECIFICATIONS.en.md` : traduction anglaise de `docs/SPECIFICATIONS.fr.md`, même structure (sections, sous-sections, lignes d'historique). Toute modification de `docs/SPECIFICATIONS.fr.md` est reportée dans la version anglaise dans le même changement; en cas d'écart, le français fait référence. Libellés d'interface cités tels qu'ils apparaissent dans l'interface anglaise (`i18n.js`, bloc `en`).
-- `README.md` : doit rester cohérent avec `docs/SPECIFICATIONS.fr.md` (pas de doublon contradictoire, même terminologie).
+Toute la documentation publiée est dans `docs/`, source du site GitHub Pages (`docs/index.md` y est recopié depuis `README.md` à chaque construction, liens adaptés : ne pas le committer). `README.md`, `CLAUDE.md`, `LICENSE`, `CODE_OF_CONDUCT.md`, `CITATION.cff` et `codemeta.json` restent à la racine, où GitHub et Software Heritage les cherchent. Procédure : skill `spec-sync` (`.claude/skills/spec-sync/SKILL.md`).
 
 ## Repères d'architecture
 
@@ -61,6 +48,23 @@ Le numéro de version de l'application est dans `app/main.py` (`FastAPI(version=
 
 Valeurs propres à ce dépôt, lues par les skills génériques de `.claude/skills/` :
 
+- **`code-style`** :
+  - en-tête de licence AGPL-3.0 (« This file is part of Wikipedia2Book … ») sur `.py`, `.js`, `.css`, `index.html`, `.sh`, `Dockerfile` et workflows ;
+  - code : `app/` (dont `app/static/`), `scripts/`, `tests/` ; pièges : `grep -rn "NE PAS" app/ scripts/ docs/_includes/` ;
+  - fichiers à vérifier pour les marqueurs de conflit : `app/static/styles.css` (un conflit y est déjà resté commité), `app/static/app.js`, `app/static/index.html` ;
+  - thèmes : `--ink` est la couleur de texte qui s'inverse ; `.button-dark` et `.toast` ont volontairement un fond fixe `#1d2927` ;
+  - encodage mixte : `app/static/app.js` mélange accents en `\uXXXX` et en UTF-8 brut ;
+  - robustesse : erreurs réseau Wikipédia (`MediaWikiClient`), validation Pydantic, pas d'échec silencieux.
+- **`spec-sync`** :
+  - référence : `docs/SPECIFICATIONS.fr.md` (français, fait foi) ; traduction : `docs/SPECIFICATIONS.en.md`, libellés cités tels que dans le bloc `en` de `app/static/i18n.js` ;
+  - évolutions non implémentées : section 18 ; schémas Mermaid : section 13.10 (modules et génération du PDF), dessinés sur GitHub Pages par `docs/_includes/head-custom.html` (Mermaid épinglé, jsDelivr) ; arborescence : section 17 et README ; historique : section 19 ; exemples d'API : section 13.3 ;
+  - README cohérent avec la spec française ; `docs/index.md` généré, jamais committé.
+- **`debug-frontend`** :
+  - production : `https://wikipedia2book-production.up.railway.app/` (Railway, suit `main`) ; aussi `https://wikipedia2book.toolforge.org/` (suit `production-toolforge`) ;
+  - statique : `app/static/` publié sous `/static`, `index.html` servi à `/` ; dossier temporaire = `index.html` à la racine + copie de `app/static/*` dans `static/` ;
+  - sélecteurs : langue `#languageSelect`, champ de sources `#articleQuery` (textarea), boutons PDF `#topExportButton`/`#exportButton`, conteneur racine `.app-shell` ;
+  - Playwright : dans `.venv` sur le poste Windows (`playwright install chromium` déjà fait) ; préinstallé (`require("playwright")`) en session cloud ;
+  - page de statistiques : `docs/stats.md` + `docs/_includes/head-custom.html`, l'endpoint `https://wikipedia2book.toolforge.org/api/stats/hourly` à simuler avec `page.route`.
 - **`release`** :
   - fichier de version : `app/main.py` (`FastAPI(title="Wikipedia2Book", version="x.y.z")`) ;
   - application déployée (version à demander) : `app/`, `requirements.txt`, `Dockerfile`, `Procfile`, `Aptfile`, `.python-version`, `toolforge-fonts.conf` ; pas de version pour `docs/`, `README.md`, `CLAUDE.md`, `scripts/`, `.github/workflows/`, `tests/`, `.claude/` ;
@@ -108,20 +112,6 @@ Reste un angle mort : le rendu réel par WeasyPrint et l'assemblage avec de vrai
 - `import app.main` échoue nativement sur cette machine Windows : WeasyPrint a besoin des libs GTK/Pango/Cairo (`libgobject-2.0-0`, etc.) que seul le conteneur Docker installe (via `apt-get`, voir `Dockerfile`). Ce n'est pas un bug du code — ne pas essayer de « corriger » ça côté app. Pour vérifier le code qui ne dépend pas de `pdf_generator`/WeasyPrint (`models`, `book_builder`, `wikipedia_api`, `explorer`), importer ces modules directement, ils fonctionnent dans ce `.venv`.
 - Pour tester la génération PDF de bout en bout (WeasyPrint inclus), il faut lancer l'app dans le conteneur Docker (`sh scripts/docker-build.sh && docker run --rm -p 8000:8000 wikipedia2book`) et dérouler le flux Sources → Organisation → Édition → export PDF.
 
-### Déboguer un bug frontend (JS/HTML) sans pouvoir lancer le backend localement
+### Déboguer un bug frontend
 
-Playwright + Chromium headless sont installés dans `.venv` (`pip install playwright && playwright install chromium`, déjà fait une fois sur cette machine). Pour reproduire un bug UI, piloter directement :
-
-- **Le site en production** (`https://wikipedia2book-production.up.railway.app/`) si la correction n'est pas encore locale, ou pour vérifier si un bug reporté vient d'une version déjà corrigée en local mais pas encore déployée (comparer `app/static/app.js` local avec `curl .../static/app.js` déployé).
-- **Une version locale non déployée** : `app/static/` ne peut pas être servi tel quel avec un simple `http.server` (les pages référencent `/static/app.js`, un chemin qui n'existe que parce que FastAPI monte `app/static/` sous `/static` en plus de servir `index.html` à `/`). Reproduire cette structure dans un dossier temporaire (`index.html` à la racine + copie de `app/static/*` dans un sous-dossier `static/`) avant de servir avec `python -m http.server`, sinon `app.js` renvoie 404 et toutes les erreurs observées (`state is not defined`, etc.) sont un artefact du test, pas un vrai bug.
-- Capturer `page.on("console", ...)` et `page.on("pageerror", ...)` systématiquement : un vrai crash JS apparaît là, pas dans le texte visible de la page.
-
-C'est exactement ce qui a permis de confirmer que le bouton « Ajouter » ne causait aucune erreur JS, et que le vrai problème était l'attribut HTML `required` sur un champ resté vide (mode par défaut sans valeur pré-remplie) — aucune boucle de supposition n'aurait été aussi rapide qu'une reproduction réelle.
-
-Pour mesurer un problème de layout CSS (ex. « on ne voit que 26 caractères »), ne pas deviner la règle CSS en cause : `page.evaluate` pour lire `clientWidth`/`scrollWidth` des conteneurs en cascade (de `.app-shell` jusqu'à l'élément) repère immédiatement lequel absorbe l'espace en trop — c'est comme ça qu'un `justify-content: space-between` orphelin (sans second enfant flex, laissé par une suppression de code mort antérieure) a été trouvé.
-
-Pour tester un `<input type="file">`, `page.set_input_files("#selector", [chemin, ...])` fonctionne directement sans dialogue natif à gérer.
-
-Pour tester le changement de langue : `page.select_option("#languageSelect", "de")` puis vérifier `page.get_attribute("html", "lang")` et le texte d'éléments connus — pas besoin de recharger la page. Limite connue, pas corrigée : les chaînes avec un compteur (`org.docAddedToast`, etc.) n'ont qu'une forme singulier/pluriel par langue (comme en français), donc un compte de 1 peut sonner faux en allemand/italien (« 1 Seiten » au lieu de « 1 Seite ») — accepté comme limitation mineure plutôt que construire une vraie pluralisation pour un seul cas.
-
-Piège d'encodage rencontré pendant le développement de l'i18n : une partie de `app.js` écrit ses caractères accentués en échappement JS littéral (`'Sélectionnez'`, texte ASCII, pas un vrai « é »), une autre partie en UTF-8 brut — les deux sont mélangés dans le même fichier. `Edit` échoue silencieusement si `old_string` ne correspond pas à la bonne forme. En cas d'échec répété sur une chaîne qui a l'air correcte : lire le fichier via Python (`repr(open(path, encoding='utf-8').read())`) pour voir la forme exacte, et faire le remplacement avec un script Python (pas un heredoc bash — les accents passés en argument de commande peuvent eux-mêmes se corrompre) plutôt qu'insister avec `Edit`.
+Skill `debug-frontend` (`.claude/skills/debug-frontend/SKILL.md`). Limite connue, pas corrigée : les chaînes avec un compteur (`org.docAddedToast`, etc.) n'ont qu'une forme singulier/pluriel par langue, donc un compte de 1 peut sonner faux en allemand/italien (« 1 Seiten ») — accepté plutôt que construire une vraie pluralisation pour un seul cas.
