@@ -13,7 +13,7 @@
 
 À régler dans les paramètres de l'environnement : menu de l'environnement cloud dans la barre de titre de la session, puis Edit, puis Network access (doc : https://code.claude.com/docs/en/cloud-environments#network-access). Ajouter les domaines sous « Allowed domains » en laissant cochée la case des gestionnaires de paquets.
 
-- [ ] **Domaines refusés pendant les sessions** :
+- [x] **Domaines refusés pendant les sessions** (ajoutés à l'environnement W2B le 15/11/2026, tous vérifiés en HTTP 200) :
   - `wikitech.wikimedia.org` et `foundation.wikimedia.org` : relire la politique robots et la politique User-Agent de Wikimédia ;
   - `www.mediawiki.org` : documentation de mediawiki2latex (section 5) ;
   - `toolviews.toolforge.org` : vérifier les réponses de l'API Toolviews ;
