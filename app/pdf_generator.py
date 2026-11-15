@@ -126,16 +126,18 @@ class OutlineEntry:
     children: list["OutlineEntry"] = field(default_factory=list)
 
 
-# NE PAS copier les pages dans un PdfWriter pypdf ni lire les fichiers en mémoire : qpdf (pikepdf) garde le contenu des pages dans les fichiers temporaires jusqu'à l'écriture, c'est ce qui permet les très gros livres sans manquer de mémoire.
-class BookAssembly:
-    def __init__(self) -> None:
-        self.book = pikepdf.new()
-        self.sources: list[pikepdf.Pdf] = []
+QPDF_WARNINGS_EXIT_CODE = 3
 
-    def append(self, path: Path) -> None:
-        source = pikepdf.open(path)
-        self.sources.append(source)
-        self.book.pages.extend(source.pages)
+
+class BookAssembly:
+    # NE PAS fusionner avec pdf.pages.extend ni un PdfWriter pypdf : les deux chargent le contenu de toutes les pages en mémoire (environ la taille du livre). La fusion par qpdf --pages lit les fichiers temporaires à l'écriture, le livre est ensuite rouvert depuis le disque.
+    def __init__(self, parts: list[Path], merged: Path) -> None:
+        job = pikepdf.Job(["qpdf", "--empty", "--stream-data=preserve", "--pages", *map(str, parts), "--", str(merged)])
+        job.run()
+        if job.exit_code not in (0, QPDF_WARNINGS_EXIT_CODE):
+            raise RuntimeError(f"qpdf n'a pas pu assembler le livre (code {job.exit_code}).")
+        self.book = pikepdf.open(merged)
+        self.sources: list[pikepdf.Pdf] = []
 
     def add_outline(self, entries: list[OutlineEntry]) -> None:
         def item(entry: OutlineEntry) -> pikepdf.OutlineItem:

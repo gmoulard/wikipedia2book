@@ -32,14 +32,15 @@ DEFAULT_STEPS = (25, 50, 100, 200, 400, 800)
 
 def source_titles(page, language, count):
     titles = []
-    params = {"action": "query", "format": "json", "formatversion": 2, "prop": "links", "titles": page,
-              "plnamespace": 0, "pllimit": "max"}
+    # NE PAS revenir à prop=links : il renvoie aussi les liens rouges (pages inexistantes), dont Wikipédia ne peut pas produire le PDF, et le test échoue sans avoir atteint la limite du serveur.
+    params = {"action": "query", "format": "json", "formatversion": 2, "generator": "links", "titles": page,
+              "gplnamespace": 0, "gpllimit": "max", "prop": "info"}
     while len(titles) < count:
         url = f"https://{language}.wikipedia.org/w/api.php?" + urllib.parse.urlencode(params)
         request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
         with urllib.request.urlopen(request, timeout=60) as response:
             data = json.load(response)
-        titles += [link["title"] for page_data in data["query"]["pages"] for link in page_data.get("links", [])]
+        titles += sorted(linked["title"] for linked in data.get("query", {}).get("pages", []) if not linked.get("missing"))
         if "continue" not in data:
             break
         params.update(data["continue"])

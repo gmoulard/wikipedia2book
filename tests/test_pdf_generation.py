@@ -51,12 +51,12 @@ class BookAssemblyTest(unittest.TestCase):
         from pathlib import Path
 
         with tempfile.TemporaryDirectory() as workdir:
-            assembly = BookAssembly()
+            parts = []
+            for index, data in enumerate(pdfs):
+                parts.append(Path(workdir) / f"part-{index}.pdf")
+                parts[-1].write_bytes(data)
+            assembly = BookAssembly(parts, Path(workdir) / "merged.pdf")
             try:
-                for index, data in enumerate(pdfs):
-                    path = Path(workdir) / f"part-{index}.pdf"
-                    path.write_bytes(data)
-                    assembly.append(path)
                 if outline:
                     assembly.add_outline(outline)
                 if stamp:

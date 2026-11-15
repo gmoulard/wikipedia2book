@@ -402,7 +402,9 @@ async def _build_book_pdf(project: Project, selected: list[Article | UploadedDoc
             else:
                 await started.put(progress("prepare_document", title=item.title))
                 data = await asyncio.to_thread(document_pdf, item)
-        fitted_items[item.key] = asyncio.ensure_future(asyncio.to_thread(fit_to_file, data))
+            fitted_items[item.key] = asyncio.ensure_future(asyncio.to_thread(fit_to_file, data))
+            # NE PAS libérer le créneau avant la fin de la recomposition : sur un serveur au processeur limité (Toolforge), les PDF bruts téléchargés s'accumuleraient en mémoire en attendant d'être recomposés.
+            await fitted_items[item.key]
 
     async with MediaWikiClient() as client:
         client.on_wait = lambda seconds: started.put_nowait({"type": "wait", "seconds": math.ceil(seconds)})
@@ -506,10 +508,8 @@ async def _build_book_pdf(project: Project, selected: list[Article | UploadedDoc
         root.children.append(OutlineEntry(pdf_label(language, "conclusion"), await place_pdf(conclusion_page)))
 
     def assemble() -> BookAssembly:
-        assembly = BookAssembly()
+        assembly = BookAssembly(parts, workdir / "merged.pdf")
         try:
-            for path in parts:
-                assembly.append(path)
             assembly.add_outline([root])
             if toc_start is not None:
                 assembly.link_toc(
