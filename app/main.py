@@ -16,10 +16,12 @@
 
 import asyncio
 import base64
+import itertools
 import json
 import math
 import re
 import subprocess
+import tempfile
 from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
@@ -28,7 +30,7 @@ from urllib.parse import quote
 from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pypdf import PdfReader, PdfWriter
+from pypdf import PdfReader
 
 from app.book_builder import (
     build_chapter_page_html,
@@ -62,12 +64,12 @@ from app.models import (
     utc_now,
 )
 from app.pdf_generator import (
-    add_internal_links,
+    BookAssembly,
+    OutlineEntry,
     fit_pdf_to_format,
     generate_pdf,
     image_to_pdf,
     internal_links,
-    stamp_page_numbers,
 )
 from app.version import VERSION
 from app.wikipedia_api import (
@@ -329,43 +331,42 @@ def _pdf_error_detail(error: Exception) -> str:
 
 
 async def build_book_pdf(project: Project, selected: list[Article | UploadedDocument], language: str):
+    # NE PAS garder le livre en mémoire : chaque PDF va dans ce dossier temporaire, supprimé à la fin de la génération (serveur sans état), y compris quand le client abandonne.
+    with tempfile.TemporaryDirectory(prefix="wikipedia2book-") as workdir:
+        events = _build_book_pdf(project, selected, language, Path(workdir))
+        try:
+            async for event in events:
+                yield event
+        finally:
+            await events.aclose()
+
+
+async def _build_book_pdf(project: Project, selected: list[Article | UploadedDocument], language: str, workdir: Path):
     groups = ordered_article_groups(project, selected, language)
-    writer = PdfWriter()
-    streams: list[BytesIO] = []
     page_width_mm, page_height_mm = page_size_mm(project)
     unique_items = list({item.key: item for _, items in groups for item in items}.values())
     total = len(unique_items) + 3 + (2 if project.page_numbers else 0)
     step = 0
+    part_numbers = itertools.count()
 
     def progress(code: str, **params) -> dict:
         nonlocal step
         step += 1
         return {"type": "progress", "step": step, "total": total, "code": code, **params}
 
-    # NE PAS appeler WeasyPrint ni pypdf directement ici : un calcul bloquant gèle le serveur et retarde l'envoi des messages de progression.
+    # NE PAS appeler WeasyPrint, pypdf ni pikepdf directement ici : un calcul bloquant gèle le serveur et retarde l'envoi des messages de progression.
     async def render(html: str) -> bytes:
         return await asyncio.to_thread(generate_pdf, html)
-
-    def fit(pdf_data: bytes) -> "asyncio.Future[bytes]":
-        # NE PAS sauter fit_pdf_to_format, même pour une page déjà au bon format : c'est lui qui décide (recomposition ou simple ajustement de la taille).
-        return asyncio.ensure_future(asyncio.to_thread(fit_pdf_to_format, pdf_data, page_width_mm, page_height_mm))
-
-    async def append_fitted(fitted: bytes) -> int:
-        stream = BytesIO(fitted)
-        streams.append(stream)
-        page_number = len(writer.pages)
-        await asyncio.to_thread(writer.append, stream)
-        return page_number
-
-    async def append_pdf(pdf_data: bytes) -> int:
-        return await append_fitted(await fit(pdf_data))
 
     def page_count(pdf_data: bytes) -> int:
         return len(PdfReader(BytesIO(pdf_data)).pages)
 
-    def fit_and_count(pdf_data: bytes) -> tuple[bytes, int]:
+    def fit_to_file(pdf_data: bytes) -> tuple[Path, int]:
+        # NE PAS sauter fit_pdf_to_format, même pour une page déjà au bon format : c'est lui qui décide (recomposition ou simple ajustement de la taille).
         fitted = fit_pdf_to_format(pdf_data, page_width_mm, page_height_mm)
-        return fitted, page_count(fitted)
+        path = workdir / f"part-{next(part_numbers)}.pdf"
+        path.write_bytes(fitted)
+        return path, page_count(fitted)
 
     def document_pdf(document: UploadedDocument) -> bytes:
         data = base64.b64decode(document.data_base64)
@@ -373,7 +374,7 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
             return data
         return image_to_pdf(data, page_width_mm, page_height_mm)
 
-    fitted_items: dict[str, asyncio.Future[tuple[bytes, int]]] = {}
+    fitted_items: dict[str, asyncio.Future[tuple[Path, int]]] = {}
     paper = WIKIPEDIA_PDF_PAPERS.get(project.page_format, "a4")
     started: asyncio.Queue[dict] = asyncio.Queue()
     # NE PAS dépasser DOWNLOAD_CONCURRENCY : hors Toolforge, la politique robots de Wikimédia est respectée avec 2 téléchargements simultanés (MediaWikiClient l'impose aussi pour tout le serveur) ; sur Toolforge, exempté, 4 par livre.
@@ -387,7 +388,7 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
             else:
                 await started.put(progress("prepare_document", title=item.title))
                 data = await asyncio.to_thread(document_pdf, item)
-        fitted_items[item.key] = asyncio.ensure_future(asyncio.to_thread(fit_and_count, data))
+        fitted_items[item.key] = asyncio.ensure_future(asyncio.to_thread(fit_to_file, data))
 
     async with MediaWikiClient() as client:
         client.on_wait = lambda seconds: started.put_nowait({"type": "wait", "seconds": math.ceil(seconds)})
@@ -449,61 +450,84 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
         cover = await render(build_cover_html(project, language))
 
     yield progress("assemble")
-    root_outline = writer.add_outline_item(
-        project.book_title or project.name,
-        await append_pdf(cover),
-    )
-    chapter_outline = root_outline
+    parts: list[Path] = []
+    pages_so_far = 0
+
+    def place(path: Path, count: int) -> int:
+        nonlocal pages_so_far
+        parts.append(path)
+        pages_so_far += count
+        return pages_so_far - count
+
+    async def place_pdf(pdf_data: bytes) -> int:
+        return place(*await asyncio.to_thread(fit_to_file, pdf_data))
+
+    root = OutlineEntry(project.book_title or project.name, await place_pdf(cover))
+    chapter_entry = root
     toc_start: int | None = None
     targets: dict[str, int] = {}
     for index, (kind, value) in enumerate(slots):
         if index == toc_at:
-            toc_start = await append_pdf(toc)
-            writer.add_outline_item(pdf_label(language, "toc"), toc_start, parent=root_outline)
+            toc_start = await place_pdf(toc)
+            root.children.append(OutlineEntry(pdf_label(language, "toc"), toc_start))
         if kind == "chapter":
             chapter_title = groups[value][0]
             chapter_page = await render(build_chapter_page_html(project, chapter_title, language))
-            targets[f"chapter:{value}"] = await append_pdf(chapter_page)
-            chapter_outline = writer.add_outline_item(chapter_title, targets[f"chapter:{value}"], parent=root_outline)
+            targets[f"chapter:{value}"] = await place_pdf(chapter_page)
+            chapter_entry = OutlineEntry(chapter_title, targets[f"chapter:{value}"])
+            root.children.append(chapter_entry)
         else:
-            item_page = await append_fitted((await fitted_items[value.key])[0])
+            item_page = place(*await fitted_items[value.key])
             targets.setdefault(value.key, item_page)
-            writer.add_outline_item(value.title, item_page, parent=chapter_outline)
+            chapter_entry.children.append(OutlineEntry(value.title, item_page))
     if toc_at == len(slots):
-        toc_start = await append_pdf(toc)
-        writer.add_outline_item(pdf_label(language, "toc"), toc_start, parent=root_outline)
-    if toc_start is not None:
-        add_internal_links(
-            writer,
-            toc_start,
-            page_count(toc),
-            TOC_LINK_PREFIX,
-            internal_links(toc, TOC_LINK_PREFIX, page_width_mm, page_height_mm),
-            targets,
-        )
-
-    writer.add_outline_item(
+        toc_start = await place_pdf(toc)
+        root.children.append(OutlineEntry(pdf_label(language, "toc"), toc_start))
+    root.children.append(OutlineEntry(
         pdf_label(language, "license"),
-        await append_pdf(await render(build_license_page_html(project, selected, language))),
-        parent=root_outline,
-    )
-
+        await place_pdf(await render(build_license_page_html(project, selected, language))),
+    ))
     if project.conclusion:
         conclusion_page = await render(build_conclusion_page_html(project, language))
-        writer.add_outline_item(
-            pdf_label(language, "conclusion"),
-            await append_pdf(conclusion_page),
-            parent=root_outline,
-        )
+        root.children.append(OutlineEntry(pdf_label(language, "conclusion"), await place_pdf(conclusion_page)))
 
-    if project.page_numbers:
-        yield progress("stamp_page_numbers")
-        await asyncio.to_thread(stamp_page_numbers, writer)
+    def assemble() -> BookAssembly:
+        assembly = BookAssembly()
+        try:
+            for path in parts:
+                assembly.append(path)
+            assembly.add_outline([root])
+            if toc_start is not None:
+                assembly.link_toc(
+                    toc_start,
+                    page_count(toc),
+                    TOC_LINK_PREFIX,
+                    internal_links(toc, TOC_LINK_PREFIX, page_width_mm, page_height_mm),
+                    targets,
+                )
+        except BaseException:
+            assembly.close()
+            raise
+        return assembly
 
-    yield progress("finalize")
-    output = BytesIO()
-    await asyncio.to_thread(writer.write, output)
-    yield {"type": "done", "pdf": output.getvalue()}
+    assembly = await asyncio.to_thread(assemble)
+    try:
+        if project.page_numbers:
+            yield progress("stamp_page_numbers")
+            await asyncio.to_thread(assembly.stamp_page_numbers)
+
+        yield progress("finalize")
+        output = workdir / "book.pdf"
+        size = await asyncio.to_thread(assembly.save, output)
+    finally:
+        await asyncio.to_thread(assembly.close)
+    yield {"type": "done", "path": output, "size": size}
+
+
+async def _pdf_chunks(path: Path):
+    with path.open("rb") as pdf:
+        while chunk := await asyncio.to_thread(pdf.read, PDF_STREAM_CHUNK):
+            yield chunk
 
 
 @app.post("/api/pdf")
@@ -516,18 +540,32 @@ async def create_pdf(
 async def _create_pdf_response(project: Project, language: str) -> Response:
     selected = _selected_items(project)
     _apply_default_book_title(project, selected)
+    events = build_book_pdf(project, selected, language)
     try:
-        async for event in build_book_pdf(project, selected, language):
+        async for event in events:
             if event["type"] == "done":
-                pdf_data = event["pdf"]
+                done = event
+                break
     except Exception as error:
+        await events.aclose()
         if isinstance(error, MediaWikiError):
             raise _mediawiki_error(error) from error
         raise HTTPException(status_code=500, detail="La génération du PDF a échoué.") from error
-    return Response(
-        content=pdf_data,
+
+    async def body():
+        try:
+            async for chunk in _pdf_chunks(done["path"]):
+                yield chunk
+        finally:
+            await events.aclose()
+
+    return StreamingResponse(
+        body(),
         media_type="application/pdf",
-        headers={"Content-Disposition": _attachment_header(f"{project.book_title or project.name}.pdf")},
+        headers={
+            "Content-Disposition": _attachment_header(f"{project.book_title or project.name}.pdf"),
+            "Content-Length": str(done["size"]),
+        },
     )
 
 
@@ -650,17 +688,19 @@ async def create_pdf_stream(
     _apply_default_book_title(project, selected)
 
     async def events():
+        book = build_book_pdf(project, selected, language)
         try:
-            async for event in build_book_pdf(project, selected, language):
+            async for event in book:
                 if event["type"] == "done":
-                    pdf = event["pdf"]
-                    yield json.dumps({"type": "done", "size": len(pdf)}) + "\n"
-                    for start in range(0, len(pdf), PDF_STREAM_CHUNK):
-                        yield pdf[start:start + PDF_STREAM_CHUNK]
+                    yield json.dumps({"type": "done", "size": event["size"]}) + "\n"
+                    async for chunk in _pdf_chunks(event["path"]):
+                        yield chunk
                     return
                 yield json.dumps(event, ensure_ascii=False) + "\n"
         except Exception as error:
             yield json.dumps({"type": "error", "detail": _pdf_error_detail(error)}, ensure_ascii=False) + "\n"
+        finally:
+            await book.aclose()
 
     return StreamingResponse(
         events(),

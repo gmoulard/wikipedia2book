@@ -1,6 +1,6 @@
 # À faire
 
-État au 15/11/2026. Production Toolforge : **1.7.5** (`1c249d3`). `main` : **1.7.6**, tags `v1.7.2` à `v1.7.6` poussés.
+État au 15/11/2026. Production Toolforge : **1.7.5** (`1c249d3`). `main` : **1.7.7**, tags `v1.7.2` à `v1.7.7` poussés.
 
 Une action réalisée est retirée de cette liste (pas cochée) : l'historique Git garde la trace de ce qui a été fait.
 

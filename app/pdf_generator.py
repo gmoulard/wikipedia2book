@@ -14,12 +14,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from dataclasses import dataclass, field
 from io import BytesIO
+from pathlib import Path
 from urllib.parse import unquote
 
+import pikepdf
 from pypdf import PageObject, PdfReader, PdfWriter, Transformation
 from pypdf.generic import RectangleObject
-from pypdf.annotations import Link
 from reportlab.lib.units import mm
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
@@ -95,30 +97,6 @@ def internal_links(pdf_data: bytes, prefix: str, width_mm: float, height_mm: flo
     return links
 
 
-def add_internal_links(
-    writer: PdfWriter,
-    first_page: int,
-    page_count: int,
-    prefix: str,
-    links: list[tuple[int, list[float], str]],
-    targets: dict[str, int],
-) -> None:
-    for page in writer.pages[first_page:first_page + page_count]:
-        annotations = page.get("/Annots")
-        if annotations is None:
-            continue
-        kept = [
-            reference
-            for reference in annotations
-            if not str((reference.get_object().get("/A") or {}).get("/URI") or "").startswith(prefix)
-        ]
-        annotations.clear()
-        annotations.extend(kept)
-    for offset, rect, key in links:
-        if key in targets:
-            writer.add_annotation(first_page + offset, Link(rect=rect, target_page_index=targets[key]))
-
-
 def image_to_pdf(image_bytes: bytes, page_width_mm: float, page_height_mm: float) -> bytes:
     width_pt, height_pt = page_width_mm * mm, page_height_mm * mm
     image = ImageReader(BytesIO(image_bytes))
@@ -141,18 +119,92 @@ def image_to_pdf(image_bytes: bytes, page_width_mm: float, page_height_mm: float
     return buffer.read()
 
 
-# NE PAS appeler avant fit_pdf_to_format : chaque page doit déjà avoir une origine (0,0) propre.
-def stamp_page_numbers(writer: PdfWriter, skip_first: bool = True) -> None:
-    for index, page in enumerate(writer.pages):
-        if skip_first and index == 0:
-            continue
-        width = float(page.mediabox.width)
-        height = float(page.mediabox.height)
+@dataclass
+class OutlineEntry:
+    title: str
+    page: int
+    children: list["OutlineEntry"] = field(default_factory=list)
+
+
+# NE PAS copier les pages dans un PdfWriter pypdf ni lire les fichiers en mémoire : qpdf (pikepdf) garde le contenu des pages dans les fichiers temporaires jusqu'à l'écriture, c'est ce qui permet les très gros livres sans manquer de mémoire.
+class BookAssembly:
+    def __init__(self) -> None:
+        self.book = pikepdf.new()
+        self.sources: list[pikepdf.Pdf] = []
+
+    def append(self, path: Path) -> None:
+        source = pikepdf.open(path)
+        self.sources.append(source)
+        self.book.pages.extend(source.pages)
+
+    def add_outline(self, entries: list[OutlineEntry]) -> None:
+        def item(entry: OutlineEntry) -> pikepdf.OutlineItem:
+            node = pikepdf.OutlineItem(entry.title, entry.page)
+            node.children.extend(item(child) for child in entry.children)
+            return node
+
+        with self.book.open_outline() as outline:
+            outline.root.extend(item(entry) for entry in entries)
+
+    def link_toc(
+        self,
+        first_page: int,
+        page_count: int,
+        prefix: str,
+        links: list[tuple[int, list[float], str]],
+        targets: dict[str, int],
+    ) -> None:
+        pages = self.book.pages
+        for page in pages[first_page:first_page + page_count]:
+            annotations = page.obj.get("/Annots")
+            if annotations is None:
+                continue
+            kept = [
+                annotation
+                for annotation in annotations
+                if not str((annotation.get("/A") or {}).get("/URI", "")).startswith(prefix)
+            ]
+            page.obj.Annots = pikepdf.Array(kept)
+        for offset, rect, key in links:
+            if key not in targets:
+                continue
+            page = pages[first_page + offset].obj
+            annotation = self.book.make_indirect(pikepdf.Dictionary(
+                Type=pikepdf.Name.Annot,
+                Subtype=pikepdf.Name.Link,
+                Rect=pikepdf.Array(rect),
+                Border=pikepdf.Array([0, 0, 0]),
+                Dest=pikepdf.Array([pages[targets[key]].obj, pikepdf.Name.Fit]),
+            ))
+            if "/Annots" not in page:
+                page.Annots = pikepdf.Array()
+            page.Annots.append(annotation)
+
+    # NE PAS appeler avant d'avoir ajouté toutes les pages, toutes déjà passées par fit_pdf_to_format : chaque page doit avoir une origine (0,0) propre.
+    def stamp_page_numbers(self) -> None:
         buffer = BytesIO()
-        overlay = canvas.Canvas(buffer, pagesize=(width, height))
-        overlay.setFont("Helvetica", 8)
-        overlay.setFillColorRGB(0.33, 0.33, 0.33)
-        overlay.drawCentredString(width / 2, 24, str(index + 1))
+        overlay = canvas.Canvas(buffer)
+        for index, page in enumerate(self.book.pages):
+            width, height = float(page.mediabox[2]), float(page.mediabox[3])
+            overlay.setPageSize((width, height))
+            overlay.setFont("Helvetica", 8)
+            overlay.setFillColorRGB(0.33, 0.33, 0.33)
+            overlay.drawCentredString(width / 2, 24, str(index + 1))
+            overlay.showPage()
         overlay.save()
-        buffer.seek(0)
-        page.merge_page(PdfReader(buffer).pages[0])
+        numbers = pikepdf.open(BytesIO(buffer.getvalue()))
+        self.sources.append(numbers)
+        for index, page in enumerate(self.book.pages):
+            if index == 0:
+                continue
+            page.add_overlay(numbers.pages[index])
+
+    def save(self, path: Path) -> int:
+        # NE PAS laisser les options par défaut : qpdf décompresserait puis recompresserait chaque flux (images comprises), ce qui multiplie le temps d'écriture pour un gain de taille faible.
+        self.book.save(path, stream_decode_level=pikepdf.StreamDecodeLevel.none, compress_streams=False)
+        return path.stat().st_size
+
+    def close(self) -> None:
+        self.book.close()
+        for source in self.sources:
+            source.close()

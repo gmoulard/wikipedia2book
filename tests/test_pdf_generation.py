@@ -27,11 +27,11 @@ except Exception:
     sys.modules["weasyprint"] = fake
 
 from reportlab.pdfgen import canvas
-from pypdf import PdfReader, PdfWriter
+from pypdf import PdfReader
 
 from app.book_builder import build_license_page_html, build_toc_html
 from app.models import Article, Project
-from app.pdf_generator import fit_pdf_to_format, stamp_page_numbers
+from app.pdf_generator import BookAssembly, OutlineEntry, fit_pdf_to_format
 
 
 def _make_pdf(num_pages, size):
@@ -45,22 +45,45 @@ def _make_pdf(num_pages, size):
     return buffer.read()
 
 
-class StampPageNumbersTest(unittest.TestCase):
-    def test_skips_first_page_and_respects_each_page_size(self):
-        writer = PdfWriter()
-        writer.append(BytesIO(_make_pdf(1, size=(400, 600))))
-        writer.append(BytesIO(_make_pdf(2, size=(300, 500))))
-        stamp_page_numbers(writer)
+class BookAssemblyTest(unittest.TestCase):
+    def _assemble(self, *pdfs, stamp=True, outline=None):
+        import tempfile
+        from pathlib import Path
 
-        output = BytesIO()
-        writer.write(output)
-        output.seek(0)
-        reader = PdfReader(output)
+        with tempfile.TemporaryDirectory() as workdir:
+            assembly = BookAssembly()
+            try:
+                for index, data in enumerate(pdfs):
+                    path = Path(workdir) / f"part-{index}.pdf"
+                    path.write_bytes(data)
+                    assembly.append(path)
+                if outline:
+                    assembly.add_outline(outline)
+                if stamp:
+                    assembly.stamp_page_numbers()
+                output = Path(workdir) / "book.pdf"
+                size = assembly.save(output)
+                data = output.read_bytes()
+            finally:
+                assembly.close()
+        self.assertEqual(size, len(data))
+        return PdfReader(BytesIO(data))
 
+    def test_page_numbers_skip_first_page_and_respect_each_page_size(self):
+        reader = self._assemble(_make_pdf(1, size=(400, 600)), _make_pdf(2, size=(300, 500)))
         self.assertEqual(len(reader.pages), 3)
         self.assertNotIn("1", reader.pages[0].extract_text())
         self.assertIn("2", reader.pages[1].extract_text())
         self.assertIn("3", reader.pages[2].extract_text())
+        self.assertEqual([float(page.mediabox.width) for page in reader.pages], [400, 300, 300])
+
+    def test_parts_keep_their_order_and_the_outline_points_to_their_pages(self):
+        outline = [OutlineEntry("Livre", 0, [OutlineEntry("A", 1), OutlineEntry("B", 3)])]
+        reader = self._assemble(_make_pdf(1, (300, 400)), _make_pdf(2, (300, 400)), _make_pdf(1, (300, 400)), stamp=False, outline=outline)
+        self.assertEqual(len(reader.pages), 4)
+        root, children = reader.outline
+        self.assertEqual(root.title, "Livre")
+        self.assertEqual([(item.title, reader.get_destination_page_number(item)) for item in children], [("A", 1), ("B", 3)])
 
 
 class FitPdfToFormatTest(unittest.TestCase):

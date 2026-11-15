@@ -20,6 +20,7 @@ import sys
 import types
 import unittest
 from io import BytesIO
+from pathlib import Path
 from unittest.mock import patch
 
 try:
@@ -49,6 +50,15 @@ def _parse_stream(content):
             event["trailing"] = len(content) - event["size"]
             events.append(event)
             break
+        events.append(event)
+    return events
+
+
+async def _book_events(project, language="fr"):
+    events = []
+    async for event in main.build_book_pdf(project, main._selected_items(project), language):
+        if event["type"] == "done":
+            event["pdf"] = event["path"].read_bytes()
         events.append(event)
     return events
 
@@ -416,7 +426,7 @@ class PdfStreamTest(unittest.TestCase):
 
             ticking = asyncio.create_task(ticker())
             project = Project(**_project(chapters=[{"id": "c1", "title": "Félins", "article_keys": ["fr:title:chat"]}]))
-            events = [event async for event in main.build_book_pdf(project, main._selected_items(project), "fr")]
+            events = await _book_events(project)
             done = True
             await ticking
             return ticks, events
@@ -448,7 +458,7 @@ class PdfStreamTest(unittest.TestCase):
 
         async def scenario():
             project = Project(**_project())
-            return [event async for event in main.build_book_pdf(project, main._selected_items(project), "fr")]
+            return await _book_events(project)
 
         with patch.object(main, "MediaWikiClient", SlowClient), patch.object(main, "fit_pdf_to_format", recording_fit), patch.object(main, "generate_pdf", lambda html: _make_pdf(1)):
             events = asyncio.run(scenario())
@@ -456,6 +466,56 @@ class PdfStreamTest(unittest.TestCase):
         last_download = max(moment for kind, _, moment in timeline if kind == "downloaded")
         first_fit = min(moment for kind, _, moment in timeline if kind == "fit")
         self.assertLess(first_fit, last_download)
+
+    def test_temporary_files_are_removed_after_success_error_and_abort(self):
+        import asyncio
+        from app.models import Project
+
+        seen = []
+        real_mkdtemp = main.tempfile.mkdtemp
+
+        def recording_mkdtemp(*args, **kwargs):
+            path = real_mkdtemp(*args, **kwargs)
+            seen.append(Path(path))
+            return path
+
+        class FailingClient(FakeClient):
+            async def get_article_pdf(self, title, language, paper):
+                if title == "Chien":
+                    raise main.MediaWikiError("Wikipédia ne répond pas")
+                return await super().get_article_pdf(title, language, paper)
+
+        async def success():
+            events = await _book_events(Project(**_project()))
+            self.assertTrue(events[-1]["pdf"].startswith(b"%PDF-"))
+
+        async def failure():
+            with self.assertRaises(main.MediaWikiError):
+                await _book_events(Project(**_project()))
+
+        async def abort():
+            book = main.build_book_pdf(Project(**_project()), main._selected_items(Project(**_project())), "fr")
+            async for event in book:
+                if event.get("code") == "assemble":
+                    break
+            self.assertTrue(any(seen[-1].iterdir()))
+            await book.aclose()
+
+        with patch.object(main.tempfile, "mkdtemp", recording_mkdtemp), patch.object(main, "generate_pdf", lambda html: _make_pdf(1)):
+            with patch.object(main, "MediaWikiClient", FakeClient):
+                asyncio.run(success())
+                asyncio.run(abort())
+            with patch.object(main, "MediaWikiClient", FailingClient):
+                asyncio.run(failure())
+        self.assertEqual(len(seen), 3)
+        self.assertEqual([path.exists() for path in seen], [False, False, False])
+
+    def test_api_pdf_streams_the_file_with_its_length(self):
+        with patch.object(main, "MediaWikiClient", FakeClient), patch.object(main, "generate_pdf", lambda html: _make_pdf(1)):
+            response = TestClient(main.app).post("/api/pdf", json=_project())
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(int(response.headers["content-length"]), len(response.content))
+        self.assertTrue(response.content.startswith(b"%PDF-"))
 
     def test_pdf_follows_the_done_line_as_raw_bytes(self):
         events = self._events(_project())
@@ -487,7 +547,7 @@ class PdfStreamTest(unittest.TestCase):
         project = Project(name="Parallèle", main_articles=articles, page_numbers=False)
 
         async def scenario():
-            return [event async for event in main.build_book_pdf(project, main._selected_items(project), "fr")]
+            return await _book_events(project)
 
         with patch.object(main, "MediaWikiClient", ParallelClient), patch.object(main, "generate_pdf", lambda html: _make_pdf(1)):
             events = asyncio.run(scenario())

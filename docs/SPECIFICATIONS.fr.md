@@ -95,7 +95,7 @@ Le logiciel gère un seul livre à la fois, construit entièrement en mémoire d
 
 * L'utilisateur peut importer un fichier JSON précédemment téléchargé pour reprendre un livre; l'import remplace le livre en cours.
 
-* Le serveur ne persiste aucun livre ni fichier sur son disque : la persistance est entièrement à la charge de l'utilisateur, via le téléchargement puis l'import manuel du fichier JSON.
+* Le serveur ne persiste aucun livre ni fichier sur son disque : la persistance est entièrement à la charge de l'utilisateur, via le téléchargement puis l'import manuel du fichier JSON. Seuls des fichiers temporaires existent le temps d'une génération de PDF (section 11.1), supprimés dès qu'elle se termine, échoue ou est abandonnée.
 
 Le livre contient notamment :
 
@@ -397,7 +397,7 @@ Le contenu des articles et des documents importés n'est pas mis en page par l'a
 
 La couverture et la table des matières sont deux sections distinctes dans le PDF final : la position choisie pour la table des matières dans l'étape Organisation (section 6) est celle effectivement utilisée à la génération — la couverture reste toujours la première page, et la table des matières s'insère exactement à l'endroit choisi : juste après la couverture, avant un chapitre (avant sa page de titre), avant un article, ou après le dernier article (avant la licence et la conclusion).
 
-La navigation dans le PDF final s'appuie sur des signets (couverture, table des matières, une entrée par chapitre et par article, licence, conclusion) et sur les liens de la table des matières. Ces liens sont produits ainsi : WeasyPrint génère chaque ligne comme un lien vers une adresse provisoire (`https://wikipedia2book.invalid/toc/<clé>`, clé d'article ou de document, ou `chapter:<n>`); après l'assemblage, ces liens sont relus (`pdf_generator.internal_links`), retirés, puis remplacés par des liens internes vers la page réelle de l'élément dans le livre (`pdf_generator.add_internal_links`), y compris quand la numérotation des pages est désactivée.
+La navigation dans le PDF final s'appuie sur des signets (couverture, table des matières, une entrée par chapitre et par article, licence, conclusion) et sur les liens de la table des matières. Ces liens sont produits ainsi : WeasyPrint génère chaque ligne comme un lien vers une adresse provisoire (`https://wikipedia2book.invalid/toc/<clé>`, clé d'article ou de document, ou `chapter:<n>`); après l'assemblage, ces liens sont relus (`pdf_generator.internal_links`), retirés, puis remplacés par des liens internes vers la page réelle de l'élément dans le livre (`BookAssembly.link_toc`), y compris quand la numérotation des pages est désactivée.
 
 ### 10.1 Format et orientation, appliqués à toutes les pages
 
@@ -452,6 +452,8 @@ Une fois le PDF lancé, le logiciel :
 * Si la numérotation des pages est activée, superpose un numéro de page en bas de chaque page du document assemblé (sauf la couverture).
 
 * Fusionne l'ensemble en un seul fichier PDF et le rend accessible au téléchargement, nommé d'après le titre du livre.
+
+* **Assemblage sur disque temporaire** : chaque PDF recomposé (article, document importé, page générée) est écrit dans un dossier temporaire propre à la génération, au lieu de rester en mémoire. Le livre est assemblé par qpdf (bibliothèque `pikepdf`), qui laisse le contenu des pages dans ces fichiers jusqu'à l'écriture du PDF final, lui aussi dans ce dossier, puis envoyé par morceaux à l'utilisateur (`/api/pdf/stream` comme `/api/pdf`, qui annonce sa taille). Le dossier est supprimé dès que l'envoi se termine, que la génération échoue ou que l'utilisateur l'abandonne. La mémoire du serveur ne croît donc plus avec la taille du livre au même rythme : sur un livre de test de 100 articles et 197 Mo, le pic passe de 1 100 Mo à 360 Mo, et de 2 130 Mo à 630 Mo pour 200 articles et 393 Mo (mesures locales, section 13.12). Les flux sont recopiés tels quels, sans décompression ni recompression : le PDF final a la même taille qu'avant.
 
 Pendant toute la génération, une fenêtre de statut indique l'étape en cours sous la forme « Étape n / total », avec son libellé (dans la langue de l'interface) et une barre de progression. Les étapes sont, dans l'ordre : le téléchargement de chaque article (une étape par article, avec son titre; jusqu'à 4 articles sont téléchargés en même temps depuis Wikipédia sur Toolforge, 2 sur les autres hébergements (section 13.2), et chaque étape s'affiche au début de son téléchargement — l'ordre des articles dans le livre n'en dépend pas; si un téléchargement échoue, les autres sont abandonnés et l'erreur du premier article en échec, dans l'ordre du livre, est affichée) ou la préparation de chaque document importé, le calcul des numéros de page (si la numérotation est activée), la composition de la couverture et de la table des matières, l'assemblage des pages au format du livre, la numérotation des pages (si activée), puis la finalisation du fichier. Le total est connu dès le départ. Chaque message est envoyé au moment où l'étape commence : les rendus WeasyPrint, la recomposition des pages, la numérotation et l'écriture du fichier s'exécutent dans un fil d'exécution séparé (`asyncio.to_thread`), ce qui laisse le serveur libre d'envoyer la progression et de répondre aux autres utilisateurs pendant une génération. La fenêtre se ferme à la fin, en cas de succès comme d'échec.
 
@@ -527,7 +529,7 @@ Cette langue d'interface est indépendante de la langue des articles Wikipédia 
 | Internationalisation | Dictionnaire JavaScript interne (`i18n.js`), FR/EN/ES/PT/IT/DE/NL/TR/ZH/JA/AR/FA, sans dépendance externe |
 | API Wikipédia     | API MediaWiki (`action=query`, `action=parse`) + endpoint REST `page/pdf` |
 | Échange du livre  | JSON navigateur ↔ API                                         |
-| Génération PDF    | PDF officiel Wikimedia (articles) + WeasyPrint (couverture, table des matières, chapitres, licence, conclusion) + pypdf (fusion, signets, lecture du nombre de pages, recomposition au format du livre) + reportlab (numéros de page, conversion d'une image importée en page PDF) |
+| Génération PDF    | PDF officiel Wikimedia (articles) + WeasyPrint (couverture, table des matières, chapitres, licence, conclusion) + pypdf (lecture du nombre de pages, recomposition au format du livre, lecture des liens provisoires de la table des matières) + pikepdf/qpdf (assemblage sur disque temporaire, signets, liens internes, superposition des numéros, écriture du PDF final) + reportlab (numéros de page, conversion d'une image importée en page PDF) |
 | Conteneurisation  | Docker                                                        |
 
 ### 13.2 API Wikipédia
@@ -636,7 +638,7 @@ L'application est alors accessible sur `http://localhost:8000`, avec sa document
 
 La page de l'application (`/`) et ses fichiers (`/static/…`) sont servis avec `Cache-Control: no-cache` : le navigateur revérifie chaque fichier à chaque chargement (réponse 304 s'il n'a pas changé), ce qui évite de mélanger, après un déploiement, une nouvelle page avec d'anciens scripts ou traductions restés en cache.
 
-Le serveur ne stocke aucun livre ni PDF sur disque; tout l'état est conservé dans le navigateur et échangé via JSON. Le déploiement ne demande donc ni base de données ni volume persistant, sur aucune plateforme.
+Le serveur ne stocke aucun livre ni PDF sur disque; tout l'état est conservé dans le navigateur et échangé via JSON. Le déploiement ne demande donc ni base de données ni volume persistant, sur aucune plateforme. Seul un dossier temporaire (répertoire temporaire du système) sert pendant chaque génération de PDF, et il est supprimé à la fin (section 11.1) : la plateforme doit offrir un espace temporaire d'environ deux fois la taille du plus gros livre généré.
 
 ### 13.5 Environnements et branches
 
@@ -906,7 +908,7 @@ flowchart TB
         MAIN["main.py<br/>endpoints /api/* · build_book_pdf()"]
         EXPL["explorer.py<br/>articles liés"]
         BB["book_builder.py<br/>ordre, chapitres, HTML des pages générées"]
-        PDFG["pdf_generator.py<br/>WeasyPrint · pypdf · reportlab"]
+        PDFG["pdf_generator.py<br/>WeasyPrint · pypdf · pikepdf · reportlab"]
         WAPI["wikipedia_api.py<br/>MediaWikiClient"]
         MODELS["models.py<br/>Project · Article · UploadedDocument · BookChapter"]
         MAIN --> EXPL
@@ -974,8 +976,9 @@ sequenceDiagram
         M->>B: build_cover_html · build_toc_html · build_chapter_page_html · build_license_page_html · build_conclusion_page_html
         B-->>M: HTML des pages générées
         M->>P: generate_pdf (WeasyPrint)
-        M->>P: fit_pdf_to_format sur chaque PDF ajouté (format et orientation du livre)
-        M->>P: stamp_page_numbers (si activé)
+        M->>P: fit_pdf_to_format sur chaque PDF ajouté (format et orientation du livre), écrit dans le dossier temporaire
+        M->>P: BookAssembly (pikepdf) : pages des fichiers temporaires, signets, liens de la table des matières
+        M->>P: stamp_page_numbers (si activé) · save (PDF final dans le dossier temporaire)
     end
     M-->>U: done (size) puis octets du PDF, ou error (detail)
 ```
@@ -1001,6 +1004,7 @@ Atelier à jouer avant toute mise en production d'une version (skill `deploy-pro
   | 1.7.1   | 2026-11-14 | Railway     | 4                          | 10,5 s    | 1,7 s       | 1,4 s     | 13,6 s | 85    |
   | 1.7.5   | 2026-11-15 | Railway     | 2                          | 17,2 s    | 1,6 s       | 1,6 s     | 20,4 s | 117   |
 | 1.7.6   | 2026-11-15 | GMoulard  | Fenêtre de génération : pendant une pause due à un refus HTTP 429 ou 503 de Wikimédia, un compte à rebours indique le délai avant le nouvel essai (événement `wait` du flux `/api/pdf/stream`, textes traduits dans les 12 langues). Atelier de performance : seuils du verdict à +50 % (à surveiller) et +100 % (régression). |
+| 1.7.7   | 2026-11-15 | GMoulard  | Génération des gros livres sans manquer de mémoire : chaque PDF recomposé est écrit dans un dossier temporaire propre à la génération, supprimé à la fin, et le livre est assemblé par qpdf (`pikepdf`), qui laisse le contenu des pages dans ces fichiers; mémoire au pic divisée par environ 3 (mesure locale : 1 100 → 360 Mo pour 100 articles, 2 130 → 630 Mo pour 200); `/api/pdf` renvoie le fichier en flux avec sa taille (sections 2, 11.1, 13.5, 13.12). |
   | 1.7.5   | 2026-11-15 | Toolforge   | 4                          | 10,9 s    | 2,3 s       | 2,8 s     | 16,0 s | 117   |
 
 ### 13.12 Test aux limites
@@ -1019,7 +1023,7 @@ Test à jouer à la main pour connaître la taille maximale d'un livre qu'un dé
   | 150      | —     | —             | —         | —           | —         | 181 s  | échec    |
   | 200      | —     | —             | —         | —           | —         | 266 s  | échec    |
 
-  **Limite constatée : environ 100 articles, soit 1 600 pages et 180 Mo de PDF.** À 150 et 200 articles, le flux s'interrompt pendant la génération : le serveur redémarre (heure de démarrage de `GET /api/stats/hourly` remise à l'heure de l'échec), très probablement par manque de mémoire, le livre étant assemblé entièrement en mémoire. La limite dépend surtout du nombre de pages et du poids des images des articles, pas du nombre d'articles lui-même. Railway et Northflank n'ont pas été testés.
+  **Limite constatée en 1.7.5 : environ 100 articles, soit 1 600 pages et 180 Mo de PDF.** À 150 et 200 articles, le flux s'interrompt pendant la génération : le serveur redémarre (heure de démarrage de `GET /api/stats/hourly` remise à l'heure de l'échec), très probablement par manque de mémoire, le livre étant assemblé entièrement en mémoire. La limite dépend surtout du nombre de pages et du poids des images des articles, pas du nombre d'articles lui-même. Railway et Northflank n'ont pas été testés. Depuis la 1.7.7, le livre est assemblé sur disque temporaire (section 11.1) : la mémoire au pic est environ trois fois plus faible, mesuré en local; la nouvelle limite sur Toolforge reste à mesurer après déploiement.
 
 ## 14\. Sécurité et robustesse
 
