@@ -1,16 +1,16 @@
 # À faire
 
-État au 15/11/2026. Production Toolforge : **1.7.1** (`production-toolforge` = `d25ebfb`). `main` : 1.7.3 publiée, 1.7.4 prête mais pas encore committée.
+État au 15/11/2026. Production Toolforge : **1.7.1** (`production-toolforge` = `d25ebfb`). `main` : **1.7.4** (`a8144df`).
 
 ## 1. Actions à faire soi-même (bloquées dans les sessions cloud)
 
-- [ ] **Committer la 1.7.4** à l'auteur `gmoulard` : les fichiers sont indexés, mais la protection de confidentialité de la session refuse d'écrire l'adresse e-mail. Ensuite, poser le tag `v1.7.4` et pousser sur `main` (skill `release`).
+- [ ] **Convention d'auteur** : le commit 1.7.4 (`a8144df`) est à l'identité de la session, pas à `gmoulard`, car la protection de confidentialité refuse d'écrire l'adresse e-mail. Pour les prochaines versions en session cloud : lancer soi-même le `git commit --author=…` avec `!`, ou accepter l'identité de la session.
 - [ ] **Pousser les tags** refusés par le proxy des sessions cloud (« Tag check » les vérifie à l'arrivée) :
   ```bash
   git fetch origin
   git tag -a v1.7.2 f086224 -m "Wikipedia2Book 1.7.2" && git push origin v1.7.2
   git tag -a v1.7.3 a281689 -m "Wikipedia2Book 1.7.3" && git push origin v1.7.3
-  # puis v1.7.4 sur son commit, une fois créé
+  git tag -a v1.7.4 a8144df -m "Wikipedia2Book 1.7.4" && git push origin v1.7.4
   ```
 - [ ] **Supprimer la branche `stats`**, devenue inutile (les statistiques sont sur `main`) : GitHub, Code → Branches, ou `git push origin --delete stats`.
 
