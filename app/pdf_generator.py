@@ -136,6 +136,9 @@ class BookAssembly:
         job.run()
         if job.exit_code not in (0, QPDF_WARNINGS_EXIT_CODE):
             raise RuntimeError(f"qpdf n'a pas pu assembler le livre (code {job.exit_code}).")
+        # NE PAS garder les fichiers des parties après la fusion : avec le fichier fusionné et le PDF final, l'espace temporaire monterait à trois fois la taille du livre, ce qui dépasse vite le quota d'espace temporaire d'un hébergeur (piste retenue pour les plantages de Toolforge à 300 articles).
+        for path in parts:
+            path.unlink()
         self.book = pikepdf.open(merged)
         self.sources: list[pikepdf.Pdf] = []
 

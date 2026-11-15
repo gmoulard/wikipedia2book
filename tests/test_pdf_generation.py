@@ -56,6 +56,7 @@ class BookAssemblyTest(unittest.TestCase):
                 parts.append(Path(workdir) / f"part-{index}.pdf")
                 parts[-1].write_bytes(data)
             assembly = BookAssembly(parts, Path(workdir) / "merged.pdf")
+            self.assertEqual([path.exists() for path in parts], [False] * len(parts))
             try:
                 if outline:
                     assembly.add_outline(outline)

@@ -4,16 +4,12 @@
 
 Une action réalisée est retirée de cette liste (pas cochée) : l'historique Git garde la trace de ce qui a été fait.
 
-## 1. Actions à faire soi-même (bloquées dans les sessions cloud)
-
-- [ ] **Convention d'auteur** : le commit 1.7.4 (`a8144df`) est à l'identité de la session, pas à `gmoulard`, car la protection de confidentialité refuse d'écrire l'adresse e-mail. Pour les prochaines versions en session cloud : lancer soi-même le `git commit --author=…` avec `!`, ou accepter l'identité de la session.
-
-## 1 bis. Autorisations manquantes dans l'environnement Claude Code cloud (« W2B »)
+## 1. Autorisations manquantes dans l'environnement Claude Code cloud (« W2B »)
 
 À régler dans les paramètres de l'environnement : menu de l'environnement cloud dans la barre de titre de la session, puis Edit, puis Network access (doc : https://code.claude.com/docs/en/cloud-environments#network-access). Ajouter les domaines sous « Allowed domains » en laissant cochée la case des gestionnaires de paquets.
 
 - [ ] **Git** : le proxy de la session ne laisse pousser que `main` et la branche de travail de la session. Les **tags** et la **suppression de branche** sont refusés (HTTP 403). Pas de réglage connu côté environnement : continuer à pousser les tags depuis sa machine.
-- [ ] **Confidentialité** : la session refuse d'écrire l'adresse e-mail de l'auteur (commits de version à `gmoulard <…>`). Option : définir soi-même `GIT_AUTHOR_NAME`/`GIT_AUTHOR_EMAIL` comme variables d'environnement de l'environnement « W2B » (valeurs non secrètes), pour que les commits de version aient le bon auteur sans que Claude écrive l'adresse.
+- [ ] **Auteur des commits** : définir soi-même `GIT_AUTHOR_NAME`/`GIT_AUTHOR_EMAIL` (et `GIT_COMMITTER_NAME`/`GIT_COMMITTER_EMAIL`) comme variables de l'environnement « W2B » (valeurs non secrètes). C'est la règle retenue (paramètres `release` du `CLAUDE.md`) : la session refuse d'écrire l'adresse e-mail, et le commit 1.7.4 (`a8144df`) est resté à l'identité de la session.
 - [ ] **Connecteur GitHub du plugin** (`plugin:github:github`) : il échoue à la connexion (« Proxy refused to open a tunnel: 403 »). Les outils GitHub intégrés suffisent ; reconnecter GitHub sur https://claude.ai/connect-github si un outil manque.
 - Hors réglages (pour mémoire) : le service PDF de Wikimédia répond HTTP 429 à presque toutes les requêtes venant des sessions cloud. Ce n'est pas une autorisation à ajouter ; l'atelier de performance tourne pour cela sur GitHub Actions.
 
