@@ -62,5 +62,5 @@ git push origin <branche> vX.Y.Z
 ## 6. Après le push
 
 - Vérifier que le commit est sur la branche distante (`git ls-remote origin refs/heads/<branche>`) et que l'intégration continue passe sur ce commit.
-- Si la production se déploie à part (skill `deploy-toolforge` ou équivalent), le proposer, ne jamais le faire sans demande explicite.
+- Si la production se déploie à part (skill `deploy-production`), le proposer, ne jamais le faire sans demande explicite.
 - Rapporter : version, commit, tag (poussé ou commande à lancer), état des tests.

@@ -664,7 +664,7 @@ Le choix de branche de Railway et Northflank ne fait pas partie du dépôt : il 
 
 ### 13.6 Intégration continue (GitHub Actions)
 
-Trois workflows. Le principal, `.github/workflows/deploy-toolforge.yml` (« Tests and Toolforge deploy »), a deux jobs :
+Trois workflows. Le principal, `.github/workflows/deploy-production.yml` (« Tests and Toolforge deploy »), a deux jobs :
 
 * `test` : à chaque push sur `main` ou `production-toolforge`, à chaque pull request et sur lancement manuel (`workflow_dispatch`). Installe Python 3.12 et `requirements.txt`, puis lance `python -m unittest discover -s tests -v`.
 
@@ -1091,13 +1091,13 @@ Wikipedia2Book/
 ├── toolinfo.json
 ├── CITATION.cff
 ├── codemeta.json
-├── .github/workflows/deploy-toolforge.yml
+├── .github/workflows/deploy-production.yml
 ├── .github/workflows/toolviews-stats.yml
 ├── .github/workflows/jekyll-gh-pages.yml
 ├── requirements.txt
 ├── .gitignore
 ├── CLAUDE.md
-├── .claude/skills/              (procédures génériques pour Claude Code : code-style, spec-sync, debug-frontend, release, deploy-toolforge; leurs valeurs pour ce dépôt sont dans CLAUDE.md)
+├── .claude/skills/              (procédures génériques pour Claude Code : code-style, spec-sync, debug-frontend, release, deploy-production; leurs valeurs pour ce dépôt sont dans CLAUDE.md)
 ├── CODE_OF_CONDUCT.md
 ├── LICENSE
 ├── README.md
