@@ -59,7 +59,7 @@ wikipedia2book/
 │   ├── update-stats.sh          # Statistics update run by GitHub Actions (daily and before each deployment)
 │   └── toolviews_chart.py       # Usage charts page for GitHub Pages
 ├── tests/                       # unittest suite (no network, WeasyPrint stubbed when missing)
-├── .github/workflows/           # Toolforge deployment, Toolviews stats, GitHub Pages
+├── .github/workflows/           # Toolforge deployment, Toolviews stats, GitHub Pages, tag check
 ├── Dockerfile                   # Image used by Railway and Northflank
 ├── Procfile, Aptfile, .python-version, toolforge-fonts.conf  # Toolforge buildpacks
 ├── toolinfo.json                # Toolhub metadata
@@ -116,7 +116,7 @@ The application is then reachable at `http://localhost:8000`.
 
 <p align="left">
   <!-- Project status, license & archive -->
-  <a href="https://github.com/gmoulard/wikipedia2book/actions/workflows/deploy-production.yml"><img src="https://github.com/gmoulard/wikipedia2book/actions/workflows/deploy-production.yml/badge.svg" alt="Deploy to Toolforge"></a>
+  <a href="https://github.com/gmoulard/wikipedia2book/actions/workflows/deploy-toolforge.yml"><img src="https://github.com/gmoulard/wikipedia2book/actions/workflows/deploy-toolforge.yml/badge.svg" alt="Deploy to Toolforge"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue" alt="License: AGPL-3.0"></a>
   <a href="https://archive.softwareheritage.org/browse/origin/?origin_url=https://github.com/gmoulard/wikipedia2book"><img src="https://archive.softwareheritage.org/badge/origin/https://github.com/gmoulard/wikipedia2book/" alt="SWH Origin"></a>
   <a href="https://archive.softwareheritage.org/swh:1:dir:9c7c016d9603a4b0201ad64535767a353031bd91;origin=https://github.com/gmoulard/wikipedia2book;visit=swh:1:snp:3b1fa78021c1ad7819b82a6f38f200a9f3bfa85e;anchor=swh:1:rev:d0cd2a14a00fb848f2555a9ee62c4147230e6080"><img src="https://archive.softwareheritage.org/badge/swh:1:dir:9c7c016d9603a4b0201ad64535767a353031bd91/" alt="SWH Directory"></a>

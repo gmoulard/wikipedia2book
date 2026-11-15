@@ -41,6 +41,8 @@ En session cloud, le proxy git peut refuser ce push (HTTP 403, branches limitée
 
 Suivre chaque job du workflow de déploiement jusqu'à la fin (actions_list / get_job_logs) ; ne pas annoncer de succès avant. Une étape marquée `continue-on-error` qui échoue n'empêche pas le déploiement mais doit être signalée.
 
+Politique d'échec : erreur réseau passagère (HTTP 5xx, dépendance ou registre indisponible) : relancer le job une seule fois ; toute autre erreur : lire le journal, le rapporter, ne pas relancer en boucle.
+
 ## 4. Vérifier
 
 - La vérification de référence est celle du job de déploiement (le commit servi est le commit construit), si le workflow en fait une.
@@ -54,4 +56,4 @@ Suivre chaque job du workflow de déploiement jusqu'à la fin (actions_list / ge
 
 ## 6. Rapport
 
-Commit et version déployés, résultat de chaque job et de chaque étape particulière, et tout avertissement.
+Commit et version déployés, résultat de chaque job et de chaque étape particulière, tout avertissement, et ce qui n'a pas été vérifié (par exemple l'adresse de vérification si le réseau de la session ne l'atteint pas).

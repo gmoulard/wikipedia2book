@@ -663,7 +663,7 @@ The branch choice for Railway and Northflank is not part of the repository: it i
 
 ### 13.6 Continuous integration (GitHub Actions)
 
-Three workflows. The main one, `.github/workflows/deploy-production.yml` ("Tests and Toolforge deploy"), has two jobs:
+Four workflows. The main one, `.github/workflows/deploy-toolforge.yml` ("Tests and Toolforge deploy"), has two jobs:
 
 * `test`: on every push to `main` or `production-toolforge`, on every pull request and on manual start (`workflow_dispatch`). Installs Python 3.12 and `requirements.txt`, then runs `python -m unittest discover -s tests -v`.
 
@@ -682,6 +682,8 @@ The `TOOLFORGE_SSH_KEY` secret contains an OpenSSH private key dedicated to depl
 The second, `.github/workflows/toolviews-stats.yml` ("Toolviews stats"), updates the usage statistics every day (section 13.8).
 
 The third, `.github/workflows/jekyll-gh-pages.yml`, publishes on every push to `main` (and on manual start) the documentation site https://gmoulard.github.io/wikipedia2book/ with GitHub Pages: The site is built from the `docs/` folder: Jekyll converts its Markdown files to HTML (`SPECIFICATIONS.fr.md`, `SPECIFICATIONS.en.md`, `stats.md`). The home page `docs/index.md` is copied from `README.md` at each build (not committed), with its links adapted: `docs/…` becomes relative to the site, and `LICENSE`, `CODE_OF_CONDUCT.md`, `CITATION.cff` and `codemeta.json`, which stay at the root of the repository, point to GitHub. This is the address declared as user documentation in `toolinfo.json`. GitHub Pages does not render Mermaid blocks natively: `docs/_includes/head-custom.html`, added by Jekyll to the head of every page (default theme), loads Mermaid 11.17.2 from jsDelivr and draws the ```` ```mermaid ```` blocks (section 13.10). The site is also rebuilt (`workflow_run` trigger) after each run of "Toolviews stats" that was not cancelled, even a partial failure since statistics may have been committed, and after each run of "Tests and Toolforge deploy" on `production-toolforge` (pre-deployment hourly collection), and every build adds the usage statistics page https://gmoulard.github.io/wikipedia2book/stats.html (section 13.8).
+
+The fourth, `.github/workflows/tag-check.yml` ("Tag check"), runs on every push of a `v*` tag: it fails if the tag number does not match the version written in `app/main.py` (`FastAPI(version=…)`). Such a failure is never fixed by moving the tag, but by a new version.
 
 ### 13.7 Toolforge
 
@@ -1090,9 +1092,10 @@ Wikipedia2Book/
 ├── toolinfo.json
 ├── CITATION.cff
 ├── codemeta.json
-├── .github/workflows/deploy-production.yml
+├── .github/workflows/deploy-toolforge.yml
 ├── .github/workflows/toolviews-stats.yml
 ├── .github/workflows/jekyll-gh-pages.yml
+├── .github/workflows/tag-check.yml
 ├── requirements.txt
 ├── .gitignore
 ├── CLAUDE.md

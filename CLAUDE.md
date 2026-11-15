@@ -72,7 +72,10 @@ Valeurs propres à ce dépôt, lues par les skills génériques de `.claude/skil
   - auteur du commit de version : `gmoulard <gmoulard@gmail.com>` ; message de tag : `Wikipedia2Book X.Y.Z` ;
   - branche principale : `main` ;
   - tests : `python3 -m unittest discover -s tests` (Linux, sessions cloud ; `pip install -r requirements.txt` si `fastapi`/`httpx` manquent) ou `.venv/Scripts/python.exe -m unittest discover -s tests -v` (poste Windows) ;
-  - intégration continue : workflow « Tests and Toolforge deploy » ; Railway et Northflank redéploient `main` d'eux-mêmes.
+  - intégration continue : workflow « Tests and Toolforge deploy » ; Railway et Northflank redéploient `main` d'eux-mêmes ;
+  - extraction de la version (à comparer au tag) : `sed -n 's/.*FastAPI(.*version="\([0-9][0-9.]*\)".*/\1/p' app/main.py` ;
+  - contrôle des tags : workflow « Tag check » (`.github/workflows/tag-check.yml`), lancé par chaque tag `v*`, échoue si le tag ne correspond pas à `app/main.py` ;
+  - angles morts à citer dans le rapport : rendu réel par WeasyPrint et assemblage avec de vraies pages (seulement dans le conteneur Docker) ; Toolforge tant que la version n'est pas poussée sur `production-toolforge` ; en session cloud, le tag (push refusé par le proxy) et les sites `*.toolforge.org`/`*.github.io` (non joignables).
 - **`deploy-production`** :
   - plateforme : Toolforge (Wikimedia Cloud), outil `wikipedia2book` ; branche principale `main`, branche de production `production-toolforge` (Railway et Northflank, eux, suivent `main` et se déploient seuls) ;
   - workflow : « Tests and Toolforge deploy » (`.github/workflows/deploy-toolforge.yml`), jobs `test` puis `deploy` ; le déploiement lui-même est `scripts/toolforge-deploy.sh` (build, variables d'environnement, redémarrage, puis attente jusqu'à 200 s que `/api/version` renvoie le commit construit : succès = ligne `déployé : <commit>`) ;
