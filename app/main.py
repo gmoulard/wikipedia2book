@@ -86,6 +86,7 @@ from app.wikipedia_api import (
 )
 
 
+PROJECT_NAMESPACES_START = 100
 DOWNLOAD_CONCURRENCY = 4 if ON_TOOLFORGE else MEDIA_CONCURRENCY
 PDF_STREAM_CHUNK = 256 * 1024
 
@@ -249,7 +250,8 @@ async def resolve_source(payload: SourceRequest) -> SourceResolution:
                     raise MediaWikiPageNotFound(f"La page « {title} » est introuvable sur {language}.{site}.org.")
                 return SourceResolution(kind="search", results=await client.search(title, language, 8, site))
             title, namespace = page
-            if namespace == 0:
+            # NE PAS réduire à l'espace principal hors Wikipédia, ni se fier au marquage « contenu » de l'API : les pages d'auteur de Wikisource sont dans un espace propre au projet dont le numéro change selon la langue (102 en français, 106 en espagnol, non marqué « contenu »).
+            if namespace == 0 or (site != "wikipedia" and namespace >= PROJECT_NAMESPACES_START and namespace % 2 == 0):
                 return SourceResolution(
                     kind="article",
                     article=Article(
@@ -257,7 +259,7 @@ async def resolve_source(payload: SourceRequest) -> SourceResolution:
                     ),
                 )
             if site != "wikipedia":
-                raise ValueError(f"Seules les pages de l’espace principal de {language}.{site}.org sont acceptées.")
+                raise ValueError(f"Seules les pages de contenu de {language}.{site}.org (textes, pages d’auteur…) sont acceptées.")
             return SourceResolution(
                 kind="book", book=await _wikipedia_book(client, language, title), book_title=_book_name(title)
             )

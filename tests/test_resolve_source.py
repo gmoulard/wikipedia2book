@@ -136,9 +136,27 @@ class ResolveSourceTest(unittest.TestCase):
         self.assertTrue(body["article"]["url"].startswith("https://zh.wikisource.org/wiki/"))
         self.assertIn(("page", "論語/學而第一", "zh", "wikisource"), FakeClient.calls)
 
-    def test_wikisource_other_namespace_is_422(self):
-        FakeClient.pages = {"Auteur:Victor Hugo": ("Auteur:Victor Hugo", 102)}
-        self.assertEqual(self.resolve("https://fr.wikisource.org/wiki/Auteur:Victor_Hugo").status_code, 422)
+    def test_wikisource_author_page_is_an_article(self):
+        FakeClient.pages = {"Auteur:François Rabelais": ("Auteur:François Rabelais", 102)}
+        body = self.resolve("https://fr.wikisource.org/wiki/Auteur:Fran%C3%A7ois_Rabelais").json()
+        self.assertEqual(body["kind"], "article")
+        self.assertEqual(body["article"]["title"], "Auteur:François Rabelais")
+        self.assertEqual(body["article"]["site"], "wikisource")
+        self.assertNotIn("book", [call[0] for call in FakeClient.calls])
+
+    def test_spanish_wikisource_author_namespace_106_is_an_article(self):
+        FakeClient.pages = {"Autor:Miguel de Cervantes": ("Autor:Miguel de Cervantes", 106)}
+        self.assertEqual(self.resolve("https://es.wikisource.org/wiki/Autor:Miguel_de_Cervantes").json()["kind"], "article")
+
+    def test_wikisource_talk_page_is_422(self):
+        FakeClient.pages = {"Discussion Auteur:Victor Hugo": ("Discussion Auteur:Victor Hugo", 103)}
+        self.assertEqual(self.resolve("https://fr.wikisource.org/wiki/Discussion_Auteur:Victor_Hugo").status_code, 422)
+
+    def test_wikisource_non_content_namespace_is_422(self):
+        FakeClient.pages = {"Aide:Accueil": ("Aide:Accueil", 12)}
+        response = self.resolve("https://fr.wikisource.org/wiki/Aide:Accueil")
+        self.assertEqual(response.status_code, 422)
+        self.assertIn("pages de contenu", response.json()["detail"])
         self.assertNotIn("book", [call[0] for call in FakeClient.calls])
 
     def test_book_structure_refuses_wikisource(self):
