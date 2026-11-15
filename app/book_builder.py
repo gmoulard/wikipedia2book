@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import math
+import re
 from datetime import date
 from html import escape
 from typing import get_args
@@ -150,7 +152,7 @@ def build_cover_html(project: Project, language: str = "fr") -> str:
 @page {{ size: {page_width:g}mm {page_height:g}mm; margin: {margin_top:g}mm {outer:g}mm {margin_bottom:g}mm {inner:g}mm; }}
 @page :left {{ margin-left: {inner:g}mm; margin-right: {outer:g}mm; }}
 @page :right {{ margin-left: {outer:g}mm; margin-right: {inner:g}mm; }}
-    body {{ color: #202020; font: 10pt serif; line-height: 1.5; }}
+    body {{ color: #202020; font: 10pt {SERIF_FONTS}; line-height: 1.5; }}
     h1, h2 {{ line-height: 1.2; }}
 h1 {{ font-size: 26pt; }}
 h2 {{ font-size: 18pt; }}
@@ -170,10 +172,29 @@ h2 {{ font-size: 18pt; }}
 
 
 TOC_LINK_PREFIX = "https://wikipedia2book.invalid/toc/"
+# NE PAS laisser la police générique seule : Pango parcourt alors toutes les polices installées (dont les polices CJK de Noto, très lourdes) pour choisir et compléter la police.
+SERIF_FONTS = '"DejaVu Serif", serif'
+SANS_FONTS = '"DejaVu Sans", sans-serif'
+
+
+GENERATED_BLOCK_ENTRIES = 100
 
 
 def toc_link_key(key: str) -> str:
     return TOC_LINK_PREFIX + quote(key, safe="")
+
+
+def _toc_entries(project: Project, items: list[BookItem], language: str) -> list[tuple[int, str, BookItem | None]]:
+    entries: list[tuple[int, str, BookItem | None]] = []
+    for index, (chapter_title, chapter_items) in enumerate(ordered_article_groups(project, items, language)):
+        if chapter_title:
+            entries.append((index, chapter_title, None))
+        entries.extend((index, chapter_title, item) for item in chapter_items)
+    return entries
+
+
+def toc_block_count(project: Project, items: list[BookItem], language: str = "fr") -> int:
+    return max(1, math.ceil(len(_toc_entries(project, items, language)) / GENERATED_BLOCK_ENTRIES))
 
 
 def build_toc_html(
@@ -182,29 +203,35 @@ def build_toc_html(
     article_pages: dict[str, int] | None = None,
     chapter_pages: list[int | None] | None = None,
     language: str = "fr",
+    block: int = 0,
 ) -> str:
-    groups = ordered_article_groups(project, items, language)
     article_pages = article_pages or {}
-    chapter_pages = chapter_pages or [None] * len(groups)
+    entries = _toc_entries(project, items, language)
+    chapter_pages = chapter_pages or [None] * (max((index for index, _, _ in entries), default=-1) + 1)
 
     def line(label: str, page: int | None, key: str) -> str:
         page_span = f'<span class="page-no">{page}</span>' if page else ""
-        return f'<a class="toc-line" href="{toc_link_key(key)}"><span class="toc-title">{label}</span>{page_span}</a>'
+        return f'<a class="toc-line" href="{toc_link_key(key)}">{page_span}<span class="toc-title">{label}</span></a>'
 
     contents: list[str] = []
-    for index, (chapter_title, chapter_items) in enumerate(groups):
-        titles = "".join(
-            f'<li class="toc-item">{line(escape(item.title), article_pages.get(item.key), item.key)}</li>'
-            for item in chapter_items
-        )
-        if chapter_title:
+    open_chapter: int | None = None
+    for index, chapter_title, item in entries[block * GENERATED_BLOCK_ENTRIES:(block + 1) * GENERATED_BLOCK_ENTRIES]:
+        if open_chapter is not None and (item is None or index != open_chapter):
+            contents.append("</ol></li>")
+            open_chapter = None
+        if item is None:
             chapter_page = chapter_pages[index] if index < len(chapter_pages) else None
-            contents.append(
-                f'<li class="toc-chapter">{line(escape(chapter_title), chapter_page, f"chapter:{index}")}<ol>{titles}</ol></li>'
-            )
-        else:
-            contents.append(titles)
+            contents.append(f'<li class="toc-chapter">{line(escape(chapter_title), chapter_page, f"chapter:{index}")}<ol>')
+            open_chapter = index
+            continue
+        if chapter_title and open_chapter is None:
+            contents.append('<li class="toc-chapter"><ol>')
+            open_chapter = index
+        contents.append(f'<li class="toc-item">{line(escape(item.title), article_pages.get(item.key), item.key)}</li>')
+    if open_chapter is not None:
+        contents.append("</ol></li>")
 
+    heading = f"<h2>{pdf_label(language, 'toc')}</h2>" if block == 0 else ""
     page_width, page_height, margin_top, margin_bottom, inner, outer = _page_layout(project)
     return f"""<!doctype html>
     <html {_html_attrs(language)}>
@@ -214,22 +241,21 @@ def build_toc_html(
 @page {{ size: {page_width:g}mm {page_height:g}mm; margin: {margin_top:g}mm {outer:g}mm {margin_bottom:g}mm {inner:g}mm; }}
 @page :left {{ margin-left: {inner:g}mm; margin-right: {outer:g}mm; }}
 @page :right {{ margin-left: {outer:g}mm; margin-right: {inner:g}mm; }}
-body {{ color: #202020; font: 10pt serif; line-height: 1.4; }}
+body {{ color: #202020; font: 10pt {SERIF_FONTS}; line-height: 1.4; }}
 nav h2 {{ font-size: 18pt; line-height: 1.2; margin: 0 0 18pt; padding-bottom: 4pt; border-bottom: 0.75pt solid #202020; }}
 nav ol {{ list-style: none; margin: 0; padding: 0; }}
 nav li {{ display: block; }}
-.toc-line {{ display: flex; align-items: baseline; justify-content: space-between; gap: 12pt; color: inherit; text-decoration: none; padding: 2.5pt 0; }}
-.toc-title {{ flex: 1 1 auto; }}
-.page-no {{ flex: 0 0 auto; min-width: 2.5em; text-align: right; color: #444; }}
+.toc-line {{ display: block; color: inherit; text-decoration: none; padding: 2.5pt 0; }}
+.page-no {{ float: right; min-width: 2.5em; margin-left: 12pt; text-align: right; color: #444; }}
 .toc-chapter {{ margin-top: 14pt; }}
 .toc-chapter > .toc-line {{ font-size: 13pt; font-weight: bold; padding-bottom: 4pt; }}
 .toc-chapter > ol {{ padding-left: 16pt; }}
 [dir=rtl] .toc-chapter > ol {{ padding-left: 0; padding-right: 16pt; }}
-[dir=rtl] .page-no {{ text-align: left; }}
+[dir=rtl] .page-no {{ float: left; margin-left: 0; margin-right: 12pt; text-align: left; }}
     </style>
     </head>
     <body>
-    <nav><h2>{pdf_label(language, 'toc')}</h2><ol>{''.join(contents)}</ol></nav>
+    <nav>{heading}<ol>{''.join(contents)}</ol></nav>
     </body>
     </html>"""
 
@@ -241,9 +267,9 @@ def build_chapter_page_html(project: Project, title: str, language: str = "fr") 
 @page {{ size: {page_width:g}mm {page_height:g}mm; margin: {margin_top:g}mm {outer:g}mm {margin_bottom:g}mm {inner:g}mm; }}
 @page :left {{ margin-left: {inner:g}mm; margin-right: {outer:g}mm; }}
 @page :right {{ margin-left: {outer:g}mm; margin-right: {inner:g}mm; }}
-body {{ color: #202020; font: 11pt serif; }}
+body {{ color: #202020; font: 11pt {SERIF_FONTS}; }}
 main {{ display: flex; min-height: 75vh; flex-direction: column; justify-content: center; }}
-p {{ color: #167465; font: bold 9pt sans-serif; letter-spacing: 1pt; text-transform: uppercase; }}
+p {{ color: #167465; font: bold 9pt {SANS_FONTS}; letter-spacing: 1pt; text-transform: uppercase; }}
 p:lang(ar), p:lang(fa) {{ letter-spacing: 0; }}
 h1 {{ font-size: 30pt; }}
 </style></head><body><main><p>{pdf_label(language, 'chapter')}</p><h1>{escape(title)}</h1></main></body></html>"""
@@ -257,7 +283,7 @@ def build_conclusion_page_html(project: Project, language: str = "fr") -> str:
 @page {{ size: {page_width:g}mm {page_height:g}mm; margin: {margin_top:g}mm {outer:g}mm {margin_bottom:g}mm {inner:g}mm; }}
 @page :left {{ margin-left: {inner:g}mm; margin-right: {outer:g}mm; }}
 @page :right {{ margin-left: {outer:g}mm; margin-right: {inner:g}mm; }}
-body {{ color: #202020; font: 11pt serif; line-height: 1.6; }}
+body {{ color: #202020; font: 11pt {SERIF_FONTS}; line-height: 1.6; }}
 h1 {{ font-size: 22pt; }}
 </style></head><body><h1>{pdf_label(language, 'conclusion')}</h1><p>{conclusion}</p></body></html>"""
 
@@ -266,56 +292,76 @@ def _history_url(article: Article) -> str:
     return article.url.replace("/wiki/", "/w/index.php?title=", 1) + "&action=history"
 
 
+def _breakable_url(url: str) -> str:
+    # NE PAS revenir à overflow-wrap: anywhere : WeasyPrint évalue alors une coupure possible à chaque caractère de chaque URL, ce qui fait exploser le temps et la mémoire de la page de licence d'un gros livre.
+    return "<wbr>".join(escape(part) for part in re.split(r"(?<=[/?&=_])|(?=%)", url))
+
+
 def _site_names(language: str, sites: list[str]) -> str:
     return pdf_label(language, "list_separator").join(pdf_label(language, f"site_{site}") for site in sites)
 
 
-def build_license_page_html(project: Project, items: list[BookItem], language: str = "fr") -> str:
-    page_width, page_height, margin_top, margin_bottom, inner, outer = _page_layout(project)
+def _license_articles(project: Project, items: list[BookItem], language: str) -> tuple[list[Article], list[UploadedDocument]]:
     groups = ordered_article_groups(project, items, language)
     ordered = list({item.key: item for _, group in groups for item in group}.values())
-    articles = [item for item in ordered if isinstance(item, Article)]
-    documents = [item for item in ordered if isinstance(item, UploadedDocument)]
+    return (
+        [item for item in ordered if isinstance(item, Article)],
+        [item for item in ordered if isinstance(item, UploadedDocument)],
+    )
+
+
+def license_block_count(project: Project, items: list[BookItem], language: str = "fr") -> int:
+    articles, _ = _license_articles(project, items, language)
+    return max(1, math.ceil(len(articles) / GENERATED_BLOCK_ENTRIES))
+
+
+def build_license_page_html(project: Project, items: list[BookItem], language: str = "fr", block: int = 0) -> str:
+    page_width, page_height, margin_top, margin_bottom, inner, outer = _page_layout(project)
+    articles, documents = _license_articles(project, items, language)
+    first = block * GENERATED_BLOCK_ENTRIES
     sources = "".join(
-        f'<li><strong>{escape(article.title)}</strong><br><span class="url">{escape(article.url)}</span><br>'
-        f'{escape(pdf_label(language, "history"))} <span class="url">{escape(_history_url(article))}</span></li>'
-        for article in articles
+        f'<li><strong>{escape(article.title)}</strong><br><span class="url">{_breakable_url(article.url)}</span><br>'
+        f'{escape(pdf_label(language, "history"))} <span class="url">{_breakable_url(_history_url(article))}</span></li>'
+        for article in articles[first:first + GENERATED_BLOCK_ENTRIES]
     )
-    sources_section = f'<h2>{pdf_label(language, "sources")}</h2><ol>{sources}</ol>' if articles else ""
-    present = [site for site in get_args(Site) if any(article.site == site for article in articles)] or ["wikipedia"]
-    share_alike = [site for site in present if site not in ("wikisource", "wikinews")]
-    notes = "".join(f"<p>{escape(pdf_label(language, f'license_{site}'))}</p>" for site in ("wikisource", "wikinews") if site in present)
-    documents_note = (
-        f"<p>{escape(pdf_label(language, 'license_documents', titles=', '.join(document.title for document in documents)))}</p>"
-        if documents else ""
-    )
-    license_name = f'<span class="license-name">{escape(pdf_label(language, "license_name"))}</span>'
-    intro_template = PDF_LABELS[language]["license_intro"].replace("{sites}", _site_names(language, share_alike))
-    intro = license_name.join(escape(part) for part in intro_template.split("{license}"))
-    share_alike_license = (
-        f"<p>{intro} <span class='url'>{pdf_label(language, 'license_url')}</span></p>"
-        f"<p>{escape(pdf_label(language, 'license_terms'))}</p>"
-        if share_alike else ""
-    )
+    sources_heading = f'<h2>{pdf_label(language, "sources")}</h2>' if block == 0 else ""
+    sources_section = f'{sources_heading}<ol start="{first + 1}">{sources}</ol>' if sources else ""
+    header = ""
+    if block == 0:
+        present = [site for site in get_args(Site) if any(article.site == site for article in articles)] or ["wikipedia"]
+        share_alike = [site for site in present if site not in ("wikisource", "wikinews")]
+        notes = "".join(f"<p>{escape(pdf_label(language, f'license_{site}'))}</p>" for site in ("wikisource", "wikinews") if site in present)
+        documents_note = (
+            f"<p>{escape(pdf_label(language, 'license_documents', titles=', '.join(document.title for document in documents)))}</p>"
+            if documents else ""
+        )
+        license_name = f'<span class="license-name">{escape(pdf_label(language, "license_name"))}</span>'
+        intro_template = PDF_LABELS[language]["license_intro"].replace("{sites}", _site_names(language, share_alike))
+        intro = license_name.join(escape(part) for part in intro_template.split("{license}"))
+        share_alike_license = (
+            f"<p>{intro} <span class='url'>{pdf_label(language, 'license_url')}</span></p>"
+            f"<p>{escape(pdf_label(language, 'license_terms'))}</p>"
+            if share_alike else ""
+        )
+        header = (
+            f"<h1>{pdf_label(language, 'license')}</h1>\n{share_alike_license}\n{notes}\n"
+            f"<p>{escape(pdf_label(language, 'license_media'))}</p>\n{documents_note}\n"
+            f"<p>{escape(pdf_label(language, 'license_unofficial', sites=_site_names(language, present)))}</p>"
+        )
     return f"""<!doctype html>
 <html {_html_attrs(language)}><head><meta charset="utf-8"><style>
 @page {{ size: {page_width:g}mm {page_height:g}mm; margin: {margin_top:g}mm {outer:g}mm {margin_bottom:g}mm {inner:g}mm; }}
 @page :left {{ margin-left: {inner:g}mm; margin-right: {outer:g}mm; }}
 @page :right {{ margin-left: {outer:g}mm; margin-right: {inner:g}mm; }}
-body {{ color: #202020; font: 10pt serif; line-height: 1.5; }}
+body {{ color: #202020; font: 10pt {SERIF_FONTS}; line-height: 1.5; }}
 h1 {{ font-size: 22pt; }}
 h2 {{ font-size: 14pt; margin-top: 18pt; }}
 ol {{ padding-left: 18pt; font-size: 9pt; }}
 [dir=rtl] ol {{ padding-left: 0; padding-right: 18pt; }}
-li {{ margin-bottom: 6pt; overflow-wrap: anywhere; }}
+li {{ margin-bottom: 6pt; }}
 .license-name {{ font-weight: bold; }}
 .url {{ direction: ltr; unicode-bidi: embed; }}
 </style></head><body>
-<h1>{pdf_label(language, 'license')}</h1>
-{share_alike_license}
-{notes}
-<p>{escape(pdf_label(language, 'license_media'))}</p>
-{documents_note}
-<p>{escape(pdf_label(language, 'license_unofficial', sites=_site_names(language, present)))}</p>
+{header}
 {sources_section}
 </body></html>"""

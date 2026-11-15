@@ -25,6 +25,8 @@ import re
 import shutil
 import subprocess
 import tempfile
+import time
+from collections import deque
 from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
@@ -42,11 +44,13 @@ from app.book_builder import (
     PDF_LABELS,
     TOC_LINK_PREFIX,
     build_license_page_html,
+    license_block_count,
     book_slots,
     build_toc_html,
     ordered_article_groups,
     page_size_mm,
     pdf_label,
+    toc_block_count,
     toc_slot_index,
 )
 from app.explorer import discover_related_articles
@@ -100,7 +104,8 @@ PDF_LANGUAGE_PATTERN = "^(" + "|".join(PDF_LABELS) + ")$"
 app.mount("/static", StaticFiles(directory=static_directory), name="static")
 HOURLY_STATS_PATH = "/api/stats/hourly"
 HEALTH_DETAILS_PATH = "/api/health/details"
-UNCOUNTED_PATHS = {HOURLY_STATS_PATH, HEALTH_DETAILS_PATH}
+GENERATION_LOG_PATH = "/api/health/generations"
+UNCOUNTED_PATHS = {HOURLY_STATS_PATH, HEALTH_DETAILS_PATH, GENERATION_LOG_PATH}
 HOURLY_KEEP = 48
 hourly_hits: dict[str, int] = {}
 started_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -109,6 +114,9 @@ PROCESS_STATUS = Path("/proc/self/status")
 TEMPORARY_PREFIX = "wikipedia2book-"
 UNLIMITED_BYTES = 2**60
 generations_in_progress = 0
+GENERATION_LOG_KEEP = 50
+generation_log: deque[dict] = deque(maxlen=GENERATION_LOG_KEEP)
+generation_ids = itertools.count(1)
 ISOLATE_ASSEMBLY = True
 
 
@@ -232,6 +240,18 @@ def health_details(response: Response) -> dict:
         "generations_in_progress": generations_in_progress,
         "memory": _container_memory(),
         "temporary": _temporary_space(),
+    }
+
+
+@app.get(GENERATION_LOG_PATH)
+def generation_journal(response: Response) -> dict:
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Cache-Control"] = "no-store"
+    return {
+        "version": app.version,
+        "started": started_at,
+        "now": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "generations": list(reversed(generation_log)),
     }
 
 
@@ -432,20 +452,73 @@ def _pdf_error_detail(error: Exception) -> str:
     return "La génération du PDF a échoué."
 
 
+def _memory_snapshot() -> dict[str, int | None]:
+    memory = _container_memory()
+    return {
+        "container_bytes": memory["used_bytes"],
+        "rss_bytes": memory["process_rss_bytes"],
+        "peak_rss_bytes": memory["process_peak_rss_bytes"],
+    }
+
+
+class GenerationRecord:
+    # NE PAS y mettre de titre, d'adresse IP ni rien qui identifie l'utilisateur : le journal est public (GET /api/health/generations) et recopié dans les journaux de la plateforme.
+    def __init__(self, project: Project, selected: list[Article | UploadedDocument], language: str) -> None:
+        self.started = time.monotonic()
+        self.data: dict = {
+            "id": next(generation_ids),
+            "started": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "version": VERSION,
+            "language": language,
+            "articles": sum(isinstance(item, Article) for item in selected),
+            "documents": sum(isinstance(item, UploadedDocument) for item in selected),
+            "chapters": len(project.chapters),
+            "page_format": project.page_format,
+            "orientation": project.orientation,
+            "page_numbers": project.page_numbers,
+            "table_of_contents": project.table_of_contents,
+            "status": "running",
+            "stages": [],
+        }
+        generation_log.append(self.data)
+        self.stage("start", "server", _memory_snapshot())
+
+    def _elapsed(self) -> float:
+        return round(time.monotonic() - self.started, 1)
+
+    def stage(self, name: str, process: str, memory: dict, **details) -> None:
+        event = {"at_s": self._elapsed(), "stage": name, "process": process, **memory, **details}
+        self.data["stages"].append(event)
+        # NE PAS enlever cette écriture sur la sortie standard : quand la plateforme arrête tout le conteneur faute de mémoire, le journal en mémoire disparaît avec le serveur et seuls les journaux de la plateforme gardent la dernière étape atteinte.
+        print(json.dumps({"generation": self.data["id"], **event}), flush=True)
+
+    def finish(self, status: str, **details) -> None:
+        self.data.update(status=status, duration_s=self._elapsed(), **details)
+        print(json.dumps({"generation": self.data["id"], "status": status, "duration_s": self.data["duration_s"], **details}), flush=True)
+
+
 async def build_book_pdf(project: Project, selected: list[Article | UploadedDocument], language: str):
     # NE PAS garder le livre en mémoire : chaque PDF va dans ce dossier temporaire, supprimé à la fin de la génération (serveur sans état), y compris quand le client abandonne.
     global generations_in_progress
     generations_in_progress += 1
+    record = GenerationRecord(project, selected, language)
+    status, details = "aborted", {}
     try:
         with tempfile.TemporaryDirectory(prefix=TEMPORARY_PREFIX) as workdir:
-            events = _build_book_pdf(project, selected, language, Path(workdir))
+            events = _build_book_pdf(project, selected, language, Path(workdir), record)
             try:
                 async for event in events:
+                    if event["type"] == "done":
+                        status, details = "done", {"size_bytes": event["size"]}
                     yield event
             finally:
                 await events.aclose()
+    except Exception as error:
+        status, details = "error", {"error": str(error) if isinstance(error, IsolatedProcessDied) else type(error).__name__}
+        raise
     finally:
         generations_in_progress -= 1
+        record.finish(status, **details)
 
 
 def _page_count(pdf_data: bytes) -> int:
@@ -459,7 +532,9 @@ def _fit_to_file(pdf_data: bytes, path: Path, page_width_mm: float, page_height_
     return path, _page_count(fitted)
 
 
-async def _build_book_pdf(project: Project, selected: list[Article | UploadedDocument], language: str, workdir: Path):
+async def _build_book_pdf(
+    project: Project, selected: list[Article | UploadedDocument], language: str, workdir: Path, record: "GenerationRecord"
+):
     groups = ordered_article_groups(project, selected, language)
     page_width_mm, page_height_mm = page_size_mm(project)
     unique_items = list({item.key: item for _, items in groups for item in items}.values())
@@ -526,18 +601,21 @@ async def _build_book_pdf(project: Project, selected: list[Article | UploadedDoc
             raise
 
     fitted = {key: task.result() for key, task in fitted_items.items()}
+    record.stage("downloads_done", "server", _memory_snapshot(), article_pages=sum(count for _, count in fitted.values()))
     if ISOLATE_ASSEMBLY:
         preload(["app.main"])
-    # NE PAS faire la suite dans le processus du serveur : les rendus WeasyPrint et l'assemblage y prennent plusieurs centaines de Mo que l'allocateur ne rend pas au système après la génération (relevé de /api/health/details sur Toolforge) ; un processus séparé rend tout en se terminant, et c'est lui, pas le serveur, qui est arrêté s'il manque de mémoire.
+    # NE PAS faire la suite dans le processus du serveur : les rendus WeasyPrint et l'assemblage y prennent plusieurs centaines de Mo que l'allocateur ne rend pas au système après la génération (relevé de /api/health/details sur Toolforge) ; un processus séparé rend tout en se terminant.
     runner = run_isolated if ISOLATE_ASSEMBLY else run_in_thread
     # NE PAS enlever aclosing : sans lui, un client qui abandonne laisse tourner le processus d'assemblage jusqu'au ramasse-miettes, pendant que son dossier temporaire est supprimé.
     async with contextlib.aclosing(runner(_finish_book, project, selected, language, workdir, fitted)) as messages:
         async for kind, value in messages:
-            if kind == "report":
-                yield progress(value)
-            else:
+            if kind == "result":
                 output, size = value
                 yield {"type": "done", "path": output, "size": size}
+            elif "progress" in value:
+                yield progress(value["progress"])
+            else:
+                record.stage(value["stage"], "assembly", value["memory"], server_rss_bytes=_memory_snapshot()["rss_bytes"], **value["details"])
 
 
 def _finish_book(
@@ -552,24 +630,36 @@ def _finish_book(
     page_width_mm, page_height_mm = page_size_mm(project)
     page_numbers = itertools.count()
 
+    def step(code: str) -> None:
+        report({"progress": code})
+
+    def stage(name: str, **details) -> None:
+        report({"stage": name, "memory": _memory_snapshot(), "details": details})
+
+    def render(html: str) -> bytes:
+        return generate_pdf(html)
+
     def place_file(pdf_data: bytes) -> tuple[Path, int]:
         return _fit_to_file(pdf_data, workdir / f"page-{next(page_numbers)}.pdf", page_width_mm, page_height_mm)
 
+    stage("assembly_start")
     slots = book_slots(groups)
     toc_at = toc_slot_index(project, groups, slots)
+    toc_blocks = toc_block_count(project, selected, language)
 
     article_pages: dict[str, int] = {}
     chapter_pages: list[int | None] = [None] * len(groups)
     cover: bytes | None = None
     if project.page_numbers:
-        report("compute_page_numbers")
-        cover = generate_pdf(build_cover_html(project, language))
+        step("compute_page_numbers")
+        cover = render(build_cover_html(project, language))
+        stage("render_cover")
         cursor = _page_count(cover) + 1
-        toc_pages = (
-            _page_count(generate_pdf(build_toc_html(project, selected, language=language)))
-            if toc_at is not None and toc_at < len(slots)
-            else 0
-        )
+        toc_pages = 0
+        if toc_at is not None and toc_at < len(slots):
+            for block in range(toc_blocks):
+                toc_pages += _page_count(render(build_toc_html(project, selected, language=language, block=block)))
+            stage("render_toc_count", blocks=toc_blocks, pages=toc_pages)
         for index, (kind, value) in enumerate(slots):
             if index == toc_at:
                 cursor += toc_pages
@@ -580,16 +670,19 @@ def _finish_book(
                 article_pages[value.key] = cursor
                 cursor += fitted[value.key][1]
 
-    report("cover_and_toc")
-    toc = (
-        generate_pdf(build_toc_html(project, selected, article_pages, chapter_pages, language))
-        if project.table_of_contents
-        else None
-    )
+    step("cover_and_toc")
+    toc: list[bytes] = []
+    if project.table_of_contents:
+        toc = [
+            render(build_toc_html(project, selected, article_pages, chapter_pages, language, block))
+            for block in range(toc_blocks)
+        ]
+        stage("render_toc", blocks=toc_blocks)
     if cover is None:
-        cover = generate_pdf(build_cover_html(project, language))
+        cover = render(build_cover_html(project, language))
+        stage("render_cover")
 
-    report("assemble")
+    step("assemble")
     parts: list[Path] = []
     pages_so_far = 0
 
@@ -602,53 +695,65 @@ def _finish_book(
     def place_pdf(pdf_data: bytes) -> int:
         return place(*place_file(pdf_data))
 
+    toc_placed: list[tuple[int, bytes]] = []
+
+    def place_toc() -> int:
+        toc_placed.extend((place_pdf(block), block) for block in toc)
+        return toc_placed[0][0]
+
     root = OutlineEntry(project.book_title or project.name, place_pdf(cover))
     chapter_entry = root
-    toc_start: int | None = None
     targets: dict[str, int] = {}
+    chapters = 0
     for index, (kind, value) in enumerate(slots):
         if index == toc_at:
-            toc_start = place_pdf(toc)
-            root.children.append(OutlineEntry(pdf_label(language, "toc"), toc_start))
+            root.children.append(OutlineEntry(pdf_label(language, "toc"), place_toc()))
         if kind == "chapter":
             chapter_title = groups[value][0]
-            targets[f"chapter:{value}"] = place_pdf(generate_pdf(build_chapter_page_html(project, chapter_title, language)))
+            targets[f"chapter:{value}"] = place_pdf(render(build_chapter_page_html(project, chapter_title, language)))
             chapter_entry = OutlineEntry(chapter_title, targets[f"chapter:{value}"])
             root.children.append(chapter_entry)
+            chapters += 1
         else:
             item_page = place(*fitted[value.key])
             targets.setdefault(value.key, item_page)
             chapter_entry.children.append(OutlineEntry(value.title, item_page))
+    stage("render_chapters", chapters=chapters)
     if toc_at == len(slots):
-        toc_start = place_pdf(toc)
-        root.children.append(OutlineEntry(pdf_label(language, "toc"), toc_start))
-    root.children.append(OutlineEntry(
-        pdf_label(language, "license"),
-        place_pdf(generate_pdf(build_license_page_html(project, selected, language))),
-    ))
+        root.children.append(OutlineEntry(pdf_label(language, "toc"), place_toc()))
+    license_blocks = license_block_count(project, selected, language)
+    license_start = [place_pdf(render(build_license_page_html(project, selected, language, block))) for block in range(license_blocks)][0]
+    root.children.append(OutlineEntry(pdf_label(language, "license"), license_start))
+    stage("render_license", blocks=license_blocks)
     if project.conclusion:
         root.children.append(OutlineEntry(
             pdf_label(language, "conclusion"),
-            place_pdf(generate_pdf(build_conclusion_page_html(project, language))),
+            place_pdf(render(build_conclusion_page_html(project, language))),
         ))
+        stage("render_conclusion")
 
     assembly = BookAssembly(parts, workdir / "merged.pdf")
     try:
+        stage("merge", parts=len(parts), pages=pages_so_far)
         assembly.add_outline([root])
-        if toc_start is not None:
+        for start, block in toc_placed:
             assembly.link_toc(
-                toc_start,
-                _page_count(toc),
+                start,
+                _page_count(block),
                 TOC_LINK_PREFIX,
-                internal_links(toc, TOC_LINK_PREFIX, page_width_mm, page_height_mm),
+                internal_links(block, TOC_LINK_PREFIX, page_width_mm, page_height_mm),
                 targets,
             )
+        stage("outline_and_links")
         if project.page_numbers:
-            report("stamp_page_numbers")
+            step("stamp_page_numbers")
             assembly.stamp_page_numbers()
-        report("finalize")
+            stage("stamp_page_numbers")
+        step("finalize")
         output = workdir / "book.pdf"
-        return output, assembly.save(output)
+        size = assembly.save(output)
+        stage("save", size_bytes=size)
+        return output, size
     finally:
         assembly.close()
 

@@ -402,8 +402,8 @@ class PdfStreamTest(unittest.TestCase):
         with patch.object(main, "generate_pdf", fake_generate):
             self.client.post("/api/pdf", json=_project(toc_position="before:fr:title:chien"))
         toc_html = [html for html in rendered if "<nav>" in html][-1]
-        self.assertIn('<span class="toc-title">Chat</span><span class="page-no">2</span>', toc_html)
-        self.assertIn('<span class="toc-title">Chien</span><span class="page-no">5</span>', toc_html)
+        self.assertIn('<span class="page-no">2</span><span class="toc-title">Chat</span>', toc_html)
+        self.assertIn('<span class="page-no">5</span><span class="toc-title">Chien</span>', toc_html)
 
     def test_generation_does_not_block_the_server_and_renders_the_cover_once(self):
         import asyncio

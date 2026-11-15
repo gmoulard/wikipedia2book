@@ -150,9 +150,9 @@ class TableOfContentsPageNumbersTest(unittest.TestCase):
         chien = Article(title="Chien", language="fr", url="https://fr.wikipedia.org/wiki/Chien", selected=True)
         project = Project(name="Test", chapters=[BookChapter(title="Félins", article_keys=[chat.key])])
         html = build_toc_html(project, [chat, chien], {chat.key: 4, chien.key: 9}, [3, 8])
-        self.assertIn(f'<li class="toc-chapter"><a class="toc-line" href="{TOC_LINK_PREFIX}chapter%3A0"><span class="toc-title">Félins</span><span class="page-no">3</span></a><ol>', html)
-        self.assertIn(f'href="{TOC_LINK_PREFIX}fr%3Atitle%3Achat"><span class="toc-title">Chat</span><span class="page-no">4</span>', html)
-        self.assertNotIn("nav li { display: flex", html)
+        self.assertIn(f'<li class="toc-chapter"><a class="toc-line" href="{TOC_LINK_PREFIX}chapter%3A0"><span class="page-no">3</span><span class="toc-title">Félins</span></a><ol>', html)
+        self.assertIn(f'href="{TOC_LINK_PREFIX}fr%3Atitle%3Achat"><span class="page-no">4</span><span class="toc-title">Chat</span>', html)
+        self.assertNotIn("display: flex", html)
 
     def test_no_page_number_markup_when_not_provided(self):
         project = Project(name="Test")
@@ -168,7 +168,7 @@ class LicensePageTest(unittest.TestCase):
         second = Article(title="Chat", language="fr", url="https://fr.wikipedia.org/wiki/Chat", selected=True)
         document = UploadedDocument(title="Carte.png", kind="image", mime_type="image/png", data_base64="AA==", selected=True)
         project = Project(name="T", article_order=[first.key, second.key])
-        html = build_license_page_html(project, [second, first, document])
+        html = build_license_page_html(project, [second, first, document]).replace("<wbr>", "")
         self.assertIn("CC BY-SA 4.0", html)
         self.assertIn("https://creativecommons.org/licenses/by-sa/4.0/deed.fr", html)
         self.assertLess(html.index("Chien"), html.index("Chat"))
@@ -179,7 +179,7 @@ class LicensePageTest(unittest.TestCase):
 class WikisourceLicenseTest(unittest.TestCase):
     def test_wikisource_only_book_has_no_wikipedia_license(self):
         text = Article(title="論語", language="zh", site="wikisource", url="https://zh.wikisource.org/wiki/%E8%AB%96%E8%AA%9E", selected=True)
-        html = build_license_page_html(Project(name="T"), [text], "zh")
+        html = build_license_page_html(Project(name="T"), [text], "zh").replace("<wbr>", "")
         self.assertIn("维基文库", html)
         self.assertNotIn("知识共享 署名-相同方式共享 4.0 国际", html)
         self.assertIn("本书并非维基文库或维基媒体基金会的官方出版物。", html)
@@ -196,7 +196,7 @@ class WikisourceLicenseTest(unittest.TestCase):
     def test_license_names_the_other_projects(self):
         book = Article(title="Programmation Python", language="fr", site="wikibooks", url="https://fr.wikibooks.org/wiki/Programmation_Python", selected=True)
         guide = Article(title="Lyon", language="fr", site="wikivoyage", url="https://fr.wikivoyage.org/wiki/Lyon", selected=True)
-        html = build_license_page_html(Project(name="T"), [guide, book])
+        html = build_license_page_html(Project(name="T"), [guide, book]).replace("<wbr>", "")
         self.assertIn("Les textes provenant de Wikilivres, Wikivoyage reproduits", html)
         self.assertIn("CC BY-SA 4.0", html)
         self.assertNotIn("Wikipédia", html)
@@ -231,6 +231,40 @@ class TranslatedTitlesTest(unittest.TestCase):
         self.assertIn("keine offizielle Veröffentlichung", html)
         self.assertNotIn("Les textes", html)
         self.assertIn("deed.zh-hans", build_license_page_html(Project(name="T"), [article], "zh"))
+
+
+class GeneratedPageBlocksTest(unittest.TestCase):
+    def articles(self, count):
+        return [Article(title=f"Article {index:03}", language="fr", url=f"https://fr.wikipedia.org/wiki/Article_{index:03}", selected=True) for index in range(count)]
+
+    def test_long_table_of_contents_is_split_into_blocks(self):
+        from app.book_builder import GENERATED_BLOCK_ENTRIES, toc_block_count
+        from app.models import BookChapter
+        items = self.articles(GENERATED_BLOCK_ENTRIES + 20)
+        project = Project(name="T", chapters=[BookChapter(title="Tout", article_keys=[item.key for item in items])])
+        self.assertEqual(toc_block_count(project, items), 2)
+        first = build_toc_html(project, items, block=0)
+        second = build_toc_html(project, items, block=1)
+        self.assertIn("Table des matières", first)
+        self.assertNotIn("Table des matières", second)
+        self.assertIn("Article 098", first)
+        self.assertNotIn("Article 099", first)
+        self.assertIn('<li class="toc-chapter"><ol><li class="toc-item"><a class="toc-line" href="https://wikipedia2book.invalid/toc/fr%3Atitle%3Aarticle%20099">', second)
+        self.assertEqual(second.count("<ol>"), second.count("</ol>"))
+        self.assertEqual(toc_block_count(project, items[:3]), 1)
+
+    def test_long_license_page_is_split_into_blocks_with_continued_numbering(self):
+        from app.book_builder import GENERATED_BLOCK_ENTRIES, license_block_count
+        items = self.articles(GENERATED_BLOCK_ENTRIES + 1)
+        project = Project(name="T")
+        self.assertEqual(license_block_count(project, items), 2)
+        first = build_license_page_html(project, items, "fr", 0)
+        second = build_license_page_html(project, items, "fr", 1)
+        self.assertIn("<h1>Licence</h1>", first)
+        self.assertNotIn("<h1>", second)
+        self.assertIn(f'<ol start="{GENERATED_BLOCK_ENTRIES + 1}"><li><strong>Article {GENERATED_BLOCK_ENTRIES:03}</strong>', second)
+        self.assertNotIn("overflow-wrap", first)
+        self.assertIn("org/<wbr>wiki/<wbr>Article_<wbr>000", first)
 
 
 if __name__ == "__main__":

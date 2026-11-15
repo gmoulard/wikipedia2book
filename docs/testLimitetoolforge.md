@@ -14,6 +14,39 @@ Réglages communs à toutes les mesures : `scripts/limit_check.py`, pages liées
 | 1.7.10  | 100 articles     | 150                     |
 | 1.8.0   | 100 articles     | 150                     |
 | 1.8.2   | 100 articles     | 150                     |
+| 1.8.3   | 150 articles     | 200                     |
+
+## Version 1.8.3 (15/11/2026, 22:17 UTC)
+
+Une fois les articles téléchargés, l'assemblage (rendus WeasyPrint, fusion, signets, numérotation, écriture) se fait dans un processus séparé qui rend sa mémoire en se terminant. Test lancé 6 s après le démarrage du serveur (22:17:11 UTC), suivi par `GET /api/health/details` toutes les 10 s.
+
+| Articles | Pages | Taille du PDF | Wikipédia | Application | Transfert | Total   | Résultat |
+|----------|-------|---------------|-----------|-------------|-----------|---------|----------|
+| 100      | 1 637 | 181,8 Mo      | 115,5 s   | 11,8 s      | 26,6 s    | 154,0 s | réussi   |
+| 150      | 2 586 | 280,0 Mo      | 93,5 s    | 21,9 s      | 48,1 s    | 163,5 s | réussi   |
+| 200      | —     | —             | —         | —           | —         | 217,2 s | échec    |
+
+Mémoire relevée (Mo ; le conteneur compte le serveur, le processus d'assemblage et le cache des fichiers temporaires) :
+
+| Heure (UTC) | Moment                                     | Conteneur | Serveur (RSS) | Fichiers temporaires |
+|-------------|--------------------------------------------|-----------|---------------|----------------------|
+| 22:19:19    | 100 articles, fin des téléchargements      | 311       | 248           | 88                   |
+| 22:19:30    | 100 articles, assemblage                   | 1 472     | 258           | 183                  |
+| 22:20:01    | génération terminée                        | 304       | 257           | 0                    |
+| 22:21:37    | 150 articles, fin des téléchargements      | 605       | 348           | 149                  |
+| 22:21:47    | 150 articles, assemblage                   | 2 048     | 348           | 186                  |
+| 22:22:50    | génération terminée                        | 399       | 348           | 5                    |
+| 22:26:07    | 200 articles, fin des téléchargements      | 627       | 374           | 200                  |
+| 22:26:18    | 200 articles, assemblage (dernier relevé)  | 1 137     | 374           | 204                  |
+| 22:26:28    | après redémarrage (22:26:26 UTC)           | 75        | 103           | 0                    |
+
+Constats :
+
+1. **La mémoire gardée entre deux générations a disparu** : le serveur reste entre 250 et 375 Mo pendant tout le test, contre 1,4 Go après chaque génération en 1.8.2, et le conteneur redescend à 300–400 Mo une fois le livre envoyé.
+2. **La limite remonte de 100 à 150 articles**, sans encore retrouver les 200 articles de la 1.7.7.
+3. **L'assemblage lui-même reste trop gourmand** : environ 1,2 Go dans le processus séparé pour 100 articles, et le conteneur touche sa limite de 2 Gio à 150 articles (il tient, une partie étant du cache de fichiers récupérable). À 200 articles, c'est **tout le conteneur** qui est arrêté, pas seulement le processus d'assemblage : le serveur redémarre (22:26:26 UTC) et le client ne reçoit pas le message « L'assemblage du livre s'est arrêté… ». Sur Toolforge, la séparation libère donc la mémoire entre deux générations, mais ne protège pas le serveur d'un assemblage qui dépasse la limite.
+
+Prochaine piste : mesurer quelle étape de l'assemblage consomme ce pic (rendus WeasyPrint de la table des matières et de la licence, fusion par qpdf, ou numérotation).
 
 ## Version 1.8.2 (15/11/2026, 21:52 UTC)
 
