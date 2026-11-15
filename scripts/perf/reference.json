@@ -1,0 +1,75 @@
+{
+  "created": "2026-11-15",
+  "base_url": "http://localhost:8000",
+  "environment": {
+    "label": "GitHub Actions ubuntu-latest, image Docker de production",
+    "python": "3.12.16",
+    "machine": "x86_64",
+    "cpus": 4
+  },
+  "scenarios": {
+    "50-pages": {
+      "total_s": 5.41,
+      "wikipedia_s": 4.64,
+      "app_s": 0.76,
+      "transfer_s": 0.01,
+      "pages": 51,
+      "size_bytes": 5390158,
+      "runs": 2
+    },
+    "200-pages": {
+      "total_s": 9.7,
+      "wikipedia_s": 7.47,
+      "app_s": 2.21,
+      "transfer_s": 0.02,
+      "pages": 200,
+      "size_bytes": 22290210,
+      "runs": 2
+    },
+    "1-article": {
+      "total_s": 1.54,
+      "wikipedia_s": 1.4,
+      "app_s": 0.14,
+      "transfer_s": 0.0,
+      "pages": 5,
+      "size_bytes": 239736,
+      "runs": 2
+    },
+    "50-pages-sans-numerotation": {
+      "total_s": 3.56,
+      "wikipedia_s": 3.03,
+      "app_s": 0.53,
+      "transfer_s": 0.0,
+      "pages": 50,
+      "size_bytes": 3221921,
+      "runs": 2
+    },
+    "200-pages-chapitres": {
+      "total_s": 4.62,
+      "wikipedia_s": 2.23,
+      "app_s": 2.37,
+      "transfer_s": 0.02,
+      "pages": 205,
+      "size_bytes": 22338464,
+      "runs": 2
+    },
+    "200-pages-a5-paysage": {
+      "total_s": 27.57,
+      "wikipedia_s": 15.09,
+      "app_s": 12.46,
+      "transfer_s": 0.02,
+      "pages": 201,
+      "size_bytes": 23499068,
+      "runs": 2
+    },
+    "20-articles": {
+      "total_s": 7.09,
+      "wikipedia_s": 4.17,
+      "app_s": 2.9,
+      "transfer_s": 0.02,
+      "pages": 253,
+      "size_bytes": 28275453,
+      "runs": 2
+    }
+  }
+}
