@@ -991,6 +991,15 @@ Atelier à jouer avant toute mise en production d'une version (skill `deploy-pro
 * **Exécution** : workflow « Performance check » (`.github/workflows/perf-check.yml`), lancement manuel depuis l'onglet Actions avec le niveau (`min` ou `max`) et, sur `main` seulement, l'option d'enregistrer la référence (commit de `scripts/perf/reference.json` sur `main`). Il construit l'image Docker de production, la démarre sur l'exécuteur GitHub, joue l'atelier contre `http://localhost:8000` et publie le rapport dans le résumé de l'exécution (et en artefact `perf-report`). Les mesures ne sont comparables qu'entre exécutions du même environnement : la référence est mesurée par ce workflow. À la main : `python scripts/perf_check.py --base-url <url> --level min|max` (écarts seulement indicatifs sur une autre machine).
 * **Tests** : `tests/test_perf_check.py` (faux serveur local qui imite `/api/pdf/stream`).
 
+* **Mesures par version** : génération d'un même livre réel, *Épaves de la rade de Saint-Pierre* (11 articles, 104 pages, 13,7 Mo), par `POST /api/pdf/stream` depuis un poste client, première génération après la mise en ligne de la version. Une génération répétée est plus rapide, car Wikimédia garde les PDF d'articles en cache : seule la phase *Wikipédia* en dépend. Les phases sont celles de l'atelier. *Tests* : nombre de tests automatisés, tous réussis à la publication.
+
+  | Version | Date       | Hébergement | Téléchargements simultanés | Wikipédia | Application | Transfert | Total  | Tests |
+  |---------|------------|-------------|----------------------------|-----------|-------------|-----------|--------|-------|
+  | 1.6.10  | 2026-11-14 | Railway     | 1                          | 31 s      | 9,7 s (application et transfert, PDF en base64) | —         | 40,7 s | 83    |
+  | 1.7.1   | 2026-11-14 | Railway     | 4                          | 10,5 s    | 1,7 s       | 1,4 s     | 13,6 s | 85    |
+  | 1.7.5   | 2026-11-15 | Railway     | 2                          | 17,2 s    | 1,6 s       | 1,6 s     | 20,4 s | 117   |
+  | 1.7.5   | 2026-11-15 | Toolforge   | 4                          | 10,9 s    | 2,3 s       | 2,8 s     | 16,0 s | 117   |
+
 ## 14\. Sécurité et robustesse
 
 Le logiciel met en œuvre aujourd'hui :

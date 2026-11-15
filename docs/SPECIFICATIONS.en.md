@@ -990,6 +990,15 @@ Workshop to run before any production deployment of a version (`deploy-productio
 * **Running it**: "Performance check" workflow (`.github/workflows/perf-check.yml`), started manually from the Actions tab with the level (`min` or `max`) and, on `main` only, the option to save the reference (commit of `scripts/perf/reference.json` to `main`). It builds the production Docker image, starts it on the GitHub runner, runs the workshop against `http://localhost:8000` and publishes the report in the run summary (and as the `perf-report` artifact). Measurements are only comparable between runs in the same environment: the reference is measured by this workflow. By hand: `python scripts/perf_check.py --base-url <url> --level min|max` (divergences only indicative on another machine).
 * **Tests**: `tests/test_perf_check.py` (fake local server imitating `/api/pdf/stream`).
 
+* **Measurements by version**: generation of the same real book, *Épaves de la rade de Saint-Pierre* (11 articles, 104 pages, 13.7 MB), through `POST /api/pdf/stream` from a client machine, first generation after the version went live. A repeated generation is faster, because Wikimedia keeps article PDFs in its cache: only the *Wikipedia* phase depends on it. The phases are those of the workshop. *Tests*: number of automated tests, all passing at release.
+
+  | Version | Date       | Host      | Simultaneous downloads | Wikipedia | Application | Transfer | Total  | Tests |
+  |---------|------------|-----------|------------------------|-----------|-------------|----------|--------|-------|
+  | 1.6.10  | 2026-11-14 | Railway   | 1                      | 31 s      | 9.7 s (application and transfer, PDF in base64) | —        | 40.7 s | 83    |
+  | 1.7.1   | 2026-11-14 | Railway   | 4                      | 10.5 s    | 1.7 s       | 1.4 s    | 13.6 s | 85    |
+  | 1.7.5   | 2026-11-15 | Railway   | 2                      | 17.2 s    | 1.6 s       | 1.6 s    | 20.4 s | 117   |
+  | 1.7.5   | 2026-11-15 | Toolforge | 4                      | 10.9 s    | 2.3 s       | 2.8 s    | 16.0 s | 117   |
+
 ## 14\. Security and robustness
 
 The software currently implements:

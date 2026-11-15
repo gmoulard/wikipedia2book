@@ -1,6 +1,6 @@
 # À faire
 
-État au 15/11/2026. Production Toolforge : **1.7.1** (`production-toolforge` = `d25ebfb`). `main` : **1.7.4** (`a8144df`), tags `v1.7.2` à `v1.7.4` poussés.
+État au 15/11/2026. Production Toolforge et `main` : **1.7.5** (`1c249d3`), tags `v1.7.2` à `v1.7.5` poussés.
 
 ## 1. Actions à faire soi-même (bloquées dans les sessions cloud)
 
@@ -28,13 +28,9 @@
 
 ## 2. Mise en production
 
-- [ ] **Déployer sur Toolforge** (skill `deploy-production`, seulement sur demande). Toolforge est en 1.7.1 et n'a pas encore :
-  - 1.7.2 : compteur horaire et `GET /api/stats/hourly`. Sans lui, la page de statistiques affiche « heures en direct indisponibles » ;
-  - 1.7.3 : nouvelles tentatives sur les refus 429/503 de Wikimédia ;
-  - 1.7.4 : politique robots de Wikimédia (2 téléchargements simultanés, 25 Mbit/s) et User-Agent conforme ;
-  - les scripts de déploiement déplacés dans `scripts/`, et le relevé horaire d'avant redémarrage. Ces deux points n'ont jamais été exécutés en conditions réelles.
-- [ ] **Avant ce déploiement : jouer l'atelier de performance** (workflow « Performance check », niveau `min`).
-- [ ] **Après ce déploiement : vérifier** `https://wikipedia2book.toolforge.org/api/version` (1.7.4), `/api/stats/hourly`, et la ligne « en direct » sous le graphique horaire de `stats.html`.
+- [x] **1.7.5 déployée sur Toolforge** le 15/11/2026 (workflow « Tests and Toolforge deploy » réussi, y compris le relevé horaire avant redémarrage). `/api/version` sert `1c249d3` et `/api/stats/hourly` répond. 4 téléchargements démarrent ensemble : le `Procfile` lève bien les limites. Temps mesurés en section 13.11 des spécifications.
+- [ ] **Atelier de performance non joué** avant ce déploiement : `gh` n'est pas connecté sur le poste local, et le workflow ne se lance que depuis GitHub. À jouer au niveau `min`, puis refaire la référence (section 3).
+- [ ] **Ligne « en direct » sous le graphique horaire de `stats.html`** : pas encore regardée.
 
 ## 3. Décisions en attente
 
