@@ -1043,6 +1043,8 @@ Test à jouer à la main pour connaître la taille maximale d'un livre qu'un dé
 
   **Résultat sur Toolforge, version 1.7.9** : 300 articles font encore redémarrer le serveur, après 347 s. La mémoire mesurée en local restant basse, la piste retenue est l'espace temporaire : en 1.7.9, les fichiers des parties, le fichier fusionné et le PDF final coexistaient, soit environ trois fois la taille du livre (588 Mo pour un livre de 197 Mo, mesuré en local). Depuis la 1.7.10, les fichiers des parties sont supprimés dès la fusion : deux fois la taille du livre (392 Mo). La cause exacte (mémoire ou quota d'espace temporaire du pod) n'a pas pu être lue dans les événements Kubernetes de Toolforge.
 
+  **Résultat sur Toolforge, version 1.7.10** : limite d'environ 100 articles (1 637 pages, 182 Mo), échec à 150 et 200 articles, soit une régression par rapport à la 1.7.7 ; l'hypothèse de l'espace temporaire ne suffit pas à l'expliquer. Détail de chaque mesure, version par version : [testLimitetoolforge.md](testLimitetoolforge.md).
+
 ## 14\. Sécurité et robustesse
 
 Le logiciel met en œuvre aujourd'hui :
@@ -1199,6 +1201,7 @@ Wikipedia2Book/
     ├── toolforge_hourly.csv      (généré chaque jour et avant chaque déploiement)
     ├── stats.md                  (généré chaque jour et avant chaque déploiement)
     ├── comparison-mediawiki2latex.md  (comparaison avec mediawiki2latex, en anglais)
+    ├── testLimitetoolforge.md  (résultats du test aux limites sur Toolforge, version par version)
     └── _includes/head-custom.html
 ```
 

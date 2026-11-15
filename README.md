@@ -75,6 +75,7 @@ wikipedia2book/
 │   ├── SPECIFICATIONS.en.md     # English translation of the specifications
 │   ├── toolviews.csv, toolforge_hourly.csv, stats.md  # Usage statistics and their charts (generated)
 │   ├── comparison-mediawiki2latex.md  # Comparison with mediawiki2latex
+│   ├── testLimitetoolforge.md   # Limit test results on Toolforge, by version (French)
 │   └── _includes/head-custom.html  # Mermaid rendering on the site
 ├── CODE_OF_CONDUCT.md
 └── LICENSE                      # GNU AGPL v3.0

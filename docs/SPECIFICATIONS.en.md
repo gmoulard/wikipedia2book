@@ -1042,6 +1042,8 @@ Test to run by hand to find the largest book a deployment can generate. Unlike t
 
   **Result on Toolforge, version 1.7.9**: 300 articles still make the server restart, after 347 s. Since the memory measured locally stays low, the most likely cause is temporary space: in 1.7.9, the part files, the merged file and the final PDF coexisted, about three times the size of the book (588 MB for a 197 MB book, measured locally). Since 1.7.10, the part files are deleted as soon as they are merged: twice the size of the book (392 MB). The exact cause (memory or the pod's temporary space quota) could not be read from the Toolforge Kubernetes events.
 
+  **Result on Toolforge, version 1.7.10**: limit of about 100 articles (1,637 pages, 182 MB), failure at 150 and 200 articles, a regression compared with 1.7.7; the temporary space hypothesis is not enough to explain it. Details of each measurement, version by version: [testLimitetoolforge.md](testLimitetoolforge.md) (in French).
+
 ## 14\. Security and robustness
 
 The software currently implements:
@@ -1198,6 +1200,7 @@ Wikipedia2Book/
     ├── toolforge_hourly.csv      (generated daily and before each deployment)
     ├── stats.md                  (generated daily and before each deployment)
     ├── comparison-mediawiki2latex.md  (comparison with mediawiki2latex)
+    ├── testLimitetoolforge.md  (limit test results on Toolforge, by version, in French)
     └── _includes/head-custom.html
 ```
 
