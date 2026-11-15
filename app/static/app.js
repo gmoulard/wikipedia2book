@@ -33,15 +33,27 @@ function escapeHtml(value = '') {
   return String(value).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 }
 
+const SERVER_DOWN_STATUSES = new Set([502, 503, 504]);
+const PDF_AUTO_RETRIES = 2;
+const SERVER_WAIT_MS = 120000;
+const SERVER_POLL_MS = 3000;
+
+class ServerCrashError extends Error {}
+
 async function request(path, options = {}) {
-  const response = await fetch(`${API}${path}`, {
-    ...options,
-    headers: { ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...options.headers },
-  });
+  let response;
+  try {
+    response = await fetch(`${API}${path}`, {
+      ...options,
+      headers: { ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...options.headers },
+    });
+  } catch {
+    throw new ServerCrashError(t('progress.interrupted'));
+  }
   if (!response.ok) {
     let message = t('common.httpError', { status: response.status });
     try { const p = await response.json(); message = p.detail || message; } catch { /* not json */ }
-    throw new Error(message);
+    throw SERVER_DOWN_STATUSES.has(response.status) ? new ServerCrashError(message) : new Error(message);
   }
   if (response.status === 204) return null;
   return response;
@@ -817,7 +829,25 @@ function hidePdfWait() {
 
 function hidePdfProgress() {
   hidePdfWait();
+  $('#pdfProgressRetry').hidden = true;
   $('#pdfProgress').hidden = true;
+}
+
+function showPdfRetry(attempt) {
+  $('#pdfProgressRetry').hidden = false;
+  $('#pdfProgressRetry').textContent = t('progress.retry', { attempt });
+}
+
+async function waitForServer() {
+  const end = Date.now() + SERVER_WAIT_MS;
+  while (Date.now() < end) {
+    await new Promise((resolve) => setTimeout(resolve, SERVER_POLL_MS));
+    try {
+      if ((await fetch(`${API}/health`, { cache: 'no-store' })).ok) return;
+    } catch {
+      continue;
+    }
+  }
 }
 
 function pdfStreamEvent(line) {
@@ -840,7 +870,13 @@ async function streamPdf(project) {
   const parts = [];
   let received = 0;
   for (;;) {
-    const { value, done: finished } = await reader.read();
+    let chunk;
+    try {
+      chunk = await reader.read();
+    } catch {
+      throw new ServerCrashError(t('progress.interrupted'));
+    }
+    const { value, done: finished } = chunk;
     if (value) {
       if (done) { parts.push(value); received += value.length; }
       else {
@@ -858,7 +894,7 @@ async function streamPdf(project) {
       }
     }
     if (done && received >= done.size) return new Blob(parts, { type: 'application/pdf' });
-    if (finished) throw new Error(t('progress.interrupted'));
+    if (finished) throw new ServerCrashError(t('progress.interrupted'));
   }
 }
 
@@ -873,7 +909,21 @@ async function exportPdf() {
   setSaveState(t('export.generating'));
   showPdfProgress(null);
   try {
-    const blob = await streamPdf(state.project);
+    let crashes = 0;
+    let blob = null;
+    while (!blob) {
+      try {
+        blob = await streamPdf(state.project);
+      } catch (error) {
+        // NE PAS relancer sur une erreur renvoyée par le serveur (article introuvable, requête invalide…) : seul un plantage (connexion coupée, serveur en redémarrage) justifie de repartir de zéro.
+        if (!(error instanceof ServerCrashError)) throw error;
+        crashes += 1;
+        if (crashes > PDF_AUTO_RETRIES && !window.confirm(t('export.retryConfirm', { count: crashes }))) throw error;
+        showPdfProgress(null);
+        showPdfRetry(crashes);
+        await waitForServer();
+      }
+    }
     const objectUrl = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = objectUrl;
