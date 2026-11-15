@@ -15,6 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import asyncio
+import os
 import re
 import weakref
 from collections import deque
@@ -36,6 +37,8 @@ USER_AGENT = (
     f"Wikipedia2Book/{VERSION} (https://wikipedia2book.toolforge.org/; https://github.com/gmoulard/wikipedia2book) "
     f"httpx/{httpx.__version__}"
 )
+# NE PAS lever les limites ailleurs que sur Toolforge : seuls les outils Toolforge sont exemptés par la politique robots de Wikimédia ; Railway et Northflank y restent soumis.
+ON_TOOLFORGE = os.environ.get("WIKIPEDIA2BOOK_PLATFORM") == "toolforge"
 MEDIA_CONCURRENCY = 2
 MEDIA_WINDOW_S = 10
 MEDIA_WINDOW_BYTES = 25_000_000 // 8 * MEDIA_WINDOW_S
@@ -145,7 +148,7 @@ class MediaWikiClient:
 
     async def _media_get(self, url: str, **kwargs) -> httpx.Response:
         limiter = media_limiter()
-        # NE PAS sortir ce bloc du sémaphore global ni lire le corps d'un coup : la politique robots de Wikimédia (Media API rules) impose au plus 2 téléchargements simultanés pour tout le serveur et 25 Mbit/s sur 10 s.
+        # NE PAS sortir ce bloc du sémaphore global ni lire le corps d'un coup : hors Toolforge, la politique robots de Wikimédia (REST API rules, 3 requêtes simultanées au plus) est respectée avec 2 téléchargements simultanés pour tout le serveur et 25 Mbit/s sur 10 s.
         async with limiter.slots:
             async with self._client.stream("GET", url, **kwargs) as response:
                 chunks = []
@@ -160,7 +163,7 @@ class MediaWikiClient:
             pause = self._resume_at - _clock()
             if pause > 0:
                 await asyncio.sleep(pause)
-            response = await (self._media_get(url, **kwargs) if media else self._client.get(url, **kwargs))
+            response = await (self._media_get(url, **kwargs) if media and not ON_TOOLFORGE else self._client.get(url, **kwargs))
             if response.status_code not in RETRY_STATUSES:
                 return response
             if attempt == len(RETRY_DELAYS_S):

@@ -145,6 +145,13 @@ L'utilisateur ajoute ainsi des articles à son livre par l'un des moyens suivant
 * Recherche dans Wikipédia : des résultats sont proposés au fil de la saisie, à ajouter d'un clic.
 
 * URL d'une page de « livre » Wikipédia listant des articles : tous les articles qu'elle référence sont importés et pré-sélectionnés, **dans l'ordre où ils apparaissent sur la page de livre** (et non par ordre alphabétique — l'API MediaWiki trie les liens, le logiciel relit donc le wikitexte de la page pour retrouver l'ordre réel). Seuls leur titre et leur URL sont chargés à ce stade; leur PDF complet n'est téléchargé qu'au moment de la génération. La structure de la page de livre est aussi reprise : la première ligne de la forme `=== … ===` devient le sous-titre du livre (seulement si le champ « Sous-titre » de l'étape Édition est vide), et chaque ligne commençant par `;` ouvre un chapitre qui reçoit les articles listés en dessous, jusqu'au chapitre suivant (étape Organisation, section 6). Le livre garde l'ordre exact de la page : les articles placés avant le premier `;` restent sans chapitre mais **en tête du livre**, avant le premier chapitre et sans page de chapitre ni intitulé « Sans chapitre » (réglage `unassigned_first` du livre, enregistré dans le fichier JSON); cela ne vaut que si le livre n'avait encore aucun chapitre avant l'import, sinon ces articles rejoignent les autres articles sans chapitre, à la fin. Les liens et la mise en forme `''`/`'''` de ces lignes sont réduits à leur texte; un chapitre sans article est ignoré, et les lignes `== … ==` (titre enregistré par le créateur de livres) ne sont pas utilisées. Le message de confirmation renvoie vers la page d'aide Wikipédia sur les livres (`https://fr.wikipedia.org/wiki/Aide:Livres`).
+  Syntaxe d'une page de livre, telle que décrite par l'aide Wikipédia ([Aide:Livres/Aide avancée](https://fr.wikipedia.org/wiki/Aide:Livres/Aide_avanc%C3%A9e)), et traitement par le logiciel (`wikipedia_api.get_book`) :
+  * Titre — `== Titre ==` : ignoré; le titre du livre se saisit dans l'étape Édition.
+  * Sous-titre — `=== Sous-titre ===` : la première ligne de cette forme devient le sous-titre du livre (voir ci-dessus).
+  * Chapitre — `;Nom du chapitre` : ouvre un chapitre.
+  * Article — `:[[Article]]` : l'article est ajouté au chapitre en cours. En pratique, tout lien `[[…]]` d'une ligne qui n'est ni un titre ni un chapitre est pris, même sans `:` initial; une ancre (`#section`) est retirée; les liens dont le titre contient `:` (autres espaces de noms, liens interlangues, fichiers) et les doublons sont ignorés; au plus 200 articles sont lus.
+  * Article renommé — `:[[Frégate (bateau)|Frégate]]` : c'est l'article cible (`Frégate (bateau)`) qui est ajouté; le libellé après `|` est ignoré, le livre affiche le titre de l'article.
+  * Version donnée — `:[{{fullurl:Nom de l'article|oldid=numéro de version}} Titre de l'article]` : non prise en charge. Ce n'est pas un lien `[[…]]`, l'article n'est donc pas importé; le PDF d'un article est toujours celui de sa version actuelle.
 
 Exemple d'URL d'article :
 
@@ -445,7 +452,7 @@ Une fois le PDF lancé, le logiciel :
 
 * Fusionne l'ensemble en un seul fichier PDF et le rend accessible au téléchargement, nommé d'après le titre du livre.
 
-Pendant toute la génération, une fenêtre de statut indique l'étape en cours sous la forme « Étape n / total », avec son libellé (dans la langue de l'interface) et une barre de progression. Les étapes sont, dans l'ordre : le téléchargement de chaque article (une étape par article, avec son titre; jusqu'à 4 articles sont téléchargés en même temps depuis Wikipédia, et chaque étape s'affiche au début de son téléchargement — l'ordre des articles dans le livre n'en dépend pas; si un téléchargement échoue, les autres sont abandonnés et l'erreur du premier article en échec, dans l'ordre du livre, est affichée) ou la préparation de chaque document importé, le calcul des numéros de page (si la numérotation est activée), la composition de la couverture et de la table des matières, l'assemblage des pages au format du livre, la numérotation des pages (si activée), puis la finalisation du fichier. Le total est connu dès le départ. Chaque message est envoyé au moment où l'étape commence : les rendus WeasyPrint, la recomposition des pages, la numérotation et l'écriture du fichier s'exécutent dans un fil d'exécution séparé (`asyncio.to_thread`), ce qui laisse le serveur libre d'envoyer la progression et de répondre aux autres utilisateurs pendant une génération. La fenêtre se ferme à la fin, en cas de succès comme d'échec.
+Pendant toute la génération, une fenêtre de statut indique l'étape en cours sous la forme « Étape n / total », avec son libellé (dans la langue de l'interface) et une barre de progression. Les étapes sont, dans l'ordre : le téléchargement de chaque article (une étape par article, avec son titre; jusqu'à 4 articles sont téléchargés en même temps depuis Wikipédia sur Toolforge, 2 sur les autres hébergements (section 13.2), et chaque étape s'affiche au début de son téléchargement — l'ordre des articles dans le livre n'en dépend pas; si un téléchargement échoue, les autres sont abandonnés et l'erreur du premier article en échec, dans l'ordre du livre, est affichée) ou la préparation de chaque document importé, le calcul des numéros de page (si la numérotation est activée), la composition de la couverture et de la table des matières, l'assemblage des pages au format du livre, la numérotation des pages (si activée), puis la finalisation du fichier. Le total est connu dès le départ. Chaque message est envoyé au moment où l'étape commence : les rendus WeasyPrint, la recomposition des pages, la numérotation et l'écriture du fichier s'exécutent dans un fil d'exécution séparé (`asyncio.to_thread`), ce qui laisse le serveur libre d'envoyer la progression et de répondre aux autres utilisateurs pendant une génération. La fenêtre se ferme à la fin, en cas de succès comme d'échec.
 
 Côté serveur, cette progression est transmise par l'endpoint `POST /api/pdf/stream`, qui renvoie un flux NDJSON (une ligne JSON par événement) : `{"type": "progress", "step", "total", "code", "title"?}` pour chaque étape, puis `{"type": "done", "size"}` immédiatement suivi des `size` octets du PDF, en binaire et sans encodage (envoyés par morceaux de 256 Ko), ou `{"type": "error", "detail"}` en cas d'échec en cours de génération. Le navigateur lit les lignes JSON jusqu'au message `done`, puis rassemble les octets du PDF; s'il en reçoit moins que `size`, il affiche « la connexion avec le serveur a été interrompue avant la fin ». Une sélection vide est refusée avant le début du flux (erreur HTTP 400). L'endpoint `POST /api/pdf`, qui renvoie directement le fichier PDF sans progression, reste disponible pour un usage direct de l'API.
 
@@ -542,7 +549,7 @@ Tous les échanges avec Wikipédia passent par la classe `MediaWikiClient` de `a
 Règles communes :
 
 * En-tête `User-Agent` conforme à la politique User-Agent de la Wikimedia Foundation (nom et version de l'outil, moyen de contact, bibliothèque et sa version) : `Wikipedia2Book/<version> (https://wikipedia2book.toolforge.org/; https://github.com/gmoulard/wikipedia2book) httpx/<version>`, la version étant celle de `app/version.py`.
-* Respect de la politique robots de Wikimédia (*Robot policy*, règles de la Media API) pour les PDF officiels : **au plus 2 téléchargements simultanés pour tout le serveur**, quel que soit le nombre de livres générés en même temps, et **au plus 25 Mbit/s** de téléchargement mesurés sur 10 s glissantes (31,25 Mo par fenêtre) : le PDF est lu par morceaux et la lecture attend quand la fenêtre est pleine. Le compteur vaut pour un processus serveur (une seule instance uvicorn par plateforme) : chaque déploiement (Toolforge, Railway, Northflank) a son propre plafond.
+* Respect de la politique robots de Wikimédia (*Robot policy*) pour les PDF officiels, hors Toolforge : le service PDF relève des règles de l'API REST (sans authentification, au plus 3 requêtes simultanées et moins de 5 par seconde), respectées avec **au plus 2 téléchargements simultanés pour tout le serveur**, quel que soit le nombre de livres générés en même temps, et **au plus 25 Mbit/s** de téléchargement mesurés sur 10 s glissantes (31,25 Mo par fenêtre) : le PDF est lu par morceaux et la lecture attend quand la fenêtre est pleine. Le compteur vaut pour un processus serveur (une seule instance uvicorn par plateforme) : chaque déploiement (Railway, Northflank) a son propre plafond. **Sur Toolforge, ces limites sont levées** : la politique en exempte les outils hébergés sur Wikimedia Cloud Services ; jusqu'à 4 téléchargements simultanés par livre, sans plafond de débit. Toolforge est reconnu par la variable d'environnement `WIKIPEDIA2BOOK_PLATFORM=toolforge`, que seul le `Procfile` positionne.
 * Délais d'attente : 20 secondes pour l'API MediaWiki, 120 secondes pour le téléchargement d'un PDF.
 * Erreurs : un échec réseau, une réponse HTTP en erreur, une réponse non JSON ou un champ `error` de l'API MediaWiki produisent une erreur explicite, renvoyée par l'API de l'application avec le code 502 (404 pour une page introuvable, 422 pour une entrée invalide). Une réponse REST qui ne commence pas par `%PDF-` est refusée; pendant la génération, la moindre erreur sur un article annule tout le livre (section 8).
 * Aucune donnée n'est mise en cache ni conservée : chaque opération refait ses appels.
@@ -697,7 +704,7 @@ Le cinquième, `.github/workflows/perf-check.yml` (« Performance check »), jou
 
 Toolforge construit l'image avec des buildpacks et ignore le `Dockerfile`. Le dépôt fournit :
 
-* `Procfile` : commande `uvicorn` sur le port 8000 attendu par Toolforge.
+* `Procfile` : commande `uvicorn` sur le port 8000 attendu par Toolforge, précédée de `env WIKIPEDIA2BOOK_PLATFORM=toolforge` (lève les limites de téléchargement, section 13.2).
 
 * `Aptfile` : mêmes dépendances système et polices que le `Dockerfile`.
 
@@ -998,7 +1005,7 @@ Le logiciel met en œuvre aujourd'hui :
 
 * Des délais d'attente bornés sur les appels réseau.
 
-* Une attente avant de réessayer, partagée et asynchrone, quand Wikimédia répond HTTP 429 ou 503 (au plus 4 nouvelles tentatives, section 7), en plus des limites de la politique robots de Wikimédia (2 téléchargements de PDF simultanés pour tout le serveur, 25 Mbit/s sur 10 s, section 13.2).
+* Une attente avant de réessayer, partagée et asynchrone, quand Wikimédia répond HTTP 429 ou 503 (au plus 4 nouvelles tentatives, section 7), en plus, hors Toolforge, des limites de la politique robots de Wikimédia (2 téléchargements de PDF simultanés pour tout le serveur, 25 Mbit/s sur 10 s, section 13.2).
 
 * Aucun contenu HTML d'article n'est interprété ni réinjecté par l'application : seuls le PDF officiel Wikipédia (binaire) et les champs texte validés par l'API transitent par le serveur.
 
@@ -1150,6 +1157,8 @@ L'essentiel du socle fonctionnel décrit dans ce document est implémenté : liv
 
 * Filtrage de l'exploration par langue ou par catégorie d'article.
 
+* Prise en charge, dans les pages de livre, des versions données d'un article (`{{fullurl:…|oldid=…}}`, section 3.1), avec le PDF de la révision indiquée.
+
 * Extraction indépendante des crédits et licences des images, au-delà de ce qu'intègre le PDF officiel Wikipédia.
 
 * Journalisation des erreurs et limitation du débit des requêtes API.
@@ -1225,5 +1234,6 @@ Numéro de version applicatif (`app/version.py`, repris par `app/main.py` et par
 | 1.7.2   | 2026-11-15 | GMoulard  | Statistiques : l'application compte ses requêtes par heure en mémoire (48 h, sans IP ni chemin, remis à zéro au redémarrage) et les expose sur `GET /api/stats/hourly` (CORS ouvert); la page de statistiques complète en direct le graphique des hits par heure, sans reconstruire le site. |
 | 1.7.3   | 2026-11-15 | GMoulard  | Génération plus fiable quand Wikimédia limite les requêtes : sur un refus HTTP 429 ou 503, attente (délai indiqué par Wikimédia, borné à 20 s, ou 2, 4, 8 puis 16 s) partagée par tous les téléchargements du livre, puis nouvelle tentative, jusqu'à 4 fois ; au-delà, message d'erreur explicite. |
 | 1.7.4   | 2026-11-15 | GMoulard  | Respect de la politique robots de Wikimédia : au plus 2 téléchargements de PDF simultanés pour tout le serveur (au lieu de 4 par livre) et débit plafonné à 25 Mbit/s sur 10 s; User-Agent conforme à la politique de la Wikimedia Foundation (version et contacts). La génération des gros livres peut être un peu plus lente. |
+| 1.7.5   | 2026-11-15 | GMoulard  | Génération plus rapide sur Toolforge : les limites de téléchargement de la politique robots de Wikimédia, dont Toolforge est exempté, y sont levées (4 PDF à la fois par livre, sans plafond de débit), et gardées sur Railway et Northflank (2 à la fois, 25 Mbit/s); Toolforge reconnu par `WIKIPEDIA2BOOK_PLATFORM=toolforge` dans le `Procfile` (section 13.2). Documentation : syntaxe des pages de livre (section 3.1). |
 
 Fin du document

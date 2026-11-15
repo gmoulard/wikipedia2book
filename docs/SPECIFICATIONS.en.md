@@ -144,6 +144,13 @@ The user can therefore add articles to the book in any of the following ways:
 * Search in Wikipedia: results are suggested as you type, to be added with one click.
 
 * URL of a Wikipedia "book" page listing articles: every article it references is imported and pre-selected, **in the order in which they appear on the book page** (not in alphabetical order — the MediaWiki API sorts links, so the software reads the page's wikitext to recover the real order). Only their title and URL are loaded at this stage; their full PDF is downloaded only at generation time. The structure of the book page is also kept: the first line of the form `=== … ===` becomes the book subtitle (only if the "Subtitle" field of the Editing step is empty), and each line starting with `;` opens a chapter that receives the articles listed below it, up to the next chapter (Organization step, section 6). The book keeps the exact order of the page: the articles placed before the first `;` stay without a chapter but **at the start of the book**, before the first chapter and without a chapter page or a "No chapter" heading (book setting `unassigned_first`, saved in the JSON file); this applies only if the book had no chapter yet before the import, otherwise those articles join the other articles without a chapter, at the end. Links and `''`/`'''` formatting in those lines are reduced to their text; a chapter without articles is ignored, and `== … ==` lines (title recorded by the book creator) are not used. The confirmation message links to the Wikipedia help page about books (`https://fr.wikipedia.org/wiki/Aide:Livres`).
+  Syntax of a book page, as described in the Wikipedia help ([Aide:Livres/Aide avancée](https://fr.wikipedia.org/wiki/Aide:Livres/Aide_avanc%C3%A9e)), and how the software handles it (`wikipedia_api.get_book`):
+  * Title — `== Title ==`: ignored; the book title is entered in the Editing step.
+  * Subtitle — `=== Subtitle ===`: the first line of this form becomes the book subtitle (see above).
+  * Chapter — `;Chapter name`: opens a chapter.
+  * Article — `:[[Article]]`: the article is added to the current chapter. In practice, every `[[…]]` link on a line that is neither a heading nor a chapter is taken, even without a leading `:`; an anchor (`#section`) is removed; links whose title contains `:` (other namespaces, interlanguage links, files) and duplicates are ignored; at most 200 articles are read.
+  * Renamed article — `:[[Frégate (bateau)|Frégate]]`: the target article (`Frégate (bateau)`) is added; the label after `|` is ignored, and the book shows the article title.
+  * Specific revision — `:[{{fullurl:Article name|oldid=revision number}} Article title]`: not supported. It is not a `[[…]]` link, so the article is not imported; an article's PDF is always that of its current revision.
 
 Example of an article URL:
 
@@ -444,7 +451,7 @@ Once the PDF is started, the software:
 
 * Merges everything into a single PDF file and makes it available for download, named after the book title.
 
-Throughout generation, a status window shows the current step as "Step n / total", with its label (in the interface language) and a progress bar. The steps are, in order: downloading each article (one step per article, with its title; up to 4 articles are downloaded from Wikipedia at the same time, and each step is shown when its download starts — the order of the articles in the book does not depend on it; if a download fails, the others are abandoned and the error of the first failing article, in book order, is shown) or preparing each imported document, computing page numbers (if numbering is on), composing the cover and the table of contents, assembling the pages in the book format, numbering the pages (if enabled), then finalizing the file. The total is known from the start. Each message is sent when its step begins: WeasyPrint renders, page recomposition, numbering and writing the file run in a separate thread (`asyncio.to_thread`), which leaves the server free to send progress and to answer other users during a generation. The window closes at the end, on success as well as on failure.
+Throughout generation, a status window shows the current step as "Step n / total", with its label (in the interface language) and a progress bar. The steps are, in order: downloading each article (one step per article, with its title; up to 4 articles are downloaded from Wikipedia at the same time on Toolforge, 2 on the other hosts (section 13.2), and each step is shown when its download starts — the order of the articles in the book does not depend on it; if a download fails, the others are abandoned and the error of the first failing article, in book order, is shown) or preparing each imported document, computing page numbers (if numbering is on), composing the cover and the table of contents, assembling the pages in the book format, numbering the pages (if enabled), then finalizing the file. The total is known from the start. Each message is sent when its step begins: WeasyPrint renders, page recomposition, numbering and writing the file run in a separate thread (`asyncio.to_thread`), which leaves the server free to send progress and to answer other users during a generation. The window closes at the end, on success as well as on failure.
 
 On the server side, this progress is sent by the `POST /api/pdf/stream` endpoint, which returns an NDJSON stream (one JSON line per event): `{"type": "progress", "step", "total", "code", "title"?}` for each step, then `{"type": "done", "size"}` immediately followed by the `size` bytes of the PDF, in binary and without encoding (sent in 256 KB chunks), or `{"type": "error", "detail"}` if generation fails along the way. The browser reads the JSON lines up to the `done` message, then gathers the PDF bytes; if it receives fewer than `size`, it shows "the connection to the server was interrupted before the end". An empty selection is refused before the stream starts (HTTP error 400). The `POST /api/pdf` endpoint, which returns the PDF file directly without progress, remains available for direct use of the API.
 
@@ -541,7 +548,7 @@ All exchanges with Wikipedia go through the `MediaWikiClient` class in `app/wiki
 Common rules:
 
 * `User-Agent` header following the Wikimedia Foundation User-Agent policy (tool name and version, contact, library and its version): `Wikipedia2Book/<version> (https://wikipedia2book.toolforge.org/; https://github.com/gmoulard/wikipedia2book) httpx/<version>`, the version being the one in `app/version.py`.
-* Compliance with the Wikimedia robot policy (*Robot policy*, Media API rules) for the official PDFs: **at most 2 simultaneous downloads for the whole server**, whatever the number of books generated at the same time, and **at most 25 Mbps** of download measured over sliding 10 s windows (31.25 MB per window): the PDF is read in chunks and reading waits when the window is full. The count applies per server process (a single uvicorn instance per platform): each deployment (Toolforge, Railway, Northflank) has its own cap.
+* Compliance with the Wikimedia robot policy (*Robot policy*) for the official PDFs, outside Toolforge: the PDF service falls under the REST API rules (unauthenticated, at most 3 simultaneous requests and fewer than 5 per second), met with **at most 2 simultaneous downloads for the whole server**, whatever the number of books generated at the same time, and **at most 25 Mbps** of download measured over sliding 10 s windows (31.25 MB per window): the PDF is read in chunks and reading waits when the window is full. The count applies per server process (a single uvicorn instance per platform): each deployment (Railway, Northflank) has its own cap. **On Toolforge, these limits are lifted**: the policy exempts tools hosted on Wikimedia Cloud Services; up to 4 simultaneous downloads per book, with no speed cap. Toolforge is recognised by the `WIKIPEDIA2BOOK_PLATFORM=toolforge` environment variable, which only the `Procfile` sets.
 * Timeouts: 20 seconds for the MediaWiki API, 120 seconds for downloading a PDF.
 * Errors: a network failure, an HTTP error response, a non-JSON response or an `error` field from the MediaWiki API produce an explicit error, returned by the application's API with code 502 (404 for a page not found, 422 for invalid input). A REST response that does not start with `%PDF-` is refused; during generation, any error on an article cancels the whole book (section 8).
 * No data is cached or kept: each operation makes its calls again.
@@ -696,7 +703,7 @@ The fifth, `.github/workflows/perf-check.yml` ("Performance check"), runs the pe
 
 Toolforge builds the image with buildpacks and ignores the `Dockerfile`. The repository provides:
 
-* `Procfile`: `uvicorn` command on port 8000, as expected by Toolforge.
+* `Procfile`: `uvicorn` command on port 8000, as expected by Toolforge, preceded by `env WIKIPEDIA2BOOK_PLATFORM=toolforge` (lifts the download limits, section 13.2).
 
 * `Aptfile`: the same system dependencies and fonts as the `Dockerfile`.
 
@@ -997,7 +1004,7 @@ The software currently implements:
 
 * Bounded timeouts on network calls.
 
-* A shared, asynchronous wait before retrying when Wikimedia answers HTTP 429 or 503 (at most 4 retries, section 7), on top of the limits of the Wikimedia robot policy (2 simultaneous PDF downloads for the whole server, 25 Mbps over 10 s, section 13.2).
+* A shared, asynchronous wait before retrying when Wikimedia answers HTTP 429 or 503 (at most 4 retries, section 7), on top of, outside Toolforge, the limits of the Wikimedia robot policy (2 simultaneous PDF downloads for the whole server, 25 Mbps over 10 s, section 13.2).
 
 * No article HTML content is interpreted or re-injected by the application: only the official Wikipedia PDF (binary) and the text fields validated by the API pass through the server.
 
@@ -1149,6 +1156,8 @@ Possible developments, not implemented to date:
 
 * Filtering the exploration by language or by article category.
 
+* Support, in book pages, for specific revisions of an article (`{{fullurl:…|oldid=…}}`, section 3.1), with the PDF of the given revision.
+
 * Independent extraction of image credits and licenses, beyond what the official Wikipedia PDF includes.
 
 * Error logging and rate limiting of API requests.
@@ -1224,5 +1233,6 @@ Application version number (`app/version.py`, used by `app/main.py` and by the U
 | 1.7.2   | 2026-11-15 | GMoulard  | Statistics: the application counts its requests per hour in memory (48 h, no IP or path, reset on restart) and exposes them on `GET /api/stats/hourly` (open CORS); the statistics page completes the hits-per-hour chart live, without rebuilding the site. |
 | 1.7.3   | 2026-11-15 | GMoulard  | More reliable generation when Wikimedia rate-limits requests: on an HTTP 429 or 503 refusal, a wait (delay given by Wikimedia, capped at 20 s, or 2, 4, 8 then 16 s) shared by all the book's downloads, then a retry, up to 4 times; beyond that, an explicit error message. |
 | 1.7.4   | 2026-11-15 | GMoulard  | Compliance with the Wikimedia robot policy: at most 2 simultaneous PDF downloads for the whole server (instead of 4 per book) and download speed capped at 25 Mbps over 10 s; User-Agent following the Wikimedia Foundation policy (version and contacts). Generating large books can be a little slower. |
+| 1.7.5   | 2026-11-15 | GMoulard  | Faster generation on Toolforge: the download limits of the Wikimedia robot policy, from which Toolforge is exempt, are lifted there (4 PDFs at a time per book, no speed cap), and kept on Railway and Northflank (2 at a time, 25 Mbps); Toolforge recognised by `WIKIPEDIA2BOOK_PLATFORM=toolforge` in the `Procfile` (section 13.2). Documentation: syntax of book pages (section 3.1). |
 
 End of document

@@ -71,6 +71,7 @@ from app.pdf_generator import (
 from app.version import VERSION
 from app.wikipedia_api import (
     MEDIA_CONCURRENCY,
+    ON_TOOLFORGE,
     WIKIPEDIA_PDF_PAPERS,
     MediaWikiClient,
     MediaWikiError,
@@ -81,7 +82,7 @@ from app.wikipedia_api import (
 )
 
 
-DOWNLOAD_CONCURRENCY = MEDIA_CONCURRENCY
+DOWNLOAD_CONCURRENCY = 4 if ON_TOOLFORGE else MEDIA_CONCURRENCY
 PDF_STREAM_CHUNK = 256 * 1024
 
 app = FastAPI(title="Wikipedia2Book", version=VERSION)
@@ -374,7 +375,7 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
     fitted_items: dict[str, asyncio.Future[tuple[bytes, int]]] = {}
     paper = WIKIPEDIA_PDF_PAPERS.get(project.page_format, "a4")
     started: asyncio.Queue[tuple[str, str]] = asyncio.Queue()
-    # NE PAS dépasser DOWNLOAD_CONCURRENCY : la politique robots de Wikimédia limite à 2 téléchargements simultanés (MediaWikiClient l'impose aussi pour tout le serveur).
+    # NE PAS dépasser DOWNLOAD_CONCURRENCY : hors Toolforge, la politique robots de Wikimédia est respectée avec 2 téléchargements simultanés (MediaWikiClient l'impose aussi pour tout le serveur) ; sur Toolforge, exempté, 4 par livre.
     slots_free = asyncio.Semaphore(DOWNLOAD_CONCURRENCY)
 
     async def load(client: MediaWikiClient, item: Article | UploadedDocument) -> None:

@@ -17,6 +17,8 @@
 import asyncio
 import re
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
 import httpx
 
@@ -105,6 +107,23 @@ class MediaPolicyTest(unittest.IsolatedAsyncioTestCase):
         for _ in range(wikipedia_api.MEDIA_CONCURRENCY):
             limiter.slots.release()
         await client.__aexit__(None, None, None)
+
+    async def test_toolforge_downloads_skip_the_media_limits(self):
+        limiter = wikipedia_api.media_limiter()
+        for _ in range(wikipedia_api.MEDIA_CONCURRENCY):
+            await limiter.slots.acquire()
+        client = await self.client(lambda request: httpx.Response(200, content=self.body))
+        with patch.object(wikipedia_api, "ON_TOOLFORGE", True):
+            self.assertEqual(await asyncio.wait_for(client.get_article_pdf("Chat", "fr", "a4"), 1), self.body)
+        self.assertEqual(list(limiter.received), [])
+        for _ in range(wikipedia_api.MEDIA_CONCURRENCY):
+            limiter.slots.release()
+        await client.__aexit__(None, None, None)
+
+    def test_only_the_toolforge_procfile_lifts_the_limits(self):
+        root = Path(__file__).resolve().parent.parent
+        self.assertIn("WIKIPEDIA2BOOK_PLATFORM=toolforge", (root / "Procfile").read_text(encoding="utf-8"))
+        self.assertNotIn("WIKIPEDIA2BOOK_PLATFORM", (root / "Dockerfile").read_text(encoding="utf-8"))
 
     def test_user_agent_follows_wikimedia_policy(self):
         self.assertRegex(wikipedia_api.USER_AGENT, r"^Wikipedia2Book/" + re.escape(VERSION) + r" \(https://[^)]+\) httpx/[0-9.]+$")
