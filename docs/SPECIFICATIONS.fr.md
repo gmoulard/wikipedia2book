@@ -49,6 +49,7 @@ Traduction anglaise : [SPECIFICATIONS.en.md](SPECIFICATIONS.en.md). Ce document 
 	- [13.9 Modèle de données et fichier de sauvegarde](#139-mod%C3%A8le-de-donn%C3%A9es-et-fichier-de-sauvegarde)
 	- [13.10 Schémas de l'architecture](#1310-sch%C3%A9mas-de-larchitecture)
 	- [13.11 Atelier de performance](#1311-atelier-de-performance)
+	- [13.12 Test aux limites](#1312-test-aux-limites)
 - [14. Sécurité et robustesse](#14-s%C3%A9curit%C3%A9-et-robustesse)
 - [15. Respect des licences Wikipédia](#15-respect-des-licences-wikip%C3%A9dia)
 - [16. Critères d'acceptation](#16-crit%C3%A8res-dacceptation)
@@ -1002,6 +1003,24 @@ Atelier à jouer avant toute mise en production d'une version (skill `deploy-pro
 | 1.7.6   | 2026-11-15 | GMoulard  | Fenêtre de génération : pendant une pause due à un refus HTTP 429 ou 503 de Wikimédia, un compte à rebours indique le délai avant le nouvel essai (événement `wait` du flux `/api/pdf/stream`, textes traduits dans les 12 langues). Atelier de performance : seuils du verdict à +50 % (à surveiller) et +100 % (régression). |
   | 1.7.5   | 2026-11-15 | Toolforge   | 4                          | 10,9 s    | 2,3 s       | 2,8 s     | 16,0 s | 117   |
 
+### 13.12 Test aux limites
+
+Test à jouer à la main pour connaître la taille maximale d'un livre qu'un déploiement sait générer. Contrairement à l'atelier de performance, il pousse le serveur jusqu'à l'échec : un serveur qui manque de mémoire est arrêté et redémarré par sa plateforme, ce qui interrompt les générations en cours des autres utilisateurs et remet à zéro le compteur horaire (section 13.8). Le jouer sur Toolforge seulement, exempté des limites de Wikimédia (section 13.2), et pas aux heures d'usage.
+
+* **Script** : `scripts/limit_check.py --base-url <url> [--steps 25,50,100,200,400,800] [--source-page France] [--language fr]`. Il prend les liens d'une page Wikipédia (par défaut, l'article *France* en français, liens dans l'ordre de l'API), génère des livres de plus en plus gros avec les N premiers, mesure chaque génération comme l'atelier de performance (mêmes phases, PDF vérifié et pages comptées), et s'arrête au premier échec. Chaque palier réutilise les articles du précédent, déjà en cache chez Wikimédia.
+* **Tests** : `tests/test_limit_check.py` (faux générateur, sans réseau).
+* **Résultats sur Toolforge, version 1.7.5** (15/11/2026, format A4, numérotation et table des matières, depuis un poste client) :
+
+  | Articles | Pages | Taille du PDF | Wikipédia | Application | Transfert | Total  | Résultat |
+  |----------|-------|---------------|-----------|-------------|-----------|--------|----------|
+  | 25       | 202   | 20,4 Mo       | 24,7 s    | 5,6 s       | 4,1 s     | 34,3 s | réussi   |
+  | 50       | 684   | 73,6 Mo       | 33,2 s    | 17,1 s      | 15,1 s    | 65,3 s | réussi   |
+  | 100      | 1 636 | 182,4 Mo      | 107,6 s   | 42,7 s      | 37,5 s    | 187,8 s | réussi  |
+  | 150      | —     | —             | —         | —           | —         | 181 s  | échec    |
+  | 200      | —     | —             | —         | —           | —         | 266 s  | échec    |
+
+  **Limite constatée : environ 100 articles, soit 1 600 pages et 180 Mo de PDF.** À 150 et 200 articles, le flux s'interrompt pendant la génération : le serveur redémarre (heure de démarrage de `GET /api/stats/hourly` remise à l'heure de l'échec), très probablement par manque de mémoire, le livre étant assemblé entièrement en mémoire. La limite dépend surtout du nombre de pages et du poids des images des articles, pas du nombre d'articles lui-même. Railway et Northflank n'ont pas été testés.
+
 ## 14\. Sécurité et robustesse
 
 Le logiciel met en œuvre aujourd'hui :
@@ -1111,6 +1130,7 @@ Wikipedia2Book/
 │   ├── toolviews_stats.py
 │   ├── toolviews_chart.py
 │   ├── perf_check.py
+│   ├── limit_check.py
 │   └── perf/                  (scenarios.json, reference.json)
 │
 ├── tests/
@@ -1127,6 +1147,7 @@ Wikipedia2Book/
 │   ├── test_media_policy.py
 │   ├── test_toolviews_chart.py
 │   ├── test_perf_check.py
+│   ├── test_limit_check.py
 │   └── test_i18n.py
 │
 ├── Dockerfile
@@ -1155,6 +1176,7 @@ Wikipedia2Book/
     ├── toolviews.csv             (généré chaque jour)
     ├── toolforge_hourly.csv      (généré chaque jour et avant chaque déploiement)
     ├── stats.md                  (généré chaque jour et avant chaque déploiement)
+    ├── comparison-mediawiki2latex.md  (comparaison avec mediawiki2latex, en anglais)
     └── _includes/head-custom.html
 ```
 

@@ -48,6 +48,7 @@ This is the English translation of [SPECIFICATIONS.fr.md](SPECIFICATIONS.fr.md).
 	- [13.9 Data model and save file](#139-data-model-and-save-file)
 	- [13.10 Architecture diagrams](#1310-architecture-diagrams)
 	- [13.11 Performance workshop](#1311-performance-workshop)
+	- [13.12 Limit test](#1312-limit-test)
 - [14. Security and robustness](#14-security-and-robustness)
 - [15. Compliance with Wikipedia licenses](#15-compliance-with-wikipedia-licenses)
 - [16. Acceptance criteria](#16-acceptance-criteria)
@@ -1001,6 +1002,24 @@ Workshop to run before any production deployment of a version (`deploy-productio
 | 1.7.6   | 2026-11-15 | GMoulard  | Generation window: during a pause caused by an HTTP 429 or 503 refusal from Wikimedia, a countdown shows the delay before the next attempt (`wait` event of the `/api/pdf/stream` stream, texts translated into the 12 languages). Performance workshop: verdict thresholds at +50% (to watch) and +100% (regression). |
   | 1.7.5   | 2026-11-15 | Toolforge | 4                      | 10.9 s    | 2.3 s       | 2.8 s    | 16.0 s | 117   |
 
+### 13.12 Limit test
+
+Test to run by hand to find the largest book a deployment can generate. Unlike the performance workshop, it pushes the server until it fails: a server that runs out of memory is stopped and restarted by its platform, which interrupts other users' generations in progress and resets the hourly counter (section 13.8). Run it on Toolforge only, which is exempt from the Wikimedia limits (section 13.2), and outside busy hours.
+
+* **Script**: `scripts/limit_check.py --base-url <url> [--steps 25,50,100,200,400,800] [--source-page France] [--language fr]`. It takes the links of a Wikipedia page (by default, the French article *France*, links in API order), generates bigger and bigger books with the first N, measures each generation like the performance workshop (same phases, PDF checked and pages counted), and stops at the first failure. Each step reuses the articles of the previous one, already cached by Wikimedia.
+* **Tests**: `tests/test_limit_check.py` (fake generator, no network).
+* **Results on Toolforge, version 1.7.5** (2026-11-15, A4 format, page numbers and table of contents, from a client machine):
+
+  | Articles | Pages | PDF size | Wikipedia | Application | Transfer | Total   | Result  |
+  |----------|-------|----------|-----------|-------------|----------|---------|---------|
+  | 25       | 202   | 20.4 MB  | 24.7 s    | 5.6 s       | 4.1 s    | 34.3 s  | passed  |
+  | 50       | 684   | 73.6 MB  | 33.2 s    | 17.1 s      | 15.1 s   | 65.3 s  | passed  |
+  | 100      | 1,636 | 182.4 MB | 107.6 s   | 42.7 s      | 37.5 s   | 187.8 s | passed  |
+  | 150      | —     | —        | —         | —           | —        | 181 s   | failed  |
+  | 200      | —     | —        | —         | —           | —        | 266 s   | failed  |
+
+  **Limit found: about 100 articles, that is 1,600 pages and 180 MB of PDF.** At 150 and 200 articles, the stream stops during generation: the server restarts (start time of `GET /api/stats/hourly` reset to the time of the failure), most likely because it runs out of memory, since the book is assembled entirely in memory. The limit depends mostly on the number of pages and the weight of the articles' images, not on the number of articles itself. Railway and Northflank were not tested.
+
 ## 14\. Security and robustness
 
 The software currently implements:
@@ -1110,6 +1129,7 @@ Wikipedia2Book/
 │   ├── toolviews_stats.py
 │   ├── toolviews_chart.py
 │   ├── perf_check.py
+│   ├── limit_check.py
 │   └── perf/                  (scenarios.json, reference.json)
 │
 ├── tests/
@@ -1126,6 +1146,7 @@ Wikipedia2Book/
 │   ├── test_media_policy.py
 │   ├── test_toolviews_chart.py
 │   ├── test_perf_check.py
+│   ├── test_limit_check.py
 │   └── test_i18n.py
 │
 ├── Dockerfile
@@ -1154,6 +1175,7 @@ Wikipedia2Book/
     ├── toolviews.csv             (generated daily)
     ├── toolforge_hourly.csv      (generated daily and before each deployment)
     ├── stats.md                  (generated daily and before each deployment)
+    ├── comparison-mediawiki2latex.md  (comparison with mediawiki2latex)
     └── _includes/head-custom.html
 ```
 

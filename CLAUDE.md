@@ -106,6 +106,7 @@ Des tests automatisés existent sous `tests/` (stdlib `unittest`, lancés avec l
 
 - `test_hourly_stats.py` : compteur en mémoire `hourly_hits` et `GET /api/stats/hourly` via `TestClient` (l'endpoint ne se compte pas lui-même, CORS ouvert, 48 heures gardées).
 
+- `test_limit_check.py` : `scripts/limit_check.py` (test aux limites, section 13.12) avec un faux générateur — paliers jusqu'au premier échec, mêmes premiers articles à chaque palier, tableau du rapport. Ne jouer le script réel que sur Toolforge et sur demande : il fait redémarrer le serveur quand la limite est atteinte.
 - `test_perf_check.py` : `scripts/perf_check.py` contre un faux serveur local qui imite `/api/pdf/stream` (phases mesurées, pages comptées, événement `error`), seuils du verdict (temps application par page : +50 % à surveiller, +100 % régression), cohérence de `scripts/perf/scenarios.json`.
 
 - `test_rate_limit.py` : attente et nouvelles tentatives de `MediaWikiClient` sur 429/503 (faux transport `httpx.MockTransport`, `asyncio.sleep` remplacé) — délais 2/4/8/16 s, `Retry-After` en secondes ou en date (borné), abandon explicite après 4 tentatives, pas de nouvelle tentative sur 404, pause partagée entre téléchargements parallèles, chaque nouvelle pause annoncée par `on_wait`, API MediaWiki couverte aussi.

@@ -58,7 +58,8 @@ wikipedia2book/
 │   ├── toolforge-hourly.sh, toolforge_hourly.py  # Hits per hour from the Toolforge webservice logs
 │   ├── update-stats.sh          # Statistics update run by GitHub Actions (daily and before each deployment)
 │   ├── toolviews_chart.py       # Usage charts page for GitHub Pages
-│   └── perf_check.py, perf/     # Performance workshop run before each production release
+│   ├── perf_check.py, perf/     # Performance workshop run before each production release
+│   └── limit_check.py           # Limit test: largest book a deployment can generate (section 13.12)
 ├── tests/                       # unittest suite (no network, WeasyPrint stubbed when missing)
 ├── .github/workflows/           # Toolforge deployment, Toolviews stats, GitHub Pages, tag check, performance check
 ├── Dockerfile                   # Image used by Railway and Northflank
@@ -72,6 +73,7 @@ wikipedia2book/
 │   ├── SPECIFICATIONS.fr.md     # Reference behaviour (French original)
 │   ├── SPECIFICATIONS.en.md     # English translation of the specifications
 │   ├── toolviews.csv, toolforge_hourly.csv, stats.md  # Usage statistics and their charts (generated)
+│   ├── comparison-mediawiki2latex.md  # Comparison with mediawiki2latex
 │   └── _includes/head-custom.html  # Mermaid rendering on the site
 ├── CODE_OF_CONDUCT.md
 └── LICENSE                      # GNU AGPL v3.0
