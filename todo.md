@@ -1,6 +1,6 @@
 # À faire
 
-État au 15/11/2026. Production Toolforge : **1.8.0** (`94cb666`). `main` : **1.8.1**, tags `v1.7.2` à `v1.8.1` poussés.
+État au 15/11/2026. Production Toolforge et `main` : **1.8.2**, tags `v1.7.2` à `v1.8.2` poussés.
 
 Une action réalisée est retirée de cette liste (pas cochée) : l'historique Git garde la trace de ce qui a été fait.
 
@@ -17,7 +17,7 @@ Une action réalisée est retirée de cette liste (pas cochée) : l'historique G
 
 - [ ] **Atelier de performance non joué** depuis la 1.7.5 (assemblage sur disque en 1.7.7, fusion par qpdf en 1.7.9) : `gh` n'est pas connecté sur le poste local, et le workflow ne se lance que depuis GitHub. À jouer au niveau `min`, puis refaire la référence (section 3).
 - [ ] **Test aux limites sur Toolforge en 1.7.10** (`scripts/limit_check.py --steps 300,400`, section 13.12 des spécifications) : 200 articles passent depuis la 1.7.7, 300 faisaient encore redémarrer le serveur en 1.7.9. Le jouer hors des heures d'usage : un échec fait redémarrer la production.
-- [ ] **Mémoire de Toolforge à 300 articles** : cause trouvée le 15/11/2026 dans les données Grafana (https://grafana.wmcloud.org/d/TJuKfnt4z/tool-dashboard?var-namespace=tool-wikipedia2book, interface à ouvrir dans son navigateur ; données lisibles aussi par l'API de Grafana sans connexion). Le conteneur `webservice` est limité à **2 Gio de mémoire et 1 CPU** (quota de l'outil : 8 Gio), sans limite d'espace temporaire ; le pod 1.7.10 a redémarré deux fois, dernier arrêt **`OOMKilled`**. Mémoire du programme (RSS) jusqu'à 1 958 Mo en 1.7.9 et 1 338 Mo en 1.7.10, cache de fichiers sous 500 Mo : ce ne sont pas les fichiers temporaires. En local, la mesure ne donne que 262 Mo pour 300 articles, mais WeasyPrint y est remplacé par un bouchon : **suspect principal, le rendu WeasyPrint des pages générées** (table des matières et page de licence de plusieurs centaines d'entrées). À confirmer avec le mode `--stub` dans Docker (section 4).
+- [ ] **Mémoire de Toolforge à 300 articles** : cause trouvée le 15/11/2026 dans les données Grafana (https://grafana.wmcloud.org/d/TJuKfnt4z/tool-dashboard?var-namespace=tool-wikipedia2book, interface à ouvrir dans son navigateur ; données lisibles aussi par l'API de Grafana sans connexion). Le conteneur `webservice` est limité à **2 Gio de mémoire et 1 CPU** (quota de l'outil : 8 Gio), sans limite d'espace temporaire ; le pod 1.7.10 a redémarré deux fois, dernier arrêt **`OOMKilled`**. Mémoire du programme (RSS) jusqu'à 1 958 Mo en 1.7.9 et 1 338 Mo en 1.7.10, cache de fichiers sous 500 Mo : ce ne sont pas les fichiers temporaires. En local, la mesure ne donne que 262 Mo pour 300 articles, mais WeasyPrint y est remplacé par un bouchon : **suspect principal, le rendu WeasyPrint des pages générées** (table des matières et page de licence de plusieurs centaines d'entrées). À confirmer avec le mode `--stub` dans Docker (section 4), ou en suivant `https://wikipedia2book.toolforge.org/api/health/details` pendant un test aux limites.
 - [ ] **Ligne « en direct » sous le graphique horaire de `stats.html`** : pas encore regardée.
 
 ## 3. Décisions en attente
@@ -27,7 +27,6 @@ Une action réalisée est retirée de cette liste (pas cochée) : l'historique G
 
 ## 4. Améliorations possibles
 
-- [ ] **Endpoint `GET /api/health/details`** (nouvelle version) : l'application lirait dans le conteneur la mémoire utilisée et sa limite (fichiers cgroup `memory.current` et `memory.max`) et l'espace libre du dossier temporaire, sans aucune donnée personnelle. On le consulterait en direct pendant un test aux limites, depuis n'importe où, sans SSH ni Grafana ; la page de statistiques pourrait l'afficher. Il dirait aussi juste avant un plantage si c'est la mémoire ou l'espace temporaire qui atteint sa limite.
 - [ ] **Mode `--stub` pour `scripts/limit_check.py`** : générer en local, dans le même processus, avec un faux client Wikipédia qui fabrique des PDF d'articles synthétiques (environ 1,8 Mo chacun), et mesurer la mémoire au pic, la durée et l'espace temporaire par palier. Le jouer aussi dans GitHub Actions, dans l'image Docker de production limitée en mémoire et en espace temporaire, pour trouver la limite sans télécharger depuis Wikipédia ni faire redémarrer Toolforge.
 - [ ] **Limite par déploiement** : le plafond de 2 téléchargements vaut pour un processus. Northflank a donc le sien ; Toolforge n'en a pas.
 - [ ] **Mermaid 11.17.2** : un graphique dessiné après un `await` reste en texte, sans erreur. Contourné dans `docs/_includes/head-custom.html` (rendu d'abord, mise à jour ensuite), mais la cause n'est pas comprise.

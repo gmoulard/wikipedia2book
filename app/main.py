@@ -19,7 +19,9 @@ import base64
 import itertools
 import json
 import math
+import os
 import re
+import shutil
 import subprocess
 import tempfile
 from datetime import datetime, timezone
@@ -95,9 +97,16 @@ static_directory = Path(__file__).parent / "static"
 PDF_LANGUAGE_PATTERN = "^(" + "|".join(PDF_LABELS) + ")$"
 app.mount("/static", StaticFiles(directory=static_directory), name="static")
 HOURLY_STATS_PATH = "/api/stats/hourly"
+HEALTH_DETAILS_PATH = "/api/health/details"
+UNCOUNTED_PATHS = {HOURLY_STATS_PATH, HEALTH_DETAILS_PATH}
 HOURLY_KEEP = 48
 hourly_hits: dict[str, int] = {}
 started_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+CGROUP_DIRECTORY = Path("/sys/fs/cgroup")
+PROCESS_STATUS = Path("/proc/self/status")
+TEMPORARY_PREFIX = "wikipedia2book-"
+UNLIMITED_BYTES = 2**60
+generations_in_progress = 0
 
 
 def _current_hour() -> str:
@@ -106,7 +115,7 @@ def _current_hour() -> str:
 
 @app.middleware("http")
 async def count_hourly_hits(request: Request, call_next):
-    if request.url.path != HOURLY_STATS_PATH:
+    if request.url.path not in UNCOUNTED_PATHS:
         hour = _current_hour()
         hourly_hits[hour] = hourly_hits.get(hour, 0) + 1
         while len(hourly_hits) > HOURLY_KEEP:
@@ -147,6 +156,82 @@ def hourly_stats(response: Response) -> dict:
     return {"started": started_at, "now": _current_hour(), "hours": dict(sorted(hourly_hits.items()))}
 
 
+def _read_bytes(path: Path) -> int | None:
+    try:
+        value = path.read_text().strip()
+    except OSError:
+        return None
+    if not value.isdigit():
+        return None
+    number = int(value)
+    return None if number >= UNLIMITED_BYTES else number
+
+
+def _process_memory() -> dict[str, int | None]:
+    values: dict[str, int] = {}
+    try:
+        for line in PROCESS_STATUS.read_text().splitlines():
+            name, _, rest = line.partition(":")
+            if name in ("VmRSS", "VmHWM") and rest.split():
+                values[name] = int(rest.split()[0]) * 1024
+    except OSError:
+        pass
+    return {"process_rss_bytes": values.get("VmRSS"), "process_peak_rss_bytes": values.get("VmHWM")}
+
+
+def _container_memory() -> dict[str, int | float | None]:
+    if (CGROUP_DIRECTORY / "memory.current").exists():
+        used = _read_bytes(CGROUP_DIRECTORY / "memory.current")
+        limit = _read_bytes(CGROUP_DIRECTORY / "memory.max")
+        peak = _read_bytes(CGROUP_DIRECTORY / "memory.peak")
+    else:
+        legacy = CGROUP_DIRECTORY / "memory"
+        used = _read_bytes(legacy / "memory.usage_in_bytes")
+        limit = _read_bytes(legacy / "memory.limit_in_bytes")
+        peak = _read_bytes(legacy / "memory.max_usage_in_bytes")
+    return {
+        "used_bytes": used,
+        "limit_bytes": limit,
+        "peak_bytes": peak,
+        "used_percent": round(used * 100 / limit, 1) if used is not None and limit else None,
+        **_process_memory(),
+    }
+
+
+def _generation_files_bytes(directory: str) -> int:
+    total = 0
+    with os.scandir(directory) as entries:
+        for entry in entries:
+            if entry.name.startswith(TEMPORARY_PREFIX) and entry.is_dir(follow_symlinks=False):
+                for root, _, files in os.walk(entry.path):
+                    for name in files:
+                        try:
+                            total += os.path.getsize(os.path.join(root, name))
+                        except OSError:
+                            pass
+    return total
+
+
+def _temporary_space() -> dict[str, int]:
+    directory = tempfile.gettempdir()
+    usage = shutil.disk_usage(directory)
+    return {"free_bytes": usage.free, "total_bytes": usage.total, "generation_files_bytes": _generation_files_bytes(directory)}
+
+
+@app.get(HEALTH_DETAILS_PATH)
+def health_details(response: Response) -> dict:
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Cache-Control"] = "no-store"
+    return {
+        "version": app.version,
+        "started": started_at,
+        "now": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "generations_in_progress": generations_in_progress,
+        "memory": _container_memory(),
+        "temporary": _temporary_space(),
+    }
+
+
 @app.get("/api/version")
 def version() -> dict[str, str]:
     try:
@@ -156,7 +241,6 @@ def version() -> dict[str, str]:
         full, short, date, author = commit.split("|")
         return {"version": app.version, "commit": full, "short": short, "date": date, "author": author}
     except Exception:
-        import os
         full = os.environ.get("GIT_COMMIT", "")
         if full == "unknown":
             full = ""
@@ -347,13 +431,18 @@ def _pdf_error_detail(error: Exception) -> str:
 
 async def build_book_pdf(project: Project, selected: list[Article | UploadedDocument], language: str):
     # NE PAS garder le livre en mémoire : chaque PDF va dans ce dossier temporaire, supprimé à la fin de la génération (serveur sans état), y compris quand le client abandonne.
-    with tempfile.TemporaryDirectory(prefix="wikipedia2book-") as workdir:
-        events = _build_book_pdf(project, selected, language, Path(workdir))
-        try:
-            async for event in events:
-                yield event
-        finally:
-            await events.aclose()
+    global generations_in_progress
+    generations_in_progress += 1
+    try:
+        with tempfile.TemporaryDirectory(prefix=TEMPORARY_PREFIX) as workdir:
+            events = _build_book_pdf(project, selected, language, Path(workdir))
+            try:
+                async for event in events:
+                    yield event
+            finally:
+                await events.aclose()
+    finally:
+        generations_in_progress -= 1
 
 
 async def _build_book_pdf(project: Project, selected: list[Article | UploadedDocument], language: str, workdir: Path):

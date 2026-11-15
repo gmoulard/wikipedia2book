@@ -577,6 +577,8 @@ GET endpoints can be opened directly in the address bar:
 
 * Hits per hour since the server started (section 13.8): `http://localhost:8000/api/stats/hourly`.
 
+* Container state, to follow live during a limit test (section 13.12): `http://localhost:8000/api/health/details`, for example in production `https://wikipedia2book.toolforge.org/api/health/details`. JSON response, with no personal data at all, open CORS, never cached, not counted in the hits per hour: `version`, `started` (server start: if it changes, the server has restarted), `now`, `generations_in_progress` (PDF generations in progress), `memory` (the container's `used_bytes`, `limit_bytes`, `peak_bytes` and `used_percent`, read from the cgroup files `memory.current`, `memory.max`, `memory.peak` — or `memory.usage_in_bytes`, `memory.limit_in_bytes`, `memory.max_usage_in_bytes` with cgroup v1 —, then the process's `process_rss_bytes` and `process_peak_rss_bytes`, read from `/proc/self/status`; `null` when the information does not exist, for example outside Linux or without a limit) and `temporary` (`free_bytes` and `total_bytes` of the temporary folder's disk, `generation_files_bytes` used by the folders of the generations in progress). Just before a crash, it shows whether memory or temporary space is reaching its limit. Tests: `tests/test_health_details.py`.
+
 * Generate the PDF of a Wikipedia book page: `http://localhost:8000/api/books/generate-from-wikipedia-book?url=https%3A%2F%2Ffr.wikipedia.org%2Fwiki%2FLivre%3AAnimaux`. The `url` parameter is required; `language` is optional and defaults to `fr`. Also accepted, all optional: `book_title`, `book_subtitle`, `book_author`, `book_conclusion`, `page_format`, `orientation`, `page_numbers`, `table_of_contents`. The PDF is returned as a download.
 
 * Check that the service responds: `http://localhost:8000/health`.
@@ -1166,6 +1168,7 @@ Wikipedia2Book/
 │   ├── test_toolviews_stats.py
 │   ├── test_toolforge_hourly.py
 │   ├── test_hourly_stats.py
+│   ├── test_health_details.py
 │   ├── test_rate_limit.py
 │   ├── test_media_policy.py
 │   ├── test_toolviews_chart.py
@@ -1305,5 +1308,6 @@ Application version number (`app/version.py`, used by `app/main.py` and by the U
 | 1.7.10  | 2026-11-15 | GMoulard  | Large books: temporary part files deleted as soon as they are merged, temporary space goes from three to two times the size of the book (most likely cause of the failure at 300 articles on Toolforge in 1.7.9) (sections 11.1, 13.12). |
 | 1.8.0   | 2026-11-15 | GMoulard  | Other Wikimedia projects: pages from Wikibooks, Wikivoyage, Wikiversity, Wikiquote, Wiktionary and Wikinews accepted by URL or interwiki prefix (`b:`, `voy:`, `v:`, `q:`, `wikt:`, `n:`), included with the project's official PDF; search, introduction and exploration on the project's site; license page naming each project, 12 languages (sections 3.1, 13.2, 15). |
 | 1.8.1   | 2026-11-15 | GMoulard  | Outside Wikipedia, pages in project-specific namespaces (even numbers from 100) are accepted as articles, including Wikisource author pages (`Auteur:…`, `Author:…`, `Autor:…`); standard and talk namespaces are still rejected (section 3.1). |
+| 1.8.2   | 2026-11-15 | GMoulard  | Monitoring: `GET /api/health/details` gives live the container's memory and its limit (cgroup), the process memory, the free space of the temporary folder and the number of generations in progress, with no personal data, open CORS, not counted in the hits per hour (section 13.3). |
 
 End of document

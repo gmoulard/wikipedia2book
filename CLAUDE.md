@@ -104,6 +104,7 @@ Des tests automatisés existent sous `tests/` (stdlib `unittest`, lancés avec l
 
 - `test_toolforge_hourly.py` : relevé horaire Toolforge — `scripts/toolforge-hourly.sh` exécuté avec un faux `kubectl` dans le `PATH`, analyse stricte du relevé (marqueurs `BEGIN-HOURLY`/`END-HOURLY`), fusion au maximum par pod et par heure, graphique des 36 dernières heures.
 
+- `test_health_details.py` : `GET /api/health/details` via `TestClient`, avec `main.CGROUP_DIRECTORY` et `main.PROCESS_STATUS` pointés vers de faux fichiers (cgroup v2, cgroup v1 et sa valeur « sans limite », absence de cgroup → `null`), espace temporaire limité aux dossiers `wikipedia2book-*`, endpoint non compté dans les hits par heure, compteur `generations_in_progress` pendant et après une génération.
 - `test_hourly_stats.py` : compteur en mémoire `hourly_hits` et `GET /api/stats/hourly` via `TestClient` (l'endpoint ne se compte pas lui-même, CORS ouvert, 48 heures gardées).
 
 - `test_limit_check.py` : `scripts/limit_check.py` (test aux limites, section 13.12) avec un faux générateur — paliers jusqu'au premier échec, mêmes premiers articles à chaque palier, tableau du rapport. Ne jouer le script réel que sur Toolforge et sur demande : il fait redémarrer le serveur quand la limite est atteinte.

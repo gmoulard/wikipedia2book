@@ -578,6 +578,8 @@ Les endpoints GET peuvent être ouverts directement dans la barre d'adresse :
 
 * Hits par heure depuis le démarrage du serveur (section 13.8) : `http://localhost:8000/api/stats/hourly`.
 
+* État du conteneur, à suivre en direct pendant un test aux limites (section 13.12) : `http://localhost:8000/api/health/details`, par exemple sur la production `https://wikipedia2book.toolforge.org/api/health/details`. Réponse JSON, sans aucune donnée personnelle, CORS ouvert, jamais mise en cache, non comptée dans les hits par heure : `version`, `started` (démarrage du serveur : s'il change, le serveur a redémarré), `now`, `generations_in_progress` (générations de PDF en cours), `memory` (`used_bytes`, `limit_bytes`, `peak_bytes` et `used_percent` du conteneur, lus dans les fichiers cgroup `memory.current`, `memory.max`, `memory.peak` — ou `memory.usage_in_bytes`, `memory.limit_in_bytes`, `memory.max_usage_in_bytes` en cgroup v1 —, puis `process_rss_bytes` et `process_peak_rss_bytes` du processus, lus dans `/proc/self/status`; `null` quand l'information n'existe pas, par exemple hors Linux ou sans limite) et `temporary` (`free_bytes` et `total_bytes` du disque du dossier temporaire, `generation_files_bytes` occupés par les dossiers des générations en cours). Juste avant un plantage, il montre si c'est la mémoire ou l'espace temporaire qui approche de sa limite. Tests : `tests/test_health_details.py`.
+
 * Générer le PDF d'une page de livre Wikipédia : `http://localhost:8000/api/books/generate-from-wikipedia-book?url=https%3A%2F%2Ffr.wikipedia.org%2Fwiki%2FLivre%3AAnimaux`. Le paramètre `url` est obligatoire; `language` est facultatif et vaut `fr` par défaut. Sont aussi acceptés, facultatifs : `book_title`, `book_subtitle`, `book_author`, `book_conclusion`, `page_format`, `orientation`, `page_numbers`, `table_of_contents`. Le PDF est renvoyé en téléchargement.
 
 * Vérifier que le service répond : `http://localhost:8000/health`.
@@ -1167,6 +1169,7 @@ Wikipedia2Book/
 │   ├── test_toolviews_stats.py
 │   ├── test_toolforge_hourly.py
 │   ├── test_hourly_stats.py
+│   ├── test_health_details.py
 │   ├── test_rate_limit.py
 │   ├── test_media_policy.py
 │   ├── test_toolviews_chart.py
@@ -1306,5 +1309,6 @@ Numéro de version applicatif (`app/version.py`, repris par `app/main.py` et par
 | 1.7.10  | 2026-11-15 | GMoulard  | Gros livres : fichiers temporaires des parties supprimés dès la fusion, l'espace temporaire passe de trois à deux fois la taille du livre (piste retenue pour l'échec à 300 articles sur Toolforge en 1.7.9) (sections 11.1, 13.12). |
 | 1.8.0   | 2026-11-15 | GMoulard  | Autres projets Wikimédia : pages de Wikilivres, Wikivoyage, Wikiversité, Wikiquote, Wiktionnaire et Wikinews acceptées par URL ou par préfixe interwiki (`b:`, `voy:`, `v:`, `q:`, `wikt:`, `n:`), intégrées avec le PDF officiel du projet; recherche, introduction et exploration sur le site du projet; page de licence nommant chaque projet, 12 langues (sections 3.1, 13.2, 15). |
 | 1.8.1   | 2026-11-15 | GMoulard  | Hors Wikipédia, les pages des espaces propres au projet (numéros pairs à partir de 100) sont acceptées comme des articles, dont les pages d'auteur de Wikisource (`Auteur:…`, `Author:…`, `Autor:…`); les espaces standard et de discussion restent refusés (section 3.1). |
+| 1.8.2   | 2026-11-15 | GMoulard  | Surveillance : `GET /api/health/details` donne en direct la mémoire du conteneur et sa limite (cgroup), la mémoire du processus, l'espace libre du dossier temporaire et le nombre de générations en cours, sans donnée personnelle, CORS ouvert, non compté dans les hits par heure (section 13.3). |
 
 Fin du document
