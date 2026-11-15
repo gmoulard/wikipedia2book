@@ -556,6 +556,8 @@ Les endpoints GET peuvent être ouverts directement dans la barre d'adresse :
 
 * Obtenir l'introduction et le créateur d'un article : `http://localhost:8000/api/articles/intro?title=Albert%20Einstein&language=fr`.
 
+* Hits par heure depuis le démarrage du serveur (section 13.8) : `http://localhost:8000/api/stats/hourly`.
+
 * Générer le PDF d'une page de livre Wikipédia : `http://localhost:8000/api/books/generate-from-wikipedia-book?url=https%3A%2F%2Ffr.wikipedia.org%2Fwiki%2FLivre%3AAnimaux`. Le paramètre `url` est obligatoire; `language` est facultatif et vaut `fr` par défaut. Sont aussi acceptés, facultatifs : `book_title`, `book_subtitle`, `book_author`, `book_conclusion`, `page_format`, `orientation`, `page_numbers`, `table_of_contents`. Le PDF est renvoyé en téléchargement.
 
 * Vérifier que le service répond : `http://localhost:8000/health`.
@@ -740,7 +742,7 @@ ssh <login>@login.toolforge.org "become wikipedia2book bash -s" < scripts/toolfo
 
 ### 13.8 Statistiques d'utilisation (Toolviews)
 
-L'application ne mesure rien elle-même (serveur sans état, aucun pisteur). La fréquentation vient de Toolviews (https://toolviews.toolforge.org/api/), qui compte les requêtes reçues par le proxy d'entrée de Toolforge pour chaque outil. Ces outils sont annexes : ils ne font pas partie de l'application déployée et ne changent pas sa version.
+Aucun pisteur, rien n'est écrit sur disque, et personne n'est identifié. La fréquentation par jour vient de Toolviews (https://toolviews.toolforge.org/api/), qui compte les requêtes reçues par le proxy d'entrée de Toolforge pour chaque outil; la fréquentation par heure, des journaux du webservice et d'un compteur en mémoire de l'application (« Hits par heure » ci-dessous). Les scripts de relevé sont annexes : ils ne font pas partie de l'application déployée et ne changent pas sa version; le compteur en mémoire, lui, en fait partie.
 
 #### Script `scripts/toolviews_stats.py`
 
@@ -777,7 +779,9 @@ Toolviews ne compte que par jour. Pour les heures, la source est le journal du w
 * `scripts/toolforge_hourly.py <csv> <relevé>` : vérifie le relevé (marqueurs présents, chaque ligne au format attendu, sinon erreur sans rien écrire) et le fusionne dans `docs/toolforge_hourly.csv` (`hour;pod;hits`). Pour un même pod et une même heure, il garde le maximum : un relevé plus récent du même pod contient le précédent, et une rotation du journal ne fait pas baisser un compte. Des pods différents (avant et après un redémarrage) s'additionnent. Les lignes de plus de 7 jours sont supprimées.
 * `scripts/update-stats.sh daily|deploy` enchaîne, sur le poste GitHub Actions : Toolviews (`daily` seulement), le relevé horaire, la régénération de `docs/stats.md`, puis le commit et le push sur `main` (avec `git fetch` + `git rebase`, trois essais). Une étape en échec n'empêche pas les suivantes, mais le script finit en erreur pour que l'échec soit visible.
 * Graphique : `scripts/toolviews_chart.py … --hourly docs/toolforge_hourly.csv` ajoute en tête de `stats.md` un histogramme des 36 dernières heures relevées (somme des pods par heure, heures UTC, 1000 px de large), qui commence à l'heure la plus ancienne disponible si le relevé couvre moins de 36 heures. Une heure dont le journal a été perdu avant d'être relevé (redémarrage du webservice par Toolforge entre deux relevés) vaut 0. Sans fichier horaire ou sans ligne, la section est omise.
-* Tests : `tests/test_toolforge_hourly.py` (analyse et fusion du relevé, graphique, et `toolforge-hourly.sh` exécuté avec un faux `kubectl`).
+* Heures en direct : l'application compte elle-même ses requêtes par heure UTC, en mémoire (middleware `count_hourly_hits` de `app/main.py`) : un simple nombre par heure, sans adresse IP, chemin ni autre détail, les 48 dernières heures seulement, remis à zéro à chaque redémarrage (même portée que le journal). L'endpoint public `GET /api/stats/hourly` renvoie `{"started": <démarrage du serveur>, "now": <heure en cours>, "hours": {"AAAA-MM-JJTHH": hits, …}}`, avec `Access-Control-Allow-Origin: *` (lisible depuis GitHub Pages) et `Cache-Control: no-store`. Ses propres appels ne sont comptés ni par le compteur ni par le relevé des journaux, pour que l'ouverture de la page de statistiques ne gonfle pas les chiffres.
+* Page : `docs/stats.md` contient, dans un élément caché `#hourly-data`, les totaux relevés par heure. À l'ouverture de `stats.html`, `docs/_includes/head-custom.html` dessine d'abord tous les graphiques tels que relevés, puis interroge `https://wikipedia2book.toolforge.org/api/stats/hourly` (5 s au plus) : pour chaque heure, il garde le maximum entre le relevé et le compteur, redessine le seul graphique horaire (36 heures jusqu'à l'heure en cours, incomplète) et l'indique sous le graphique. Si l'application ne répond pas, le graphique relevé reste affiché avec un message qui le dit. Le site n'a donc pas besoin d'être reconstruit pour montrer les dernières heures.
+* Tests : `tests/test_toolforge_hourly.py` (analyse et fusion du relevé, graphique, et `toolforge-hourly.sh` exécuté avec un faux `kubectl`) et `tests/test_hourly_stats.py` (compteur et endpoint, via `TestClient`).
 
 #### Lecture des chiffres
 
@@ -1075,6 +1079,7 @@ Wikipedia2Book/
 │   ├── test_resolve_source.py
 │   ├── test_toolviews_stats.py
 │   ├── test_toolforge_hourly.py
+│   ├── test_hourly_stats.py
 │   ├── test_toolviews_chart.py
 │   └── test_i18n.py
 │
@@ -1186,5 +1191,6 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 1.6.10  | 2026-11-14 | GMoulard  | Assemblage du PDF plus rapide : une page déjà au format du livre (à 1 point près, sans rotation) n'est plus recomposée, seule sa taille est ajustée — environ 8 fois plus rapide pour les livres A4, Letter et Legal; les articles sont recomposés en arrière-plan pendant le téléchargement des suivants (sections 10.1 et 11.1). |
 | 1.7.0   | 2026-11-14 | GMoulard  | Étape Sources : le champ accepte une liste de pages, une par ligne (liens wiki `[[…]]` avec préfixe de langue, liens Markdown, URL, titres, puces et numéros ignorés), recherchées et ajoutées une par une; les lignes introuvables restent dans le champ; livres multilingues possibles (section 3.1). Textes traduits dans les 12 langues. |
 | 1.7.1   | 2026-11-14 | GMoulard  | Génération du PDF plus rapide : jusqu'à 4 articles téléchargés à la fois depuis Wikipédia (ordre du livre et numérotation des étapes conservés), nombre de pages de chaque PDF calculé dès son arrivée; `/api/pdf/stream` envoie le PDF en octets bruts après la ligne `done` (`size`) au lieu de `pdf_base64` (section 11.1). |
+| 1.7.2   | 2026-11-15 | GMoulard  | Statistiques : l'application compte ses requêtes par heure en mémoire (48 h, sans IP ni chemin, remis à zéro au redémarrage) et les expose sur `GET /api/stats/hourly` (CORS ouvert); la page de statistiques complète en direct le graphique des hits par heure, sans reconstruire le site. |
 
 Fin du document

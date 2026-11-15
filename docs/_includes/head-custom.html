@@ -9,11 +9,9 @@
     diagram.textContent = block.textContent;
     target.replaceWith(diagram);
   });
-  if (blocks.length) {
-    mermaid.initialize({ startOnLoad: false, theme: window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "default" });
-    await mermaid.run({ querySelector: ".mermaid" });
+  const fitLabels = (root) => {
     // NE PAS retirer : Mermaid calcule la taille des étiquettes d'après la largeur des barres (-1px s'il y a une barre à 0, énorme pour une seule barre)
-    document.querySelectorAll('svg[aria-roledescription="xychart"]').forEach((svg) => {
+    root.querySelectorAll('svg[aria-roledescription="xychart"]').forEach((svg) => {
       const bar = svg.querySelector('g[class^="bar-plot"] rect');
       const labels = [...svg.querySelectorAll('g[class^="bar-plot"] text')];
       if (!bar || !labels.length) return;
@@ -21,5 +19,45 @@
       const size = Math.max(6, Math.min(12, bar.width.baseVal.value / (longest * 0.62)));
       labels.forEach((label) => label.setAttribute("font-size", `${size}px`));
     });
+  };
+  const hourlyData = document.getElementById("hourly-data");
+  const hourlyDiagram = [...document.querySelectorAll("div.mermaid")].find((diagram) => diagram.textContent.includes('title "Hourly hits'));
+  const hourlyText = hourlyDiagram?.textContent;
+  if (blocks.length) {
+    mermaid.initialize({ startOnLoad: false, theme: window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "default" });
+    // NE PAS attendre la réponse de l'application avant ce rendu : après un await, Mermaid 11.17.2 laisse le graphique horaire en texte, sans erreur
+    await mermaid.run({ querySelector: ".mermaid" });
+    fitLabels(document);
+  }
+  if (hourlyData && hourlyDiagram) {
+    const note = document.createElement("p");
+    hourlyDiagram.after(note);
+    try {
+      const response = await fetch("https://wikipedia2book.toolforge.org/api/stats/hourly", { cache: "no-store", signal: AbortSignal.timeout(5000) });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const live = (await response.json()).hours;
+      const hits = JSON.parse(hourlyData.dataset.hours);
+      for (const [hour, count] of Object.entries(live)) hits[hour] = Math.max(hits[hour] || 0, count);
+      const toDate = (hour) => new Date(`${hour}:00:00Z`);
+      const keys = Object.keys(hits).sort();
+      const end = toDate(keys[keys.length - 1]);
+      const first = new Date(Math.max(end - 35 * 3600e3, toDate(keys[0])));
+      const hours = [];
+      for (let time = first.getTime(); time <= end.getTime(); time += 3600e3) hours.push(new Date(time));
+      const key = (date) => date.toISOString().slice(0, 13);
+      const pad = (value) => String(value).padStart(2, "0");
+      const label = (date) => `${pad(date.getUTCDate())}/${pad(date.getUTCMonth() + 1)} ${pad(date.getUTCHours())}h`;
+      const values = hours.map((date) => hits[key(date)] || 0);
+      const text = hourlyText
+        .replace(/^ {4}title .*$/m, `    title "Hourly hits (UTC) ${label(hours[0])} - ${label(hours[hours.length - 1])}"`)
+        .replace(/^ {4}x-axis .*$/m, `    x-axis [${hours.map((date) => `"${pad(date.getUTCHours())}"`).join(", ")}]`)
+        .replace(/^ {4}y-axis .*$/m, `    y-axis "Hits" 0 --> ${Math.ceil(Math.max(...values, 1) * 1.15)}`)
+        .replace(/^ {4}bar .*$/m, `    bar [${values.join(", ")}]`);
+      hourlyDiagram.innerHTML = (await mermaid.render("hourly-live", text)).svg;
+      fitLabels(hourlyDiagram);
+      note.textContent = `Live / en direct : ${label(end)} UTC (current hour in progress / heure en cours incomplète).`;
+    } catch (error) {
+      note.textContent = `Live hours unavailable / heures en direct indisponibles (${error.message}) : chart as of the last collection / graphique au dernier relevé.`;
+    }
   }
 </script>

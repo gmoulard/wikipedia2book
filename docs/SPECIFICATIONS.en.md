@@ -555,6 +555,8 @@ GET endpoints can be opened directly in the address bar:
 
 * Get the introduction and the creator of an article: `http://localhost:8000/api/articles/intro?title=Albert%20Einstein&language=fr`.
 
+* Hits per hour since the server started (section 13.8): `http://localhost:8000/api/stats/hourly`.
+
 * Generate the PDF of a Wikipedia book page: `http://localhost:8000/api/books/generate-from-wikipedia-book?url=https%3A%2F%2Ffr.wikipedia.org%2Fwiki%2FLivre%3AAnimaux`. The `url` parameter is required; `language` is optional and defaults to `fr`. Also accepted, all optional: `book_title`, `book_subtitle`, `book_author`, `book_conclusion`, `page_format`, `orientation`, `page_numbers`, `table_of_contents`. The PDF is returned as a download.
 
 * Check that the service responds: `http://localhost:8000/health`.
@@ -739,7 +741,7 @@ ssh <login>@login.toolforge.org "become wikipedia2book bash -s" < scripts/toolfo
 
 ### 13.8 Usage statistics (Toolviews)
 
-The application measures nothing itself (stateless server, no tracker). Traffic figures come from Toolviews (https://toolviews.toolforge.org/api/), which counts the requests received by Toolforge's front proxy for each tool. These tools are auxiliary: they are not part of the deployed application and do not change its version.
+No tracker, nothing is written to disk, and nobody is identified. Traffic per day comes from Toolviews (https://toolviews.toolforge.org/api/), which counts the requests received by Toolforge's front proxy for each tool; traffic per hour, from the webservice logs and an in-memory counter of the application ("Hits per hour" below). The collection scripts are auxiliary: they are not part of the deployed application and do not change its version; the in-memory counter is part of it.
 
 #### Script `scripts/toolviews_stats.py`
 
@@ -776,7 +778,9 @@ Toolviews only counts per day. For hours, the source is the webservice log on To
 * `scripts/toolforge_hourly.py <csv> <capture>`: checks the capture (markers present, every line in the expected format, otherwise an error without writing anything) and merges it into `docs/toolforge_hourly.csv` (`hour;pod;hits`). For the same pod and hour it keeps the maximum: a newer capture of the same pod contains the previous one, and a log rotation does not lower a count. Different pods (before and after a restart) are added up. Lines older than 7 days are removed.
 * `scripts/update-stats.sh daily|deploy` runs, on the GitHub Actions runner: Toolviews (`daily` only), the hourly collection, the regeneration of `docs/stats.md`, then the commit and push to `main` (with `git fetch` + `git rebase`, three attempts). A failed step does not prevent the following ones, but the script ends with an error so that the failure is visible.
 * Chart: `scripts/toolviews_chart.py … --hourly docs/toolforge_hourly.csv` adds at the top of `stats.md` a bar chart of the last 36 collected hours (sum of the pods per hour, UTC hours, 1000 px wide), which starts at the oldest available hour if the collection covers less than 36 hours. An hour whose log was lost before being collected (webservice restarted by Toolforge between two collections) counts as 0. Without an hourly file or without lines, the section is omitted.
-* Tests: `tests/test_toolforge_hourly.py` (parsing and merging of the capture, chart, and `toolforge-hourly.sh` run with a fake `kubectl`).
+* Live hours: the application counts its own requests per UTC hour, in memory (`count_hourly_hits` middleware in `app/main.py`): a plain number per hour, with no IP address, path or other detail, for the last 48 hours only, reset on each restart (same scope as the log). The public endpoint `GET /api/stats/hourly` returns `{"started": <server start>, "now": <current hour>, "hours": {"YYYY-MM-DDTHH": hits, …}}`, with `Access-Control-Allow-Origin: *` (readable from GitHub Pages) and `Cache-Control: no-store`. Its own calls are counted neither by the counter nor by the log collection, so that opening the statistics page does not inflate the figures.
+* Page: `docs/stats.md` contains, in a hidden `#hourly-data` element, the collected totals per hour. When `stats.html` opens, `docs/_includes/head-custom.html` first draws every chart as collected, then queries `https://wikipedia2book.toolforge.org/api/stats/hourly` (5 s at most): for each hour it keeps the maximum of the collection and the counter, redraws only the hourly chart (36 hours up to the current, incomplete hour) and says so under the chart. If the application does not answer, the collected chart stays, with a message saying so. The site therefore does not need to be rebuilt to show the latest hours.
+* Tests: `tests/test_toolforge_hourly.py` (parsing and merging of the capture, chart, and `toolforge-hourly.sh` run with a fake `kubectl`) and `tests/test_hourly_stats.py` (counter and endpoint, through `TestClient`).
 
 #### Reading the figures
 
@@ -1074,6 +1078,7 @@ Wikipedia2Book/
 │   ├── test_resolve_source.py
 │   ├── test_toolviews_stats.py
 │   ├── test_toolforge_hourly.py
+│   ├── test_hourly_stats.py
 │   ├── test_toolviews_chart.py
 │   └── test_i18n.py
 │
@@ -1185,5 +1190,6 @@ Application version number (`app/main.py`, shown in the application's footer —
 | 1.6.10  | 2026-11-14 | GMoulard  | Faster PDF assembly: a page already at the book format (within 1 point, no rotation) is no longer recomposed, only its size is adjusted — about 8 times faster for A4, Letter and Legal books; articles are recomposed in the background while the next ones download (sections 10.1 and 11.1). |
 | 1.7.0   | 2026-11-14 | GMoulard  | Sources step: the field accepts a list of pages, one per line (wiki links `[[…]]` with language prefix, Markdown links, URLs, titles, bullets and numbers ignored), looked up and added one by one; lines not found stay in the field; multilingual books possible (section 3.1). Texts translated into the 12 languages. |
 | 1.7.1   | 2026-11-14 | GMoulard  | Faster PDF generation: up to 4 articles downloaded from Wikipedia at a time (book order and step numbering kept), page count of each PDF computed as soon as it arrives; `/api/pdf/stream` sends the PDF as raw bytes after the `done` line (`size`) instead of `pdf_base64` (section 11.1). |
+| 1.7.2   | 2026-11-15 | GMoulard  | Statistics: the application counts its requests per hour in memory (48 h, no IP or path, reset on restart) and exposes them on `GET /api/stats/hourly` (open CORS); the statistics page completes the hits-per-hour chart live, without rebuilding the site. |
 
 End of document

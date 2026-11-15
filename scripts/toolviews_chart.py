@@ -15,6 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import argparse
+import json
 import math
 import sys
 from collections import defaultdict
@@ -55,12 +56,14 @@ def hourly_section(hourly):
     first = max(end - timedelta(hours=HOURLY_HOURS - 1), datetime.strptime(min(totals), HOUR))
     hours = [first + timedelta(hours=i) for i in range((end - first) // timedelta(hours=1) + 1)]
     return [
-        f"## Hourly hits / Hits par heure ({len(hours)} hours, UTC)",
+        f"## Hourly hits / Hits par heure (UTC, last {HOURLY_HOURS} hours / {HOURLY_HOURS} dernières heures)",
         "Source: Toolforge webservice logs, read every day and just before each deployment, since they are "
         "erased at each restart. Every request seen by the application counts, static files included; "
         "an hour whose logs were lost before being read shows 0.",
         "Source : journaux du webservice Toolforge, relevés chaque jour et juste avant chaque déploiement. "
-        "Une heure dont les journaux ont été perdus avant d'être relevés vaut 0.",
+        "Une heure dont les journaux ont été perdus avant d'être relevés vaut 0. "
+        "À l'ouverture de la page, les heures plus récentes sont ajoutées en direct depuis l'application.",
+        f"<div id=\"hourly-data\" hidden data-hours='{json.dumps(dict(sorted(totals.items())), separators=(',', ':'))}'></div>",
         xychart(
             f"Hourly hits (UTC) {hours[0]:%d/%m %Hh} - {hours[-1]:%d/%m %Hh}",
             [f"{hour:%H}" for hour in hours],

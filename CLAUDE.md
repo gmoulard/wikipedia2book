@@ -8,7 +8,7 @@ Wikipedia2Book crée directement un livre PDF imprimable à partir d'articles Wi
 
 ## Principes de conception à préserver
 
-- **Serveur sans état.** Aucune persistance disque côté serveur (pas de DB, pas de livre ni de PDF stocké). La sauvegarde est entièrement à la charge de l'utilisateur via export/import JSON depuis le navigateur.
+- **Serveur sans état.** Aucune persistance disque côté serveur (pas de DB, pas de livre ni de PDF stocké). La sauvegarde est entièrement à la charge de l'utilisateur via export/import JSON depuis le navigateur. Seule exception, voulue par l'utilisateur : `hourly_hits` dans `app/main.py`, un compteur de requêtes par heure en mémoire (48 h, aucune IP ni chemin, perdu au redémarrage), lu par `GET /api/stats/hourly` pour la page de statistiques — ne jamais l'étendre à des données identifiantes ni le persister.
 - **Le contenu des articles n'est jamais reconstruit, leur format physique si.** Chaque article sélectionné est intégré via le PDF officiel Wikipédia (`/api/rest_v1/page/pdf/{titre}/{format}`, `format` = `a4`/`letter`/`legal` d'après `page_format` via `wikipedia_api.WIKIPEDIA_PDF_PAPERS`, `a4` pour tout autre format — Wikipédia ne propose que ces trois-là, en portrait, et refuse les majuscules) : texte, images, références restent ceux de Wikipédia, jamais reparsés/reconstruits en HTML (c'était du code mort, `article_parser.py`, supprimé). En revanche, depuis que « toutes les pages doivent respecter le format d'impression » a été demandé, chaque page (article, document importé, ou générée par l'app) est recomposée — mise à l'échelle et centrée, sans déformation — sur le format/orientation choisis pour le livre (`pdf_generator.fit_page_to_format`/`fit_pdf_to_format`). Ce n'est pas une régression du principe « PDF officiel conservé » : seul le contenu compte, pas la forme physique de la page source.
 
 ## Style de code — « vibe coding »
@@ -84,6 +84,8 @@ Des tests automatisés existent sous `tests/` (stdlib `unittest`, lancés avec l
 - `test_toolviews_stats.py` : `scripts/toolviews_stats.py` (hors `app/`) avec un faux `fetcher` — seuls les jours absents du CSV sont demandés, le jour courant n'est jamais écrit, les jours sans visite valent 0 jusqu'au dernier jour publié par Toolviews, rien au-delà.
 
 - `test_toolforge_hourly.py` : relevé horaire Toolforge — `scripts/toolforge-hourly.sh` exécuté avec un faux `kubectl` dans le `PATH`, analyse stricte du relevé (marqueurs `BEGIN-HOURLY`/`END-HOURLY`), fusion au maximum par pod et par heure, graphique des 36 dernières heures.
+
+- `test_hourly_stats.py` : compteur en mémoire `hourly_hits` et `GET /api/stats/hourly` via `TestClient` (l'endpoint ne se compte pas lui-même, CORS ouvert, 48 heures gardées).
 
 - `test_pdf_stream.py` : déroulement complet de `/api/pdf` et `/api/pdf/stream` via `TestClient`, avec `main.MediaWikiClient` et `main.generate_pdf` remplacés par des faux (PDF reportlab) — vérifie la numérotation des étapes de progression, l'événement `done` (PDF valide), l'événement `error` sur échec Wikipédia et le refus 400 d'une sélection vide.
 

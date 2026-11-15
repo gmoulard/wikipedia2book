@@ -19,6 +19,7 @@ import base64
 import json
 import re
 import subprocess
+from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
 from urllib.parse import quote
@@ -81,10 +82,28 @@ from app.wikipedia_api import (
 DOWNLOAD_CONCURRENCY = 4
 PDF_STREAM_CHUNK = 256 * 1024
 
-app = FastAPI(title="Wikipedia2Book", version="1.7.1")
+app = FastAPI(title="Wikipedia2Book", version="1.7.2")
 static_directory = Path(__file__).parent / "static"
 PDF_LANGUAGE_PATTERN = "^(" + "|".join(PDF_LABELS) + ")$"
 app.mount("/static", StaticFiles(directory=static_directory), name="static")
+HOURLY_STATS_PATH = "/api/stats/hourly"
+HOURLY_KEEP = 48
+hourly_hits: dict[str, int] = {}
+started_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def _current_hour() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H")
+
+
+@app.middleware("http")
+async def count_hourly_hits(request: Request, call_next):
+    if request.url.path != HOURLY_STATS_PATH:
+        hour = _current_hour()
+        hourly_hits[hour] = hourly_hits.get(hour, 0) + 1
+        while len(hourly_hits) > HOURLY_KEEP:
+            del hourly_hits[min(hourly_hits)]
+    return await call_next(request)
 
 
 @app.middleware("http")
@@ -111,6 +130,13 @@ def _mediawiki_error(error: Exception) -> HTTPException:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get(HOURLY_STATS_PATH)
+def hourly_stats(response: Response) -> dict:
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Cache-Control"] = "no-store"
+    return {"started": started_at, "now": _current_hour(), "hours": dict(sorted(hourly_hits.items()))}
 
 
 @app.get("/api/version")

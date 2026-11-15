@@ -26,7 +26,7 @@ fi
 echo "BEGIN-HOURLY"
 for pod in $pods; do
   kubectl logs --timestamps "$pod" \
-    | awk -v pod="$pod" '/"[A-Z]+ [^"]* HTTP\/[0-9.]+" [0-9][0-9][0-9]/ { print pod ";" substr($1, 1, 13) }' \
+    | awk -v pod="$pod" '/"[A-Z]+ [^"]* HTTP\/[0-9.]+" [0-9][0-9][0-9]/ && !/"[A-Z]+ \/api\/stats\/hourly[ ?]/ { print pod ";" substr($1, 1, 13) }' \
     | sort | uniq -c | awk '{ print $2 ";" $1 }'
 done
 echo "END-HOURLY"
