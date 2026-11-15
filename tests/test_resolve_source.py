@@ -43,8 +43,8 @@ class FakeClient:
     async def __aexit__(self, *exc):
         return False
 
-    async def get_page(self, title, language):
-        FakeClient.calls.append(("page", title, language))
+    async def get_page(self, title, language, site="wikipedia"):
+        FakeClient.calls.append(("page", title, language, site))
         if FakeClient.fail:
             raise MediaWikiError("Impossible de joindre l’API Wikipédia.")
         return FakeClient.pages.get(title)
@@ -126,6 +126,24 @@ class ResolveSourceTest(unittest.TestCase):
         self.assertEqual(self.resolve("   ").status_code, 422)
         self.assertEqual(self.client.post("/api/sources/resolve", json={"input": ""}).status_code, 422)
         self.assertEqual(self.resolve("Chat", "FR!").status_code, 422)
+
+    def test_wikisource_text_url(self):
+        FakeClient.pages = {"論語/學而第一": ("論語/學而第一", 0)}
+        body = self.resolve("https://zh.wikisource.org/wiki/%E8%AB%96%E8%AA%9E/%E5%AD%B8%E8%80%8C%E7%AC%AC%E4%B8%80").json()
+        self.assertEqual(body["kind"], "article")
+        self.assertEqual(body["article"]["site"], "wikisource")
+        self.assertEqual(body["article"]["language"], "zh")
+        self.assertTrue(body["article"]["url"].startswith("https://zh.wikisource.org/wiki/"))
+        self.assertIn(("page", "論語/學而第一", "zh", "wikisource"), FakeClient.calls)
+
+    def test_wikisource_other_namespace_is_422(self):
+        FakeClient.pages = {"Auteur:Victor Hugo": ("Auteur:Victor Hugo", 102)}
+        self.assertEqual(self.resolve("https://fr.wikisource.org/wiki/Auteur:Victor_Hugo").status_code, 422)
+        self.assertNotIn("book", [call[0] for call in FakeClient.calls])
+
+    def test_book_structure_refuses_wikisource(self):
+        response = self.client.post("/api/books/structure", json={"url": "https://fr.wikisource.org/wiki/Livre:X"})
+        self.assertEqual(response.status_code, 422)
 
     def test_wikipedia_unreachable_is_502(self):
         FakeClient.fail = True

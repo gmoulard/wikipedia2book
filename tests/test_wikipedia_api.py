@@ -20,7 +20,8 @@ import unittest
 import httpx
 from unittest.mock import AsyncMock
 
-from app.wikipedia_api import USER_AGENT, MediaWikiClient, MediaWikiPageNotFound
+from app.models import Article
+from app.wikipedia_api import USER_AGENT, MediaWikiClient, MediaWikiPageNotFound, article_url, parse_article_url
 
 
 def _book_client(wikitext):
@@ -92,6 +93,29 @@ class GetArticlePdfTest(unittest.TestCase):
         self.assertEqual(str(requests[0].url), "https://fr.wikipedia.org/api/rest_v1/page/pdf/Montagne_Pel%C3%A9e/letter")
         self.assertEqual(requests[0].headers["User-Agent"], USER_AGENT)
 
+    def test_wikisource_pdf_comes_from_wikisource(self):
+        requests = []
+
+        def handle(request):
+            requests.append(request)
+            return httpx.Response(200, content=b"%PDF-1.7 ...")
+
+        async def run():
+            async with MediaWikiClient() as client:
+                await client._client.aclose()
+                client._client = httpx.AsyncClient(transport=httpx.MockTransport(handle))
+                return await client.get_article_pdf("論語", "zh", "a4", "wikisource")
+
+        asyncio.run(run())
+        self.assertEqual(str(requests[0].url), "https://zh.wikisource.org/api/rest_v1/page/pdf/%E8%AB%96%E8%AA%9E/a4")
+
+    def test_rejects_an_unknown_site(self):
+        client = MediaWikiClient()
+        client._client = AsyncMock()
+        with self.assertRaises(ValueError):
+            asyncio.run(client.get_article_pdf("Chat", "fr", "a4", "wiktionary"))
+        client._client.get.assert_not_called()
+
     def test_rejects_an_unknown_paper_format(self):
         client = MediaWikiClient()
         client._client = AsyncMock()
@@ -156,3 +180,23 @@ class GetPageTest(unittest.TestCase):
             client = MediaWikiClient()
             client._get = AsyncMock(return_value={"query": {"pages": [page]}})
             self.assertIsNone(asyncio.run(client.get_page("Xyz", "fr")))
+
+
+class ParseArticleUrlTest(unittest.TestCase):
+    def test_accepts_wikipedia_and_wikisource(self):
+        self.assertEqual(parse_article_url("https://fr.wikipedia.org/wiki/Chat"), ("fr", "Chat", "wikipedia"))
+        self.assertEqual(
+            parse_article_url("https://fr.wikisource.org/wiki/Les_Fleurs_du_mal"), ("fr", "Les Fleurs du mal", "wikisource")
+        )
+
+    def test_rejects_other_sites(self):
+        for url in ("https://fr.wiktionary.org/wiki/chat", "https://wikisource.org/wiki/Main_Page", "http://fr.wikisource.org/wiki/X"):
+            with self.assertRaises(ValueError):
+                parse_article_url(url)
+
+    def test_wikisource_key_does_not_collide_with_wikipedia(self):
+        wikipedia = Article(title="Chat", language="fr", url="https://fr.wikipedia.org/wiki/Chat")
+        wikisource = Article(title="Chat", language="fr", site="wikisource", url="https://fr.wikisource.org/wiki/Chat")
+        self.assertEqual(wikipedia.key, "fr:title:chat")
+        self.assertEqual(wikisource.key, "wikisource:fr:title:chat")
+        self.assertEqual(article_url("fr", "Les Fleurs du mal", "wikisource"), "https://fr.wikisource.org/wiki/Les_Fleurs_du_mal")

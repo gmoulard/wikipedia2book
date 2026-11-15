@@ -29,16 +29,16 @@ async def discover_related_articles(
     if max_depth <= 0 or max_articles <= 0:
         return []
 
-    seen = {(article.language, article.title.casefold()) for article in seeds}
-    frontier = [(article.language, article.title, article.title, 0) for article in seeds]
+    seen = {(article.site, article.language, article.title.casefold()) for article in seeds}
+    frontier = [(article.site, article.language, article.title, article.title) for article in seeds]
     discovered: list[Article] = []
 
     for depth in range(1, max_depth + 1):
-        candidates: dict[tuple[str, str], tuple[str, str]] = {}
-        next_frontier: list[tuple[str, str, str, int]] = []
-        for language, source_title, origin_title, _ in frontier:
-            for title in await client.get_links(source_title, language):
-                key = (language, title.casefold())
+        candidates: dict[tuple[str, str, str], tuple[str, str]] = {}
+        next_frontier: list[tuple[str, str, str, str]] = []
+        for site, language, source_title, origin_title in frontier:
+            for title in await client.get_links(source_title, language, site):
+                key = (site, language, title.casefold())
                 if key in seen or key in candidates:
                     continue
                 candidates[key] = (title, origin_title)
@@ -48,18 +48,19 @@ async def discover_related_articles(
             if len(discovered) + len(candidates) >= max_articles:
                 break
 
-        for (language, normalized_title), (title, origin_title) in candidates.items():
-            seen.add((language, normalized_title))
+        for (site, language, normalized_title), (title, origin_title) in candidates.items():
+            seen.add((site, language, normalized_title))
             article = Article(
                 title=title,
                 language=language,
-                url=article_url(language, title),
+                site=site,
+                url=article_url(language, title, site),
                 origin_title=origin_title,
                 depth=depth,
                 selected=False,
             )
             discovered.append(article)
-            next_frontier.append((language, article.title, origin_title, depth))
+            next_frontier.append((site, language, article.title, origin_title))
             if len(discovered) >= max_articles:
                 return discovered
         frontier = next_frontier

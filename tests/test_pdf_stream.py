@@ -85,7 +85,7 @@ class FakeClient:
 
     papers = []
 
-    async def get_article_pdf(self, title, language, paper):
+    async def get_article_pdf(self, title, language, paper, site="wikipedia"):
         FakeClient.papers.append(paper)
         if FakeClient.wait is not None and title == "Chat":
             self.on_wait(FakeClient.wait)
@@ -98,7 +98,7 @@ class FakeClient:
     async def get_book(self, title, language, limit=200):
         return FakeClient.book
 
-    async def get_intro_and_creator(self, title, language):
+    async def get_intro_and_creator(self, title, language, site="wikipedia"):
         return ("Introduction de test", "Auteur du livre")
 
 
@@ -445,7 +445,7 @@ class PdfStreamTest(unittest.TestCase):
         timeline = []
 
         class SlowClient(FakeClient):
-            async def get_article_pdf(self, title, language, paper):
+            async def get_article_pdf(self, title, language, paper, site="wikipedia"):
                 await asyncio.sleep(0.05 if title == "Chat" else 0.4)
                 timeline.append(("downloaded", title, time.perf_counter()))
                 return _make_pdf(2)
@@ -480,7 +480,7 @@ class PdfStreamTest(unittest.TestCase):
             return path
 
         class FailingClient(FakeClient):
-            async def get_article_pdf(self, title, language, paper):
+            async def get_article_pdf(self, title, language, paper, site="wikipedia"):
                 if title == "Chien":
                     raise main.MediaWikiError("Wikipédia ne répond pas")
                 return await super().get_article_pdf(title, language, paper)
@@ -532,7 +532,7 @@ class PdfStreamTest(unittest.TestCase):
         peak = 0
 
         class ParallelClient(FakeClient):
-            async def get_article_pdf(self, title, language, paper):
+            async def get_article_pdf(self, title, language, paper, site="wikipedia"):
                 nonlocal running, peak
                 running += 1
                 peak = max(peak, running)

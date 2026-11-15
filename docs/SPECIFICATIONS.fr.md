@@ -119,11 +119,13 @@ Le modèle de données complet et le format du fichier JSON sont décrits en sec
 
 Un seul champ de saisie, dans l'étape Sources, sert à tous les moyens d'ajout : l'utilisateur n'indique pas le type de ce qu'il saisit, le logiciel le reconnaît en interrogeant Wikipédia (`POST /api/sources/resolve`, qui reçoit `input` et `language`) :
 
-* une URL `https://<langue>.wikipedia.org/wiki/…` est lue avec la langue de l'URL; sinon, le texte saisi est pris comme un titre de page, dans la langue de Wikipédia choisie à côté du champ. Ce sélecteur propose FR, EN, DE, ES, IT, PT et NL; à l'ouverture de l'application, il est positionné sur la langue du navigateur (partie principale du code, par exemple `pt` pour `pt-BR`, `no` pour `nb`), ajoutée à la liste si elle n'y figure pas (par exemple JA). Si la langue du navigateur est absente ou n'est pas un code valide, EN est sélectionné. Ce choix n'est enregistré ni dans le livre ni dans le navigateur;
+* une URL `https://<langue>.wikipedia.org/wiki/…` est lue avec la langue de l'URL; une URL `https://<langue>.wikisource.org/wiki/…` aussi, sur Wikisource (voir plus bas); sinon, le texte saisi est pris comme un titre de page, dans la langue de Wikipédia choisie à côté du champ. Ce sélecteur propose FR, EN, DE, ES, IT, PT et NL; à l'ouverture de l'application, il est positionné sur la langue du navigateur (partie principale du code, par exemple `pt` pour `pt-BR`, `no` pour `nb`), ajoutée à la liste si elle n'y figure pas (par exemple JA). Si la langue du navigateur est absente ou n'est pas un code valide, EN est sélectionné. Ce choix n'est enregistré ni dans le livre ni dans le navigateur;
 
 * la page est recherchée sur Wikipédia, redirections suivies : une page de l'espace principal (un article) est ajoutée comme article; une page d'un autre espace de noms (`Utilisateur:…/Livres/…`, `Livre:…`, etc.) est importée comme page de livre;
 
 * si aucune page ne porte exactement ce titre, les résultats de la recherche Wikipédia sont proposés sous le champ, à ajouter d'un clic; une URL vers une page inexistante est signalée comme introuvable.
+
+* **Wikisource** : une URL d'une page de texte de Wikisource (espace principal, par exemple `https://zh.wikisource.org/wiki/論語/學而第一` ou `https://fr.wikisource.org/wiki/Le_Corbeau`) est ajoutée comme un article, avec le PDF officiel de Wikisource (même service que Wikipédia, section 13.2). Seule l'URL est reconnue : un titre saisi seul, la recherche et les pages de livre restent propres à Wikipédia, et une page Wikisource d'un autre espace de noms (`Auteur:…`, `Livre:…`, etc.) est refusée. Chaque page est ajoutée telle quelle : pour une œuvre découpée en sous-pages, la page principale ne contient souvent que le sommaire, et il faut ajouter chaque sous-page (on peut coller la liste de leurs URL, une par ligne). La carte de l'article indique « Wikisource » à côté de la langue.
 
 Le champ accepte aussi une **liste de pages, une par ligne** (collée, ou saisie avec Maj+Entrée; Entrée seule lance l'ajout). Chaque ligne est reconnue puis recherchée sur Wikipédia l'une après l'autre, avec un message « Ajout de la liste : n / total — titre » :
 
@@ -536,6 +538,8 @@ Cette langue d'interface est indépendante de la langue des articles Wikipédia 
 
 Tous les échanges avec Wikipédia passent par la classe `MediaWikiClient` de `app/wikipedia_api.py`; aucun autre module n'appelle Wikipédia. Deux services sont utilisés, sur le wiki de la langue de l'article (`<langue>` = code validé par `^[a-z0-9-]{2,12}$`) :
 
+Pour un texte de Wikisource (section 3.1), les mêmes appels sont faits sur `https://<langue>.wikisource.org` au lieu de `https://<langue>.wikipedia.org` (reconnaissance de la page, introduction et auteur proposés, liens pour l'exploration, PDF); la recherche et les pages de livre restent sur Wikipédia.
+
 * **API MediaWiki (Action API)** : `https://<langue>.wikipedia.org/w/api.php`, en GET, toujours avec `format=json&formatversion=2` et, par défaut, `action=query`.
 * **API REST** : `https://<langue>.wikipedia.org/api/rest_v1/page/pdf/<titre>/<format>`, pour le PDF officiel d'un article (le titre a ses espaces remplacés par `_` et est encodé dans l'URL).
 
@@ -859,12 +863,13 @@ Le bouton de téléchargement produit un fichier `<titre-du-livre>.json` (caract
 | --- | --- | --- |
 | `page_id` | entier ≥ 1 ou absent | identifiant de page Wikipédia |
 | `title`, `language`, `url` | textes | titre, code de langue, URL de l'article |
+| `site` | `wikipedia` ou `wikisource`, `wikipedia` | projet Wikimédia de la page (absent des fichiers JSON plus anciens, qui restent lisibles) |
 | `summary` | texte, `""` | résumé affiché sur la carte |
 | `origin_title` | texte ou absent | article depuis lequel il a été découvert |
 | `depth` | entier ≥ 0, 0 | profondeur d'exploration (0 = ajouté directement) |
 | `selected` | booléen, faux | inclus dans le livre |
 
-Clé d'un article : `<langue>:<page_id>`, ou `<langue>:title:<titre en minuscules>` sans `page_id`.
+Clé d'un article : `<langue>:<page_id>`, ou `<langue>:title:<titre en minuscules>` sans `page_id`; pour un texte de Wikisource, la même clé précédée de `wikisource:`.
 
 #### `UploadedDocument`
 
@@ -1003,8 +1008,6 @@ Atelier à jouer avant toute mise en production d'une version (skill `deploy-pro
   | 1.6.10  | 2026-11-14 | Railway     | 1                          | 31 s      | 9,7 s (application et transfert, PDF en base64) | —         | 40,7 s | 83    |
   | 1.7.1   | 2026-11-14 | Railway     | 4                          | 10,5 s    | 1,7 s       | 1,4 s     | 13,6 s | 85    |
   | 1.7.5   | 2026-11-15 | Railway     | 2                          | 17,2 s    | 1,6 s       | 1,6 s     | 20,4 s | 117   |
-| 1.7.6   | 2026-11-15 | GMoulard  | Fenêtre de génération : pendant une pause due à un refus HTTP 429 ou 503 de Wikimédia, un compte à rebours indique le délai avant le nouvel essai (événement `wait` du flux `/api/pdf/stream`, textes traduits dans les 12 langues). Atelier de performance : seuils du verdict à +50 % (à surveiller) et +100 % (régression). |
-| 1.7.7   | 2026-11-15 | GMoulard  | Génération des gros livres sans manquer de mémoire : chaque PDF recomposé est écrit dans un dossier temporaire propre à la génération, supprimé à la fin, et le livre est assemblé par qpdf (`pikepdf`), qui laisse le contenu des pages dans ces fichiers; mémoire au pic divisée par environ 3 (mesure locale : 1 100 → 360 Mo pour 100 articles, 2 130 → 630 Mo pour 200); `/api/pdf` renvoie le fichier en flux avec sa taille (sections 2, 11.1, 13.5, 13.12). |
   | 1.7.5   | 2026-11-15 | Toolforge   | 4                          | 10,9 s    | 2,3 s       | 2,8 s     | 16,0 s | 117   |
 
 ### 13.12 Test aux limites
@@ -1029,7 +1032,7 @@ Test à jouer à la main pour connaître la taille maximale d'un livre qu'un dé
 
 Le logiciel met en œuvre aujourd'hui :
 
-* La validation stricte des URL fournies (schéma HTTPS, domaine `*.wikipedia.org`, titre présent).
+* La validation stricte des URL fournies (schéma HTTPS, domaine `*.wikipedia.org` ou `*.wikisource.org`, titre présent).
 
 * La validation des codes de langue (expression régulière, 2 à 12 caractères).
 
@@ -1057,7 +1060,7 @@ Le logiciel :
 
 * Conserve le lien vers chaque article original.
 
-* Ajoute au livre une page « Licence », juste avant la conclusion, qui indique que les textes Wikipédia sont sous licence Creative Commons Attribution – Partage dans les mêmes conditions 4.0 International (CC BY-SA 4.0), avec le lien vers la licence, un résumé des conditions de réutilisation, et la liste des articles dans l'ordre du livre avec, pour chacun, l'URL de l'article et celle de son historique (qui recense les auteurs). Les documents importés y sont cités comme non couverts par cette licence. Cette page rappelle aussi que le livre n'est pas une publication officielle de Wikipédia; elle est entièrement rédigée dans la langue de l'interface (section 12.1).
+* Ajoute au livre une page « Licence », juste avant la conclusion, qui indique que les textes Wikipédia sont sous licence Creative Commons Attribution – Partage dans les mêmes conditions 4.0 International (CC BY-SA 4.0), avec le lien vers la licence, un résumé des conditions de réutilisation, et la liste des articles dans l'ordre du livre avec, pour chacun, l'URL de l'article et celle de son historique (qui recense les auteurs). Les documents importés y sont cités comme non couverts par cette licence. Si le livre contient des textes de Wikisource, la page précise qu'ils sont pour la plupart dans le domaine public, les autres (traductions, éditions récentes) étant sous la licence indiquée sur leur page Wikisource, en général CC BY-SA 4.0; la mention CC BY-SA des articles Wikipédia n'est affichée que si le livre contient au moins un article Wikipédia. Cette page rappelle aussi que le livre n'est pas une publication officielle de Wikipédia; elle est entièrement rédigée dans la langue de l'interface (section 12.1).
 
 * N'altère pas le contenu, les crédits ni les mentions de licence imprimés par Wikipédia dans son propre PDF.
 
@@ -1206,6 +1209,8 @@ L'essentiel du socle fonctionnel décrit dans ce document est implémenté : liv
 
 * Importation de contenus depuis d'autres encyclopédies.
 
+* Wikisource, au-delà des pages isolées (section 3.1) : remarque — il faudra peut-être étendre la fonctionnalité pour répondre aux besoins exprimés par PacmanD sur le Bistro technique de la Wikipédia en chinois (novembre 2026) : importer une œuvre entière à partir de sa page sommaire (sous-pages dans l'ordre, comme une page de livre, avec chapitres), titre de recherche et titres seuls sur Wikisource, et bon rendu des caractères chinois rares (僻字) — à vérifier dans le PDF officiel de Wikisource, que le logiciel ne modifie pas, et dans les pages générées par le logiciel, qui n'ont que les polices Noto CJK (extensions CJK B et suivantes non couvertes).
+
 * Personnalisation avancée de la couverture et des styles typographiques.
 
 * Génération de livres volumineux (regroupement par volumes, par exemple).
@@ -1272,5 +1277,8 @@ Numéro de version applicatif (`app/version.py`, repris par `app/main.py` et par
 | 1.7.3   | 2026-11-15 | GMoulard  | Génération plus fiable quand Wikimédia limite les requêtes : sur un refus HTTP 429 ou 503, attente (délai indiqué par Wikimédia, borné à 20 s, ou 2, 4, 8 puis 16 s) partagée par tous les téléchargements du livre, puis nouvelle tentative, jusqu'à 4 fois ; au-delà, message d'erreur explicite. |
 | 1.7.4   | 2026-11-15 | GMoulard  | Respect de la politique robots de Wikimédia : au plus 2 téléchargements de PDF simultanés pour tout le serveur (au lieu de 4 par livre) et débit plafonné à 25 Mbit/s sur 10 s; User-Agent conforme à la politique de la Wikimedia Foundation (version et contacts). La génération des gros livres peut être un peu plus lente. |
 | 1.7.5   | 2026-11-15 | GMoulard  | Génération plus rapide sur Toolforge : les limites de téléchargement de la politique robots de Wikimédia, dont Toolforge est exempté, y sont levées (4 PDF à la fois par livre, sans plafond de débit), et gardées sur Railway et Northflank (2 à la fois, 25 Mbit/s); Toolforge reconnu par `WIKIPEDIA2BOOK_PLATFORM=toolforge` dans le `Procfile` (section 13.2). Documentation : syntaxe des pages de livre (section 3.1). |
+| 1.7.6   | 2026-11-15 | GMoulard  | Fenêtre de génération : pendant une pause due à un refus HTTP 429 ou 503 de Wikimédia, un compte à rebours indique le délai avant le nouvel essai (événement `wait` du flux `/api/pdf/stream`, textes traduits dans les 12 langues). Atelier de performance : seuils du verdict à +50 % (à surveiller) et +100 % (régression). |
+| 1.7.7   | 2026-11-15 | GMoulard  | Génération des gros livres sans manquer de mémoire : chaque PDF recomposé est écrit dans un dossier temporaire propre à la génération, supprimé à la fin, et le livre est assemblé par qpdf (`pikepdf`), qui laisse le contenu des pages dans ces fichiers; mémoire au pic divisée par environ 3 (mesure locale : 1 100 → 360 Mo pour 100 articles, 2 130 → 630 Mo pour 200); `/api/pdf` renvoie le fichier en flux avec sa taille (sections 2, 11.1, 13.5, 13.12). |
+| 1.7.8   | 2026-11-15 | GMoulard  | Pages de texte de Wikisource acceptées par URL (`https://<langue>.wikisource.org/wiki/…`), intégrées avec le PDF officiel de Wikisource; champ `site` des articles (fichiers JSON plus anciens toujours lisibles); page de licence adaptée aux textes de Wikisource (sections 3.1, 13.2, 13.9, 14, 15, 18). |
 
 Fin du document

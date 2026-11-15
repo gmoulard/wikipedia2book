@@ -11,6 +11,7 @@ WWikipedia2Book is a web application that allows you to compile a book in PDF fo
 - A single book, built in browser memory; its state can be exported/imported as a JSON file.
 - A single input field for an article URL, a Wikipedia book page or a title: the kind of page is detected automatically on Wikipedia (`POST /api/sources/resolve`); the full content is only fetched at generation time.
 - Import the list of articles from a Wikipedia book page, in their actual order.
+- Wikisource text pages accepted by URL, with the official Wikisource PDF.
 - Book introduction and author suggested automatically from the first article added.
 - Exploration of Wikipedia internal links with configurable depth and number of articles.
 - Manual selection of the articles to include; discovered articles are never added automatically.

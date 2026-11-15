@@ -30,17 +30,20 @@ class Article(BaseModel):
     page_id: int | None = Field(default=None, ge=1)
     title: str
     language: str
+    site: Literal["wikipedia", "wikisource"] = "wikipedia"
     url: str
     summary: str = ""
     origin_title: str | None = None
     depth: int = Field(default=0, ge=0)
     selected: bool = False
 
+    # NE PAS préfixer les clés Wikipédia : elles doivent rester identiques à celles des fichiers JSON déjà exportés (chapitres, ordre) ; garder aligné avec articleKey dans app.js.
     @property
     def key(self) -> str:
+        prefix = "wikisource:" if self.site == "wikisource" else ""
         if self.page_id is not None:
-            return f"{self.language}:{self.page_id}"
-        return f"{self.language}:title:{self.title.lower()}"
+            return f"{prefix}{self.language}:{self.page_id}"
+        return f"{prefix}{self.language}:title:{self.title.lower()}"
 
 
 class UploadedDocument(BaseModel):

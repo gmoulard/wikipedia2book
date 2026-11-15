@@ -118,11 +118,13 @@ The full data model and the format of the JSON file are described in section 13.
 
 A single input field, in the Sources step, is used for every way of adding content: the user does not say what kind of thing they are typing, the software recognizes it by querying Wikipedia (`POST /api/sources/resolve`, which receives `input` and `language`):
 
-* a `https://<language>.wikipedia.org/wiki/…` URL is read with the language of the URL; otherwise, the text is taken as a page title, in the Wikipedia language chosen next to the field. This selector offers FR, EN, DE, ES, IT, PT and NL; when the application opens, it is set to the browser language (main part of the code, for example `pt` for `pt-BR`, `no` for `nb`), added to the list if missing (for example JA). If the browser language is missing or not a valid code, EN is selected. This choice is saved neither in the book nor in the browser;
+* a `https://<language>.wikipedia.org/wiki/…` URL is read with the language of the URL; so is a `https://<language>.wikisource.org/wiki/…` URL, on Wikisource (see below); otherwise, the text is taken as a page title, in the Wikipedia language chosen next to the field. This selector offers FR, EN, DE, ES, IT, PT and NL; when the application opens, it is set to the browser language (main part of the code, for example `pt` for `pt-BR`, `no` for `nb`), added to the list if missing (for example JA). If the browser language is missing or not a valid code, EN is selected. This choice is saved neither in the book nor in the browser;
 
 * the page is looked up on Wikipedia, following redirects: a page in the main namespace (an article) is added as an article; a page in another namespace (`User:…/Books/…`, `Book:…`, etc.) is imported as a book page;
 
 * if no page has exactly that title, the Wikipedia search results are offered below the field, to be added with one click; a URL pointing to a page that does not exist is reported as not found.
+
+* **Wikisource**: the URL of a Wikisource text page (main namespace, for example `https://zh.wikisource.org/wiki/論語/學而第一` or `https://fr.wikisource.org/wiki/Le_Corbeau`) is added as an article, with the official Wikisource PDF (same service as Wikipedia, section 13.2). Only the URL is recognized: a plain title, search and book pages remain specific to Wikipedia, and a Wikisource page in another namespace (`Author:…`, `Index:…`, etc.) is rejected. Each page is added as is: for a work split into subpages, the main page often contains only the table of contents, and each subpage must be added (the list of their URLs can be pasted, one per line). The article card shows "Wikisource" next to the language.
 
 The field also accepts a **list of pages, one per line** (pasted, or typed with Shift+Enter; Enter alone starts the addition). Each line is recognized and then looked up on Wikipedia one after the other, with a message "Adding the list: n / total — title":
 
@@ -535,6 +537,8 @@ This interface language is independent of the language of the Wikipedia articles
 
 All exchanges with Wikipedia go through the `MediaWikiClient` class in `app/wikipedia_api.py`; no other module calls Wikipedia. Two services are used, on the wiki of the article's language (`<language>` = code validated by `^[a-z0-9-]{2,12}$`):
 
+For a Wikisource text (section 3.1), the same calls are made on `https://<language>.wikisource.org` instead of `https://<language>.wikipedia.org` (page recognition, suggested introduction and author, links for exploration, PDF); search and book pages stay on Wikipedia.
+
 * **MediaWiki API (Action API)**: `https://<language>.wikipedia.org/w/api.php`, with GET, always with `format=json&formatversion=2` and, by default, `action=query`.
 * **REST API**: `https://<language>.wikipedia.org/api/rest_v1/page/pdf/<title>/<format>`, for the official PDF of an article (spaces in the title are replaced with `_` and it is URL-encoded).
 
@@ -858,12 +862,13 @@ On import, the following are accepted: this format in version 1 (any other versi
 | --- | --- | --- |
 | `page_id` | integer ≥ 1 or absent | Wikipedia page identifier |
 | `title`, `language`, `url` | texts | title, language code, article URL |
+| `site` | `wikipedia` or `wikisource`, `wikipedia` | Wikimedia project of the page (missing from older JSON files, which remain readable) |
 | `summary` | text, `""` | summary shown on the card |
 | `origin_title` | text or absent | article from which it was discovered |
 | `depth` | integer ≥ 0, 0 | exploration depth (0 = added directly) |
 | `selected` | boolean, false | included in the book |
 
-Article key: `<language>:<page_id>`, or `<language>:title:<lowercase title>` without `page_id`.
+Article key: `<language>:<page_id>`, or `<language>:title:<lowercase title>` without `page_id`; for a Wikisource text, the same key prefixed with `wikisource:`.
 
 #### `UploadedDocument`
 
@@ -1002,8 +1007,6 @@ Workshop to run before any production deployment of a version (`deploy-productio
   | 1.6.10  | 2026-11-14 | Railway   | 1                      | 31 s      | 9.7 s (application and transfer, PDF in base64) | —        | 40.7 s | 83    |
   | 1.7.1   | 2026-11-14 | Railway   | 4                      | 10.5 s    | 1.7 s       | 1.4 s    | 13.6 s | 85    |
   | 1.7.5   | 2026-11-15 | Railway   | 2                      | 17.2 s    | 1.6 s       | 1.6 s    | 20.4 s | 117   |
-| 1.7.6   | 2026-11-15 | GMoulard  | Generation window: during a pause caused by an HTTP 429 or 503 refusal from Wikimedia, a countdown shows the delay before the next attempt (`wait` event of the `/api/pdf/stream` stream, texts translated into the 12 languages). Performance workshop: verdict thresholds at +50% (to watch) and +100% (regression). |
-| 1.7.7   | 2026-11-15 | GMoulard  | Generating large books without running out of memory: each recomposed PDF is written to a temporary folder of its own for the generation, deleted at the end, and the book is assembled by qpdf (`pikepdf`), which leaves the page contents in these files; peak memory divided by about 3 (local measurement: 1,100 → 360 MB for 100 articles, 2,130 → 630 MB for 200); `/api/pdf` returns the file as a stream with its size (sections 2, 11.1, 13.5, 13.12). |
   | 1.7.5   | 2026-11-15 | Toolforge | 4                      | 10.9 s    | 2.3 s       | 2.8 s    | 16.0 s | 117   |
 
 ### 13.12 Limit test
@@ -1028,7 +1031,7 @@ Test to run by hand to find the largest book a deployment can generate. Unlike t
 
 The software currently implements:
 
-* Strict validation of the URLs provided (HTTPS scheme, `*.wikipedia.org` domain, title present).
+* Strict validation of the URLs provided (HTTPS scheme, `*.wikipedia.org` or `*.wikisource.org` domain, title present).
 
 * Validation of language codes (regular expression, 2 to 12 characters).
 
@@ -1056,7 +1059,7 @@ The software:
 
 * Keeps the link to each original article.
 
-* Adds to the book a "License" page, just before the conclusion, stating that Wikipedia texts are under the Creative Commons Attribution-ShareAlike 4.0 International license (CC BY-SA 4.0), with the link to the license, a summary of the reuse conditions, and the list of articles in book order with, for each one, the URL of the article and that of its history (which lists the authors). Imported documents are listed there as not covered by this license. This page also states that the book is not an official Wikipedia publication; it is written entirely in the interface language (section 12.1).
+* Adds to the book a "License" page, just before the conclusion, stating that Wikipedia texts are under the Creative Commons Attribution-ShareAlike 4.0 International license (CC BY-SA 4.0), with the link to the license, a summary of the reuse conditions, and the list of articles in book order with, for each one, the URL of the article and that of its history (which lists the authors). Imported documents are listed there as not covered by this license. If the book contains Wikisource texts, the page states that they are mostly in the public domain, the others (translations, recent editions) being under the license shown on their Wikisource page, usually CC BY-SA 4.0; the CC BY-SA statement for Wikipedia articles is shown only if the book contains at least one Wikipedia article. This page also states that the book is not an official Wikipedia publication; it is written entirely in the interface language (section 12.1).
 
 * Does not alter the content, credits or license notices printed by Wikipedia in its own PDF.
 
@@ -1205,6 +1208,8 @@ Possible developments, not implemented to date:
 
 * Importing content from other encyclopedias.
 
+* Wikisource, beyond single pages (section 3.1): note — the feature may need to be extended to meet the needs expressed by PacmanD on the Chinese Wikipedia technical village pump (November 2026): importing a whole work from its contents page (subpages in order, like a book page, with chapters), search and plain titles on Wikisource, and correct rendering of rare Chinese characters (僻字) — to be checked in the official Wikisource PDF, which the software does not modify, and in the pages generated by the software, which only have the Noto CJK fonts (CJK extensions B and beyond not covered).
+
 * Advanced customization of the cover and of typographic styles.
 
 * Generation of large books (split into volumes, for example).
@@ -1271,5 +1276,8 @@ Application version number (`app/version.py`, used by `app/main.py` and by the U
 | 1.7.3   | 2026-11-15 | GMoulard  | More reliable generation when Wikimedia rate-limits requests: on an HTTP 429 or 503 refusal, a wait (delay given by Wikimedia, capped at 20 s, or 2, 4, 8 then 16 s) shared by all the book's downloads, then a retry, up to 4 times; beyond that, an explicit error message. |
 | 1.7.4   | 2026-11-15 | GMoulard  | Compliance with the Wikimedia robot policy: at most 2 simultaneous PDF downloads for the whole server (instead of 4 per book) and download speed capped at 25 Mbps over 10 s; User-Agent following the Wikimedia Foundation policy (version and contacts). Generating large books can be a little slower. |
 | 1.7.5   | 2026-11-15 | GMoulard  | Faster generation on Toolforge: the download limits of the Wikimedia robot policy, from which Toolforge is exempt, are lifted there (4 PDFs at a time per book, no speed cap), and kept on Railway and Northflank (2 at a time, 25 Mbps); Toolforge recognised by `WIKIPEDIA2BOOK_PLATFORM=toolforge` in the `Procfile` (section 13.2). Documentation: syntax of book pages (section 3.1). |
+| 1.7.6   | 2026-11-15 | GMoulard  | Generation window: during a pause caused by an HTTP 429 or 503 refusal from Wikimedia, a countdown shows the delay before the next attempt (`wait` event of the `/api/pdf/stream` stream, texts translated into the 12 languages). Performance workshop: verdict thresholds at +50% (to watch) and +100% (regression). |
+| 1.7.7   | 2026-11-15 | GMoulard  | Generating large books without running out of memory: each recomposed PDF is written to a temporary folder of its own for the generation, deleted at the end, and the book is assembled by qpdf (`pikepdf`), which leaves the page contents in these files; peak memory divided by about 3 (local measurement: 1,100 → 360 MB for 100 articles, 2,130 → 630 MB for 200); `/api/pdf` returns the file as a stream with its size (sections 2, 11.1, 13.5, 13.12). |
+| 1.7.8   | 2026-11-15 | GMoulard  | Wikisource text pages accepted by URL (`https://<language>.wikisource.org/wiki/…`), included with the official Wikisource PDF; `site` field on articles (older JSON files still readable); license page adapted to Wikisource texts (sections 3.1, 13.2, 13.9, 14, 15, 18). |
 
 End of document

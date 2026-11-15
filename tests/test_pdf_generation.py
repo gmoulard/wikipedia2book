@@ -175,6 +175,22 @@ class LicensePageTest(unittest.TestCase):
         self.assertIn("Carte.png", html)
 
 
+class WikisourceLicenseTest(unittest.TestCase):
+    def test_wikisource_only_book_has_no_wikipedia_license(self):
+        text = Article(title="論語", language="zh", site="wikisource", url="https://zh.wikisource.org/wiki/%E8%AB%96%E8%AA%9E", selected=True)
+        html = build_license_page_html(Project(name="T"), [text], "zh")
+        self.assertIn("维基文库", html)
+        self.assertNotIn("本书收录的维基百科条目文本", html)
+        self.assertIn("https://zh.wikisource.org/w/index.php?title=%E8%AB%96%E8%AA%9E&amp;action=history", html)
+
+    def test_mixed_book_has_both_notes(self):
+        text = Article(title="Le Corbeau", language="fr", site="wikisource", url="https://fr.wikisource.org/wiki/Le_Corbeau", selected=True)
+        article = Article(title="Chat", language="fr", url="https://fr.wikipedia.org/wiki/Chat", selected=True)
+        html = build_license_page_html(Project(name="T"), [text, article])
+        self.assertIn("CC BY-SA 4.0", html)
+        self.assertIn("Les textes provenant de Wikisource", html)
+
+
 class TranslatedTitlesTest(unittest.TestCase):
     def test_generated_pages_use_the_requested_language(self):
         from app.book_builder import build_chapter_page_html, build_cover_html

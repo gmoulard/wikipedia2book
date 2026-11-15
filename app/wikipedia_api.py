@@ -33,6 +33,7 @@ from app.version import VERSION
 
 
 _LANGUAGE_RE = re.compile(r"^[a-z0-9-]{2,12}$")
+SITES = ("wikipedia", "wikisource")
 WIKIPEDIA_PDF_PAPERS = {"A4": "a4", "Letter": "letter", "Legal": "legal"}
 USER_AGENT = (
     f"Wikipedia2Book/{VERSION} (https://wikipedia2book.toolforge.org/; https://github.com/gmoulard/wikipedia2book) "
@@ -70,19 +71,25 @@ def validate_language(language: str) -> str:
     return normalized
 
 
-def article_url(language: str, title: str) -> str:
-    language = validate_language(language)
+def site_host(language: str, site: str) -> str:
+    if site not in SITES:
+        raise ValueError("Site Wikimédia invalide : seuls Wikipédia et Wikisource sont acceptés.")
+    return f"{validate_language(language)}.{site}.org"
+
+
+def article_url(language: str, title: str, site: str = "wikipedia") -> str:
     slug = quote(title.replace(" ", "_"), safe="()!$&'*,;=:@")
-    return f"https://{language}.wikipedia.org/wiki/{slug}"
+    return f"https://{site_host(language, site)}/wiki/{slug}"
 
 
-def parse_article_url(url: str) -> tuple[str, str]:
+def parse_article_url(url: str) -> tuple[str, str, str]:
     parsed = urlparse(url)
     host = (parsed.hostname or "").lower()
-    match = re.fullmatch(r"([a-z0-9-]{2,12})\.wikipedia\.org", host)
+    match = re.fullmatch(r"([a-z0-9-]{2,12})\.(wikipedia|wikisource)\.org", host)
     if parsed.scheme != "https" or not match or parsed.port is not None:
-        raise ValueError("L’URL doit pointer vers un article HTTPS de wikipedia.org.")
+        raise ValueError("L’URL doit pointer vers une page HTTPS de wikipedia.org ou de wikisource.org.")
     language = validate_language(match.group(1))
+    site = match.group(2)
     if parsed.path.startswith("/wiki/"):
         title = unquote(parsed.path.removeprefix("/wiki/")).replace("_", " ")
     elif parsed.path == "/w/index.php":
@@ -91,7 +98,7 @@ def parse_article_url(url: str) -> tuple[str, str]:
         title = ""
     if not title or len(title) > 300:
         raise ValueError("L’URL ne contient pas de titre d’article valide.")
-    return language, title
+    return language, title, site
 
 
 def retry_delay(response: httpx.Response, attempt: int) -> float:
@@ -190,13 +197,13 @@ class MediaWikiClient:
             await self._client.aclose()
             self._client = None
 
-    async def _get(self, language: str, params: dict) -> dict:
-        language = validate_language(language)
+    async def _get(self, language: str, params: dict, site: str = "wikipedia") -> dict:
+        host = site_host(language, site)
         if self._client is None:
             raise RuntimeError("MediaWikiClient doit être utilisé dans un bloc async with.")
         query = {"action": "query", "format": "json", "formatversion": 2, **params}
         try:
-            response = await self._send(f"https://{language}.wikipedia.org/w/api.php", params=query)
+            response = await self._send(f"https://{host}/w/api.php", params=query)
             response.raise_for_status()
             result = response.json()
         except (httpx.HTTPError, ValueError) as error:
@@ -226,23 +233,23 @@ class MediaWikiClient:
             for item in items
         ]
 
-    async def get_page(self, title: str, language: str = "fr") -> tuple[str, int] | None:
-        result = await self._get(language, {"prop": "info", "titles": title, "redirects": 1})
+    async def get_page(self, title: str, language: str = "fr", site: str = "wikipedia") -> tuple[str, int] | None:
+        result = await self._get(language, {"prop": "info", "titles": title, "redirects": 1}, site)
         pages = result.get("query", {}).get("pages", [])
         if not pages or pages[0].get("missing") or pages[0].get("invalid"):
             return None
         return pages[0]["title"], pages[0]["ns"]
 
     # NE PAS fusionner en un seul appel : MediaWiki ne renvoie pas extracts + première révision ensemble de façon exploitable.
-    async def get_intro_and_creator(self, title: str, language: str = "fr") -> tuple[str, str]:
+    async def get_intro_and_creator(self, title: str, language: str = "fr", site: str = "wikipedia") -> tuple[str, str]:
         extract_result = await self._get(
-            language, {"prop": "extracts", "exintro": 1, "explaintext": 1, "titles": title}
+            language, {"prop": "extracts", "exintro": 1, "explaintext": 1, "titles": title}, site
         )
         pages = extract_result.get("query", {}).get("pages", [])
         introduction = pages[0].get("extract", "") if pages and not pages[0].get("missing") else ""
 
         creator_result = await self._get(
-            language, {"prop": "revisions", "rvlimit": 1, "rvdir": "newer", "rvprop": "user", "titles": title}
+            language, {"prop": "revisions", "rvlimit": 1, "rvdir": "newer", "rvprop": "user", "titles": title}, site
         )
         rev_pages = creator_result.get("query", {}).get("pages", [])
         revisions = rev_pages[0].get("revisions", []) if rev_pages else []
@@ -250,14 +257,14 @@ class MediaWikiClient:
 
         return introduction, creator
 
-    async def get_article_pdf(self, title: str, language: str, paper: str) -> bytes:
-        language = validate_language(language)
+    async def get_article_pdf(self, title: str, language: str, paper: str, site: str = "wikipedia") -> bytes:
+        host = site_host(language, site)
         if paper not in WIKIPEDIA_PDF_PAPERS.values():
             raise ValueError("Format de PDF Wikipédia invalide.")
         if self._client is None:
             raise RuntimeError("MediaWikiClient doit être utilisé dans un bloc async with.")
         page_path = quote(title.replace(" ", "_"), safe="")
-        url = f"https://{language}.wikipedia.org/api/rest_v1/page/pdf/{page_path}/{paper}"
+        url = f"https://{host}/api/rest_v1/page/pdf/{page_path}/{paper}"
         try:
             response = await self._send(url, media=True, timeout=120)
             response.raise_for_status()
@@ -267,11 +274,12 @@ class MediaWikiClient:
             raise MediaWikiError(f"Wikipédia n’a pas renvoyé un PDF valide pour « {title} ».")
         return response.content
 
-    async def get_links(self, title: str, language: str = "fr") -> list[str]:
+    async def get_links(self, title: str, language: str = "fr", site: str = "wikipedia") -> list[str]:
         result = await self._get(
             language,
             # NE PAS passer à prop=links : tri alphabétique, l'ordre d'apparition dans la page serait perdu.
             {"action": "parse", "page": title, "prop": "text", "redirects": 1, "disabletoc": 1},
+            site,
         )
         parsed = result.get("parse", {})
         seen = {parsed.get("title", title).casefold()}

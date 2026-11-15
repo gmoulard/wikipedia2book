@@ -74,15 +74,21 @@ function selectedArticles() {
   return [...activeArticles(), ...(state.project?.uploaded_documents || [])].filter((a) => a.selected);
 }
 
+// NE PAS préfixer les clés Wikipédia : elles doivent rester identiques à celles des fichiers JSON déjà exportés ; garder aligné avec Article.key dans models.py.
 function articleKey(article) {
   if (article.kind) return `doc:${article.id}`;
+  const prefix = article.site === 'wikisource' ? 'wikisource:' : '';
   return article.page_id != null
-    ? `${article.language}:${article.page_id}`
-    : `${article.language}:title:${article.title.toLowerCase()}`;
+    ? `${prefix}${article.language}:${article.page_id}`
+    : `${prefix}${article.language}:title:${article.title.toLowerCase()}`;
+}
+
+function articleSiteLabel(article) {
+  return article.site === 'wikisource' ? `${article.language.toUpperCase()} · Wikisource` : article.language.toUpperCase();
 }
 
 function sameArticle(a, b) {
-  if (a.language !== b.language) return false;
+  if (a.language !== b.language || (a.site || 'wikipedia') !== (b.site || 'wikipedia')) return false;
   if (a.page_id != null && b.page_id != null) return a.page_id === b.page_id;
   return a.title.toLocaleLowerCase() === b.title.toLocaleLowerCase();
 }
@@ -175,7 +181,7 @@ function dismissSuggestion(key) {
 
 function articleCard(article, isMain, isSource = false) {
   const key = articleKey(article);
-  const meta = isMain ? [article.language.toUpperCase(), article.origin_title ? t('meta.from', { origin: article.origin_title }) : t('meta.main')] : [article.language.toUpperCase()];
+  const meta = isMain ? [articleSiteLabel(article), article.origin_title ? t('meta.from', { origin: article.origin_title }) : t('meta.main')] : [articleSiteLabel(article)];
   const summary = article.summary ? `<p class="article-summary">${escapeHtml(article.summary.slice(0, 290))}${article.summary.length > 290 ? '\u2026' : ''}</p>` : '';
   return `<article class="article-card${article.selected ? ' selected' : ''}" data-article-key="${escapeHtml(key)}">
     <div class="article-card-top">
@@ -278,7 +284,7 @@ function renderOrganization() {
     const isDoc = Boolean(a.kind);
     const origin = isDoc
       ? (a.kind === 'pdf' ? t('org.docPdf') : t('org.docImage'))
-      : (a.origin_title ? t('org.discoveredFrom', { origin: a.origin_title }) : t('org.mainArticleOrigin', { lang: a.language.toUpperCase() }));
+      : (a.origin_title ? t('org.discoveredFrom', { origin: a.origin_title }) : t('org.mainArticleOrigin', { lang: articleSiteLabel(a) }));
     const openHref = isDoc ? `data:${a.mime_type};base64,${a.data_base64}` : a.url;
     const openTitle = isDoc ? t('org.openDocument') : t('org.openWikipedia');
     return `<div class="org-row org-article" draggable="true" data-slot-type="article" data-slot-index="${idx}" data-article-key="${escapeHtml(k)}">
@@ -452,7 +458,7 @@ async function loadProjects() {
 async function suggestIntroAndAuthor(article) {
   if (!state.project || (state.project.introduction && state.project.book_author)) return;
   try {
-    const params = new URLSearchParams({ title: article.title, language: article.language });
+    const params = new URLSearchParams({ title: article.title, language: article.language, site: article.site || 'wikipedia' });
     const info = await getJson(`/api/articles/intro?${params}`);
     const patch = {};
     if (!state.project.introduction && info.introduction) patch.introduction = info.introduction;
