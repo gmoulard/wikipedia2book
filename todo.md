@@ -45,7 +45,16 @@ Première liste, dressée de mémoire : la documentation de mediawiki2latex n'é
 - Compatibles avec le principe « PDF officiel conservé » :
   - [ ] Liste des **contributeurs** de chaque article sur la page de licence (API MediaWiki `prop=contributors`).
   - [ ] Page de **crédits des images** : images de chaque article (`prop=images`), auteur et licence (`prop=imageinfo&iiprop=extmetadata`).
-  - [ ] **Autres wikis Wikimédia** (Wikibooks, Wikiversité…), s'ils exposent le même service PDF (à vérifier).
+  - [ ] **Autres wikis Wikimédia** : le service PDF (`/api/rest_v1/page/pdf/…`) répond sur tous les projets (vérifié le 15/11/2026, un PDF valide par projet). Wikipédia et Wikisource sont déjà acceptés (`SITES` dans `app/wikipedia_api.py`).
+    - Faciles à ajouter (adresses `<langue>.<projet>.org`, même mécanique que Wikisource en 1.7.8) :
+      - **Wikilivres** (`wikibooks`) ★★★ : manuels, cours, recettes ; le projet fait pour les livres. Prévoir l'import d'un livre depuis sa page de sommaire (sous-pages `Livre/Chapitre`).
+      - **Wikivoyage** (`wikivoyage`) ★★★ : guides de voyage imprimables.
+      - **Wikiversité** (`wikiversity`) ★★ : supports de cours et leçons.
+      - **Wikiquote** (`wikiquote`) ★ : recueils de citations.
+      - **Wiktionnaire** (`wiktionary`) ★ : glossaires thématiques, entrées courtes.
+      - **Wikinews** (`wikinews`) ★ : archives de presse.
+    - Possibles mais peu utiles (domaine unique, sans langue) : Commons, Meta-Wiki, MediaWiki.org (un manuel technique, à la rigueur), Wikispecies. Sans intérêt : Wikidata.
+    - À adapter en même temps : nom du projet sur la page de licence (`license_*` de `PDF_LABELS`, 12 langues), recherche et exploration sur le site du projet, politique robots de Wikimédia (identique pour tous les projets).
   - [ ] **Liste des figures** (incertain : dépend de ce qu'on peut extraire des PDF ou de l'API).
   - [ ] **Renvois internes** : un lien vers un autre article du livre renverrait à sa page plutôt qu'au web (incertain chez mediawiki2latex ; faisable sur le modèle des liens de la table des matières).
 - Contraires au principe actuel (il faudrait reconstruire le contenu) : à ne faire que si l'on change de principe.
