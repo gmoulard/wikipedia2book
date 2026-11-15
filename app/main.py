@@ -68,7 +68,9 @@ from app.pdf_generator import (
     internal_links,
     stamp_page_numbers,
 )
+from app.version import VERSION
 from app.wikipedia_api import (
+    MEDIA_CONCURRENCY,
     WIKIPEDIA_PDF_PAPERS,
     MediaWikiClient,
     MediaWikiError,
@@ -79,10 +81,10 @@ from app.wikipedia_api import (
 )
 
 
-DOWNLOAD_CONCURRENCY = 4
+DOWNLOAD_CONCURRENCY = MEDIA_CONCURRENCY
 PDF_STREAM_CHUNK = 256 * 1024
 
-app = FastAPI(title="Wikipedia2Book", version="1.7.3")
+app = FastAPI(title="Wikipedia2Book", version=VERSION)
 static_directory = Path(__file__).parent / "static"
 PDF_LANGUAGE_PATTERN = "^(" + "|".join(PDF_LABELS) + ")$"
 app.mount("/static", StaticFiles(directory=static_directory), name="static")
@@ -372,7 +374,7 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
     fitted_items: dict[str, asyncio.Future[tuple[bytes, int]]] = {}
     paper = WIKIPEDIA_PDF_PAPERS.get(project.page_format, "a4")
     started: asyncio.Queue[tuple[str, str]] = asyncio.Queue()
-    # NE PAS dépasser DOWNLOAD_CONCURRENCY : le service PDF de Wikimédia est coûteux, il faut rester raisonnable envers lui.
+    # NE PAS dépasser DOWNLOAD_CONCURRENCY : la politique robots de Wikimédia limite à 2 téléchargements simultanés (MediaWikiClient l'impose aussi pour tout le serveur).
     slots_free = asyncio.Semaphore(DOWNLOAD_CONCURRENCY)
 
     async def load(client: MediaWikiClient, item: Article | UploadedDocument) -> None:

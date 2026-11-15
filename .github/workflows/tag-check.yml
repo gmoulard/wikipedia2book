@@ -29,16 +29,16 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Tag matches app/main.py
+      - name: Tag matches app/version.py
         run: |
           tag="${GITHUB_REF_NAME#v}"
-          version=$(sed -n 's/.*FastAPI(.*version="\([0-9][0-9.]*\)".*/\1/p' app/main.py)
+          version=$(sed -n 's/^VERSION = "\([0-9][0-9.]*\)"$/\1/p' app/version.py)
           if [ -z "$version" ]; then
-            echo "::error::Version introuvable dans app/main.py"
+            echo "::error::Version introuvable dans app/version.py"
             exit 1
           fi
           if [ "$tag" != "$version" ]; then
-            echo "::error::Le tag v$tag ne correspond pas à la version $version de app/main.py"
+            echo "::error::Le tag v$tag ne correspond pas à la version $version de app/version.py"
             exit 1
           fi
-          echo "v$tag = app/main.py $version"
+          echo "v$tag = app/version.py $version"

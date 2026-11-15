@@ -16,6 +16,8 @@
 
 import asyncio
 import re
+import weakref
+from collections import deque
 from dataclasses import dataclass
 from email.utils import parsedate_to_datetime
 from datetime import datetime, timezone
@@ -25,11 +27,18 @@ import httpx
 from bs4 import BeautifulSoup
 
 from app.models import Article
+from app.version import VERSION
 
 
 _LANGUAGE_RE = re.compile(r"^[a-z0-9-]{2,12}$")
 WIKIPEDIA_PDF_PAPERS = {"A4": "a4", "Letter": "letter", "Legal": "legal"}
-_USER_AGENT ="Wikipedia2Book/0.1 (https://github.com/gmoulard/wikipedia2book; MediaWiki API client)"
+USER_AGENT = (
+    f"Wikipedia2Book/{VERSION} (https://wikipedia2book.toolforge.org/; https://github.com/gmoulard/wikipedia2book) "
+    f"httpx/{httpx.__version__}"
+)
+MEDIA_CONCURRENCY = 2
+MEDIA_WINDOW_S = 10
+MEDIA_WINDOW_BYTES = 25_000_000 // 8 * MEDIA_WINDOW_S
 RETRY_STATUSES = {429, 503}
 RETRY_DELAYS_S = (2, 4, 8, 16)
 MAX_RETRY_WAIT_S = 20
@@ -96,32 +105,74 @@ def retry_delay(response: httpx.Response, attempt: int) -> float:
     return min(max(delay, 1.0), MAX_RETRY_WAIT_S)
 
 
+def _clock() -> float:
+    return asyncio.get_running_loop().time()
+
+
+class MediaLimiter:
+    def __init__(self) -> None:
+        self.slots = asyncio.Semaphore(MEDIA_CONCURRENCY)
+        self.received: deque[tuple[float, int]] = deque()
+        self.lock = asyncio.Lock()
+
+    async def consume(self, size: int) -> None:
+        async with self.lock:
+            while True:
+                now = _clock()
+                while self.received and self.received[0][0] <= now - MEDIA_WINDOW_S:
+                    self.received.popleft()
+                if not self.received or sum(count for _, count in self.received) + size <= MEDIA_WINDOW_BYTES:
+                    self.received.append((now, size))
+                    return
+                await asyncio.sleep(self.received[0][0] + MEDIA_WINDOW_S - now)
+
+
+_media_limiters: "weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, MediaLimiter]" = weakref.WeakKeyDictionary()
+
+
+def media_limiter() -> MediaLimiter:
+    loop = asyncio.get_running_loop()
+    if loop not in _media_limiters:
+        _media_limiters[loop] = MediaLimiter()
+    return _media_limiters[loop]
+
+
 class MediaWikiClient:
     def __init__(self, timeout: float = 20.0) -> None:
         self.timeout = timeout
         self._client: httpx.AsyncClient | None = None
         self._resume_at = 0.0
 
-    async def _send(self, url: str, **kwargs) -> httpx.Response:
-        loop = asyncio.get_running_loop()
+    async def _media_get(self, url: str, **kwargs) -> httpx.Response:
+        limiter = media_limiter()
+        # NE PAS sortir ce bloc du sémaphore global ni lire le corps d'un coup : la politique robots de Wikimédia (Media API rules) impose au plus 2 téléchargements simultanés pour tout le serveur et 25 Mbit/s sur 10 s.
+        async with limiter.slots:
+            async with self._client.stream("GET", url, **kwargs) as response:
+                chunks = []
+                async for chunk in response.aiter_bytes():
+                    await limiter.consume(len(chunk))
+                    chunks.append(chunk)
+        return httpx.Response(response.status_code, headers=response.headers, content=b"".join(chunks), request=response.request)
+
+    async def _send(self, url: str, media: bool = False, **kwargs) -> httpx.Response:
         attempt = 0
         while True:
-            pause = self._resume_at - loop.time()
+            pause = self._resume_at - _clock()
             if pause > 0:
                 await asyncio.sleep(pause)
-            response = await self._client.get(url, **kwargs)
+            response = await (self._media_get(url, **kwargs) if media else self._client.get(url, **kwargs))
             if response.status_code not in RETRY_STATUSES:
                 return response
             if attempt == len(RETRY_DELAYS_S):
                 raise MediaWikiError(RATE_LIMITED.format(status=response.status_code))
             # NE PAS dormir seulement dans cette tâche : la pause est partagée par tout le client, sinon les téléchargements parallèles relancent aussitôt Wikimédia, qui les refuse encore.
-            self._resume_at = max(self._resume_at, loop.time() + retry_delay(response, attempt))
+            self._resume_at = max(self._resume_at, _clock() + retry_delay(response, attempt))
             attempt += 1
 
     async def __aenter__(self) -> "MediaWikiClient":
         self._client = httpx.AsyncClient(
             timeout=self.timeout,
-            headers={"User-Agent": _USER_AGENT},
+            headers={"User-Agent": USER_AGENT},
         )
         return self
 
@@ -199,7 +250,7 @@ class MediaWikiClient:
         page_path = quote(title.replace(" ", "_"), safe="")
         url = f"https://{language}.wikipedia.org/api/rest_v1/page/pdf/{page_path}/{paper}"
         try:
-            response = await self._send(url, timeout=120)
+            response = await self._send(url, media=True, timeout=120)
             response.raise_for_status()
         except httpx.HTTPError as error:
             raise MediaWikiError(f"Impossible de télécharger le PDF Wikipédia pour « {title} ».") from error

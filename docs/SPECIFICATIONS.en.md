@@ -540,7 +540,8 @@ All exchanges with Wikipedia go through the `MediaWikiClient` class in `app/wiki
 
 Common rules:
 
-* Dedicated `User-Agent` header: `Wikipedia2Book/0.1 (https://github.com/gmoulard/wikipedia2book; MediaWiki API client)`.
+* `User-Agent` header following the Wikimedia Foundation User-Agent policy (tool name and version, contact, library and its version): `Wikipedia2Book/<version> (https://wikipedia2book.toolforge.org/; https://github.com/gmoulard/wikipedia2book) httpx/<version>`, the version being the one in `app/version.py`.
+* Compliance with the Wikimedia robot policy (*Robot policy*, Media API rules) for the official PDFs: **at most 2 simultaneous downloads for the whole server**, whatever the number of books generated at the same time, and **at most 25 Mbps** of download measured over sliding 10 s windows (31.25 MB per window): the PDF is read in chunks and reading waits when the window is full. The count applies per server process (a single uvicorn instance per platform): each deployment (Toolforge, Railway, Northflank) has its own cap.
 * Timeouts: 20 seconds for the MediaWiki API, 120 seconds for downloading a PDF.
 * Errors: a network failure, an HTTP error response, a non-JSON response or an `error` field from the MediaWiki API produce an explicit error, returned by the application's API with code 502 (404 for a page not found, 422 for invalid input). A REST response that does not start with `%PDF-` is refused; during generation, any error on an article cancels the whole book (section 8).
 * No data is cached or kept: each operation makes its calls again.
@@ -652,7 +653,7 @@ git push origin main:production-toolforge
 
 `production-toolforge` receives no commits of its own: it only moves forward to a commit already on `main`. Going back to an earlier version on Toolforge is done by pushing an older `main` commit to it (`git push --force origin <commit>:production-toolforge`).
 
-Each version of the application is marked in Git by an **annotated tag** `vX.Y.Z` (for example `v1.6.6`), placed on the commit that sets `app/main.py` to that version, then pushed to GitHub:
+Each version of the application is marked in Git by an **annotated tag** `vX.Y.Z` (for example `v1.6.6`), placed on the commit that sets `app/version.py` to that version, then pushed to GitHub:
 
 ```bash
 git tag -a v1.6.6 -m "Wikipedia2Book 1.6.6"
@@ -685,7 +686,7 @@ The second, `.github/workflows/toolviews-stats.yml` ("Toolviews stats"), updates
 
 The third, `.github/workflows/jekyll-gh-pages.yml`, publishes on every push to `main` (and on manual start) the documentation site https://gmoulard.github.io/wikipedia2book/ with GitHub Pages: The site is built from the `docs/` folder: Jekyll converts its Markdown files to HTML (`SPECIFICATIONS.fr.md`, `SPECIFICATIONS.en.md`, `stats.md`). The home page `docs/index.md` is copied from `README.md` at each build (not committed), with its links adapted: `docs/…` becomes relative to the site, and `LICENSE`, `CODE_OF_CONDUCT.md`, `CITATION.cff` and `codemeta.json`, which stay at the root of the repository, point to GitHub. This is the address declared as user documentation in `toolinfo.json`. GitHub Pages does not render Mermaid blocks natively: `docs/_includes/head-custom.html`, added by Jekyll to the head of every page (default theme), loads Mermaid 11.17.2 from jsDelivr and draws the ```` ```mermaid ```` blocks (section 13.10). The site is also rebuilt (`workflow_run` trigger) after each run of "Toolviews stats" that was not cancelled, even a partial failure since statistics may have been committed, and after each run of "Tests and Toolforge deploy" on `production-toolforge` (pre-deployment hourly collection), and every build adds the usage statistics page https://gmoulard.github.io/wikipedia2book/stats.html (section 13.8).
 
-The fourth, `.github/workflows/tag-check.yml` ("Tag check"), runs on every push of a `v*` tag: it fails if the tag number does not match the version written in `app/main.py` (`FastAPI(version=…)`). Such a failure is never fixed by moving the tag, but by a new version.
+The fourth, `.github/workflows/tag-check.yml` ("Tag check"), runs on every push of a `v*` tag: it fails if the tag number does not match the version written in `app/version.py` (`VERSION = "x.y.z"`, since 1.7.4; `app/main.py` before). Such a failure is never fixed by moving the tag, but by a new version.
 
 The fifth, `.github/workflows/perf-check.yml` ("Performance check"), runs the performance workshop on demand (section 13.11).
 
@@ -996,7 +997,7 @@ The software currently implements:
 
 * Bounded timeouts on network calls.
 
-* A shared, asynchronous wait before retrying when Wikimedia answers HTTP 429 or 503 (at most 4 retries, section 7), on top of the cap of 4 simultaneous PDF downloads.
+* A shared, asynchronous wait before retrying when Wikimedia answers HTTP 429 or 503 (at most 4 retries, section 7), on top of the limits of the Wikimedia robot policy (2 simultaneous PDF downloads for the whole server, 25 Mbps over 10 s, section 13.2).
 
 * No article HTML content is interpreted or re-injected by the application: only the official Wikipedia PDF (binary) and the text fields validated by the API pass through the server.
 
@@ -1067,6 +1068,7 @@ Wikipedia2Book/
 │
 ├── app/
 │   ├── __init__.py
+│   ├── version.py
 │   ├── main.py
 │   ├── models.py
 │   ├── wikipedia_api.py
@@ -1103,6 +1105,7 @@ Wikipedia2Book/
 │   ├── test_toolforge_hourly.py
 │   ├── test_hourly_stats.py
 │   ├── test_rate_limit.py
+│   ├── test_media_policy.py
 │   ├── test_toolviews_chart.py
 │   ├── test_perf_check.py
 │   └── test_i18n.py
@@ -1164,7 +1167,7 @@ Any development must preserve the core principles of the software, in particular
 
 ## 19\. Version history
 
-Application version number (`app/main.py`, shown in the application's footer — see section 12). Incremented on the user's decision before each commit (patch, minor or major), following the rule defined in `CLAUDE.md`. Each version matches the Git tag `vX.Y.Z` (section 13.5).
+Application version number (`app/version.py`, used by `app/main.py` and by the User-Agent sent to Wikimedia, shown in the application's footer — see section 12). Incremented on the user's decision before each commit (patch, minor or major), following the rule defined in `CLAUDE.md`. Each version matches the Git tag `vX.Y.Z` (section 13.5).
 
 | Version | Date       | Author    | Changes |
 | ------- | ---------- | --------- | ------------------------ |
@@ -1220,5 +1223,6 @@ Application version number (`app/main.py`, shown in the application's footer —
 | 1.7.1   | 2026-11-14 | GMoulard  | Faster PDF generation: up to 4 articles downloaded from Wikipedia at a time (book order and step numbering kept), page count of each PDF computed as soon as it arrives; `/api/pdf/stream` sends the PDF as raw bytes after the `done` line (`size`) instead of `pdf_base64` (section 11.1). |
 | 1.7.2   | 2026-11-15 | GMoulard  | Statistics: the application counts its requests per hour in memory (48 h, no IP or path, reset on restart) and exposes them on `GET /api/stats/hourly` (open CORS); the statistics page completes the hits-per-hour chart live, without rebuilding the site. |
 | 1.7.3   | 2026-11-15 | GMoulard  | More reliable generation when Wikimedia rate-limits requests: on an HTTP 429 or 503 refusal, a wait (delay given by Wikimedia, capped at 20 s, or 2, 4, 8 then 16 s) shared by all the book's downloads, then a retry, up to 4 times; beyond that, an explicit error message. |
+| 1.7.4   | 2026-11-15 | GMoulard  | Compliance with the Wikimedia robot policy: at most 2 simultaneous PDF downloads for the whole server (instead of 4 per book) and download speed capped at 25 Mbps over 10 s; User-Agent following the Wikimedia Foundation policy (version and contacts). Generating large books can be a little slower. |
 
 End of document

@@ -16,9 +16,11 @@
 
 import asyncio
 import unittest
-from unittest.mock import AsyncMock, Mock
 
-from app.wikipedia_api import MediaWikiClient, MediaWikiPageNotFound
+import httpx
+from unittest.mock import AsyncMock
+
+from app.wikipedia_api import USER_AGENT, MediaWikiClient, MediaWikiPageNotFound
 
 
 def _book_client(wikitext):
@@ -73,15 +75,22 @@ class GetBookTest(unittest.TestCase):
 
 class GetArticlePdfTest(unittest.TestCase):
     def test_requests_the_given_paper_format(self):
-        client = MediaWikiClient()
-        client._client = AsyncMock()
-        client._client.get.return_value = Mock(content=b"%PDF-1.7 ...", raise_for_status=Mock())
-        pdf = asyncio.run(client.get_article_pdf("Montagne Pelée", "fr", "letter"))
+        requests = []
+
+        def handle(request):
+            requests.append(request)
+            return httpx.Response(200, content=b"%PDF-1.7 ...")
+
+        async def run():
+            async with MediaWikiClient() as client:
+                await client._client.aclose()
+                client._client = httpx.AsyncClient(transport=httpx.MockTransport(handle), headers={"User-Agent": USER_AGENT})
+                return await client.get_article_pdf("Montagne Pelée", "fr", "letter")
+
+        pdf = asyncio.run(run())
         self.assertTrue(pdf.startswith(b"%PDF-"))
-        self.assertEqual(
-            client._client.get.call_args.args[0],
-            "https://fr.wikipedia.org/api/rest_v1/page/pdf/Montagne_Pel%C3%A9e/letter",
-        )
+        self.assertEqual(str(requests[0].url), "https://fr.wikipedia.org/api/rest_v1/page/pdf/Montagne_Pel%C3%A9e/letter")
+        self.assertEqual(requests[0].headers["User-Agent"], USER_AGENT)
 
     def test_rejects_an_unknown_paper_format(self):
         client = MediaWikiClient()

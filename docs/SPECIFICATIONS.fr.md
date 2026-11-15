@@ -541,7 +541,8 @@ Tous les échanges avec Wikipédia passent par la classe `MediaWikiClient` de `a
 
 Règles communes :
 
-* En-tête `User-Agent` dédié : `Wikipedia2Book/0.1 (https://github.com/gmoulard/wikipedia2book; MediaWiki API client)`.
+* En-tête `User-Agent` conforme à la politique User-Agent de la Wikimedia Foundation (nom et version de l'outil, moyen de contact, bibliothèque et sa version) : `Wikipedia2Book/<version> (https://wikipedia2book.toolforge.org/; https://github.com/gmoulard/wikipedia2book) httpx/<version>`, la version étant celle de `app/version.py`.
+* Respect de la politique robots de Wikimédia (*Robot policy*, règles de la Media API) pour les PDF officiels : **au plus 2 téléchargements simultanés pour tout le serveur**, quel que soit le nombre de livres générés en même temps, et **au plus 25 Mbit/s** de téléchargement mesurés sur 10 s glissantes (31,25 Mo par fenêtre) : le PDF est lu par morceaux et la lecture attend quand la fenêtre est pleine. Le compteur vaut pour un processus serveur (une seule instance uvicorn par plateforme) : chaque déploiement (Toolforge, Railway, Northflank) a son propre plafond.
 * Délais d'attente : 20 secondes pour l'API MediaWiki, 120 secondes pour le téléchargement d'un PDF.
 * Erreurs : un échec réseau, une réponse HTTP en erreur, une réponse non JSON ou un champ `error` de l'API MediaWiki produisent une erreur explicite, renvoyée par l'API de l'application avec le code 502 (404 pour une page introuvable, 422 pour une entrée invalide). Une réponse REST qui ne commence pas par `%PDF-` est refusée; pendant la génération, la moindre erreur sur un article annule tout le livre (section 8).
 * Aucune donnée n'est mise en cache ni conservée : chaque opération refait ses appels.
@@ -653,7 +654,7 @@ git push origin main:production-toolforge
 
 `production-toolforge` ne reçoit pas de commits propres : elle ne fait qu'avancer vers un commit déjà présent sur `main`. Revenir à une version antérieure sur Toolforge se fait en y poussant un commit plus ancien de `main` (`git push --force origin <commit>:production-toolforge`).
 
-Chaque version de l'application est repérée dans Git par un **tag annoté** `vX.Y.Z` (par exemple `v1.6.6`), posé sur le commit qui fait passer `app/main.py` à cette version, puis poussé sur GitHub :
+Chaque version de l'application est repérée dans Git par un **tag annoté** `vX.Y.Z` (par exemple `v1.6.6`), posé sur le commit qui fait passer `app/version.py` à cette version, puis poussé sur GitHub :
 
 ```bash
 git tag -a v1.6.6 -m "Wikipedia2Book 1.6.6"
@@ -686,7 +687,7 @@ Le second, `.github/workflows/toolviews-stats.yml` (« Toolviews stats »), met 
 
 Le troisième, `.github/workflows/jekyll-gh-pages.yml`, publie à chaque push sur `main` (et sur lancement manuel) le site de documentation https://gmoulard.github.io/wikipedia2book/ avec GitHub Pages : Le site est construit à partir du dossier `docs/` : Jekyll y convertit en HTML les fichiers Markdown (`SPECIFICATIONS.fr.md`, `SPECIFICATIONS.en.md`, `stats.md`). La page d'accueil `docs/index.md` est recopiée depuis `README.md` à chaque construction (non committée), avec ses liens adaptés : `docs/…` devient relatif au site, et `LICENSE`, `CODE_OF_CONDUCT.md`, `CITATION.cff` et `codemeta.json`, restés à la racine du dépôt, pointent vers GitHub. C'est l'adresse déclarée comme documentation utilisateur dans `toolinfo.json`. GitHub Pages n'affiche pas les blocs Mermaid nativement : `docs/_includes/head-custom.html`, ajouté par Jekyll dans l'en-tête de chaque page (thème par défaut), charge Mermaid 11.17.2 depuis jsDelivr et dessine les blocs ```` ```mermaid ```` (section 13.10). Le site est aussi reconstruit (déclencheur `workflow_run`) après chaque exécution de « Toolviews stats » qui n'a pas été annulée, même en échec partiel puisque des statistiques ont pu être committées, et après chaque exécution de « Tests and Toolforge deploy » sur `production-toolforge` (relevé horaire d'avant déploiement), et chaque construction ajoute la page de statistiques d'utilisation https://gmoulard.github.io/wikipedia2book/stats.html (section 13.8).
 
-Le quatrième, `.github/workflows/tag-check.yml` (« Tag check »), se lance à chaque push d'un tag `v*` : il échoue si le numéro du tag ne correspond pas à la version écrite dans `app/main.py` (`FastAPI(version=…)`). Un tel échec ne se corrige jamais en déplaçant le tag, mais par une nouvelle version.
+Le quatrième, `.github/workflows/tag-check.yml` (« Tag check »), se lance à chaque push d'un tag `v*` : il échoue si le numéro du tag ne correspond pas à la version écrite dans `app/version.py` (`VERSION = "x.y.z"`, depuis la 1.7.4; `app/main.py` avant). Un tel échec ne se corrige jamais en déplaçant le tag, mais par une nouvelle version.
 
 Le cinquième, `.github/workflows/perf-check.yml` (« Performance check »), joue l'atelier de performance à la demande (section 13.11).
 
@@ -997,7 +998,7 @@ Le logiciel met en œuvre aujourd'hui :
 
 * Des délais d'attente bornés sur les appels réseau.
 
-* Une attente avant de réessayer, partagée et asynchrone, quand Wikimédia répond HTTP 429 ou 503 (au plus 4 nouvelles tentatives, section 7), en plus du plafond de 4 téléchargements de PDF simultanés.
+* Une attente avant de réessayer, partagée et asynchrone, quand Wikimédia répond HTTP 429 ou 503 (au plus 4 nouvelles tentatives, section 7), en plus des limites de la politique robots de Wikimédia (2 téléchargements de PDF simultanés pour tout le serveur, 25 Mbit/s sur 10 s, section 13.2).
 
 * Aucun contenu HTML d'article n'est interprété ni réinjecté par l'application : seuls le PDF officiel Wikipédia (binaire) et les champs texte validés par l'API transitent par le serveur.
 
@@ -1068,6 +1069,7 @@ Wikipedia2Book/
 │
 ├── app/
 │   ├── __init__.py
+│   ├── version.py
 │   ├── main.py
 │   ├── models.py
 │   ├── wikipedia_api.py
@@ -1104,6 +1106,7 @@ Wikipedia2Book/
 │   ├── test_toolforge_hourly.py
 │   ├── test_hourly_stats.py
 │   ├── test_rate_limit.py
+│   ├── test_media_policy.py
 │   ├── test_toolviews_chart.py
 │   ├── test_perf_check.py
 │   └── test_i18n.py
@@ -1165,7 +1168,7 @@ Toute évolution doit préserver les principes fondamentaux du logiciel, notamme
 
 ## 19\. Historique des versions
 
-Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l'application — voir section 12). Incrémenté sur décision de l'utilisateur avant chaque commit (patch, minor ou major), selon la règle définie dans `CLAUDE.md`. Chaque version correspond au tag Git `vX.Y.Z` (section 13.5).
+Numéro de version applicatif (`app/version.py`, repris par `app/main.py` et par le User-Agent envoyé à Wikimédia, affiché dans le pied de page de l'application — voir section 12). Incrémenté sur décision de l'utilisateur avant chaque commit (patch, minor ou major), selon la règle définie dans `CLAUDE.md`. Chaque version correspond au tag Git `vX.Y.Z` (section 13.5).
 
 | Version | Date       | Auteur    | Modifications apportées |
 | ------- | ---------- | --------- | ------------------------ |
@@ -1221,5 +1224,6 @@ Numéro de version applicatif (`app/main.py`, affiché dans le pied de page de l
 | 1.7.1   | 2026-11-14 | GMoulard  | Génération du PDF plus rapide : jusqu'à 4 articles téléchargés à la fois depuis Wikipédia (ordre du livre et numérotation des étapes conservés), nombre de pages de chaque PDF calculé dès son arrivée; `/api/pdf/stream` envoie le PDF en octets bruts après la ligne `done` (`size`) au lieu de `pdf_base64` (section 11.1). |
 | 1.7.2   | 2026-11-15 | GMoulard  | Statistiques : l'application compte ses requêtes par heure en mémoire (48 h, sans IP ni chemin, remis à zéro au redémarrage) et les expose sur `GET /api/stats/hourly` (CORS ouvert); la page de statistiques complète en direct le graphique des hits par heure, sans reconstruire le site. |
 | 1.7.3   | 2026-11-15 | GMoulard  | Génération plus fiable quand Wikimédia limite les requêtes : sur un refus HTTP 429 ou 503, attente (délai indiqué par Wikimédia, borné à 20 s, ou 2, 4, 8 puis 16 s) partagée par tous les téléchargements du livre, puis nouvelle tentative, jusqu'à 4 fois ; au-delà, message d'erreur explicite. |
+| 1.7.4   | 2026-11-15 | GMoulard  | Respect de la politique robots de Wikimédia : au plus 2 téléchargements de PDF simultanés pour tout le serveur (au lieu de 4 par livre) et débit plafonné à 25 Mbit/s sur 10 s; User-Agent conforme à la politique de la Wikimedia Foundation (version et contacts). La génération des gros livres peut être un peu plus lente. |
 
 Fin du document
