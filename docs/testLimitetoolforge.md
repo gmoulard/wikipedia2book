@@ -12,6 +12,18 @@ Réglages communs à toutes les mesures : `scripts/limit_check.py`, pages liées
 | 1.7.7   | 200 articles     | 300                     |
 | 1.7.9   | non mesurée en dessous de 300 | 300        |
 | 1.7.10  | 100 articles     | 150                     |
+| 1.8.0   | 100 articles     | 150                     |
+
+## Version 1.8.0 (15/11/2026, 21:12 UTC)
+
+Mesure prévue pour confirmer celle de la 1.7.10 ; entre-temps, Toolforge était passé en 1.8.0 (commit `94cb666`, serveur démarré à 21:03:32 UTC). La 1.8.0 ajoute d'autres projets Wikimédia et ne change pas l'assemblage du livre. Le réseau de Toolforge était lent, d'où un transfert long, sans lien avec l'application.
+
+| Articles | Pages | Taille du PDF | Wikipédia | Application | Transfert | Total   | Résultat |
+|----------|-------|---------------|-----------|-------------|-----------|---------|----------|
+| 100      | 1 637 | 182,0 Mo      | 116,1 s   | 8,8 s       | 322,9 s   | 447,8 s | réussi   |
+| 150      | —     | —             | —         | —           | —         | 94,2 s  | échec    |
+
+**Limite : environ 100 articles**, comme en 1.7.10. À 150 articles, le serveur redémarre (heure de démarrage de `GET /api/stats/hourly` remise à 21:21:17 UTC), plus tôt qu'à 19 h (94 s au lieu de 159 s). Cause identifiée depuis dans les données Grafana : arrêt `OOMKilled` du conteneur, limité à 2 Gio (voir `todo.md`).
 
 ## Version 1.7.10 (15/11/2026)
 
