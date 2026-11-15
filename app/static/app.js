@@ -77,14 +77,14 @@ function selectedArticles() {
 // NE PAS préfixer les clés Wikipédia : elles doivent rester identiques à celles des fichiers JSON déjà exportés ; garder aligné avec Article.key dans models.py.
 function articleKey(article) {
   if (article.kind) return `doc:${article.id}`;
-  const prefix = article.site === 'wikisource' ? 'wikisource:' : '';
+  const prefix = article.site && article.site !== 'wikipedia' ? `${article.site}:` : '';
   return article.page_id != null
     ? `${prefix}${article.language}:${article.page_id}`
     : `${prefix}${article.language}:title:${article.title.toLowerCase()}`;
 }
 
 function articleSiteLabel(article) {
-  return article.site === 'wikisource' ? `${article.language.toUpperCase()} · Wikisource` : article.language.toUpperCase();
+  return article.site && article.site !== 'wikipedia' ? `${article.language.toUpperCase()} · ${t(`site.${article.site}`)}` : article.language.toUpperCase();
 }
 
 function sameArticle(a, b) {
@@ -489,10 +489,11 @@ function addArticle(source) {
 
 function addSource(value) {
   return withAddButton(t('export.addingLabel'), async () => {
-    const resolved = await getJson('/api/sources/resolve', { method: 'POST', body: JSON.stringify({ input: value, language: $('#articleLanguage').value }) });
+    const source = parseSourceLine(value, $('#articleLanguage').value);
+    const resolved = await getJson('/api/sources/resolve', { method: 'POST', body: JSON.stringify({ input: source.input, language: source.language, site: source.site }) });
     if (resolved.kind === 'article') await addArticleToBook(resolved.article);
     else if (resolved.kind === 'book') await importBook(resolved.book, resolved.book_title);
-    else showSearchResults(resolved.results, t('sources.noExactPage', { query: value }));
+    else showSearchResults(resolved.results, source, t('sources.noExactPage', { query: value }));
   });
 }
 
@@ -562,20 +563,27 @@ function markdownLinkUrl(text) {
   return null;
 }
 
+const INTERWIKI_SITES = { w: 'wikipedia', s: 'wikisource', b: 'wikibooks', voy: 'wikivoyage', v: 'wikiversity', q: 'wikiquote', wikt: 'wiktionary', n: 'wikinews' };
+
 function parseSourceLine(line, defaultLanguage) {
   let text = line.trim().replace(/^(?:\d+[.)]|[#*•\-–]+)\s*/, '').trim();
   if (!text) return null;
+  const site = 'wikipedia';
   const markdownUrl = markdownLinkUrl(text);
-  if (markdownUrl) return { label: text, input: markdownUrl, language: defaultLanguage };
+  if (markdownUrl) return { label: text, input: markdownUrl, language: defaultLanguage, site };
   const wikilink = text.match(/^\[\[\s*:?([^\]|]+?)\s*(?:\|[^\]]*)?\]\]/);
   if (wikilink) text = wikilink[1];
-  if (/^[a-z]+:\/\//i.test(text)) return { label: text, input: text, language: defaultLanguage };
-  const prefixed = text.match(/^([a-z]{2,3}(?:-[a-z]{2,8})?):(.+)$/);
-  if (prefixed) {
-    const language = prefixed[1];
-    return { label: text, input: `https://${language}.wikipedia.org/wiki/${encodeURIComponent(prefixed[2].trim().replace(/ /g, '_'))}`, language };
+  if (/^[a-z]+:\/\//i.test(text)) return { label: text, input: text, language: defaultLanguage, site };
+  const label = text;
+  let language = null;
+  let project = null;
+  for (let prefixed = text.match(/^([a-z][a-z-]*):(.+)$/); prefixed; prefixed = text.match(/^([a-z][a-z-]*):(.+)$/)) {
+    if (!project && INTERWIKI_SITES[prefixed[1]]) project = INTERWIKI_SITES[prefixed[1]];
+    else if (!language && /^[a-z]{2,3}(?:-[a-z]{2,8})?$/.test(prefixed[1])) language = prefixed[1];
+    else break;
+    text = prefixed[2].trim();
   }
-  return { label: text, input: text, language: defaultLanguage };
+  return { label, input: text, language: language || defaultLanguage, site: project || site };
 }
 
 async function addSourceList(lines) {
@@ -587,7 +595,7 @@ async function addSourceList(lines) {
     for (const [index, { line, source }] of sources.entries()) {
       $('#entryHint').textContent = t('sources.listProgress', { n: index + 1, total: sources.length, title: source.label });
       try {
-        const resolved = await getJson('/api/sources/resolve', { method: 'POST', body: JSON.stringify({ input: source.input, language: source.language }) });
+        const resolved = await getJson('/api/sources/resolve', { method: 'POST', body: JSON.stringify({ input: source.input, language: source.language, site: source.site }) });
         if (resolved.kind === 'article') {
           if (await pushArticle(resolved.article)) added += 1; else already += 1;
         } else if (resolved.kind === 'book') {
@@ -603,11 +611,12 @@ async function addSourceList(lines) {
   showToast(t('sources.listSummary', { added, already, missing: missing.length }), missing.length > 0);
 }
 
-function showSearchResults(items, hint) {
+function showSearchResults(items, source, hint) {
   const results = $('#searchResults');
   results.hidden = false;
+  const kind = source.site === 'wikipedia' ? t('sources.wikipediaArticleLabel') : t(`site.${source.site}`);
   results.innerHTML = items.length
-    ? items.map((item) => `<button class="search-result" type="button" data-add-title="${escapeHtml(item.title)}" data-page-id="${item.page_id}"><span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(t('sources.wikipediaArticleLabel'))} \u00b7 ${escapeHtml($('#articleLanguage').value.toUpperCase())}</small></span><span class="search-add" aria-hidden="true">+</span></button>`).join('')
+    ? items.map((item) => `<button class="search-result" type="button" data-add-title="${escapeHtml(item.title)}" data-page-id="${item.page_id}" data-language="${escapeHtml(source.language)}" data-site="${escapeHtml(source.site)}"><span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(kind)} \u00b7 ${escapeHtml(source.language.toUpperCase())}</small></span><span class="search-add" aria-hidden="true">+</span></button>`).join('')
     : `<div class="search-result"><span><strong>${escapeHtml(t('sources.noResultsTitle'))}</strong><small>${escapeHtml(t('sources.noResultsDesc'))}</small></span></div>`;
   if (hint) $('#entryHint').textContent = hint;
 }
@@ -620,10 +629,12 @@ async function searchArticles(query) {
     results.hidden = false;
     results.innerHTML = `<div class="search-result"><span><strong>${escapeHtml(t('sources.searching'))}</strong></span></div>`;
     try {
-      const params = new URLSearchParams({ query: query.trim(), language: $('#articleLanguage').value, limit: '8' });
+      const source = parseSourceLine(query, $('#articleLanguage').value);
+      if (source.input.length < 2) { results.hidden = true; return; }
+      const params = new URLSearchParams({ query: source.input, language: source.language, site: source.site, limit: '8' });
       const items = await getJson(`/api/search?${params}`);
       if ($('#articleQuery').value.trim() !== query.trim()) return;
-      showSearchResults(items);
+      showSearchResults(items, source);
     } catch (error) {
       results.innerHTML = `<div class="search-result"><span><strong>${escapeHtml(t('sources.searchUnavailable'))}</strong><small>${escapeHtml(error.message)}</small></span></div>`;
     }
@@ -940,7 +951,7 @@ document.addEventListener('click', async (event) => {
     return;
   }
   const result = event.target.closest('[data-add-title]');
-  if (result) { await addArticle({ title: result.dataset.addTitle, language: $('#articleLanguage').value, page_id: Number(result.dataset.pageId) }); return; }
+  if (result) { await addArticle({ title: result.dataset.addTitle, language: result.dataset.language, site: result.dataset.site, page_id: Number(result.dataset.pageId) }); return; }
   if (event.target.closest('#selectDiscoveredButton')) { addSuggestions(visibleSuggestions()); return; }
   const suggestionCard = event.target.closest('#discoveredArticles .article-card');
   if (suggestionCard && event.target.closest('.add-suggestion')) { addSuggestions(state.project.discovered_articles.filter((a) => articleKey(a) === suggestionCard.dataset.articleKey)); return; }

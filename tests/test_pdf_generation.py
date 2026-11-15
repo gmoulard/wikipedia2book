@@ -181,7 +181,8 @@ class WikisourceLicenseTest(unittest.TestCase):
         text = Article(title="論語", language="zh", site="wikisource", url="https://zh.wikisource.org/wiki/%E8%AB%96%E8%AA%9E", selected=True)
         html = build_license_page_html(Project(name="T"), [text], "zh")
         self.assertIn("维基文库", html)
-        self.assertNotIn("本书收录的维基百科条目文本", html)
+        self.assertNotIn("知识共享 署名-相同方式共享 4.0 国际", html)
+        self.assertIn("本书并非维基文库或维基媒体基金会的官方出版物。", html)
         self.assertIn("https://zh.wikisource.org/w/index.php?title=%E8%AB%96%E8%AA%9E&amp;action=history", html)
 
     def test_mixed_book_has_both_notes(self):
@@ -190,6 +191,24 @@ class WikisourceLicenseTest(unittest.TestCase):
         html = build_license_page_html(Project(name="T"), [text, article])
         self.assertIn("CC BY-SA 4.0", html)
         self.assertIn("Les textes provenant de Wikisource", html)
+        self.assertIn("Les textes provenant de Wikipédia reproduits", html)
+
+    def test_license_names_the_other_projects(self):
+        book = Article(title="Programmation Python", language="fr", site="wikibooks", url="https://fr.wikibooks.org/wiki/Programmation_Python", selected=True)
+        guide = Article(title="Lyon", language="fr", site="wikivoyage", url="https://fr.wikivoyage.org/wiki/Lyon", selected=True)
+        html = build_license_page_html(Project(name="T"), [guide, book])
+        self.assertIn("Les textes provenant de Wikilivres, Wikivoyage reproduits", html)
+        self.assertIn("CC BY-SA 4.0", html)
+        self.assertNotIn("Wikipédia", html)
+        self.assertIn("https://fr.wikibooks.org/w/index.php?title=Programmation_Python&amp;action=history", html)
+        self.assertIn("Vikikitap, Vikigezgin", build_license_page_html(Project(name="T"), [guide, book], "tr"))
+
+    def test_wikinews_is_cc_by(self):
+        news = Article(title="Main Page", language="en", site="wikinews", url="https://en.wikinews.org/wiki/Main_Page", selected=True)
+        html = build_license_page_html(Project(name="T"), [news], "en")
+        self.assertIn("Creative Commons Attribution (CC BY)", html)
+        self.assertNotIn("CC BY-SA", html)
+        self.assertIn("official publication of Wikinews", html)
 
 
 class TranslatedTitlesTest(unittest.TestCase):

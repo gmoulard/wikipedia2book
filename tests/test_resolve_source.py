@@ -53,8 +53,8 @@ class FakeClient:
         FakeClient.calls.append(("book", title, language))
         return WikipediaBook(subtitle="Sous-titre", chapters=[("", ["Chat"]), ("Partie", ["Chien"])])
 
-    async def search(self, query, language, limit):
-        FakeClient.calls.append(("search", query, language))
+    async def search(self, query, language, limit, site="wikipedia"):
+        FakeClient.calls.append(("search", query, language, site))
         return [{"page_id": 1, "title": "Chat domestique", "snippet": "", "url": "https://fr.wikipedia.org/wiki/Chat_domestique"}]
 
 
@@ -70,8 +70,8 @@ class ResolveSourceTest(unittest.TestCase):
     def tearDown(self):
         self.patch.stop()
 
-    def resolve(self, text, language="fr"):
-        return self.client.post("/api/sources/resolve", json={"input": text, "language": language})
+    def resolve(self, text, language="fr", site="wikipedia"):
+        return self.client.post("/api/sources/resolve", json={"input": text, "language": language, "site": site})
 
     def test_article_url(self):
         FakeClient.pages = {"Épaves de la rade": ("Épaves de la rade", 0)}
@@ -111,7 +111,7 @@ class ResolveSourceTest(unittest.TestCase):
         body = self.resolve("chats du monde").json()
         self.assertEqual(body["kind"], "search")
         self.assertEqual(body["results"][0]["title"], "Chat domestique")
-        self.assertIn(("search", "chats du monde", "fr"), FakeClient.calls)
+        self.assertIn(("search", "chats du monde", "fr", "wikipedia"), FakeClient.calls)
 
     def test_unknown_url_is_404(self):
         self.assertEqual(self.resolve("https://fr.wikipedia.org/wiki/Inexistant").status_code, 404)
@@ -144,6 +144,47 @@ class ResolveSourceTest(unittest.TestCase):
     def test_book_structure_refuses_wikisource(self):
         response = self.client.post("/api/books/structure", json={"url": "https://fr.wikisource.org/wiki/Livre:X"})
         self.assertEqual(response.status_code, 422)
+
+    def test_other_wikimedia_projects_by_url(self):
+        for site, url, title in (
+            ("wikibooks", "https://fr.wikibooks.org/wiki/Programmation_Python", "Programmation Python"),
+            ("wikivoyage", "https://fr.wikivoyage.org/wiki/Lyon", "Lyon"),
+            ("wikiversity", "https://fr.wikiversity.org/wiki/Alg%C3%A8bre_lin%C3%A9aire", "Algèbre linéaire"),
+            ("wikiquote", "https://fr.wikiquote.org/wiki/Victor_Hugo", "Victor Hugo"),
+            ("wiktionary", "https://fr.wiktionary.org/wiki/chat", "chat"),
+            ("wikinews", "https://en.wikinews.org/wiki/Main_Page", "Main Page"),
+        ):
+            with self.subTest(site=site):
+                FakeClient.pages = {title: (title, 0)}
+                body = self.resolve(url).json()
+                self.assertEqual(body["kind"], "article")
+                self.assertEqual(body["article"]["site"], site)
+                self.assertTrue(body["article"]["url"].startswith(f"https://{url.split('/')[2]}/wiki/"))
+                self.assertEqual(FakeClient.calls[-1][3], site)
+
+    def test_title_on_another_project_searches_that_project(self):
+        FakeClient.pages = {"Programmation Python": ("Programmation Python", 0)}
+        body = self.resolve("Programmation Python", "fr", "wikibooks").json()
+        self.assertEqual(body["article"]["site"], "wikibooks")
+        self.assertEqual(body["article"]["url"], "https://fr.wikibooks.org/wiki/Programmation_Python")
+        body = self.resolve("Pyhton", "fr", "wikibooks").json()
+        self.assertEqual(body["kind"], "search")
+        self.assertIn(("search", "Pyhton", "fr", "wikibooks"), FakeClient.calls)
+
+    def test_other_project_namespace_is_422(self):
+        FakeClient.pages = {"Wikilivres:Accueil": ("Wikilivres:Accueil", 4)}
+        self.assertEqual(self.resolve("https://fr.wikibooks.org/wiki/Wikilivres:Accueil").status_code, 422)
+        self.assertNotIn("book", [call[0] for call in FakeClient.calls])
+
+    def test_unknown_site_is_422(self):
+        self.assertEqual(self.resolve("Chat", "fr", "wikidata").status_code, 422)
+        self.assertEqual(self.resolve("https://commons.wikimedia.org/wiki/Main_Page").status_code, 422)
+
+    def test_add_article_by_title_on_another_project(self):
+        response = self.client.post("/api/articles", json={"title": "Lyon", "language": "fr", "site": "wikivoyage"})
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["url"], "https://fr.wikivoyage.org/wiki/Lyon")
+        self.assertEqual(response.json()["site"], "wikivoyage")
 
     def test_wikipedia_unreachable_is_502(self):
         FakeClient.fail = True

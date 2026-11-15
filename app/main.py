@@ -25,7 +25,6 @@ import tempfile
 from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
-from typing import Literal
 from urllib.parse import quote
 
 from fastapi import FastAPI, HTTPException, Query, Request, Response
@@ -58,6 +57,7 @@ from app.models import (
     Project,
     ProjectExplorationRequest,
     SourceRequest,
+    Site,
     SourceResolution,
     UploadedDocument,
     WikipediaBookGenerationRequest,
@@ -173,10 +173,11 @@ async def search_articles(
     query: str = Query(min_length=2, max_length=200),
     language: str = Query(default="fr", pattern=r"^[a-z0-9-]{2,12}$"),
     limit: int = Query(default=10, ge=1, le=20),
+    site: Site = "wikipedia",
 ) -> list[dict]:
     try:
         async with MediaWikiClient() as client:
-            return await client.search(query, language, limit)
+            return await client.search(query, language, limit, site)
     except (MediaWikiError, ValueError) as error:
         raise _mediawiki_error(error) from error
 
@@ -185,7 +186,7 @@ async def search_articles(
 async def article_intro(
     title: str = Query(min_length=1, max_length=300),
     language: str = Query(default="fr", pattern=r"^[a-z0-9-]{2,12}$"),
-    site: Literal["wikipedia", "wikisource"] = "wikipedia",
+    site: Site = "wikipedia",
 ) -> dict[str, str]:
     try:
         async with MediaWikiClient() as client:
@@ -199,7 +200,7 @@ async def article_intro(
 def add_article_reference(payload: ArticleRequest) -> Article:
     try:
         language, title, site = (
-            parse_article_url(payload.url) if payload.url else (payload.language, payload.title, "wikipedia")
+            parse_article_url(payload.url) if payload.url else (payload.language, payload.title, payload.site)
         )
         language = validate_language(language)
         title = title.strip()
@@ -240,13 +241,13 @@ async def resolve_source(payload: SourceRequest) -> SourceResolution:
     try:
         if not text:
             raise ValueError("Saisissez une URL, une page de livre ou un titre Wikipédia.")
-        language, title, site = parse_article_url(text) if is_url else (validate_language(payload.language), text, "wikipedia")
+        language, title, site = parse_article_url(text) if is_url else (validate_language(payload.language), text, payload.site)
         async with MediaWikiClient() as client:
             page = await client.get_page(title, language, site)
             if page is None:
                 if is_url:
                     raise MediaWikiPageNotFound(f"La page « {title} » est introuvable sur {language}.{site}.org.")
-                return SourceResolution(kind="search", results=await client.search(text, language, 8))
+                return SourceResolution(kind="search", results=await client.search(title, language, 8, site))
             title, namespace = page
             if namespace == 0:
                 return SourceResolution(
@@ -255,8 +256,8 @@ async def resolve_source(payload: SourceRequest) -> SourceResolution:
                         title=title, language=language, site=site, url=article_url(language, title, site), selected=True
                     ),
                 )
-            if site == "wikisource":
-                raise ValueError("Seules les pages de texte de Wikisource (espace principal) sont acceptées.")
+            if site != "wikipedia":
+                raise ValueError(f"Seules les pages de l’espace principal de {language}.{site}.org sont acceptées.")
             return SourceResolution(
                 kind="book", book=await _wikipedia_book(client, language, title), book_title=_book_name(title)
             )

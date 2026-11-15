@@ -109,11 +109,29 @@ class GetArticlePdfTest(unittest.TestCase):
         asyncio.run(run())
         self.assertEqual(str(requests[0].url), "https://zh.wikisource.org/api/rest_v1/page/pdf/%E8%AB%96%E8%AA%9E/a4")
 
+    def test_every_project_pdf_comes_from_its_own_site(self):
+        for site in ("wikibooks", "wikivoyage", "wikiversity", "wikiquote", "wiktionary", "wikinews"):
+            requests = []
+
+            def handle(request):
+                requests.append(request)
+                return httpx.Response(200, content=b"%PDF-1.7 ...")
+
+            async def run():
+                async with MediaWikiClient() as client:
+                    await client._client.aclose()
+                    client._client = httpx.AsyncClient(transport=httpx.MockTransport(handle))
+                    return await client.get_article_pdf("Programmation Python", "fr", "a4", site)
+
+            with self.subTest(site=site):
+                asyncio.run(run())
+                self.assertEqual(str(requests[0].url), f"https://fr.{site}.org/api/rest_v1/page/pdf/Programmation_Python/a4")
+
     def test_rejects_an_unknown_site(self):
         client = MediaWikiClient()
         client._client = AsyncMock()
         with self.assertRaises(ValueError):
-            asyncio.run(client.get_article_pdf("Chat", "fr", "a4", "wiktionary"))
+            asyncio.run(client.get_article_pdf("Chat", "fr", "a4", "wikidata"))
         client._client.get.assert_not_called()
 
     def test_rejects_an_unknown_paper_format(self):
@@ -122,6 +140,15 @@ class GetArticlePdfTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             asyncio.run(client.get_article_pdf("Chat", "fr", "a5"))
         client._client.get.assert_not_called()
+
+
+class SearchTest(unittest.TestCase):
+    def test_search_targets_the_project_site(self):
+        client = MediaWikiClient()
+        client._get = AsyncMock(return_value={"query": {"search": [{"pageid": 3, "title": "Lyon", "snippet": "<b>Lyon</b>"}]}})
+        results = asyncio.run(client.search("Lyon", "fr", 5, "wikivoyage"))
+        self.assertEqual(client._get.call_args.args[2], "wikivoyage")
+        self.assertEqual(results, [{"page_id": 3, "title": "Lyon", "snippet": "Lyon", "url": "https://fr.wikivoyage.org/wiki/Lyon"}])
 
 
 class GetIntroAndCreatorTest(unittest.TestCase):
@@ -189,8 +216,25 @@ class ParseArticleUrlTest(unittest.TestCase):
             parse_article_url("https://fr.wikisource.org/wiki/Les_Fleurs_du_mal"), ("fr", "Les Fleurs du mal", "wikisource")
         )
 
+    def test_accepts_the_other_language_projects(self):
+        for site in ("wikibooks", "wikivoyage", "wikiversity", "wikiquote", "wiktionary", "wikinews"):
+            with self.subTest(site=site):
+                self.assertEqual(parse_article_url(f"https://de.{site}.org/wiki/Haus_und_Hof"), ("de", "Haus und Hof", site))
+                self.assertEqual(article_url("de", "Haus und Hof", site), f"https://de.{site}.org/wiki/Haus_und_Hof")
+                self.assertEqual(
+                    Article(title="Haus", language="de", site=site, url=article_url("de", "Haus", site)).key,
+                    f"{site}:de:title:haus",
+                )
+
     def test_rejects_other_sites(self):
-        for url in ("https://fr.wiktionary.org/wiki/chat", "https://wikisource.org/wiki/Main_Page", "http://fr.wikisource.org/wiki/X"):
+        for url in (
+            "https://wikisource.org/wiki/Main_Page",
+            "http://fr.wikisource.org/wiki/X",
+            "https://commons.wikimedia.org/wiki/Main_Page",
+            "https://www.wikidata.org/wiki/Q42",
+            "https://species.wikimedia.org/wiki/Felis",
+            "https://fr.wikibooks.org.example.com/wiki/X",
+        ):
             with self.assertRaises(ValueError):
                 parse_article_url(url)
 

@@ -116,15 +116,15 @@ The full data model and the format of the JSON file are described in section 13.
 
 ### 3.1 Ways to add articles
 
-A single input field, in the Sources step, is used for every way of adding content: the user does not say what kind of thing they are typing, the software recognizes it by querying Wikipedia (`POST /api/sources/resolve`, which receives `input` and `language`):
+A single input field, in the Sources step, is used for every way of adding content: the user does not say what kind of thing they are typing, the software recognizes it by querying Wikipedia (`POST /api/sources/resolve`, which receives `input`, `language` and `site`):
 
-* a `https://<language>.wikipedia.org/wiki/…` URL is read with the language of the URL; so is a `https://<language>.wikisource.org/wiki/…` URL, on Wikisource (see below); otherwise, the text is taken as a page title, in the Wikipedia language chosen next to the field. This selector offers FR, EN, DE, ES, IT, PT and NL; when the application opens, it is set to the browser language (main part of the code, for example `pt` for `pt-BR`, `no` for `nb`), added to the list if missing (for example JA). If the browser language is missing or not a valid code, EN is selected. This choice is saved neither in the book nor in the browser;
+* a `https://<language>.wikipedia.org/wiki/…` URL is read with the language of the URL; so is a URL of another Wikimedia project of the form `https://<language>.<project>.org/wiki/…`, on that project (see below); otherwise, the text is taken as a page title, in the Wikipedia language chosen next to the field. This selector offers FR, EN, DE, ES, IT, PT and NL; when the application opens, it is set to the browser language (main part of the code, for example `pt` for `pt-BR`, `no` for `nb`), added to the list if missing (for example JA). If the browser language is missing or not a valid code, EN is selected. This choice is saved neither in the book nor in the browser;
 
 * the page is looked up on Wikipedia, following redirects: a page in the main namespace (an article) is added as an article; a page in another namespace (`User:…/Books/…`, `Book:…`, etc.) is imported as a book page;
 
 * if no page has exactly that title, the Wikipedia search results are offered below the field, to be added with one click; a URL pointing to a page that does not exist is reported as not found.
 
-* **Wikisource**: the URL of a Wikisource text page (main namespace, for example `https://zh.wikisource.org/wiki/論語/學而第一` or `https://fr.wikisource.org/wiki/Le_Corbeau`) is added as an article, with the official Wikisource PDF (same service as Wikipedia, section 13.2). Only the URL is recognized: a plain title, search and book pages remain specific to Wikipedia, and a Wikisource page in another namespace (`Author:…`, `Index:…`, etc.) is rejected. Each page is added as is: for a work split into subpages, the main page often contains only the table of contents, and each subpage must be added (the list of their URLs can be pasted, one per line). The article card shows "Wikisource" next to the language.
+* **Other Wikimedia projects**: a main-namespace page of Wikisource (`wikisource`), Wikibooks (`wikibooks`), Wikivoyage (`wikivoyage`), Wikiversity (`wikiversity`), Wikiquote (`wikiquote`), Wiktionary (`wiktionary`) or Wikinews (`wikinews`) is added as an article, with the official PDF of the project (same service as Wikipedia, section 13.2), for example `https://zh.wikisource.org/wiki/論語/學而第一`, `https://fr.wikibooks.org/wiki/Programmation_Python` or `https://fr.wikivoyage.org/wiki/Lyon`. It is given by its URL or by a title preceded by a project interwiki prefix (see the list below): the page is then looked up on that project and, if there is no exact page, that project's search results are offered. Book pages remain specific to Wikipedia, and a page in another namespace of these projects (`Author:…`, `Index:…`, `Wikibooks:…`, etc.) is rejected. Each page is added as is: for a work or a book split into subpages (Wikisource, Wikibooks), the main page often contains only the table of contents, and each subpage must be added (the list of their URLs can be pasted, one per line). The article card shows the name of the project, in the interface language (for example "Wikibooks"), next to the language. Projects without a `<language>.<project>.org` address (Commons, Meta-Wiki, MediaWiki.org, Wikispecies, Wikidata) are not accepted.
 
 The field also accepts a **list of pages, one per line** (pasted, or typed with Shift+Enter; Enter alone starts the addition). Each line is recognized and then looked up on Wikipedia one after the other, with a message "Adding the list: n / total — title":
 
@@ -132,11 +132,12 @@ The field also accepts a **list of pages, one per line** (pasted, or typed with 
 * wiki link `[[Title]]`, `[[:fr:Title]]` or `[[nl:Title|text]]`: the title, in the language given by the prefix if any;
 * Markdown link `[text](https://…)`: the URL, parentheses included (`…/Suchet%20(navire)`);
 * language prefix `nl:Title` (2 or 3 lowercase letters, optionally followed by a variant, for example `zh-yue`): the page with that title on that Wikipedia, which allows multilingual lists;
-* Wikipedia URL: read with its language; plain title: in the language chosen next to the field.
+* project interwiki prefix, alone or combined with a language prefix in any order: `w:` Wikipedia, `s:` Wikisource, `b:` Wikibooks, `voy:` Wikivoyage, `v:` Wikiversity, `q:` Wikiquote, `wikt:` Wiktionary, `n:` Wikinews (for example `b:Programmation Python`, `[[voy:en:Lyon]]`, `fr:wikt:chat`): the page with that title on that project, in the language of the prefix or, failing that, the one chosen next to the field;
+* URL of Wikipedia or of another accepted project: read with its language; plain title: on Wikipedia, in the language chosen next to the field.
 
 Each page found is added as an article (or, for a book page, all its articles); a page already in the book is skipped. Lines without an exact page, or in error, stay in the field to be corrected and are listed below it. A final message gives the number of pages added, already present and not found. Search-as-you-type is turned off as soon as the field contains several lines.
 
-Below the field, a permanent label reminds the user what can be typed: the URL of an article, a book page (URL or name) or the name of a Wikipedia page. Status messages (article added, pages imported, no exact page) are shown on a separate line underneath, without replacing that label. While typing text that is not a URL, search results are suggested as you type. The previous endpoints (`POST /api/articles`, `POST /api/books/structure`, `GET /api/search`) remain available.
+Below the field, a permanent label reminds the user what can be typed: the URL of an article, a book page (URL or name) or the name of a Wikipedia page. Status messages (article added, pages imported, no exact page) are shown on a separate line underneath, without replacing that label. While typing text that is not a URL, search results are suggested as you type, on the project and in the language of the prefixes if any (`b:fr:Program…` searches the French Wikibooks). The previous endpoints (`POST /api/articles`, `POST /api/books/structure`, `GET /api/search`) remain available.
 
 The user can therefore add articles to the book in any of the following ways:
 
@@ -537,7 +538,7 @@ This interface language is independent of the language of the Wikipedia articles
 
 All exchanges with Wikipedia go through the `MediaWikiClient` class in `app/wikipedia_api.py`; no other module calls Wikipedia. Two services are used, on the wiki of the article's language (`<language>` = code validated by `^[a-z0-9-]{2,12}$`):
 
-For a Wikisource text (section 3.1), the same calls are made on `https://<language>.wikisource.org` instead of `https://<language>.wikipedia.org` (page recognition, suggested introduction and author, links for exploration, PDF); search and book pages stay on Wikipedia.
+For a page of another Wikimedia project (section 3.1), the same calls are made on `https://<language>.<project>.org` instead of `https://<language>.wikipedia.org` (page recognition, search, suggested introduction and author, links for exploration, PDF); only book pages stay on Wikipedia. The accepted projects are the `SITES` list in `app/wikipedia_api.py`, derived from the `Site` type in `app/models.py`. The Wikimedia robot policy (section 3) is the same for every project: the PDF download limits are shared by all of them.
 
 * **MediaWiki API (Action API)**: `https://<language>.wikipedia.org/w/api.php`, with GET, always with `format=json&formatversion=2` and, by default, `action=query`.
 * **REST API**: `https://<language>.wikipedia.org/api/rest_v1/page/pdf/<title>/<format>`, for the official PDF of an article (spaces in the title are replaced with `_` and it is URL-encoded).
@@ -569,6 +570,8 @@ The examples below assume that the server runs on `http://localhost:8000`. Repla
 GET endpoints can be opened directly in the address bar:
 
 * Search for articles: `http://localhost:8000/api/search?query=Albert%20Einstein&language=fr&limit=5`.
+
+* Search another Wikimedia project: `http://localhost:8000/api/search?query=Lyon&language=fr&site=wikivoyage`.
 
 * Get the introduction and the creator of an article: `http://localhost:8000/api/articles/intro?title=Albert%20Einstein&language=fr`.
 
@@ -861,13 +864,13 @@ On import, the following are accepted: this format in version 1 (any other versi
 | --- | --- | --- |
 | `page_id` | integer ≥ 1 or absent | Wikipedia page identifier |
 | `title`, `language`, `url` | texts | title, language code, article URL |
-| `site` | `wikipedia` or `wikisource`, `wikipedia` | Wikimedia project of the page (missing from older JSON files, which remain readable) |
+| `site` | `wikipedia`, `wikisource`, `wikibooks`, `wikivoyage`, `wikiversity`, `wikiquote`, `wiktionary` or `wikinews`, `wikipedia` | Wikimedia project of the page (missing from older JSON files, which remain readable) |
 | `summary` | text, `""` | summary shown on the card |
 | `origin_title` | text or absent | article from which it was discovered |
 | `depth` | integer ≥ 0, 0 | exploration depth (0 = added directly) |
 | `selected` | boolean, false | included in the book |
 
-Article key: `<language>:<page_id>`, or `<language>:title:<lowercase title>` without `page_id`; for a Wikisource text, the same key prefixed with `wikisource:`.
+Article key: `<language>:<page_id>`, or `<language>:title:<lowercase title>` without `page_id`; for a page of a project other than Wikipedia, the same key prefixed with the project name and `:` (for example `wikisource:`, `wikibooks:`).
 
 #### `UploadedDocument`
 
@@ -1043,7 +1046,7 @@ Test to run by hand to find the largest book a deployment can generate. Unlike t
 
 The software currently implements:
 
-* Strict validation of the URLs provided (HTTPS scheme, `*.wikipedia.org` or `*.wikisource.org` domain, title present).
+* Strict validation of the URLs provided (HTTPS scheme, `<language>.<project>.org` domain of an accepted project, title present).
 
 * Validation of language codes (regular expression, 2 to 12 characters).
 
@@ -1071,7 +1074,7 @@ The software:
 
 * Keeps the link to each original article.
 
-* Adds to the book a "License" page, just before the conclusion, stating that Wikipedia texts are under the Creative Commons Attribution-ShareAlike 4.0 International license (CC BY-SA 4.0), with the link to the license, a summary of the reuse conditions, and the list of articles in book order with, for each one, the URL of the article and that of its history (which lists the authors). Imported documents are listed there as not covered by this license. If the book contains Wikisource texts, the page states that they are mostly in the public domain, the others (translations, recent editions) being under the license shown on their Wikisource page, usually CC BY-SA 4.0; the CC BY-SA statement for Wikipedia articles is shown only if the book contains at least one Wikipedia article. This page also states that the book is not an official Wikipedia publication; it is written entirely in the interface language (section 12.1).
+* Adds to the book a "License" page, just before the conclusion, stating that the texts of Wikipedia and of the other projects under the same license (Wikibooks, Wikivoyage, Wikiversity, Wikiquote, Wiktionary) are under the Creative Commons Attribution-ShareAlike 4.0 International license (CC BY-SA 4.0), naming the projects present in the book, with the link to the license, a summary of the reuse conditions, and the list of articles in book order with, for each one, the URL of the article and that of its history (which lists the authors). Imported documents are listed there as not covered by this license. If the book contains Wikisource texts, the page states that they are mostly in the public domain, the others (translations, recent editions) being under the license shown on their Wikisource page, usually CC BY-SA 4.0; if it contains Wikinews articles, that they are under the Creative Commons Attribution license (CC BY), in the version shown on their page; the CC BY-SA statement is shown only if the book contains at least one page of a project under that license. This page also states that the book is not an official publication of the projects it takes pages from (Wikipedia by default) or of the Wikimedia Foundation; the project names are those of the interface language (`site_*` in `PDF_LABELS`, for example "Wikilivres" in French, "Wikibooks" in English); it is written entirely in the interface language (section 12.1).
 
 * Does not alter the content, credits or license notices printed by Wikipedia in its own PDF.
 
@@ -1220,7 +1223,11 @@ Possible developments, not implemented to date:
 
 * Importing content from other encyclopedias.
 
-* Wikisource, beyond single pages (section 3.1): note — the feature may need to be extended to meet the needs expressed by PacmanD on the Chinese Wikipedia technical village pump (November 2026): importing a whole work from its contents page (subpages in order, like a book page, with chapters), search and plain titles on Wikisource, and correct rendering of rare Chinese characters (僻字) — to be checked in the official Wikisource PDF, which the software does not modify, and in the pages generated by the software, which only have the Noto CJK fonts (CJK extensions B and beyond not covered).
+* Wikisource, beyond single pages (section 3.1): note — the feature may need to be extended to meet the needs expressed by PacmanD on the Chinese Wikipedia technical village pump (November 2026): importing a whole work from its contents page (subpages in order, like a book page, with chapters), and correct rendering of rare Chinese characters (僻字) — to be checked in the official Wikisource PDF, which the software does not modify, and in the pages generated by the software, which only have the Noto CJK fonts (CJK extensions B and beyond not covered).
+
+* Wikibooks: importing a whole book from its contents page (`Book/Chapter` subpages in order, like a Wikipedia book page); today each subpage is added separately (section 3.1).
+
+* Single-domain Wikimedia projects, without a language in the address (Commons, Meta-Wiki, MediaWiki.org, Wikispecies): not accepted, of little use for a book; Wikidata is irrelevant here.
 
 * Advanced customization of the cover and of typographic styles.
 
@@ -1293,5 +1300,6 @@ Application version number (`app/version.py`, used by `app/main.py` and by the U
 | 1.7.8   | 2026-11-15 | GMoulard  | Wikisource text pages accepted by URL (`https://<language>.wikisource.org/wiki/…`), included with the official Wikisource PDF; `site` field on articles (older JSON files still readable); license page adapted to Wikisource texts (sections 3.1, 13.2, 13.9, 14, 15, 18). |
 | 1.7.9   | 2026-11-15 | GMoulard  | Large books: temporary files merged by qpdf (`--pages`) instead of copying pages with pikepdf, which loaded their content into memory, and download slot kept until recomposition is finished; peak memory measured locally: 158 MB for 100 articles, 262 MB for 300 (instead of 360 and 912 MB in 1.7.7). Limit test: red links excluded (sections 11.1, 13.12). |
 | 1.7.10  | 2026-11-15 | GMoulard  | Large books: temporary part files deleted as soon as they are merged, temporary space goes from three to two times the size of the book (most likely cause of the failure at 300 articles on Toolforge in 1.7.9) (sections 11.1, 13.12). |
+| 1.8.0   | 2026-11-15 | GMoulard  | Other Wikimedia projects: pages from Wikibooks, Wikivoyage, Wikiversity, Wikiquote, Wiktionary and Wikinews accepted by URL or interwiki prefix (`b:`, `voy:`, `v:`, `q:`, `wikt:`, `n:`), included with the project's official PDF; search, introduction and exploration on the project's site; license page naming each project, 12 languages (sections 3.1, 13.2, 15). |
 
 End of document

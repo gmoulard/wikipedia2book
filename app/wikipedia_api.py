@@ -23,17 +23,19 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from email.utils import parsedate_to_datetime
 from datetime import datetime, timezone
+from typing import get_args
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
 import httpx
 from bs4 import BeautifulSoup
 
-from app.models import Article
+from app.models import Article, Site
 from app.version import VERSION
 
 
 _LANGUAGE_RE = re.compile(r"^[a-z0-9-]{2,12}$")
-SITES = ("wikipedia", "wikisource")
+SITES: tuple[str, ...] = get_args(Site)
+_HOST_RE = re.compile(rf"([a-z0-9-]{{2,12}})\.({'|'.join(SITES)})\.org")
 WIKIPEDIA_PDF_PAPERS = {"A4": "a4", "Letter": "letter", "Legal": "legal"}
 USER_AGENT = (
     f"Wikipedia2Book/{VERSION} (https://wikipedia2book.toolforge.org/; https://github.com/gmoulard/wikipedia2book) "
@@ -73,7 +75,7 @@ def validate_language(language: str) -> str:
 
 def site_host(language: str, site: str) -> str:
     if site not in SITES:
-        raise ValueError("Site Wikimédia invalide : seuls Wikipédia et Wikisource sont acceptés.")
+        raise ValueError(f"Site Wikimédia invalide : seuls {', '.join(SITES)} sont acceptés.")
     return f"{validate_language(language)}.{site}.org"
 
 
@@ -85,9 +87,11 @@ def article_url(language: str, title: str, site: str = "wikipedia") -> str:
 def parse_article_url(url: str) -> tuple[str, str, str]:
     parsed = urlparse(url)
     host = (parsed.hostname or "").lower()
-    match = re.fullmatch(r"([a-z0-9-]{2,12})\.(wikipedia|wikisource)\.org", host)
+    match = _HOST_RE.fullmatch(host)
     if parsed.scheme != "https" or not match or parsed.port is not None:
-        raise ValueError("L’URL doit pointer vers une page HTTPS de wikipedia.org ou de wikisource.org.")
+        raise ValueError(
+            f"L’URL doit pointer vers une page HTTPS d’un projet Wikimédia <langue>.<projet>.org ({', '.join(SITES)})."
+        )
     language = validate_language(match.group(1))
     site = match.group(2)
     if parsed.path.startswith("/wiki/"):
@@ -212,7 +216,7 @@ class MediaWikiClient:
             raise MediaWikiError(result["error"].get("info", "Erreur de l’API Wikipédia."))
         return result
 
-    async def search(self, query: str, language: str = "fr", limit: int = 10) -> list[dict]:
+    async def search(self, query: str, language: str = "fr", limit: int = 10, site: str = "wikipedia") -> list[dict]:
         result = await self._get(
             language,
             {
@@ -221,6 +225,7 @@ class MediaWikiClient:
                 "srlimit": min(max(limit, 1), 20),
                 "srnamespace": 0,
             },
+            site,
         )
         items = result.get("query", {}).get("search", [])
         return [
@@ -228,7 +233,7 @@ class MediaWikiClient:
                 "page_id": item["pageid"],
                 "title": item["title"],
                 "snippet": BeautifulSoup(item.get("snippet", ""), "html.parser").get_text(" ", strip=True),
-                "url": f"https://{validate_language(language)}.wikipedia.org/wiki/{item['title'].replace(' ', '_')}",
+                "url": article_url(language, item["title"], site),
             }
             for item in items
         ]

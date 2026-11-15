@@ -117,15 +117,15 @@ Le modèle de données complet et le format du fichier JSON sont décrits en sec
 
 ### 3.1 Méthodes d'ajout
 
-Un seul champ de saisie, dans l'étape Sources, sert à tous les moyens d'ajout : l'utilisateur n'indique pas le type de ce qu'il saisit, le logiciel le reconnaît en interrogeant Wikipédia (`POST /api/sources/resolve`, qui reçoit `input` et `language`) :
+Un seul champ de saisie, dans l'étape Sources, sert à tous les moyens d'ajout : l'utilisateur n'indique pas le type de ce qu'il saisit, le logiciel le reconnaît en interrogeant Wikipédia (`POST /api/sources/resolve`, qui reçoit `input`, `language` et `site`) :
 
-* une URL `https://<langue>.wikipedia.org/wiki/…` est lue avec la langue de l'URL; une URL `https://<langue>.wikisource.org/wiki/…` aussi, sur Wikisource (voir plus bas); sinon, le texte saisi est pris comme un titre de page, dans la langue de Wikipédia choisie à côté du champ. Ce sélecteur propose FR, EN, DE, ES, IT, PT et NL; à l'ouverture de l'application, il est positionné sur la langue du navigateur (partie principale du code, par exemple `pt` pour `pt-BR`, `no` pour `nb`), ajoutée à la liste si elle n'y figure pas (par exemple JA). Si la langue du navigateur est absente ou n'est pas un code valide, EN est sélectionné. Ce choix n'est enregistré ni dans le livre ni dans le navigateur;
+* une URL `https://<langue>.wikipedia.org/wiki/…` est lue avec la langue de l'URL; une URL d'un autre projet Wikimédia de la forme `https://<langue>.<projet>.org/wiki/…` aussi, sur ce projet (voir plus bas); sinon, le texte saisi est pris comme un titre de page, dans la langue de Wikipédia choisie à côté du champ. Ce sélecteur propose FR, EN, DE, ES, IT, PT et NL; à l'ouverture de l'application, il est positionné sur la langue du navigateur (partie principale du code, par exemple `pt` pour `pt-BR`, `no` pour `nb`), ajoutée à la liste si elle n'y figure pas (par exemple JA). Si la langue du navigateur est absente ou n'est pas un code valide, EN est sélectionné. Ce choix n'est enregistré ni dans le livre ni dans le navigateur;
 
 * la page est recherchée sur Wikipédia, redirections suivies : une page de l'espace principal (un article) est ajoutée comme article; une page d'un autre espace de noms (`Utilisateur:…/Livres/…`, `Livre:…`, etc.) est importée comme page de livre;
 
 * si aucune page ne porte exactement ce titre, les résultats de la recherche Wikipédia sont proposés sous le champ, à ajouter d'un clic; une URL vers une page inexistante est signalée comme introuvable.
 
-* **Wikisource** : une URL d'une page de texte de Wikisource (espace principal, par exemple `https://zh.wikisource.org/wiki/論語/學而第一` ou `https://fr.wikisource.org/wiki/Le_Corbeau`) est ajoutée comme un article, avec le PDF officiel de Wikisource (même service que Wikipédia, section 13.2). Seule l'URL est reconnue : un titre saisi seul, la recherche et les pages de livre restent propres à Wikipédia, et une page Wikisource d'un autre espace de noms (`Auteur:…`, `Livre:…`, etc.) est refusée. Chaque page est ajoutée telle quelle : pour une œuvre découpée en sous-pages, la page principale ne contient souvent que le sommaire, et il faut ajouter chaque sous-page (on peut coller la liste de leurs URL, une par ligne). La carte de l'article indique « Wikisource » à côté de la langue.
+* **Autres projets Wikimédia** : une page de l'espace principal de Wikisource (`wikisource`), Wikilivres (`wikibooks`), Wikivoyage (`wikivoyage`), Wikiversité (`wikiversity`), Wikiquote (`wikiquote`), Wiktionnaire (`wiktionary`) ou Wikinews (`wikinews`) est ajoutée comme un article, avec le PDF officiel du projet (même service que Wikipédia, section 13.2), par exemple `https://zh.wikisource.org/wiki/論語/學而第一`, `https://fr.wikibooks.org/wiki/Programmation_Python` ou `https://fr.wikivoyage.org/wiki/Lyon`. Elle est donnée par son URL ou par un titre précédé d'un préfixe interwiki de projet (voir la liste plus bas) : la page est alors cherchée sur ce projet et, s'il n'y a pas de page exacte, les résultats de la recherche de ce projet sont proposés. Les pages de livre restent propres à Wikipédia, et une page d'un autre espace de noms de ces projets (`Auteur:…`, `Livre:…`, `Wikilivres:…`, etc.) est refusée. Chaque page est ajoutée telle quelle : pour une œuvre ou un livre découpé en sous-pages (Wikisource, Wikilivres), la page principale ne contient souvent que le sommaire, et il faut ajouter chaque sous-page (on peut coller la liste de leurs URL, une par ligne). La carte de l'article indique le nom du projet, dans la langue de l'interface (par exemple « Wikilivres »), à côté de la langue. Les projets sans adresse `<langue>.<projet>.org` (Commons, Meta-Wiki, MediaWiki.org, Wikispecies, Wikidata) ne sont pas acceptés.
 
 Le champ accepte aussi une **liste de pages, une par ligne** (collée, ou saisie avec Maj+Entrée; Entrée seule lance l'ajout). Chaque ligne est reconnue puis recherchée sur Wikipédia l'une après l'autre, avec un message « Ajout de la liste : n / total — titre » :
 
@@ -133,11 +133,12 @@ Le champ accepte aussi une **liste de pages, une par ligne** (collée, ou saisie
 * lien wiki `[[Titre]]`, `[[:fr:Titre]]` ou `[[nl:Titre|texte]]` : le titre, dans la langue indiquée par le préfixe s'il y en a un;
 * lien Markdown `[texte](https://…)` : l'URL, parenthèses comprises (`…/Suchet%20(navire)`);
 * préfixe de langue `nl:Titre` (2 ou 3 lettres minuscules, éventuellement suivies d'une variante, par exemple `zh-yue`) : la page de ce titre sur cette Wikipédia, ce qui permet des listes multilingues;
-* URL Wikipédia : lue avec sa langue; titre seul : dans la langue choisie à côté du champ.
+* préfixe interwiki de projet, seul ou combiné avec un préfixe de langue dans un ordre quelconque : `w:` Wikipédia, `s:` Wikisource, `b:` Wikilivres, `voy:` Wikivoyage, `v:` Wikiversité, `q:` Wikiquote, `wikt:` Wiktionnaire, `n:` Wikinews (par exemple `b:Programmation Python`, `[[voy:en:Lyon]]`, `fr:wikt:chat`) : la page de ce titre sur ce projet, dans la langue du préfixe ou, à défaut, celle choisie à côté du champ;
+* URL Wikipédia ou d'un autre projet accepté : lue avec sa langue; titre seul : sur Wikipédia, dans la langue choisie à côté du champ.
 
 Chaque page trouvée est ajoutée comme un article (ou, pour une page de livre, tous ses articles); une page déjà dans le livre est ignorée. Les lignes sans page exacte, ou en erreur, restent dans le champ pour être corrigées, et sont rappelées sous le champ. Un message final indique le nombre de pages ajoutées, déjà présentes et introuvables. La recherche au fil de la frappe est désactivée dès que le champ contient plusieurs lignes.
 
-Sous le champ, un libellé permanent rappelle ce qu'on peut y saisir : l'URL d'un article, une page de livre (URL ou nom) ou le nom d'une page Wikipédia. Les messages d'état (article ajouté, pages importées, aucune page exacte) s'affichent sur une ligne distincte en dessous, sans remplacer ce libellé. Pendant la saisie d'un texte qui n'est pas une URL, des résultats de recherche sont proposés au fil de la frappe. Les endpoints précédents (`POST /api/articles`, `POST /api/books/structure`, `GET /api/search`) restent disponibles.
+Sous le champ, un libellé permanent rappelle ce qu'on peut y saisir : l'URL d'un article, une page de livre (URL ou nom) ou le nom d'une page Wikipédia. Les messages d'état (article ajouté, pages importées, aucune page exacte) s'affichent sur une ligne distincte en dessous, sans remplacer ce libellé. Pendant la saisie d'un texte qui n'est pas une URL, des résultats de recherche sont proposés au fil de la frappe, sur le projet et dans la langue des préfixes s'il y en a (`b:fr:Program…` cherche sur Wikilivres en français). Les endpoints précédents (`POST /api/articles`, `POST /api/books/structure`, `GET /api/search`) restent disponibles.
 
 L'utilisateur ajoute ainsi des articles à son livre par l'un des moyens suivants :
 
@@ -538,7 +539,7 @@ Cette langue d'interface est indépendante de la langue des articles Wikipédia 
 
 Tous les échanges avec Wikipédia passent par la classe `MediaWikiClient` de `app/wikipedia_api.py`; aucun autre module n'appelle Wikipédia. Deux services sont utilisés, sur le wiki de la langue de l'article (`<langue>` = code validé par `^[a-z0-9-]{2,12}$`) :
 
-Pour un texte de Wikisource (section 3.1), les mêmes appels sont faits sur `https://<langue>.wikisource.org` au lieu de `https://<langue>.wikipedia.org` (reconnaissance de la page, introduction et auteur proposés, liens pour l'exploration, PDF); la recherche et les pages de livre restent sur Wikipédia.
+Pour une page d'un autre projet Wikimédia (section 3.1), les mêmes appels sont faits sur `https://<langue>.<projet>.org` au lieu de `https://<langue>.wikipedia.org` (reconnaissance de la page, recherche, introduction et auteur proposés, liens pour l'exploration, PDF); seules les pages de livre restent sur Wikipédia. Les projets acceptés sont la liste `SITES` de `app/wikipedia_api.py`, tirée du type `Site` de `app/models.py`. La politique robots de Wikimédia (section 3) est la même pour tous les projets : les limites de téléchargement des PDF sont communes à tous.
 
 * **API MediaWiki (Action API)** : `https://<langue>.wikipedia.org/w/api.php`, en GET, toujours avec `format=json&formatversion=2` et, par défaut, `action=query`.
 * **API REST** : `https://<langue>.wikipedia.org/api/rest_v1/page/pdf/<titre>/<format>`, pour le PDF officiel d'un article (le titre a ses espaces remplacés par `_` et est encodé dans l'URL).
@@ -570,6 +571,8 @@ Les exemples ci-dessous supposent que le serveur fonctionne sur `http://localhos
 Les endpoints GET peuvent être ouverts directement dans la barre d'adresse :
 
 * Rechercher des articles : `http://localhost:8000/api/search?query=Albert%20Einstein&language=fr&limit=5`.
+
+* Rechercher sur un autre projet Wikimédia : `http://localhost:8000/api/search?query=Lyon&language=fr&site=wikivoyage`.
 
 * Obtenir l'introduction et le créateur d'un article : `http://localhost:8000/api/articles/intro?title=Albert%20Einstein&language=fr`.
 
@@ -862,13 +865,13 @@ Le bouton de téléchargement produit un fichier `<titre-du-livre>.json` (caract
 | --- | --- | --- |
 | `page_id` | entier ≥ 1 ou absent | identifiant de page Wikipédia |
 | `title`, `language`, `url` | textes | titre, code de langue, URL de l'article |
-| `site` | `wikipedia` ou `wikisource`, `wikipedia` | projet Wikimédia de la page (absent des fichiers JSON plus anciens, qui restent lisibles) |
+| `site` | `wikipedia`, `wikisource`, `wikibooks`, `wikivoyage`, `wikiversity`, `wikiquote`, `wiktionary` ou `wikinews`, `wikipedia` | projet Wikimédia de la page (absent des fichiers JSON plus anciens, qui restent lisibles) |
 | `summary` | texte, `""` | résumé affiché sur la carte |
 | `origin_title` | texte ou absent | article depuis lequel il a été découvert |
 | `depth` | entier ≥ 0, 0 | profondeur d'exploration (0 = ajouté directement) |
 | `selected` | booléen, faux | inclus dans le livre |
 
-Clé d'un article : `<langue>:<page_id>`, ou `<langue>:title:<titre en minuscules>` sans `page_id`; pour un texte de Wikisource, la même clé précédée de `wikisource:`.
+Clé d'un article : `<langue>:<page_id>`, ou `<langue>:title:<titre en minuscules>` sans `page_id`; pour une page d'un autre projet que Wikipédia, la même clé précédée du nom du projet et de `:` (par exemple `wikisource:`, `wikibooks:`).
 
 #### `UploadedDocument`
 
@@ -1044,7 +1047,7 @@ Test à jouer à la main pour connaître la taille maximale d'un livre qu'un dé
 
 Le logiciel met en œuvre aujourd'hui :
 
-* La validation stricte des URL fournies (schéma HTTPS, domaine `*.wikipedia.org` ou `*.wikisource.org`, titre présent).
+* La validation stricte des URL fournies (schéma HTTPS, domaine `<langue>.<projet>.org` d'un projet accepté, titre présent).
 
 * La validation des codes de langue (expression régulière, 2 à 12 caractères).
 
@@ -1072,7 +1075,7 @@ Le logiciel :
 
 * Conserve le lien vers chaque article original.
 
-* Ajoute au livre une page « Licence », juste avant la conclusion, qui indique que les textes Wikipédia sont sous licence Creative Commons Attribution – Partage dans les mêmes conditions 4.0 International (CC BY-SA 4.0), avec le lien vers la licence, un résumé des conditions de réutilisation, et la liste des articles dans l'ordre du livre avec, pour chacun, l'URL de l'article et celle de son historique (qui recense les auteurs). Les documents importés y sont cités comme non couverts par cette licence. Si le livre contient des textes de Wikisource, la page précise qu'ils sont pour la plupart dans le domaine public, les autres (traductions, éditions récentes) étant sous la licence indiquée sur leur page Wikisource, en général CC BY-SA 4.0; la mention CC BY-SA des articles Wikipédia n'est affichée que si le livre contient au moins un article Wikipédia. Cette page rappelle aussi que le livre n'est pas une publication officielle de Wikipédia; elle est entièrement rédigée dans la langue de l'interface (section 12.1).
+* Ajoute au livre une page « Licence », juste avant la conclusion, qui indique que les textes de Wikipédia et des autres projets sous la même licence (Wikilivres, Wikivoyage, Wikiversité, Wikiquote, Wiktionnaire) sont sous licence Creative Commons Attribution – Partage dans les mêmes conditions 4.0 International (CC BY-SA 4.0), en nommant les projets présents dans le livre, avec le lien vers la licence, un résumé des conditions de réutilisation, et la liste des articles dans l'ordre du livre avec, pour chacun, l'URL de l'article et celle de son historique (qui recense les auteurs). Les documents importés y sont cités comme non couverts par cette licence. Si le livre contient des textes de Wikisource, la page précise qu'ils sont pour la plupart dans le domaine public, les autres (traductions, éditions récentes) étant sous la licence indiquée sur leur page Wikisource, en général CC BY-SA 4.0; s'il contient des articles de Wikinews, qu'ils sont sous licence Creative Commons Attribution (CC BY), dans la version indiquée sur leur page; la mention CC BY-SA n'est affichée que si le livre contient au moins une page d'un projet sous cette licence. Cette page rappelle aussi que le livre n'est pas une publication officielle des projets dont il reprend des pages (Wikipédia par défaut) ni de la Wikimedia Foundation; les noms des projets y sont ceux de la langue de l'interface (`site_*` de `PDF_LABELS`, par exemple « Wikilivres » en français, « Wikibooks » en anglais); elle est entièrement rédigée dans la langue de l'interface (section 12.1).
 
 * N'altère pas le contenu, les crédits ni les mentions de licence imprimés par Wikipédia dans son propre PDF.
 
@@ -1221,7 +1224,11 @@ L'essentiel du socle fonctionnel décrit dans ce document est implémenté : liv
 
 * Importation de contenus depuis d'autres encyclopédies.
 
-* Wikisource, au-delà des pages isolées (section 3.1) : remarque — il faudra peut-être étendre la fonctionnalité pour répondre aux besoins exprimés par PacmanD sur le Bistro technique de la Wikipédia en chinois (novembre 2026) : importer une œuvre entière à partir de sa page sommaire (sous-pages dans l'ordre, comme une page de livre, avec chapitres), titre de recherche et titres seuls sur Wikisource, et bon rendu des caractères chinois rares (僻字) — à vérifier dans le PDF officiel de Wikisource, que le logiciel ne modifie pas, et dans les pages générées par le logiciel, qui n'ont que les polices Noto CJK (extensions CJK B et suivantes non couvertes).
+* Wikisource, au-delà des pages isolées (section 3.1) : remarque — il faudra peut-être étendre la fonctionnalité pour répondre aux besoins exprimés par PacmanD sur le Bistro technique de la Wikipédia en chinois (novembre 2026) : importer une œuvre entière à partir de sa page sommaire (sous-pages dans l'ordre, comme une page de livre, avec chapitres), et bon rendu des caractères chinois rares (僻字) — à vérifier dans le PDF officiel de Wikisource, que le logiciel ne modifie pas, et dans les pages générées par le logiciel, qui n'ont que les polices Noto CJK (extensions CJK B et suivantes non couvertes).
+
+* Wikilivres : importer un livre entier à partir de sa page de sommaire (sous-pages `Livre/Chapitre` dans l'ordre, comme une page de livre Wikipédia); aujourd'hui chaque sous-page s'ajoute à part (section 3.1).
+
+* Projets Wikimédia à domaine unique, sans langue dans l'adresse (Commons, Meta-Wiki, MediaWiki.org, Wikispecies) : non acceptés, peu utiles pour un livre; Wikidata est sans intérêt ici.
 
 * Personnalisation avancée de la couverture et des styles typographiques.
 
@@ -1294,5 +1301,6 @@ Numéro de version applicatif (`app/version.py`, repris par `app/main.py` et par
 | 1.7.8   | 2026-11-15 | GMoulard  | Pages de texte de Wikisource acceptées par URL (`https://<langue>.wikisource.org/wiki/…`), intégrées avec le PDF officiel de Wikisource; champ `site` des articles (fichiers JSON plus anciens toujours lisibles); page de licence adaptée aux textes de Wikisource (sections 3.1, 13.2, 13.9, 14, 15, 18). |
 | 1.7.9   | 2026-11-15 | GMoulard  | Gros livres : fusion des fichiers temporaires par qpdf (`--pages`) au lieu d'une copie des pages par pikepdf, qui chargeait leur contenu en mémoire, et créneau de téléchargement gardé jusqu'à la fin de la recomposition; mémoire au pic mesurée en local : 158 Mo pour 100 articles, 262 Mo pour 300 (au lieu de 360 et 912 Mo en 1.7.7). Test aux limites : liens rouges exclus (sections 11.1, 13.12). |
 | 1.7.10  | 2026-11-15 | GMoulard  | Gros livres : fichiers temporaires des parties supprimés dès la fusion, l'espace temporaire passe de trois à deux fois la taille du livre (piste retenue pour l'échec à 300 articles sur Toolforge en 1.7.9) (sections 11.1, 13.12). |
+| 1.8.0   | 2026-11-15 | GMoulard  | Autres projets Wikimédia : pages de Wikilivres, Wikivoyage, Wikiversité, Wikiquote, Wiktionnaire et Wikinews acceptées par URL ou par préfixe interwiki (`b:`, `voy:`, `v:`, `q:`, `wikt:`, `n:`), intégrées avec le PDF officiel du projet; recherche, introduction et exploration sur le site du projet; page de licence nommant chaque projet, 12 langues (sections 3.1, 13.2, 15). |
 
 Fin du document
