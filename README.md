@@ -57,9 +57,10 @@ wikipedia2book/
 │   ├── toolviews_stats.py       # Daily Toolviews usage statistics (not part of the app)
 │   ├── toolforge-hourly.sh, toolforge_hourly.py  # Hits per hour from the Toolforge webservice logs
 │   ├── update-stats.sh          # Statistics update run by GitHub Actions (daily and before each deployment)
-│   └── toolviews_chart.py       # Usage charts page for GitHub Pages
+│   ├── toolviews_chart.py       # Usage charts page for GitHub Pages
+│   └── perf_check.py, perf/     # Performance workshop run before each production release
 ├── tests/                       # unittest suite (no network, WeasyPrint stubbed when missing)
-├── .github/workflows/           # Toolforge deployment, Toolviews stats, GitHub Pages, tag check
+├── .github/workflows/           # Toolforge deployment, Toolviews stats, GitHub Pages, tag check, performance check
 ├── Dockerfile                   # Image used by Railway and Northflank
 ├── Procfile, Aptfile, .python-version, toolforge-fonts.conf  # Toolforge buildpacks
 ├── toolinfo.json                # Toolhub metadata

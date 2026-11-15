@@ -47,6 +47,7 @@ This is the English translation of [SPECIFICATIONS.fr.md](SPECIFICATIONS.fr.md).
 	- [13.8 Usage statistics (Toolviews)](#138-usage-statistics-toolviews)
 	- [13.9 Data model and save file](#139-data-model-and-save-file)
 	- [13.10 Architecture diagrams](#1310-architecture-diagrams)
+	- [13.11 Performance workshop](#1311-performance-workshop)
 - [14. Security and robustness](#14-security-and-robustness)
 - [15. Compliance with Wikipedia licenses](#15-compliance-with-wikipedia-licenses)
 - [16. Acceptance criteria](#16-acceptance-criteria)
@@ -663,7 +664,7 @@ The branch choice for Railway and Northflank is not part of the repository: it i
 
 ### 13.6 Continuous integration (GitHub Actions)
 
-Four workflows. The main one, `.github/workflows/deploy-toolforge.yml` ("Tests and Toolforge deploy"), has two jobs:
+Five workflows. The main one, `.github/workflows/deploy-toolforge.yml` ("Tests and Toolforge deploy"), has two jobs:
 
 * `test`: on every push to `main` or `production-toolforge`, on every pull request and on manual start (`workflow_dispatch`). Installs Python 3.12 and `requirements.txt`, then runs `python -m unittest discover -s tests -v`.
 
@@ -684,6 +685,8 @@ The second, `.github/workflows/toolviews-stats.yml` ("Toolviews stats"), updates
 The third, `.github/workflows/jekyll-gh-pages.yml`, publishes on every push to `main` (and on manual start) the documentation site https://gmoulard.github.io/wikipedia2book/ with GitHub Pages: The site is built from the `docs/` folder: Jekyll converts its Markdown files to HTML (`SPECIFICATIONS.fr.md`, `SPECIFICATIONS.en.md`, `stats.md`). The home page `docs/index.md` is copied from `README.md` at each build (not committed), with its links adapted: `docs/…` becomes relative to the site, and `LICENSE`, `CODE_OF_CONDUCT.md`, `CITATION.cff` and `codemeta.json`, which stay at the root of the repository, point to GitHub. This is the address declared as user documentation in `toolinfo.json`. GitHub Pages does not render Mermaid blocks natively: `docs/_includes/head-custom.html`, added by Jekyll to the head of every page (default theme), loads Mermaid 11.17.2 from jsDelivr and draws the ```` ```mermaid ```` blocks (section 13.10). The site is also rebuilt (`workflow_run` trigger) after each run of "Toolviews stats" that was not cancelled, even a partial failure since statistics may have been committed, and after each run of "Tests and Toolforge deploy" on `production-toolforge` (pre-deployment hourly collection), and every build adds the usage statistics page https://gmoulard.github.io/wikipedia2book/stats.html (section 13.8).
 
 The fourth, `.github/workflows/tag-check.yml` ("Tag check"), runs on every push of a `v*` tag: it fails if the tag number does not match the version written in `app/main.py` (`FastAPI(version=…)`). Such a failure is never fixed by moving the tag, but by a new version.
+
+The fifth, `.github/workflows/perf-check.yml` ("Performance check"), runs the performance workshop on demand (section 13.11).
 
 ### 13.7 Toolforge
 
@@ -965,6 +968,19 @@ sequenceDiagram
     M-->>U: done (size) then the PDF bytes, or error (detail)
 ```
 
+### 13.11 Performance workshop
+
+Workshop to run before any production deployment of a version (`deploy-production` skill). It measures, through the API, the generation time of real PDF books and compares it with a saved reference.
+
+* **Scenarios** (`scripts/perf/scenarios.json`), in French, each article downloaded from Wikipedia by the application as for a real book:
+  * minimum validation (`min`, 3 generations per scenario): `50-pages`, 10 short articles, about 50 PDF pages (Baguette, Croissant, Fougasse, Clafoutis, Brie, Bouillabaisse, Ratatouille, Tarte Tatin, Camembert, Pétanque); `200-pages`, 10 long articles, about 200 pages (Mont Blanc, Saint-Tropez, Château de Chambord, Loire, Lavande, Galette des rois, Mistral, Cassoulet, Pain d'épices, Baguette);
+  * maximum validation (`max`, 2 generations per scenario): the two above, plus `1-article` (fixed cost of a generation), `50-pages-sans-numerotation` (no page numbers or table of contents), `200-pages-chapitres` (5 chapters, table of contents at the end), `200-pages-a5-paysage` (every page refitted to another format) and `20-articles` (about 250 pages).
+* **Measurement** (`scripts/perf_check.py`, standard library and `pypdf`): each book is generated through `POST /api/pdf/stream`; the progress stream splits the total time into three phases: *Wikipedia* (until the first event that is not a download), *application* (from there to the `done` event: application pages, assembly, numbering, writing) and *transfer* (sending the PDF). The received PDF is checked (announced size, `%PDF-` header) and its pages counted. For each scenario the median of the generations is kept. A failed Wikipedia download is retried once after 60 s.
+* **Reference**: `scripts/perf/reference.json` (date, environment, measurements per scenario), saved with `--save-reference`. Each run shows, per scenario, the divergence of the *application time per page* and of the total time from the reference.
+* **Verdict**, on the *application time per page* (Wikipedia time depends on the network and on Wikimedia's load; it is shown but does not count): `ok` up to +25%, `à surveiller` (to watch) up to +50%, `régression` beyond, `échec` (failure) if the generation does not complete. A regression or a failure makes the script exit with an error. A page count that changes by more than 5% is reported: the articles' content changed, times are less comparable.
+* **Running it**: "Performance check" workflow (`.github/workflows/perf-check.yml`), started manually from the Actions tab with the level (`min` or `max`) and, on `main` only, the option to save the reference (commit of `scripts/perf/reference.json` to `main`). It builds the production Docker image, starts it on the GitHub runner, runs the workshop against `http://localhost:8000` and publishes the report in the run summary (and as the `perf-report` artifact). Measurements are only comparable between runs in the same environment: the reference is measured by this workflow. By hand: `python scripts/perf_check.py --base-url <url> --level min|max` (divergences only indicative on another machine).
+* **Tests**: `tests/test_perf_check.py` (fake local server imitating `/api/pdf/stream`).
+
 ## 14\. Security and robustness
 
 The software currently implements:
@@ -1069,7 +1085,9 @@ Wikipedia2Book/
 │   ├── toolforge_hourly.py
 │   ├── update-stats.sh
 │   ├── toolviews_stats.py
-│   └── toolviews_chart.py
+│   ├── toolviews_chart.py
+│   ├── perf_check.py
+│   └── perf/                  (scenarios.json, reference.json)
 │
 ├── tests/
 │   ├── test_syntax.py
@@ -1082,6 +1100,7 @@ Wikipedia2Book/
 │   ├── test_toolforge_hourly.py
 │   ├── test_hourly_stats.py
 │   ├── test_toolviews_chart.py
+│   ├── test_perf_check.py
 │   └── test_i18n.py
 │
 ├── Dockerfile
@@ -1096,6 +1115,7 @@ Wikipedia2Book/
 ├── .github/workflows/toolviews-stats.yml
 ├── .github/workflows/jekyll-gh-pages.yml
 ├── .github/workflows/tag-check.yml
+├── .github/workflows/perf-check.yml
 ├── requirements.txt
 ├── .gitignore
 ├── CLAUDE.md

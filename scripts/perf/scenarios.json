@@ -1,0 +1,139 @@
+{
+  "language": "fr",
+  "levels": {
+    "min": {
+      "repeat": 3,
+      "scenarios": [
+        "50-pages",
+        "200-pages"
+      ]
+    },
+    "max": {
+      "repeat": 2,
+      "scenarios": [
+        "50-pages",
+        "200-pages",
+        "1-article",
+        "50-pages-sans-numerotation",
+        "200-pages-chapitres",
+        "200-pages-a5-paysage",
+        "20-articles"
+      ]
+    }
+  },
+  "scenarios": {
+    "50-pages": {
+      "articles": [
+        "Baguette",
+        "Croissant",
+        "Fougasse",
+        "Clafoutis",
+        "Brie (fromage)",
+        "Bouillabaisse",
+        "Ratatouille",
+        "Tarte Tatin",
+        "Camembert (fromage)",
+        "Pétanque"
+      ],
+      "expected_pages": 50
+    },
+    "200-pages": {
+      "articles": [
+        "Mont Blanc",
+        "Saint-Tropez",
+        "Château de Chambord",
+        "Loire",
+        "Lavande",
+        "Galette des rois",
+        "Mistral (vent)",
+        "Cassoulet",
+        "Pain d'épices",
+        "Baguette"
+      ],
+      "expected_pages": 200
+    },
+    "1-article": {
+      "articles": [
+        "Baguette"
+      ]
+    },
+    "50-pages-sans-numerotation": {
+      "articles": [
+        "Baguette",
+        "Croissant",
+        "Fougasse",
+        "Clafoutis",
+        "Brie (fromage)",
+        "Bouillabaisse",
+        "Ratatouille",
+        "Tarte Tatin",
+        "Camembert (fromage)",
+        "Pétanque"
+      ],
+      "options": {
+        "page_numbers": false,
+        "table_of_contents": false
+      }
+    },
+    "200-pages-chapitres": {
+      "articles": [
+        "Mont Blanc",
+        "Saint-Tropez",
+        "Château de Chambord",
+        "Loire",
+        "Lavande",
+        "Galette des rois",
+        "Mistral (vent)",
+        "Cassoulet",
+        "Pain d'épices",
+        "Baguette"
+      ],
+      "chapters": 5,
+      "options": {
+        "toc_position": "end"
+      }
+    },
+    "200-pages-a5-paysage": {
+      "articles": [
+        "Mont Blanc",
+        "Saint-Tropez",
+        "Château de Chambord",
+        "Loire",
+        "Lavande",
+        "Galette des rois",
+        "Mistral (vent)",
+        "Cassoulet",
+        "Pain d'épices",
+        "Baguette"
+      ],
+      "options": {
+        "page_format": "A5",
+        "orientation": "landscape"
+      }
+    },
+    "20-articles": {
+      "articles": [
+        "Baguette",
+        "Croissant",
+        "Fougasse",
+        "Clafoutis",
+        "Brie (fromage)",
+        "Bouillabaisse",
+        "Ratatouille",
+        "Tarte Tatin",
+        "Camembert (fromage)",
+        "Pétanque",
+        "Mont Blanc",
+        "Saint-Tropez",
+        "Château de Chambord",
+        "Loire",
+        "Lavande",
+        "Galette des rois",
+        "Mistral (vent)",
+        "Cassoulet",
+        "Pain d'épices",
+        "Gorges du Verdon"
+      ]
+    }
+  }
+}

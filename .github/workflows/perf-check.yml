@@ -1,0 +1,93 @@
+# This file is part of Wikipedia2Book
+# <https://github.com/gmoulard/wikipedia2book>.
+# Copyright (c) 2026 Guillaume Moulard.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, version 3.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+name: Performance check
+
+on:
+  workflow_dispatch:
+    inputs:
+      level:
+        description: "min : 2 PDF (50 et 200 pages) ; max : version détaillée"
+        type: choice
+        options: [min, max]
+        default: min
+      save_reference:
+        description: "Enregistrer ces mesures comme nouvelle référence (main uniquement)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: perf-check
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  perf:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      PERF_ENVIRONMENT: "GitHub Actions ubuntu-latest, image Docker de production"
+      LEVEL: ${{ inputs.level }}
+      SAVE_REFERENCE: ${{ inputs.save_reference && github.ref == 'refs/heads/main' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "$(grep '^pypdf==' requirements.txt)"
+      - name: Build the production image
+        run: docker build --build-arg GIT_COMMIT="$(git rev-parse HEAD)" -t wikipedia2book-perf .
+      - name: Start the application
+        run: |
+          docker run -d --name app -p 8000:8000 wikipedia2book-perf
+          for _ in $(seq 1 60); do
+            curl -fsS http://localhost:8000/health && exit 0
+            sleep 2
+          done
+          docker logs app
+          exit 1
+      - name: Run the performance workshop
+        run: |
+          args="--level $LEVEL --report perf-report.md"
+          [ "$SAVE_REFERENCE" = true ] && args="$args --save-reference"
+          status=0
+          python scripts/perf_check.py $args || status=$?
+          [ -f perf-report.md ] && cat perf-report.md >> "$GITHUB_STEP_SUMMARY"
+          exit $status
+      - name: Application logs
+        if: failure()
+        run: docker logs app | tail -100
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: perf-report
+          path: perf-report.md
+          if-no-files-found: ignore
+      - name: Save the reference on main
+        if: env.SAVE_REFERENCE == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/perf/reference.json
+          git diff --cached --quiet && exit 0
+          git commit -m "perf: référence $LEVEL $(date -u +%F)"
+          for attempt in 1 2 3; do
+            git fetch -q origin main && git rebase -q origin/main && git push -q origin HEAD:main && exit 0
+            sleep $((attempt * 5))
+          done
+          exit 1

@@ -81,6 +81,7 @@ Valeurs propres à ce dépôt, lues par les skills génériques de `.claude/skil
   - workflow : « Tests and Toolforge deploy » (`.github/workflows/deploy-toolforge.yml`), jobs `test` puis `deploy` ; le déploiement lui-même est `scripts/toolforge-deploy.sh` (build, variables d'environnement, redémarrage, puis attente jusqu'à 200 s que `/api/version` renvoie le commit construit : succès = ligne `déployé : <commit>`) ;
   - étape particulière : « Hourly statistics before restart », avant le redémarrage, relève les hits par heure et les committe sur `main` (`scripts/update-stats.sh deploy`), en `continue-on-error` ; à signaler si elle échoue ;
   - diagnostic sur la plateforme, dans le compte de l'outil (`ssh <login>@login.toolforge.org`, puis `become wikipedia2book`) : `toolforge webservice status`, `toolforge webservice logs -f`, `toolforge build list`, `toolforge build logs <identifiant>`, `toolforge envvars list` ; le port SSH 22 peut être bloqué par certains réseaux d'entreprise (pas sur les exécuteurs GitHub Actions) ;
+  - atelier de performance : workflow « Performance check » (`.github/workflows/perf-check.yml`, lancement manuel sur la branche du commit à déployer, entrée `level` = `min` ou `max`, `save_reference` seulement sur demande de l'utilisateur et sur `main`) ; rapport dans le résumé de l'exécution et l'artefact `perf-report` ; référence `scripts/perf/reference.json` ; détail en section 13.11 des spécifications. Ne pas le jouer depuis une session cloud : le service PDF de Wikimédia y répond HTTP 429 à presque toutes les requêtes ;
   - vérification : `https://wikipedia2book.toolforge.org/api/version` (version et commit) et `https://wikipedia2book.toolforge.org/api/stats/hourly` (répond, compteur reparti de zéro) ; le site GitHub Pages se reconstruit tout seul après le workflow.
 
 ## Vérification avant de considérer une tâche terminée
@@ -104,6 +105,8 @@ Des tests automatisés existent sous `tests/` (stdlib `unittest`, lancés avec l
 - `test_toolforge_hourly.py` : relevé horaire Toolforge — `scripts/toolforge-hourly.sh` exécuté avec un faux `kubectl` dans le `PATH`, analyse stricte du relevé (marqueurs `BEGIN-HOURLY`/`END-HOURLY`), fusion au maximum par pod et par heure, graphique des 36 dernières heures.
 
 - `test_hourly_stats.py` : compteur en mémoire `hourly_hits` et `GET /api/stats/hourly` via `TestClient` (l'endpoint ne se compte pas lui-même, CORS ouvert, 48 heures gardées).
+
+- `test_perf_check.py` : `scripts/perf_check.py` contre un faux serveur local qui imite `/api/pdf/stream` (phases mesurées, pages comptées, événement `error`), seuils du verdict (temps application par page : +25 % à surveiller, +50 % régression), cohérence de `scripts/perf/scenarios.json`.
 
 - `test_pdf_stream.py` : déroulement complet de `/api/pdf` et `/api/pdf/stream` via `TestClient`, avec `main.MediaWikiClient` et `main.generate_pdf` remplacés par des faux (PDF reportlab) — vérifie la numérotation des étapes de progression, l'événement `done` (PDF valide), l'événement `error` sur échec Wikipédia et le refus 400 d'une sélection vide.
 

@@ -22,6 +22,11 @@ Ne pousser vers la branche de production que sur demande explicite de l'utilisat
    Rien à déployer : le dire et s'arrêter.
 2. Vérifier que l'intégration continue est verte sur ce commit de la branche principale. Rouge : ne pas déployer, le signaler.
 3. Si l'application a changé depuis le dernier déploiement sans nouvelle version, le signaler (skill `release`) avant de continuer.
+4. **Atelier de performance**, si le dépôt en a un (voir `CLAUDE.md`) : le jouer sur le commit à déployer, au niveau minimal (deux générations de référence), ou au niveau maximal pour une version mineure ou majeure, ou si l'utilisateur le demande. Lire le rapport et comparer à la référence :
+   - `ok` partout : continuer ;
+   - `à surveiller` : montrer les écarts à l'utilisateur et lui demander s'il déploie quand même ;
+   - `régression` ou `échec` : ne pas déployer ; rapporter les écarts (et, pour un échec, s'il vient du service externe ou de l'application) et attendre la décision de l'utilisateur.
+   Ne jamais enregistrer une nouvelle référence sans demande explicite de l'utilisateur : une référence remplacée efface la comparaison avec le passé.
 
 ## 2. Pousser
 
@@ -56,4 +61,4 @@ Politique d'échec : erreur réseau passagère (HTTP 5xx, dépendance ou registr
 
 ## 6. Rapport
 
-Commit et version déployés, résultat de chaque job et de chaque étape particulière, tout avertissement, et ce qui n'a pas été vérifié (par exemple l'adresse de vérification si le réseau de la session ne l'atteint pas).
+Commit et version déployés, verdict et écarts de l'atelier de performance, résultat de chaque job et de chaque étape particulière, tout avertissement, et ce qui n'a pas été vérifié (par exemple l'adresse de vérification si le réseau de la session ne l'atteint pas).
