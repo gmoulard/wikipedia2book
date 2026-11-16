@@ -1,5 +1,5 @@
 {
-  "created": "2026-11-15",
+  "created": "2026-11-16",
   "base_url": "http://localhost:8000",
   "environment": {
     "label": "GitHub Actions ubuntu-latest, image Docker de production",
@@ -9,67 +9,76 @@
   },
   "scenarios": {
     "50-pages": {
-      "total_s": 5.41,
-      "wikipedia_s": 4.64,
-      "app_s": 0.76,
+      "total_s": 3.27,
+      "wikipedia_s": 2.35,
+      "app_s": 0.91,
       "transfer_s": 0.01,
-      "pages": 51,
-      "size_bytes": 5390158,
-      "runs": 2
+      "pages": 50,
+      "size_bytes": 3517995,
+      "runs": 9
     },
     "200-pages": {
-      "total_s": 9.7,
-      "wikipedia_s": 7.47,
-      "app_s": 2.21,
+      "total_s": 7.67,
+      "wikipedia_s": 5.64,
+      "app_s": 2.02,
       "transfer_s": 0.02,
       "pages": 200,
-      "size_bytes": 22290210,
-      "runs": 2
+      "size_bytes": 13221373,
+      "runs": 9
     },
     "1-article": {
-      "total_s": 1.54,
-      "wikipedia_s": 1.4,
-      "app_s": 0.14,
+      "total_s": 0.53,
+      "wikipedia_s": 0.11,
+      "app_s": 0.43,
       "transfer_s": 0.0,
-      "pages": 5,
-      "size_bytes": 239736,
-      "runs": 2
+      "pages": 4,
+      "size_bytes": 562432,
+      "runs": 9
     },
     "50-pages-sans-numerotation": {
-      "total_s": 3.56,
-      "wikipedia_s": 3.03,
-      "app_s": 0.53,
-      "transfer_s": 0.0,
-      "pages": 50,
-      "size_bytes": 3221921,
-      "runs": 2
+      "total_s": 1.56,
+      "wikipedia_s": 0.94,
+      "app_s": 0.61,
+      "transfer_s": 0.01,
+      "pages": 49,
+      "size_bytes": 3483858,
+      "runs": 9
     },
     "200-pages-chapitres": {
-      "total_s": 4.62,
-      "wikipedia_s": 2.23,
-      "app_s": 2.37,
-      "transfer_s": 0.02,
+      "total_s": 8.0,
+      "wikipedia_s": 5.78,
+      "app_s": 2.2,
+      "transfer_s": 0.03,
       "pages": 205,
-      "size_bytes": 22338464,
-      "runs": 2
+      "size_bytes": 13257700,
+      "runs": 9
     },
     "200-pages-a5-paysage": {
-      "total_s": 27.57,
-      "wikipedia_s": 15.09,
-      "app_s": 12.46,
-      "transfer_s": 0.02,
+      "total_s": 44.17,
+      "wikipedia_s": 42.1,
+      "app_s": 2.02,
+      "transfer_s": 0.04,
       "pages": 201,
-      "size_bytes": 23499068,
-      "runs": 2
+      "size_bytes": 23700460,
+      "runs": 9
     },
     "20-articles": {
-      "total_s": 7.09,
-      "wikipedia_s": 4.17,
-      "app_s": 2.9,
-      "transfer_s": 0.02,
+      "total_s": 9.22,
+      "wikipedia_s": 6.66,
+      "app_s": 2.53,
+      "transfer_s": 0.03,
       "pages": 253,
-      "size_bytes": 28275453,
-      "runs": 2
+      "size_bytes": 16888842,
+      "runs": 9
+    },
+    "livre-reference-images": {
+      "total_s": 4.69,
+      "wikipedia_s": 2.68,
+      "app_s": 1.99,
+      "transfer_s": 0.02,
+      "pages": 107,
+      "size_bytes": 11105783,
+      "runs": 9
     }
   }
 }
