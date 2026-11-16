@@ -42,16 +42,44 @@ def _resolve(host: str) -> list[str]:
 
 
 # NE PAS télécharger une adresse qui mène au réseau interne (127.0.0.1, 10.x, métadonnées du cloud…) : le serveur deviendrait un relais vers ses voisins ; chaque redirection est revérifiée.
-async def _check_url(url: str, resolve) -> None:
+async def _check_url(url: str, resolve, label: str) -> None:
     parts = urlsplit(url)
     if parts.scheme != "https" or not parts.hostname:
-        raise JsonSourceError(422, "L’URL du fichier JSON doit commencer par https://.")
+        raise JsonSourceError(422, f"L’adresse {label} doit commencer par https:// : {url}")
     try:
         addresses = await asyncio.to_thread(resolve, parts.hostname)
     except OSError as error:
-        raise JsonSourceError(422, f"Hôte introuvable : {parts.hostname}.") from error
+        raise JsonSourceError(422, f"Hôte introuvable pour {label} : {parts.hostname}.") from error
     if not addresses or any(not ipaddress.ip_address(address.split("%")[0]).is_global for address in addresses):
-        raise JsonSourceError(422, f"Hôte refusé : {parts.hostname} n’est pas une adresse publique.")
+        raise JsonSourceError(422, f"Hôte refusé pour {label} : {parts.hostname} n’est pas une adresse publique.")
+
+
+async def download(
+    url: str, max_bytes: int, label: str, transport: httpx.AsyncBaseTransport | None = None, resolve=_resolve
+) -> tuple[bytes, str]:
+    too_large = f"{label[0].upper()}{label[1:]} est trop volumineux ({max_bytes // 1_000_000} Mo au plus) : {url}"
+    async with httpx.AsyncClient(transport=transport, timeout=TIMEOUT_S, follow_redirects=False, headers={"User-Agent": USER_AGENT}) as client:
+        for _ in range(MAX_REDIRECTS + 1):
+            await _check_url(url, resolve, label)
+            try:
+                async with client.stream("GET", url) as response:
+                    if response.is_redirect:
+                        url = urljoin(url, response.headers.get("location", ""))
+                        continue
+                    if response.status_code != 200:
+                        raise JsonSourceError(502, f"{label[0].upper()}{label[1:]} n’a pas pu être téléchargé (HTTP {response.status_code}) : {url}")
+                    if int(response.headers.get("content-length") or 0) > max_bytes:
+                        raise JsonSourceError(413, too_large)
+                    body = bytearray()
+                    async for chunk in response.aiter_bytes():
+                        body.extend(chunk)
+                        if len(body) > max_bytes:
+                            raise JsonSourceError(413, too_large)
+                    content_type = response.headers.get("content-type", "").split(";")[0].strip().lower()
+            except httpx.HTTPError as error:
+                raise JsonSourceError(502, f"{label[0].upper()}{label[1:]} n’a pas pu être téléchargé ({type(error).__name__}) : {url}") from error
+            return bytes(body), content_type
+    raise JsonSourceError(502, f"Trop de redirections pour télécharger {label} : {url}")
 
 
 def _project_from_payload(payload) -> Project:
@@ -70,28 +98,9 @@ def _project_from_payload(payload) -> Project:
 
 
 async def fetch_project(url: str, transport: httpx.AsyncBaseTransport | None = None, resolve=_resolve) -> Project:
-    async with httpx.AsyncClient(transport=transport, timeout=TIMEOUT_S, follow_redirects=False, headers={"User-Agent": USER_AGENT}) as client:
-        for _ in range(MAX_REDIRECTS + 1):
-            await _check_url(url, resolve)
-            try:
-                async with client.stream("GET", url) as response:
-                    if response.is_redirect:
-                        url = urljoin(url, response.headers.get("location", ""))
-                        continue
-                    if response.status_code != 200:
-                        raise JsonSourceError(502, f"Le fichier JSON n’a pas pu être téléchargé (HTTP {response.status_code}).")
-                    if int(response.headers.get("content-length") or 0) > MAX_JSON_BYTES:
-                        raise JsonSourceError(413, f"Fichier JSON trop volumineux ({MAX_JSON_BYTES // 1_000_000} Mo au plus).")
-                    body = bytearray()
-                    async for chunk in response.aiter_bytes():
-                        body.extend(chunk)
-                        if len(body) > MAX_JSON_BYTES:
-                            raise JsonSourceError(413, f"Fichier JSON trop volumineux ({MAX_JSON_BYTES // 1_000_000} Mo au plus).")
-            except httpx.HTTPError as error:
-                raise JsonSourceError(502, f"Le fichier JSON n’a pas pu être téléchargé ({type(error).__name__}).") from error
-            try:
-                payload = json.loads(bytes(body))
-            except (ValueError, UnicodeDecodeError) as error:
-                raise JsonSourceError(422, "Le fichier téléchargé n’est pas un JSON valide.") from error
-            return _project_from_payload(payload)
-    raise JsonSourceError(502, "Trop de redirections pour télécharger le fichier JSON.")
+    body, _ = await download(url, MAX_JSON_BYTES, "le fichier JSON", transport, resolve)
+    try:
+        payload = json.loads(body)
+    except (ValueError, UnicodeDecodeError) as error:
+        raise JsonSourceError(422, "Le fichier téléchargé n’est pas un JSON valide.") from error
+    return _project_from_payload(payload)

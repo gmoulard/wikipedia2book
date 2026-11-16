@@ -713,5 +713,102 @@ class PdfStreamTest(unittest.TestCase):
         self.assertIn('filename="Animaux.pdf"', response.headers["content-disposition"])
 
 
+
+def _png():
+    from PIL import Image
+    buffer = BytesIO()
+    Image.new("RGB", (40, 60), "white").save(buffer, "PNG")
+    return buffer.getvalue()
+
+
+class RemoteFilesTest(unittest.TestCase):
+    COVER = "https://upload.wikimedia.org/couverture.png"
+    BACK = "https://example.org/dos.png"
+    PHOTO = "https://example.org/photo.png"
+    LEAFLET = "https://example.org/notice.pdf"
+
+    def setUp(self):
+        self.files = {
+            self.COVER: (_png(), "image/png"),
+            self.BACK: (_png(), "image/png"),
+            self.PHOTO: (_png(), "image/png"),
+            self.LEAFLET: (_make_pdf(3), "application/pdf"),
+        }
+        self.requested = []
+        self.htmls = []
+
+        async def fake_download(url, max_bytes, label):
+            self.requested.append(url)
+            if url not in self.files:
+                raise main.JsonSourceError(502, f"Introuvable : {url}")
+            return self.files[url]
+
+        def fake_generate(html):
+            self.htmls.append(html)
+            return _make_pdf(1)
+
+        self.patches = [
+            patch.object(main, "MediaWikiClient", FakeClient),
+            patch.object(main, "generate_pdf", fake_generate),
+            patch.object(main, "download", fake_download),
+        ]
+        for p in self.patches:
+            p.start()
+        FakeClient.fail = False
+        FakeClient.wait = None
+        self.client = TestClient(main.app)
+
+    def tearDown(self):
+        for p in self.patches:
+            p.stop()
+
+    def _project(self, **extra):
+        documents = [
+            {"title": "Photo", "kind": "image", "url": self.PHOTO, "selected": True},
+            {"title": "Notice", "kind": "image", "url": self.LEAFLET, "selected": True},
+        ]
+        return _project(
+            page_numbers=False,
+            cover_image={"title": "Couverture", "url": self.COVER},
+            back_image={"title": "Dos", "url": self.BACK},
+            uploaded_documents=documents,
+            **extra,
+        )
+
+    def test_images_and_documents_are_downloaded_at_each_generation(self):
+        for _ in range(2):
+            response = self.client.post("/api/pdf/stream", json=self._project())
+            events = _parse_stream(response.content)
+            codes = [e["code"] for e in events if e["type"] == "progress"]
+            self.assertEqual(codes[:2], ["fetch_image", "fetch_image"])
+            self.assertEqual(codes.count("prepare_document"), 2)
+            self.assertEqual(events[-1]["type"], "done")
+            pdf = PdfReader(BytesIO(events[-1]["pdf"]))
+            self.assertEqual(len(pdf.pages), 1 + 1 + 2 + 2 + 1 + 3 + 1 + 1)
+        self.assertEqual(sorted(self.requested), sorted([self.COVER, self.BACK, self.PHOTO, self.LEAFLET] * 2))
+        cover = base64.b64encode(_png()).decode("ascii")
+        self.assertTrue(any(f"data:image/png;base64,{cover}" in html for html in self.htmls))
+        self.assertFalse(any("https://upload.wikimedia.org" in html for html in self.htmls))
+
+    def test_unreachable_image_stops_the_generation_with_its_address(self):
+        del self.files[self.BACK]
+        events = _parse_stream(self.client.post("/api/pdf/stream", json=self._project()).content)
+        self.assertEqual(events[-1]["type"], "error")
+        self.assertIn(self.BACK, events[-1]["detail"])
+        self.assertFalse(any(e["type"] == "done" for e in events))
+
+    def test_unexpected_file_type_is_refused(self):
+        self.files[self.COVER] = (b"<html></html>", "text/html")
+        events = _parse_stream(self.client.post("/api/pdf/stream", json=self._project()).content)
+        self.assertEqual(events[-1]["type"], "error")
+        self.assertIn("text/html", events[-1]["detail"])
+
+    def test_unreachable_document_gives_a_502_on_api_pdf(self):
+        del self.files[self.PHOTO]
+        response = self.client.post("/api/pdf", json=self._project())
+        self.assertEqual(response.status_code, 502)
+        self.assertIn(self.PHOTO, response.json()["detail"])
+
+
 if __name__ == "__main__":
     unittest.main()

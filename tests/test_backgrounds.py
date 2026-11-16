@@ -26,7 +26,7 @@ from PIL import Image
 from pydantic import ValidationError
 
 from app import book_builder
-from app.models import Article, BookImage, Project
+from app.models import Article, BookImage, Project, UploadedDocument
 
 PNG = base64.b64encode(b"\x89PNG\r\n\x1a\nfake").decode("ascii")
 COVER = BookImage(title="couverture.png", mime_type="image/png", data_base64=PNG)
@@ -43,6 +43,22 @@ class BookImageTest(unittest.TestCase):
         for mime, data in (("application/pdf", PNG), ("image/tiff", PNG), ("image/png", "pas du base64 !")):
             with self.subTest(mime=mime), self.assertRaises(ValidationError):
                 BookImage(mime_type=mime, data_base64=data)
+
+    def test_an_image_is_either_an_address_or_its_content(self):
+        image = BookImage(title="Phare", url="https://upload.wikimedia.org/phare.jpg")
+        self.assertIsNone(image.data_base64)
+        for fields in ({}, {"url": "http://example.org/a.png"}, {"data_base64": PNG},
+                       {"url": "https://example.org/a.png", "mime_type": "image/png", "data_base64": PNG}):
+            with self.subTest(fields=fields), self.assertRaises(ValidationError):
+                BookImage(**fields)
+
+    def test_a_document_is_either_an_address_or_its_content(self):
+        UploadedDocument(title="Notice", kind="pdf", url="https://example.org/notice.pdf")
+        UploadedDocument(title="Notice", kind="pdf", mime_type="application/pdf", data_base64=PNG)
+        for fields in ({}, {"url": "ftp://example.org/a.pdf"}, {"data_base64": PNG},
+                       {"url": "https://example.org/a.pdf", "mime_type": "application/pdf", "data_base64": PNG}):
+            with self.subTest(fields=fields), self.assertRaises(ValidationError):
+                UploadedDocument(title="Notice", kind="pdf", **fields)
 
     def test_project_without_images_by_default(self):
         project = Project(name="Livre")

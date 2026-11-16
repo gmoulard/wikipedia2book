@@ -483,7 +483,7 @@ function recommendedBackgroundSize(project) {
 }
 
 function backgroundWarning(image, preview, size) {
-  if (!image || image.mime_type === 'image/svg+xml' || !preview.naturalWidth || !preview.naturalHeight) return '';
+  if (!image || image.mime_type === 'image/svg+xml' || /\.svg($|\?)/i.test(image.url || '') || !preview.naturalWidth || !preview.naturalHeight) return '';
   const width = preview.naturalWidth;
   const height = preview.naturalHeight;
   const warnings = [];
@@ -504,7 +504,7 @@ function renderBackgrounds() {
     };
     preview.hidden = !image;
     preview.onload = showWarning;
-    const source = image ? `data:${image.mime_type};base64,${image.data_base64}` : '';
+    const source = image ? image.url || `data:${image.mime_type};base64,${image.data_base64}` : '';
     if (image && preview.getAttribute('src') !== source) { preview.src = source; preview.alt = image.title || ''; }
     else if (!image) preview.removeAttribute('src');
     showWarning();
@@ -544,21 +544,67 @@ async function wikimediaFileUrl(address) {
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   const info = (await response.json())?.query?.pages?.[0]?.imageinfo?.[0];
   if (!info) throw new Error(page[1]);
-  return { url: info.thumburl || info.url, title: page[1] };
+  return { thumb: withoutTracking(info.thumburl || info.url), original: withoutTracking(info.url), mime: info.mime, title: page[1] };
 }
 
+function withoutTracking(url) {
+  const address = new URL(url);
+  [...address.searchParams.keys()].filter((name) => name.startsWith('utm_')).forEach((name) => address.searchParams.delete(name));
+  return address.href;
+}
+
+function addressTitle(address) {
+  return (decodeURIComponent(address.pathname.split('/').pop() || '') || address.hostname).slice(0, 300);
+}
+
+function loadImage(url) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error(url));
+    image.src = url;
+  });
+}
+
+// NE PAS remettre l'image en base64 dans le livre : seule l'adresse est enregistrée dans le JSON, le serveur la retélécharge à chaque génération.
 async function setBackgroundFromUrl(field, value) {
   const text = value.trim();
   if (!text) { showToast(t('edition.backgroundUrlEmpty'), true); return; }
+  if (!/^https:\/\//i.test(text)) { showToast(t('common.httpsOnly'), true); return; }
   try {
     const address = new URL(text);
     const file = await wikimediaFileUrl(address);
-    const response = await fetch(file ? file.url : address);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const title = file ? file.title : (decodeURIComponent(address.pathname.split('/').pop() || '') || address.hostname);
-    await setBackground(field, await response.blob(), title);
+    const url = file ? file.thumb : address.href;
+    await loadImage(url);
+    state.project[field] = { title: file ? file.title.slice(0, 300) : addressTitle(address), url };
+    queueSave({ [field]: state.project[field] });
+    renderBackgrounds();
+    showToast(t('edition.backgroundAddedToast'));
   } catch (error) {
     showToast(t('edition.backgroundUrlError', { error: error.message }), true);
+  }
+}
+
+async function addDocumentFromUrl(value) {
+  const text = value.trim();
+  if (!text) { showToast(t('edition.backgroundUrlEmpty'), true); return; }
+  if (!/^https:\/\//i.test(text)) { showToast(t('common.httpsOnly'), true); return; }
+  try {
+    const address = new URL(text);
+    const file = await wikimediaFileUrl(address);
+    const kind = (file ? file.mime === 'application/pdf' : /\.pdf$/i.test(address.pathname)) ? 'pdf' : 'image';
+    const url = file ? (kind === 'pdf' ? file.original : file.thumb) : address.href;
+    if (kind === 'image') await loadImage(url);
+    state.project.uploaded_documents = [
+      ...(state.project.uploaded_documents || []),
+      { id: crypto.randomUUID(), title: file ? file.title.slice(0, 300) : addressTitle(address), kind, mime_type: '', url, selected: true },
+    ];
+    queueSave({ uploaded_documents: state.project.uploaded_documents });
+    $('#documentUrl').value = '';
+    renderWorkspace();
+    showToast(t('org.docAddedToast', { n: 1 }));
+  } catch (error) {
+    showToast(t('org.docUrlError', { error: error.message }), true);
   }
 }
 
@@ -902,6 +948,7 @@ async function handleDocumentUpload(files) {
 function openUploadedDocument(id) {
   const doc = (state.project.uploaded_documents || []).find((d) => d.id === id);
   if (!doc) return;
+  if (doc.url) { window.open(doc.url, '_blank', 'noopener'); return; }
   const bytes = Uint8Array.from(atob(doc.data_base64), (c) => c.charCodeAt(0));
   const url = URL.createObjectURL(new Blob([bytes], { type: doc.mime_type }));
   window.open(url, '_blank', 'noopener');
@@ -1270,6 +1317,7 @@ document.addEventListener('click', async (event) => {
   const volumeRow = event.target.closest('.org-volume');
   if (volumeRow && event.target.closest('.volume-remove')) { removeVolumeBreak(volumeRow.dataset.volumeAnchor); return; }
   if (event.target.closest('#uploadDocumentButton')) { $('#documentFileInput').click(); return; }
+  if (event.target.closest('#addDocumentUrlButton')) { await addDocumentFromUrl($('#documentUrl').value); return; }
   if (event.target.closest('#importWorkspaceButton')) { $('#workspaceFileInput').click(); return; }
   if (event.target.closest('#saveWorkspaceButton')) { exportWorkspace(); return; }
   if (event.target.closest('#topExportButton, #exportButton')) { await exportPdf(); return; }
@@ -1309,6 +1357,8 @@ document.addEventListener('change', async (event) => {
   if (event.target.matches('#marginPreset')) applyMarginPreset(event.target.value);
   if (numericSettings[event.target.id]?.startsWith('margin_')) $('#marginPreset').value = marginPresetOf(state.project);
 });
+
+$('#documentUrl').addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); addDocumentFromUrl(event.target.value); } });
 
 document.addEventListener('input', (event) => {
   if (event.target.matches('#articleQuery')) {

@@ -50,13 +50,29 @@ class Article(BaseModel):
         return f"{prefix}{self.language}:title:{self.title.lower()}"
 
 
+REMOTE_URL = r"^https://[^\s]+$"
+
+
+def _one_source(data_base64: str | None, url: str | None, mime_type: str | None) -> None:
+    if (data_base64 is None) == (url is None):
+        raise ValueError("Indiquez soit l’adresse du fichier (url), soit son contenu (data_base64), pas les deux.")
+    if data_base64 is not None and not mime_type:
+        raise ValueError("Type de fichier (mime_type) manquant pour un contenu base64.")
+
+
 class UploadedDocument(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()))
     title: str = Field(min_length=1, max_length=300)
     kind: Literal["image", "pdf"]
-    mime_type: str = Field(min_length=1, max_length=100)
-    data_base64: str = Field(min_length=1, max_length=30_000_000)
+    mime_type: str = Field(default="", max_length=100)
+    data_base64: str | None = Field(default=None, min_length=1, max_length=30_000_000)
+    url: str | None = Field(default=None, max_length=2048, pattern=REMOTE_URL)
     selected: bool = True
+
+    @model_validator(mode="after")
+    def single_source(self) -> "UploadedDocument":
+        _one_source(self.data_base64, self.url, self.mime_type)
+        return self
 
     @property
     def key(self) -> str:
@@ -65,17 +81,25 @@ class UploadedDocument(BaseModel):
 
 class BookImage(BaseModel):
     title: str = Field(default="", max_length=300)
-    mime_type: str = Field(pattern=r"^image/(png|jpeg|gif|webp|svg\+xml)$")
-    data_base64: str = Field(min_length=1, max_length=30_000_000)
+    mime_type: str | None = Field(default=None, pattern=r"^image/(png|jpeg|gif|webp|svg\+xml)$")
+    data_base64: str | None = Field(default=None, min_length=1, max_length=30_000_000)
+    url: str | None = Field(default=None, max_length=2048, pattern=REMOTE_URL)
 
     @field_validator("data_base64")
     @classmethod
-    def decodable(cls, value: str) -> str:
+    def decodable(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
         try:
             b64decode(value, validate=True)
         except binascii.Error as error:
             raise ValueError("Image illisible : contenu base64 invalide.") from error
         return value
+
+    @model_validator(mode="after")
+    def single_source(self) -> "BookImage":
+        _one_source(self.data_base64, self.url, self.mime_type)
+        return self
 
 
 class BookChapter(BaseModel):

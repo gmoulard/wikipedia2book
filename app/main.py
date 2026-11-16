@@ -56,11 +56,12 @@ from app.book_builder import (
 )
 from app.explorer import discover_related_articles
 from app.isolation import IsolatedProcessDied, preload, run_in_thread, run_isolated
-from app.json_source import JsonSourceError, fetch_project
+from app.json_source import JsonSourceError, download, fetch_project
 from app.models import (
     Article,
     ArticleRequest,
     BookChapter,
+    BookImage,
     BookImportRequest,
     BookGenerationRequest,
     Project,
@@ -121,6 +122,23 @@ def deployment_settings(environ: Mapping[str, str], on_toolforge: bool) -> tuple
 
 
 ARTICLE_LIMIT, DOWNLOAD_CONCURRENCY = deployment_settings(os.environ, ON_TOOLFORGE)
+REMOTE_FILE_BYTES = 15 * 1024 * 1024
+BACKGROUND_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml"}
+DOCUMENT_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp", "application/pdf"}
+
+
+class RemoteFileError(ValueError):
+    pass
+
+
+async def fetch_remote_file(url: str, accepted: set[str], label: str) -> tuple[bytes, str]:
+    try:
+        data, content_type = await download(url, REMOTE_FILE_BYTES, label)
+    except JsonSourceError as error:
+        raise RemoteFileError(str(error)) from error
+    if content_type not in accepted:
+        raise RemoteFileError(f"{label[0].upper()}{label[1:]} n’est pas d’un type accepté ({content_type or 'type inconnu'}) : {url}")
+    return data, content_type
 PDF_STREAM_CHUNK = 256 * 1024
 
 app = FastAPI(title="Wikipedia2Book", version=VERSION)
@@ -578,7 +596,8 @@ async def _build_book_pdf(
     groups = ordered_article_groups(project, selected, language)
     page_width_mm, page_height_mm = page_size_mm(project)
     unique_items = list({item.key: item for _, items in groups for item in items}.values())
-    total = len(unique_items) + 3 + (2 if project.page_numbers else 0)
+    remote_images = [field for field in ("cover_image", "back_image") if getattr(project, field) and getattr(project, field).url]
+    total = len(unique_items) + len(remote_images) + 3 + (2 if project.page_numbers else 0)
     step = 0
     part_numbers = itertools.count()
 
@@ -590,11 +609,23 @@ async def _build_book_pdf(
     def fit_to_file(pdf_data: bytes) -> tuple[Path, int]:
         return _fit_to_file(pdf_data, workdir / f"part-{next(part_numbers)}.pdf", page_width_mm, page_height_mm)
 
-    def document_pdf(document: UploadedDocument) -> bytes:
-        data = base64.b64decode(document.data_base64)
-        if document.kind == "pdf":
+    def document_pdf(data: bytes, is_pdf: bool) -> bytes:
+        if is_pdf:
             return data
         return image_to_pdf(data, page_width_mm, page_height_mm)
+
+    async def document_data(document: UploadedDocument) -> tuple[bytes, bool]:
+        if document.url is None:
+            return base64.b64decode(document.data_base64), document.kind == "pdf"
+        data, content_type = await fetch_remote_file(document.url, DOCUMENT_TYPES, f"le document « {document.title} »")
+        return data, content_type == "application/pdf"
+
+    # NE PAS garder l'image dans le livre reçu ni l'écrire sur disque : seule l'adresse est enregistrée dans le JSON, l'image est retéléchargée à chaque génération et ne vit que le temps de celle-ci.
+    for field in remote_images:
+        image = getattr(project, field)
+        yield progress("fetch_image", title=image.title or image.url)
+        data, content_type = await fetch_remote_file(image.url, BACKGROUND_TYPES, f"l’image « {image.title or image.url} »")
+        project = project.model_copy(update={field: BookImage(title=image.title, mime_type=content_type, data_base64=base64.b64encode(data).decode("ascii"))})
 
     fitted_items: dict[str, asyncio.Future[tuple[Path, int]]] = {}
     paper = WIKIPEDIA_PDF_PAPERS.get(project.page_format, "a4")
@@ -609,7 +640,7 @@ async def _build_book_pdf(
                 data = await client.get_article_pdf(item.title, item.language, paper, item.site)
             else:
                 await started.put(progress("prepare_document", title=item.title))
-                data = await asyncio.to_thread(document_pdf, item)
+                data = await asyncio.to_thread(document_pdf, *await document_data(item))
             # NE PAS appeler pypdf directement ici : un calcul bloquant gèle le serveur et retarde l'envoi des messages de progression.
             fitted_items[item.key] = asyncio.ensure_future(asyncio.to_thread(fit_to_file, data))
             # NE PAS libérer le créneau avant la fin de la recomposition : sur un serveur au processeur limité (Toolforge), les PDF bruts téléchargés s'accumuleraient en mémoire en attendant d'être recomposés.
@@ -841,6 +872,8 @@ async def _create_pdf_response(project: Project, language: str) -> Response:
         await events.aclose()
         if isinstance(error, MediaWikiError):
             raise _mediawiki_error(error) from error
+        if isinstance(error, RemoteFileError):
+            raise HTTPException(status_code=502, detail=str(error)) from error
         raise HTTPException(status_code=500, detail="La génération du PDF a échoué.") from error
 
     async def body():
