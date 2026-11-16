@@ -3,7 +3,7 @@
 <table border="0" ><tr><td>
 <img src="https://gmoulard.github.io/wikipedia2book/static/Wikipedia2bookLogo.png" alt="Wikipedia2Book logo" width="100"  >
 </td><td>
-Traduction anglaise : [SPECIFICATIONS.en.md](SPECIFICATIONS.en.md). Ce document en français fait référence.
+Traduction anglaise : [SPECIFICATIONS.en.md](https://gmoulard.github.io/wikipedia2book/SPECIFICATIONS.en.html). Ce document en français fait référence.
 </td></tr></table>
 
 ## Table des matières
