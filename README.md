@@ -142,7 +142,7 @@ Count about 250 MB for the server and the assembly process themselves, plus roug
 python scripts/limit_check.py --base-url https://your-server --search 50
 ```
 
-It doubles the number of articles until the first failure, then narrows down by bisection. `GET /api/health/details` shows the memory of the container and its limit, and `GET /api/health/generations` the memory reached at each stage of the last generations (details in section 13 of the [specifications](docs/SPECIFICATIONS.en.md)).
+It doubles the number of articles until the first failure, then narrows down by bisection. Add `--save-pdf ./tmp` to keep each generated book (`./tmp` is ignored by git). `GET /api/health/details` shows the memory of the container and its limit, and `GET /api/health/generations` the memory reached at each stage of the last generations (details in section 13 of the [specifications](docs/SPECIFICATIONS.en.md)).
 
 ## Deployment Toolforge
 - [web app](https://wikipedia2book.toolforge.org)

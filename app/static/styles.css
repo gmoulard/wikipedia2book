@@ -235,6 +235,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .org-article { grid-template-columns: 22px 1fr minmax(120px, 200px) 28px; }
 .org-chapter-row { grid-template-columns: 22px 28px 1fr auto; background: var(--subtle); }
 .org-toc { grid-template-columns: 22px 28px 1fr auto; background: var(--accent-pale); }
+.org-volume { grid-template-columns: 22px 28px 1fr auto; border-top: 2px solid var(--accent); background: var(--paper); }
+.volume-icon { display: grid; width: 28px; height: 28px; place-items: center; border-radius: var(--radius); background: var(--accent); color: var(--paper); font-weight: 700; }
 .organization-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .drag-handle { color: var(--muted); font-size: 14px; user-select: none; }
 .toc-icon { display: grid; width: 28px; height: 28px; place-items: center; border-radius: var(--radius); background: var(--paper); color: var(--accent); font-size: 16px; }

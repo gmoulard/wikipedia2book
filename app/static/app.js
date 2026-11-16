@@ -118,7 +118,7 @@ function normalizeProject(input) {
     book_title: '', book_subtitle: '', book_author: '', introduction: '', conclusion: '',
     page_format: 'A4', custom_width_mm: 148, custom_height_mm: 210, orientation: 'portrait',
     margin_top_mm: 18, margin_bottom_mm: 18, margin_inside_mm: 18, margin_outside_mm: 16,
-    margin_binding_mm: 0, article_order: [], chapters: [], toc_position: 'start', unassigned_first: false, table_of_contents: true, page_numbers: true, ...input,
+    margin_binding_mm: 0, article_order: [], chapters: [], toc_position: 'start', volume_breaks: [], unassigned_first: false, table_of_contents: true, page_numbers: true, ...input,
   };
   project.main_articles = [...project.main_articles, ...project.discovered_articles.filter((a) => a.selected)];
   project.discovered_articles = project.discovered_articles.filter((a) => !a.selected);
@@ -243,8 +243,56 @@ function buildOrgSlots() {
   const unassignedSlots = unassigned.map((a) => ({ type: 'article', article: a, chapterId: '' }));
   if (chapters.length && unassigned.length && !project.unassigned_first) unassignedSlots.unshift({ type: 'unassigned' });
   const slots = project.unassigned_first ? [...unassignedSlots, ...chapterSlots] : [...chapterSlots, ...unassignedSlots];
+  const contentSlots = [...slots];
   if (project.table_of_contents !== false) slots.splice(tocSlotIndex(slots), 0, { type: 'toc' });
+  volumeStarts(contentSlots).forEach((start) => {
+    let at = slots.indexOf(contentSlots[start]);
+    // NE PAS laisser la table des matières avant la coupure quand elles visent le même élément : elle ouvre alors le volume suivant.
+    if (slots[at - 1]?.type === 'toc') at -= 1;
+    slots.splice(at, 0, { type: 'volume', anchor: slotAnchor(contentSlots[start]) });
+  });
   return slots;
+}
+
+function contentOrgSlots() {
+  return buildOrgSlots().filter((slot) => slot.type !== 'toc' && slot.type !== 'volume');
+}
+
+// NE PAS compter une coupure sur le premier élément ou sur un chapitre sans article : elle ne séparerait aucun article.
+function volumeStarts(contentSlots) {
+  const starts = new Set();
+  (state.project.volume_breaks || []).forEach((position) => {
+    const index = contentSlots.findIndex((slot) => slotAnchor(slot) === position.replace(/^before:/, ''));
+    const slot = contentSlots[index];
+    if (index > 0 && !(slot.type === 'chapter' && !slot.chapter.articles.length)) starts.add(index);
+  });
+  return [...starts].sort((a, b) => a - b);
+}
+
+function articleSegments() {
+  const content = contentOrgSlots();
+  const bounds = [0, ...volumeStarts(content), content.length];
+  const segments = [];
+  for (let i = 0; i < bounds.length - 1; i += 1) {
+    const slots = content.slice(bounds[i], bounds[i + 1]).filter((slot) => slot.type === 'article');
+    if (slots.length) segments.push(slots);
+  }
+  return segments;
+}
+
+function addVolumeBreak() {
+  const content = contentOrgSlots();
+  const starts = volumeStarts(content);
+  const last = starts.length ? starts[starts.length - 1] : 0;
+  const candidate = last + Math.ceil((content.length - last) / 2);
+  if (candidate <= last || candidate >= content.length) { showToast(t('org.volumeTooSmall'), true); return; }
+  queueSave({ volume_breaks: [...(state.project.volume_breaks || []), `before:${slotAnchor(content[candidate])}`] });
+  renderOrganization();
+}
+
+function removeVolumeBreak(anchor) {
+  queueSave({ volume_breaks: (state.project.volume_breaks || []).filter((position) => position !== `before:${anchor}`) });
+  renderOrganization();
 }
 
 function slotAnchor(slot) {
@@ -266,8 +314,9 @@ function renderOrganization() {
   $('#organizationCount').textContent = articles.length;
   $('#addTocButton').hidden = project.table_of_contents !== false;
   const volumes = bookVolumes();
-  $('#organizationVolumes').hidden = !volumes;
-  if (volumes) $('#organizationVolumes').textContent = t('org.volumesHint', { limit: state.articleLimit, count: volumes.length });
+  const split = Boolean(volumes) && volumes.length > articleSegments().length;
+  $('#organizationVolumes').hidden = !split;
+  if (split) $('#organizationVolumes').textContent = t('org.volumesHint', { limit: state.articleLimit, count: volumes.length });
 
   if (!articles.length) {
     $('#organizationList').innerHTML = `<div class="org-empty">${escapeHtml(t('org.emptyListLine1'))}<br>${escapeHtml(t('org.emptyListLine2'))}</div>`;
@@ -282,6 +331,14 @@ function renderOrganization() {
         <span class="toc-icon" aria-hidden="true">\u2261</span>
         <div><div class="org-article-title">${escapeHtml(t('org.toc'))}</div><div class="org-article-origin">${escapeHtml(t('org.tocHint'))}</div></div>
         <button class="chapter-remove toc-remove" type="button" title="${escapeHtml(t('org.removeTocTitle'))}">${escapeHtml(t('org.removeToc'))}</button>
+      </div>`;
+    }
+    if (slot.type === 'volume') {
+      return `<div class="org-row org-volume" draggable="true" data-slot-type="volume" data-slot-index="${idx}" data-volume-anchor="${escapeHtml(slot.anchor)}">
+        <span class="drag-handle" aria-hidden="true">\u2630</span>
+        <span class="volume-icon" aria-hidden="true">\u2702</span>
+        <div><div class="org-article-title">${escapeHtml(t('org.volume'))}</div><div class="org-article-origin">${escapeHtml(t('org.volumeHint'))}</div></div>
+        <button class="chapter-remove volume-remove" type="button" title="${escapeHtml(t('org.removeVolumeTitle'))}">${escapeHtml(t('org.removeVolume'))}</button>
       </div>`;
     }
     if (slot.type === 'unassigned') {
@@ -349,11 +406,23 @@ function applyDragDrop(fromIndex, toIndex) {
   const project = state.project;
   const slots = buildOrgSlots();
   const from = slots[fromIndex];
-  const to = slots[toIndex];
+  let to = slots[toIndex];
   if (!from || !to) return;
+  if (to.type === 'volume' && from.type !== 'volume' && from.type !== 'toc') to = slots[toIndex + 1] || slots[toIndex - 1];
+
+  if (from.type === 'volume') {
+    const others = slots.filter((slot) => slot.type !== 'toc' && slot.type !== 'volume');
+    const following = slots.slice(toIndex).find((slot) => others.includes(slot));
+    const at = others.includes(to) ? others.indexOf(to) + (toIndex > fromIndex ? 1 : 0) : (following ? others.indexOf(following) : others.length);
+    if (at <= 0 || at >= others.length) return;
+    const breaks = (project.volume_breaks || []).filter((position) => position !== `before:${from.anchor}`);
+    queueSave({ volume_breaks: [...new Set([...breaks, `before:${slotAnchor(others[at])}`])] });
+    renderOrganization();
+    return;
+  }
 
   if (from.type === 'toc') {
-    const others = slots.filter((slot) => slot.type !== 'toc');
+    const others = slots.filter((slot) => slot.type !== 'toc' && slot.type !== 'volume');
     const at = others.indexOf(to) + (toIndex > fromIndex ? 1 : 0);
     const position = at >= others.length ? 'end' : at === 0 ? 'start' : `before:${slotAnchor(others[at])}`;
     queueSave({ toc_position: position });
@@ -919,10 +988,9 @@ function limitedArticleCount() {
 }
 
 // NE PAS couper un chapitre tant qu'il tient dans un volume : la coupure se fait entre deux chapitres, et à l'intérieur d'un chapitre seulement s'il dépasse la limite à lui seul.
-function planVolumes(limit) {
+function planVolumes(limit, slots) {
   const units = [];
-  buildOrgSlots().forEach((slot) => {
-    if (slot.type !== 'article') return;
+  slots.forEach((slot) => {
     const last = units[units.length - 1];
     if (last && last.chapterId === slot.chapterId) last.items.push(slot.article);
     else units.push({ chapterId: slot.chapterId, items: [slot.article] });
@@ -947,10 +1015,12 @@ function planVolumes(limit) {
   return volumes;
 }
 
+// NE PAS faire passer le découpage automatique avant les coupures de l'utilisateur : elles délimitent d'abord les volumes, puis chaque volume encore trop gros est découpé.
 function bookVolumes() {
+  if (!state.project) return null;
   const limit = state.articleLimit;
-  if (!state.project || !limit || limitedArticleCount() <= limit) return null;
-  return planVolumes(limit);
+  const volumes = articleSegments().flatMap((segment) => (limit ? planVolumes(limit, segment) : [segment.map((slot) => slot.article)]));
+  return volumes.length > 1 ? volumes : null;
 }
 
 function volumeProject(project, items, index, total) {
@@ -1016,7 +1086,9 @@ async function exportPdf() {
       }
     }
     if (volumes) {
-      const notice = t('export.volumesNotice', { articles: limitedArticleCount(), limit: state.articleLimit, count: volumes.length });
+      const notice = volumes.length > articleSegments().length
+        ? t('export.volumesNotice', { articles: limitedArticleCount(), limit: state.articleLimit, count: volumes.length })
+        : t('export.volumesManualNotice', { count: volumes.length });
       showToast(notice);
       for (const [index, items] of volumes.entries()) {
         showPdfProgress(null);
@@ -1113,6 +1185,9 @@ document.addEventListener('click', async (event) => {
     return;
   }
   if (event.target.closest('#addChapterButton')) { addChapter(); return; }
+  if (event.target.closest('#addVolumeButton')) { addVolumeBreak(); return; }
+  const volumeRow = event.target.closest('.org-volume');
+  if (volumeRow && event.target.closest('.volume-remove')) { removeVolumeBreak(volumeRow.dataset.volumeAnchor); return; }
   if (event.target.closest('.toc-remove')) {
     queueSave({ table_of_contents: false });
     renderOrganization();
