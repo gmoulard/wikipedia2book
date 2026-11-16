@@ -45,7 +45,6 @@ from app.book_builder import (
     PDF_LABELS,
     TOC_LINK_PREFIX,
     build_license_page_html,
-    license_block_count,
     book_slots,
     build_toc_html,
     ordered_article_groups,
@@ -760,14 +759,10 @@ def _finish_book(
     stage("render_chapters", chapters=chapters)
     if toc_at == len(slots):
         root.children.append(OutlineEntry(pdf_label(language, "toc"), place_toc()))
-    license_blocks = license_block_count(project, selected, language)
-    # NE PAS mettre le logo et les liens ailleurs qu'en dernière page : sur le dernier bloc de la licence, ou sur la conclusion quand le livre en a une.
-    license_start = [
-        place_pdf(render(build_license_page_html(project, selected, language, block, colophon=block == license_blocks - 1 and not project.conclusion)))
-        for block in range(license_blocks)
-    ][0]
+    # NE PAS mettre le logo et les liens ailleurs qu'en dernière page : sur la licence, ou sur la conclusion quand le livre en a une.
+    license_start = place_pdf(render(build_license_page_html(project, selected, language, colophon=not project.conclusion)))
     root.children.append(OutlineEntry(pdf_label(language, "license"), license_start))
-    stage("render_license", blocks=license_blocks)
+    stage("render_license")
     if project.conclusion:
         root.children.append(OutlineEntry(
             pdf_label(language, "conclusion"),

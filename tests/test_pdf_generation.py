@@ -213,28 +213,28 @@ class TableOfContentsPageNumbersTest(unittest.TestCase):
 
 
 class LicensePageTest(unittest.TestCase):
-    def test_license_page_names_cc_by_sa_and_lists_sources_in_book_order(self):
+    def test_license_page_names_cc_by_sa_and_credits_authors_without_listing_sources(self):
         from app.models import UploadedDocument
         first = Article(title="Chien", language="fr", url="https://fr.wikipedia.org/wiki/Chien", selected=True)
         second = Article(title="Chat", language="fr", url="https://fr.wikipedia.org/wiki/Chat", selected=True)
         document = UploadedDocument(title="Carte.png", kind="image", mime_type="image/png", data_base64="AA==", selected=True)
         project = Project(name="T", article_order=[first.key, second.key])
-        html = build_license_page_html(project, [second, first, document]).replace("<wbr>", "")
+        html = build_license_page_html(project, [second, first, document])
         self.assertIn("CC BY-SA 4.0", html)
         self.assertIn("https://creativecommons.org/licenses/by-sa/4.0/deed.fr", html)
-        self.assertLess(html.index("Chien"), html.index("Chat"))
-        self.assertIn("https://fr.wikipedia.org/w/index.php?title=Chat&amp;action=history", html)
+        self.assertIn("crédités par le lien vers sa source", html)
         self.assertIn("Carte.png", html)
+        for absent in ("Sources et auteurs", "action=history", "https://fr.wikipedia.org/wiki/Chat", "<ol"):
+            self.assertNotIn(absent, html)
 
 
 class WikisourceLicenseTest(unittest.TestCase):
     def test_wikisource_only_book_has_no_wikipedia_license(self):
         text = Article(title="論語", language="zh", site="wikisource", url="https://zh.wikisource.org/wiki/%E8%AB%96%E8%AA%9E", selected=True)
-        html = build_license_page_html(Project(name="T"), [text], "zh").replace("<wbr>", "")
+        html = build_license_page_html(Project(name="T"), [text], "zh")
         self.assertIn("维基文库", html)
         self.assertNotIn("知识共享 署名-相同方式共享 4.0 国际", html)
         self.assertIn("本书并非维基文库或维基媒体基金会的官方出版物。", html)
-        self.assertIn("https://zh.wikisource.org/w/index.php?title=%E8%AB%96%E8%AA%9E&amp;action=history", html)
 
     def test_mixed_book_has_both_notes(self):
         text = Article(title="Le Corbeau", language="fr", site="wikisource", url="https://fr.wikisource.org/wiki/Le_Corbeau", selected=True)
@@ -247,11 +247,10 @@ class WikisourceLicenseTest(unittest.TestCase):
     def test_license_names_the_other_projects(self):
         book = Article(title="Programmation Python", language="fr", site="wikibooks", url="https://fr.wikibooks.org/wiki/Programmation_Python", selected=True)
         guide = Article(title="Lyon", language="fr", site="wikivoyage", url="https://fr.wikivoyage.org/wiki/Lyon", selected=True)
-        html = build_license_page_html(Project(name="T"), [guide, book]).replace("<wbr>", "")
+        html = build_license_page_html(Project(name="T"), [guide, book])
         self.assertIn("Les textes provenant de Wikilivres, Wikivoyage reproduits", html)
         self.assertIn("CC BY-SA 4.0", html)
         self.assertNotIn("Wikipédia", html)
-        self.assertIn("https://fr.wikibooks.org/w/index.php?title=Programmation_Python&amp;action=history", html)
         self.assertIn("Vikikitap, Vikigezgin", build_license_page_html(Project(name="T"), [guide, book], "tr"))
 
     def test_wikinews_is_cc_by(self):
@@ -304,18 +303,11 @@ class GeneratedPageBlocksTest(unittest.TestCase):
         self.assertEqual(second.count("<ol>"), second.count("</ol>"))
         self.assertEqual(toc_block_count(project, items[:3]), 1)
 
-    def test_long_license_page_is_split_into_blocks_with_continued_numbering(self):
-        from app.book_builder import GENERATED_BLOCK_ENTRIES, license_block_count
-        items = self.articles(GENERATED_BLOCK_ENTRIES + 1)
-        project = Project(name="T")
-        self.assertEqual(license_block_count(project, items), 2)
-        first = build_license_page_html(project, items, "fr", 0)
-        second = build_license_page_html(project, items, "fr", 1)
-        self.assertIn("<h1>Licence</h1>", first)
-        self.assertNotIn("<h1>", second)
-        self.assertIn(f'<ol start="{GENERATED_BLOCK_ENTRIES + 1}"><li><strong>Article {GENERATED_BLOCK_ENTRIES:03}</strong>', second)
-        self.assertNotIn("overflow-wrap", first)
-        self.assertIn("org/<wbr>wiki/<wbr>Article_<wbr>000", first)
+    def test_license_page_of_a_large_book_stays_short(self):
+        items = self.articles(1000)
+        html = build_license_page_html(Project(name="T"), items, "fr")
+        self.assertNotIn("Article 000", html)
+        self.assertLess(len(html), 6000)
 
 
 if __name__ == "__main__":
