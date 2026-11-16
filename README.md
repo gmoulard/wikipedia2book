@@ -116,7 +116,7 @@ Two settings control how heavy a generation can be. They are environment variabl
 
 | Variable | Default in the `Dockerfile` | Meaning |
 |---|---|---|
-| `WIKIPEDIA2BOOK_ARTICLE_LIMIT` | `0` (no limit) | Maximum number of articles per book. Beyond it, the API refuses the book at once (HTTP 413, code `too_many_articles`); the web interface reads the limit from `/api/version` and generates the book in several volumes instead, each under the limit. `0` lifts the limit. |
+| `WIKIPEDIA2BOOK_ARTICLE_LIMIT` | `300` (also the default when the variable is not set, on every host) | Maximum number of articles per book. Beyond it, the API refuses the book at once (HTTP 413, code `too_many_articles`); the web interface reads the limit from `/api/version` and generates the book in several volumes instead, each under the limit. `0` lifts the limit. |
 | `WIKIPEDIA2BOOK_DOWNLOADS` | `2` | Number of article PDFs downloaded from Wikipedia at the same time for a book. |
 
 Change them in the `Dockerfile` and rebuild the image, or override them when starting the container, without rebuilding:
@@ -134,7 +134,7 @@ The server refuses to start with an invalid value and says why.
 | Container memory | Largest book generated | Notes |
 |---|---|---|
 | 256 MB | under 20 articles | Northflank: restart at 20 articles, already very slow at 10 |
-| 2 GiB | about 800 articles (14,000 pages, 780 MB of PDF) | Toolforge: failure at 1,000 articles; the official instance refuses books of more than 2,000 articles |
+| 2 GiB | about 800 articles (14,000 pages, 780 MB of PDF) | Toolforge: failure at 1,000 articles; the official instance limits books to 300 articles (larger ones are generated in volumes) |
 
 Count about 250 MB for the server and the assembly process themselves, plus roughly 2 to 2.5 MB per article at the peak, and keep the limit well below what your container can hold, for example a third to a half: with 2 GiB, that gives a few hundred articles; with 256 MB, nothing is left for a book of any size. To find the real maximum of your deployment, run the limit test against it (it can make the server restart, so not during busy hours):
 

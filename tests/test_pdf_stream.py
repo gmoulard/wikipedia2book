@@ -537,21 +537,21 @@ class PdfStreamTest(unittest.TestCase):
             details = self.client.get("/api/version").json()
         self.assertEqual(details["article_limit"], 300)
         self.assertIn("version", details)
-        self.assertIsNone(self.client.get("/api/version").json()["article_limit"])
+        with patch.object(main, "ARTICLE_LIMIT", None):
+            self.assertIsNone(self.client.get("/api/version").json()["article_limit"])
 
-    def test_no_article_limit_outside_toolforge(self):
-        self.assertFalse(main.ON_TOOLFORGE)
-        self.assertIsNone(main.ARTICLE_LIMIT)
+    def test_article_limit_of_300_everywhere_by_default(self):
+        self.assertEqual(main.DEFAULT_ARTICLE_LIMIT, 300)
 
     def test_deployment_settings_defaults_per_platform(self):
-        self.assertEqual(main.deployment_settings({}, on_toolforge=True), (2000, 4))
-        self.assertEqual(main.deployment_settings({}, on_toolforge=False), (None, 2))
+        self.assertEqual(main.deployment_settings({}, on_toolforge=True), (300, 4))
+        self.assertEqual(main.deployment_settings({}, on_toolforge=False), (300, 2))
 
     def test_deployment_settings_from_the_environment(self):
         settings = main.deployment_settings
         self.assertEqual(settings({"WIKIPEDIA2BOOK_ARTICLE_LIMIT": "40", "WIKIPEDIA2BOOK_DOWNLOADS": "1"}, on_toolforge=False), (40, 1))
         self.assertEqual(settings({"WIKIPEDIA2BOOK_ARTICLE_LIMIT": "0"}, on_toolforge=True), (None, 4))
-        self.assertEqual(settings({"WIKIPEDIA2BOOK_ARTICLE_LIMIT": " "}, on_toolforge=True), (2000, 4))
+        self.assertEqual(settings({"WIKIPEDIA2BOOK_ARTICLE_LIMIT": " "}, on_toolforge=True), (300, 4))
         for environ, on_toolforge in (
             ({"WIKIPEDIA2BOOK_DOWNLOADS": "3"}, False),
             ({"WIKIPEDIA2BOOK_DOWNLOADS": "5"}, True),
@@ -564,7 +564,7 @@ class PdfStreamTest(unittest.TestCase):
 
     def test_dockerfile_sets_both_settings_within_the_policy(self):
         dockerfile = (Path(main.__file__).resolve().parent.parent / "Dockerfile").read_text(encoding="utf-8")
-        self.assertIn("WIKIPEDIA2BOOK_ARTICLE_LIMIT=0", dockerfile)
+        self.assertIn("WIKIPEDIA2BOOK_ARTICLE_LIMIT=300", dockerfile)
         self.assertIn("WIKIPEDIA2BOOK_DOWNLOADS=2", dockerfile)
         self.assertNotIn("WIKIPEDIA2BOOK_PLATFORM", dockerfile.split("# NE PAS")[0])
 
