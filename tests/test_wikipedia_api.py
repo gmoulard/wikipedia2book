@@ -21,7 +21,7 @@ import httpx
 from unittest.mock import AsyncMock
 
 from app.models import Article
-from app.wikipedia_api import USER_AGENT, MediaWikiClient, MediaWikiPageNotFound, article_url, parse_article_url, wikibook_chapters
+from app.wikipedia_api import USER_AGENT, MediaWikiClient, MediaWikiPageNotFound, article_url, parse_article_url, subpage_chapters
 
 
 def _book_client(wikitext):
@@ -208,7 +208,7 @@ class WikibookChaptersTest(unittest.TestCase):
             _sub("Autre livre/Page"), _sub("Python/Rouge", css=' class="new"'), _sub("Python/Introduction"),
             _sub("Python/Boucles#Exemple"), _sub("Python/Boucles/Exercices"), _sub("Fichier:Logo.png"),
         )
-        self.assertEqual(wikibook_chapters(html, "Python"), [("", ["Python/Introduction", "Python/Variables", "Python/Boucles", "Python/Boucles/Exercices"])])
+        self.assertEqual(subpage_chapters(html, "Python"), [("", ["Python/Introduction", "Python/Variables", "Python/Boucles", "Python/Boucles/Exercices"])])
 
     def test_sections_become_chapters_at_the_first_level_that_splits_the_book(self):
         html = _toc(
@@ -218,24 +218,47 @@ class WikibookChaptersTest(unittest.TestCase):
             "<h4>Details</h4>", _sub("Py/Strings"),
             "<h2>See also</h2>", '<a href="/wiki/Python">Python</a>',
         )
-        self.assertEqual(wikibook_chapters(html, "Py"), [("Intro", ["Py/Overview", "Py/Setup"]), ("Basics", ["Py/Variables", "Py/Strings"])])
+        self.assertEqual(subpage_chapters(html, "Py"), [("Intro", ["Py/Overview", "Py/Setup"]), ("Basics", ["Py/Variables", "Py/Strings"])])
 
     def test_pages_before_the_first_section_stay_without_chapter(self):
         html = _toc(_sub("L/Préface"), '<div class="mw-heading"><h2>Partie 1</h2></div>', _sub("L/A"), "<h2>Partie 2</h2>", _sub("L/B"))
-        self.assertEqual(wikibook_chapters(html, "L"), [("", ["L/Préface"]), ("Partie 1", ["L/A"]), ("Partie 2", ["L/B"])])
+        self.assertEqual(subpage_chapters(html, "L"), [("", ["L/Préface"]), ("Partie 1", ["L/A"]), ("Partie 2", ["L/B"])])
 
     def test_page_without_subpage_and_limit(self):
-        self.assertEqual(wikibook_chapters(_toc(_sub("Autre")), "L"), [])
+        self.assertEqual(subpage_chapters(_toc(_sub("Autre")), "L"), [])
         html = _toc(*[_sub(f"L/P{index}") for index in range(10)])
-        self.assertEqual(wikibook_chapters(html, "L", limit=3), [("", ["L/P0", "L/P1", "L/P2"])])
+        self.assertEqual(subpage_chapters(html, "L", limit=3), [("", ["L/P0", "L/P1", "L/P2"])])
 
-    def test_get_wikibook_parses_the_rendered_page_on_wikibooks(self):
+    def test_get_subpage_book_parses_the_rendered_page_on_wikibooks(self):
         client = MediaWikiClient()
         client._get = AsyncMock(return_value={"parse": {"title": "Python", "text": _toc(_sub("Python/A"), _sub("Python/B"))}})
-        book = asyncio.run(client.get_wikibook("python", "fr"))
+        book = asyncio.run(client.get_subpage_book("python", "fr", "wikibooks"))
         self.assertEqual(book.chapters, [("", ["Python/A", "Python/B"])])
         language, params, site = client._get.call_args.args
         self.assertEqual((language, params["action"], params["prop"], site), ("fr", "parse", "text", "wikibooks"))
+
+    def test_full_text_pages_are_ignored_like_print_versions(self):
+        html = _toc(_sub("論語/序說"), _sub("論語/學而第一"), _sub("論語/全覽"), _sub("Bovary/Texte entier"), _sub("論語/爲政第二"))
+        self.assertEqual(subpage_chapters(html, "論語"), [("", ["論語/序說", "論語/學而第一", "論語/爲政第二"])])
+
+    def test_wikisource_skips_intermediate_tables_of_contents(self):
+        html = _toc(
+            "<h2>Première partie</h2>", _sub("M/Tome 1"), _sub("M/Tome 1/Livre 1"), _sub("M/Tome 1/Livre 1/01"), _sub("M/Tome 1/Livre 1/02"),
+            "<h2>Deuxième partie</h2>", _sub("M/Tome 2/Livre 1/01"), _sub("M/Préface seule"),
+        )
+        self.assertEqual(subpage_chapters(html, "M", skip_parents=True),
+                         [("Première partie", ["M/Tome 1/Livre 1/01", "M/Tome 1/Livre 1/02"]), ("Deuxième partie", ["M/Tome 2/Livre 1/01", "M/Préface seule"])])
+        kept = [page for _, pages in subpage_chapters(html, "M") for page in pages]
+        self.assertIn("M/Tome 1/Livre 1", kept)
+
+    def test_get_subpage_book_skips_parents_only_on_wikisource(self):
+        html = _toc(_sub("L/A"), _sub("L/A/1"), _sub("L/B"))
+        for site, expected in (("wikisource", ["L/A/1", "L/B"]), ("wikibooks", ["L/A", "L/A/1", "L/B"])):
+            client = MediaWikiClient()
+            client._get = AsyncMock(return_value={"parse": {"title": "L", "text": html}})
+            book = asyncio.run(client.get_subpage_book("L", "fr", site))
+            self.assertEqual([page for _, pages in book.chapters for page in pages], expected, site)
+            self.assertEqual(client._get.call_args.args[2], site)
 
 
 class GetPageTest(unittest.TestCase):

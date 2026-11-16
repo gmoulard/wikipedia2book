@@ -36,6 +36,7 @@ RUN apt-get update \
         shared-mime-info \
         fonts-dejavu-core \
         fonts-noto-cjk \
+        fonts-hanazono \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt ./requirements.txt

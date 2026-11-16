@@ -88,7 +88,8 @@ from app.version import VERSION
 from app.wikipedia_api import (
     MEDIA_CONCURRENCY,
     ON_TOOLFORGE,
-    WIKIBOOK_MIN_SUBPAGES,
+    SUBPAGE_BOOK_MIN,
+    SUBPAGE_BOOK_SITES,
     WIKIPEDIA_PDF_PAPERS,
     MediaWikiClient,
     MediaWikiError,
@@ -410,11 +411,11 @@ async def resolve_source(payload: SourceRequest) -> SourceResolution:
             # NE PAS réduire à l'espace principal hors Wikipédia, ni se fier au marquage « contenu » de l'API : les pages d'auteur de Wikisource sont dans un espace propre au projet dont le numéro change selon la langue (102 en français, 106 en espagnol, non marqué « contenu »).
             if namespace == 0 or (site != "wikipedia" and namespace >= PROJECT_NAMESPACES_START and namespace % 2 == 0):
                 article = Article(title=title, language=language, site=site, url=article_url(language, title, site), selected=True)
-                if site == "wikibooks" and namespace == 0:
-                    wikibook = await client.get_wikibook(title, language)
-                    if sum(len(pages) for _, pages in wikibook.chapters) >= WIKIBOOK_MIN_SUBPAGES:
+                if site in SUBPAGE_BOOK_SITES and namespace == 0:
+                    subpage_book = await client.get_subpage_book(title, language, site)
+                    if sum(len(pages) for _, pages in subpage_book.chapters) >= SUBPAGE_BOOK_MIN:
                         return SourceResolution(
-                            kind="wikibook", article=article, book=_book_import(wikibook, language, site), book_title=_book_name(title)
+                            kind="subpages", article=article, book=_book_import(subpage_book, language, site), book_title=_book_name(title)
                         )
                 return SourceResolution(kind="article", article=article)
             if site != "wikipedia":

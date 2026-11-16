@@ -185,8 +185,9 @@ h2 {{ font-size: 18pt; }}
 
 TOC_LINK_PREFIX = "https://wikipedia2book.invalid/toc/"
 # NE PAS laisser la police générique seule : Pango parcourt alors toutes les polices installées (dont les polices CJK de Noto, très lourdes) pour choisir et compléter la police.
-SERIF_FONTS = '"DejaVu Serif", serif'
-SANS_FONTS = '"DejaVu Sans", sans-serif'
+# NE PAS placer HanaMinA ni Noto CJK avant le générique : HanaMinB ne couvre que les extensions CJK B et suivantes (caractères rares, 僻字), les caractères chinois et japonais courants restent à Noto CJK, choisi selon la langue de la page.
+SERIF_FONTS = '"DejaVu Serif", "HanaMinB", serif'
+SANS_FONTS = '"DejaVu Sans", "HanaMinB", sans-serif'
 
 
 GENERATED_BLOCK_ENTRIES = 100

@@ -49,12 +49,16 @@ MEDIA_WINDOW_BYTES = 25_000_000 // 8 * MEDIA_WINDOW_S
 RETRY_STATUSES = {429, 503}
 RETRY_DELAYS_S = (2, 4, 8, 16)
 MAX_RETRY_WAIT_S = 20
-WIKIBOOK_PRINT_VERSIONS = {
+FULL_TEXT_PAGES = {
     "version imprimable", "print version", "printable version", "druckversion", "versione stampabile",
     "versión para imprimir", "versión imprimible", "versão para impressão", "versão para imprimir", "afdrukbare versie",
     "yazdırılabilir sürüm", "印刷版", "印刷用", "打印版", "نسخه چاپی", "نسخة للطباعة", "نسخة قابلة للطباعة",
+    "texte entier", "texte complet", "full text", "complete text", "volltext", "vollständiger text", "testo completo",
+    "testo integrale", "texto completo", "texto integral", "volledige tekst", "tam metin", "全覽", "全文", "全本", "全文表示",
+    "متن کامل", "النص الكامل",
 }
-WIKIBOOK_MIN_SUBPAGES = 2
+SUBPAGE_BOOK_MIN = 2
+SUBPAGE_BOOK_SITES = ("wikibooks", "wikisource")
 RATE_LIMITED = "Wikipédia limite le nombre de requêtes en ce moment (HTTP {status}) : réessayez dans quelques minutes."
 
 
@@ -305,11 +309,12 @@ class MediaWikiClient:
             links.append(link_title)
         return links
 
-    async def get_wikibook(self, title: str, language: str = "fr", limit: int = 500) -> WikipediaBook:
+    async def get_subpage_book(self, title: str, language: str, site: str, limit: int = 500) -> WikipediaBook:
         # NE PAS passer à prop=links : tri alphabétique, l'ordre des chapitres du sommaire serait perdu.
-        result = await self._get(language, {"action": "parse", "page": title, "prop": "text", "redirects": 1, "disabletoc": 1}, "wikibooks")
+        result = await self._get(language, {"action": "parse", "page": title, "prop": "text", "redirects": 1, "disabletoc": 1}, site)
         parsed = result.get("parse", {})
-        return WikipediaBook(subtitle="", chapters=wikibook_chapters(parsed.get("text", ""), parsed.get("title", title), min(max(limit, 1), 500)))
+        chapters = subpage_chapters(parsed.get("text", ""), parsed.get("title", title), min(max(limit, 1), 500), skip_parents=site == "wikisource")
+        return WikipediaBook(subtitle="", chapters=chapters)
 
     async def get_book(self, title: str, language: str = "fr", limit: int = 200) -> WikipediaBook:
         language = validate_language(language)
@@ -355,7 +360,7 @@ class MediaWikiClient:
         return WikipediaBook(subtitle=subtitle, chapters=[chapter for chapter in chapters if chapter[1]])
 
 
-def wikibook_chapters(html: str, title: str, limit: int = 500) -> list[tuple[str, list[str]]]:
+def subpage_chapters(html: str, title: str, limit: int = 500, skip_parents: bool = False) -> list[tuple[str, list[str]]]:
     soup = BeautifulSoup(html, "html.parser")
     for edit_link in soup.select(".mw-editsection"):
         edit_link.decompose()
@@ -370,13 +375,18 @@ def wikibook_chapters(html: str, title: str, limit: int = 500) -> list[tuple[str
         if not href.startswith("/wiki/") or "new" in (element.get("class") or []):
             continue
         link_title = unquote(href[len("/wiki/"):].split("#", 1)[0]).replace("_", " ").strip()
-        # NE PAS garder la version imprimable : elle contient tout le livre, qui serait en double dans le PDF.
-        if not link_title.startswith(prefix) or link_title in seen or link_title.rsplit("/", 1)[-1].casefold() in WIKIBOOK_PRINT_VERSIONS:
+        # NE PAS garder la version imprimable ni le texte entier : ils contiennent tout le livre, qui serait en double dans le PDF.
+        if not link_title.startswith(prefix) or link_title in seen or link_title.rsplit("/", 1)[-1].casefold() in FULL_TEXT_PAGES:
             continue
         seen.add(link_title)
         sequence.append((0, link_title))
         if len(seen) >= limit:
             break
+    if skip_parents:
+        # NE PAS appliquer à Wikilivres : un chapitre y a souvent son propre texte en plus de ses sous-pages ; sur Wikisource, une page qui a des sous-pages dans le livre n'est qu'un sommaire intermédiaire.
+        pages = {text for heading_level, text in sequence if heading_level == 0}
+        sequence = [(heading_level, text) for heading_level, text in sequence
+                    if heading_level != 0 or not any(page.startswith(text + "/") for page in pages)]
     for level in (2, 3, 4):
         chapters: list[tuple[str, list[str]]] = [("", [])]
         for heading_level, text in sequence:
