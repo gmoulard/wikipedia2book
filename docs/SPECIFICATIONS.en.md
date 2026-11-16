@@ -1068,9 +1068,17 @@ Two series of measurements, in tables whose common columns are aligned (date, ve
   | 2026-11-16 | 1.8.6 | Toolforge | max | `200-pages-chapitres` | 205 | 5.08 s | 2.41 s | 16.2 s | 23.69 s | +2% | ok |
   | 2026-11-16 | 1.8.6 | Toolforge | max | `200-pages-a5-paysage` | 201 | 48.84 s | 2.17 s | 34.05 s | 85.05 s | -83% | ok |
   | 2026-11-16 | 1.8.6 | Toolforge | max | `20-articles` | 253 | 8.38 s | 3.24 s | 11.64 s | 23.26 s | +12% | ok |
+  | 2026-11-16 | 1.9.5 | Toolforge | max | `50-pages` | 50 | 7.05 s | 0.62 s | 1.22 s | 8.89 s | -17% | ok |
+  | 2026-11-16 | 1.9.5 | Toolforge | max | `200-pages` | 200 | 8.84 s | 2.02 s | 2.96 s | 13.81 s | -9% | ok |
+  | 2026-11-16 | 1.9.5 | Toolforge | max | `1-article` | 4 | 0.56 s | 0.37 s | 0.59 s | 1.51 s | +230% | regression |
+  | 2026-11-16 | 1.9.5 | Toolforge | max | `50-pages-sans-numerotation` | 49 | 3.55 s | 0.29 s | 1.61 s | 5.45 s | -44% | ok |
+  | 2026-11-16 | 1.9.5 | Toolforge | max | `200-pages-chapitres` | 205 | 6.11 s | 2.25 s | 2.84 s | 11.2 s | -5% | ok |
+  | 2026-11-16 | 1.9.5 | Toolforge | max | `200-pages-a5-paysage` | 201 | 49.36 s | 1.95 s | 5.97 s | 57.29 s | -84% | ok |
+  | 2026-11-16 | 1.9.5 | Toolforge | max | `20-articles` | 253 | 6.98 s | 2.59 s | 3.14 s | 12.71 s | -11% | ok |
 
   * Run of 2026-11-15 on Toolforge (4 simultaneous downloads): no failure or regression. The only "to watch" (`1-article`) concerns 0.22 s for 5 pages, a gap of a few hundredths of a second, within measurement noise. The Wikipedia phase of `200-pages-a5-paysage` (47 s) includes recomposing every page to A5 landscape, done during the downloads.
   * Run of 2026-11-16 on Toolforge, version 1.8.6 (assembly by PyMuPDF in a separate process): no failure or regression compared with the reference. The only "to watch" (`1-article`) is again a matter of a few hundredths of a second. Compared with 1.8.2 on the same target, the *Application* phase takes about twice as long (0.78 s instead of 0.4 s for `50-pages`, 2.13 s instead of 0.94 s for `200-pages`): starting the assembly process, the stage journal and numbering by MuPDF; this is the price of an assembly that holds up to 800 articles instead of 150 (docs/testLimitetoolforge.md). The longer transfers depend on the network to the client computer.
+  * Run of 2026-11-16 on Toolforge, version 1.9.5 (limit of 300 articles per book, no more "Sources and authors" list in the licence page): no failure. One "regression" on `1-article`: 0.37 s of application for 4 pages instead of 5 (shorter licence page), a gap of a few tenths of a second in the fixed cost of a generation (starting the assembly process), which the per-page calculation magnifies; every other scenario has an *application per page* time below the reference and close to 1.8.6 (2.02 s instead of 2.13 s for `200-pages`). Transfers are shorter than in 1.8.6 (2.96 s instead of 6.12 s for `200-pages`), thanks to the client machine's network and lighter PDFs. The script exits with an error because of this "regression": not to be taken as a release blocker.
 
 ### 13.12 Limit test
 
