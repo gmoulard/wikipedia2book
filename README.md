@@ -31,17 +31,22 @@ Available for: Wikipedia, Wikisource, Wikibooks, Wikivoyage, Wikiversity, Wikiqu
 - WeasyPrint for the cover, chapter pages, license page (CC BY-SA 4.0, with article sources) and conclusion; pypdf to recompose pages to the book format; PyMuPDF to assemble the book on temporary disk in batches, so that large books do not run out of memory, and to add bookmarks, links and page numbers; reportlab for converting imported images to PDF.
 - Docker for deployment.
 
-Documentation site (GitHub Pages): https://gmoulard.github.io/wikipedia2book/
+## Documentation 
 
-[Wikipedia usage](https://gmoulard.github.io/wikipedia2book/stats.html)
+- [documentation](https://gmoulard.github.io/wikipedia2book/) on site GitHub Pages
 
-Functional and technical details are described in [SPECIFICATIONS.en.md](docs/SPECIFICATIONS.en.md) (English translation) and [SPECIFICATIONS.fr.md](docs/SPECIFICATIONS.fr.md) (French, the reference version).
+Functional and technical details 
+- [SPECIFICATIONS.fr.md](docs/SPECIFICATIONS.fr.md) (French, the reference version).
+- [SPECIFICATIONS.en.md](docs/SPECIFICATIONS.en.md) (English translation) 
 
-## Deployment Toolforge
+## Deployment
+
+### Production deployment
 - [web app](https://wikipedia2book.toolforge.org)
 - [API](https://wikipedia2book.toolforge.org/docs)
+- [Wikipedia usage](https://gmoulard.github.io/wikipedia2book/stats.html)
 
-## dev
+### developement 
 - [Northflank](https://prod--wikipedia2book--wkvpbnfj6h4v.code.run) 
 
 ## Repository structure
