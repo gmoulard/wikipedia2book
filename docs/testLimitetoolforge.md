@@ -17,18 +17,6 @@ Réglages communs à toutes les mesures : `scripts/limit_check.py`, pages liées
 | 1.8.3   | 150 articles     | 200                     |
 | 1.8.5   | au moins 150 articles | test arrêté avant 200 |
 | 1.8.6   | 800 articles     | 1 000 (erreur sans redémarrage) |
-| 1.8.6, Northflank | moins de 20 articles | 20 (redémarrage), test arrêté |
-
-## Northflank, version 1.8.6 (16/11/2026, 07:55 UTC)
-
-Premier test sur Northflank (`https://prod--wikipedia2book--wkvpbnfj6h4v.code.run`), par dichotomie (`--search 20 --precision 10`), arrêté à la demande avant la fin. Le conteneur Northflank n'a que **256 Mo de mémoire** (`limit_bytes` de `GET /api/health/details`), dont environ 130 Mo pour le serveur au repos ; il reste soumis aux limites de téléchargement de la politique robots de Wikimédia (2 PDF à la fois, 25 Mbit/s).
-
-| Articles | Résultat |
-|----------|----------|
-| 20       | échec : le serveur redémarre (démarré à 07:56:37 UTC) |
-| 10       | non terminé au bout de 218 s : fusion des parties en 124 s, ajout des signets en 61 s, conteneur à 100 % de ses 256 Mo pendant tout l'assemblage |
-
-**Limite sous 20 articles, et génération très lente dès 10** : avec 256 Mo, le conteneur passe son temps à libérer son cache de fichiers. Northflank ne peut pas servir de repli pour les gros livres refusés par Toolforge au-delà de 300 articles.
 
 ## Version 1.8.6 (16/11/2026, 04:35 UTC)
 
