@@ -63,7 +63,7 @@ def project(name, scenario, language):
     return body
 
 
-def generate(base_url, body, language, timeout=900):
+def generate(base_url, body, language, timeout=900, save_to=None):
     request = urllib.request.Request(
         f"{base_url.rstrip('/')}/api/pdf/stream?language={language}",
         data=json.dumps(body).encode("utf-8"),
@@ -89,6 +89,9 @@ def generate(base_url, body, language, timeout=900):
                 break
     if len(pdf) != event["size"] or pdf[:5] != b"%PDF-":
         raise GenerationError("PDF incomplet ou invalide")
+    if save_to is not None:
+        save_to.parent.mkdir(parents=True, exist_ok=True)
+        save_to.write_bytes(pdf)
     downloads_done = downloads_done or done
     return {
         "total_s": end - start,

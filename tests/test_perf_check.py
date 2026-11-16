@@ -103,6 +103,16 @@ class PerfCheckTest(unittest.TestCase):
         self.assertAlmostEqual(run["total_s"], run["wikipedia_s"] + run["app_s"] + run["transfer_s"], places=6)
         self.assertEqual(FakeApp.received[0][0], "/api/pdf/stream?language=fr")
 
+    def test_generate_saves_the_pdf_when_asked(self):
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as folder:
+            target = Path(folder) / "sous-dossier" / "livre.pdf"
+            run = perf_check.generate(self.url, perf_check.project("x", {"articles": ["A"]}, "fr"), "fr", save_to=target)
+            self.assertTrue(target.read_bytes().startswith(b"%PDF-"))
+            self.assertEqual(target.stat().st_size, run["size_bytes"])
+
     def test_generate_raises_on_error_event(self):
         FakeApp.fail = "Impossible de télécharger le PDF Wikipédia pour « A »."
         with self.assertRaises(perf_check.GenerationError):

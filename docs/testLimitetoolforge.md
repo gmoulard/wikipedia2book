@@ -17,6 +17,92 @@ Réglages communs à toutes les mesures : `scripts/limit_check.py`, pages liées
 | 1.8.3   | 150 articles     | 200                     |
 | 1.8.5   | au moins 150 articles | test arrêté avant 200 |
 | 1.8.6   | 800 articles     | 1 000 (erreur sans redémarrage) |
+| 1.8.9   | au moins 900 articles | 1 000 en cours de mesure |
+
+## Version 1.8.9 (16/11/2026, 08:41 UTC)
+
+Correctif des parties en double (deux titres de même clé d'article supprimaient deux fois la même partie, cause de l'échec à 1 000 articles en 1.8.6) et limite de Toolforge relevée de 300 à 2 000 articles par livre. Un seul palier, 900 articles, lancé 64 s après le démarrage du serveur (08:40:01 UTC, redémarrage du déploiement de la 1.8.9). Suivi par `GET /api/health/generations` (journal enregistré toutes les 15 s) et `GET /api/health/details` (348 relevés, toutes les 10 s, de 08:41:01 à 09:41:24 UTC).
+
+Les 900 premiers liens de l'article *France* (n° 0 à 899) ne contiennent pas les deux titres de même clé, « France Info » et « France info », qui sont les liens n° 900 et 907 : ce palier ne met pas encore le correctif à l'épreuve, celui de 1 000 articles si.
+
+### Résultat
+
+| Articles | Pages  | Taille du PDF | Wikipédia | Application | Transfert | Total     | Résultat |
+|----------|--------|---------------|-----------|-------------|-----------|-----------|----------|
+| 900      | 15 641 | 855,8 Mo      | 1 021,2 s | 897,5 s     | 1 689,9 s | 3 608,6 s | réussi   |
+
+Aucun redémarrage du serveur pendant tout le test : l'heure de démarrage reste 08:40:01 UTC dans les 348 relevés. Une seule requête de surveillance a échoué (09:48:49, heure du poste, délai de connexion TLS dépassé), suivie d'une réponse normale 13 s plus tard : incident réseau passager, sans redémarrage.
+
+### Journal de la génération
+
+Étapes de la génération n° 1 (`GET /api/health/generations`). *Assemblage* : mémoire (RSS) du processus d'assemblage ; *serveur* : mémoire du serveur ; *conteneur* : mémoire totale du conteneur, cache des fichiers compris (limite 2 048 Mo). En Mo.
+
+| Temps    | Étape                 | Processus  | Assemblage (pic) | Serveur | Conteneur | Détail |
+|----------|-----------------------|------------|------------------|---------|-----------|--------|
+| 0,0 s    | `start`               | serveur    | —                | 124     | 96        | 900 articles, A4 portrait, numérotation et table des matières, français |
+| 1 018,8 s | `downloads_done`     | serveur    | —                | 310     | 1 188     | 15 540 pages d'articles |
+| 1 020,2 s | `assembly_start`     | assemblage | 89               | 311     | 1 286     | |
+| 1 020,4 s | `render_cover`       | assemblage | 100              | 311     | 1 296     | |
+| 1 023,4 s | `render_toc_count`   | assemblage | 119              | 310     | 1 332     | 9 blocs, 27 pages de table des matières |
+| 1 027,9 s | `render_toc`         | assemblage | 123              | 310     | 1 333     | 9 blocs |
+| 1 029,0 s | `render_chapters`    | assemblage | 124              | 310     | 1 332     | aucun chapitre |
+| 1 067,0 s | `render_license`     | assemblage | 173              | 310     | 1 369     | 9 blocs |
+| 1 291,6 s | `merge_parts`        | assemblage | 325 (345)        | 308     | 1 482     | 919 parties, 15 641 pages |
+| 1 291,6 s | `merge_reopen`       | assemblage | 325 (345)        | 308     | 1 481     | |
+| 1 336,6 s | `outline_and_links`  | assemblage | 358              | 308     | 1 514     | |
+| 1 901,4 s | `stamp_page_numbers` | assemblage | 1 390            | 308     | 2 048     | |
+| 1 916,3 s | `save`               | assemblage | 1 415            | 308     | 2 048     | 855 777 235 octets |
+| 3 605,4 s | fin (`done`)         |            |                  |         |           | durée côté serveur |
+
+Durée de chaque étape de l'assemblage : pages générées (couverture, table des matières en 2 rendus de 9 blocs, licence en 9 blocs) 47 s ; fusion des 919 parties 225 s ; signets et liens de la table des matières 45 s ; **numérotation des 15 641 pages 565 s** ; écriture 15 s.
+
+### Mémoire du conteneur
+
+Relevés de `GET /api/health/details` aux moments clés (Mo ; *fichiers* = dossier temporaire de la génération) :
+
+| Heure (UTC) | Générations | Conteneur | Serveur | Fichiers | Phase |
+|-------------|-------------|-----------|---------|----------|-------|
+| 08:41:01    | 0           | 95        | 123     | 0        | avant le test |
+| 08:45:00    | 1           | 453       | 267     | 205      | téléchargements |
+| 08:50:06    | 1           | 784       | 289     | 502      | téléchargements |
+| 08:55:07    | 1           | 1 046     | 296     | 755      | téléchargements |
+| 09:00:00    | 1           | 1 802     | 308     | 1 270    | fin des téléchargements |
+| 09:02:03    | 1           | 2 048     | 308     | 1 612    | fusion |
+| 09:03:08    | 1           | 1 512     | 308     | 814      | fusion terminée, parties supprimées |
+| 09:10:01    | 1           | 2 048     | 308     | 814      | numérotation |
+| 09:15:03    | 1           | 729       | 308     | 1 630    | PDF écrit, processus d'assemblage terminé, envoi |
+| 09:30:00    | 2           | 1 229     | 308     | 1 677    | envoi, plus une autre génération |
+| 09:40:09    | 1           | 1 421     | 308     | 1 630    | fin de l'envoi |
+
+- Le conteneur a été à 100 % de sa mémoire dans 47 relevés, de 09:01:12 à 09:13:00 UTC (fusion puis numérotation), sans être arrêté : une partie de cette mémoire est du cache de fichiers, que le système reprend.
+- Fichiers temporaires au plus haut : 1 692 Mo (parties de 900 articles, puis fichier fusionné et PDF final).
+- Mémoire du serveur au plus haut : 311 Mo ; elle reste stable pendant tout l'assemblage, qui tourne dans son propre processus.
+- Pendant l'envoi, la mémoire du conteneur remonte de 729 à 1 421 Mo : c'est le cache du PDF final (816 Mio) lu pour l'envoi.
+
+### Générations simultanées
+
+Nombre de générations en cours dans les 348 relevés : 0 dans 3 relevés, 1 dans 310, 2 dans 35 (au plus 2 à la fois, de 09:28:17 à 09:37:44 UTC). Quatre autres livres ont été générés pendant l'envoi du nôtre, tous en allemand, A4, avec numérotation et table des matières :
+
+| Génération | Début (UTC) | Articles | Durée côté serveur | Taille | Résultat |
+|------------|-------------|----------|--------------------|--------|----------|
+| n° 2       | 09:28:14    | 133      | 188,5 s            | 23,5 Mio | réussi |
+| n° 3       | 09:31:54    | 5        | 7,8 s              | 1,4 Mio  | réussi |
+| n° 4       | 09:33:38    | 70       | 61,0 s             | 13,5 Mio | réussi |
+| n° 5       | 09:36:08    | 107      | 95,9 s             | 19,2 Mio | réussi |
+
+Aucune n'a chevauché l'assemblage du livre de 900 articles, terminé avant 09:15 UTC.
+
+### Comparaison avec la 1.8.6
+
+| Étape (assemblage, Mo)  | 800 articles (1.8.6) | 900 articles (1.8.9) |
+|-------------------------|----------------------|----------------------|
+| fusion des parties      | 283                  | 325                  |
+| numérotation            | 1 295 (428 s)        | 1 390 (565 s)        |
+| écriture                | 1 316                | 1 415                |
+| pic du conteneur        | 2 048                | 2 048                |
+| total côté client       | 3 468,8 s            | 3 608,6 s            |
+
+**Conclusion** : 900 articles passent (15 641 pages, 856 Mo de PDF, une heure de bout en bout), sans redémarrage, avec au plus 2 générations simultanées. La numérotation reste l'étape la plus lourde : environ 0,09 Mo par page et 9 minutes et demie à 900 articles. Le conteneur travaille à sa limite de mémoire pendant 12 minutes : 1 000 articles sont au bord de la limite, et un autre gros livre en même temps la dépasserait.
 
 ## Version 1.8.6 (16/11/2026, 04:35 UTC)
 

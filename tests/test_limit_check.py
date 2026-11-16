@@ -96,6 +96,18 @@ class LimitCheckTest(unittest.TestCase):
         self.assertEqual(attempts, ["http://x/api/version"] * 3)
         self.assertEqual(slept, [10, 10])
 
+    def test_save_dir_names_each_pdf_after_its_step(self):
+        targets = []
+
+        def generator(base_url, body, language, timeout, save_to=None):
+            targets.append(save_to)
+            return {"total_s": 1.0, "wikipedia_s": 0.5, "app_s": 0.3, "transfer_s": 0.2, "pages": 1, "size_bytes": 1}
+
+        limit_check.run("http://x", [2, 3], ["A", "B", "C"], "fr", generator=generator, save_dir=Path("tmp"))
+        self.assertEqual(targets, [Path("tmp") / "limite-2-articles.pdf", Path("tmp") / "limite-3-articles.pdf"])
+        limit_check.run("http://x", [2], ["A", "B"], "fr", generator=self.fake(10))
+        self.assertEqual(self.calls, [2])
+
     def test_report_shows_successes_and_the_failure(self):
         table = limit_check.report([
             {"articles": 25, "pages": 250, "size_bytes": 2_500_000, "wikipedia_s": 0.5, "app_s": 0.3, "transfer_s": 0.2, "total_s": 1.0},

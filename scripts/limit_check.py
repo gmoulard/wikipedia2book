@@ -50,20 +50,21 @@ def source_titles(page, language, count):
     return titles[:count]
 
 
-def measure_one(base_url, count, titles, language, generator=generate):
+def measure_one(base_url, count, titles, language, generator=generate, save_dir=None):
     body = project(f"{count} articles", {"articles": titles[:count]}, language)
+    options = {"save_to": save_dir / f"limite-{count}-articles.pdf"} if save_dir else {}
     start = time.perf_counter()
     try:
-        measure = generator(base_url, body, language, timeout=3600)
+        measure = generator(base_url, body, language, timeout=3600, **options)
     except (GenerationError, OSError, ValueError) as error:
         return {"articles": count, "error": f"{type(error).__name__}: {error}", "after_s": round(time.perf_counter() - start, 1)}
     return {"articles": count, **{key: round(value, 1) if isinstance(value, float) else value for key, value in measure.items()}}
 
 
-def run(base_url, steps, titles, language, generator=generate):
+def run(base_url, steps, titles, language, generator=generate, save_dir=None):
     results = []
     for count in steps:
-        results.append(measure_one(base_url, count, titles, language, generator))
+        results.append(measure_one(base_url, count, titles, language, generator, save_dir))
         if "error" in results[-1]:
             break
     return results
@@ -82,11 +83,11 @@ def wait_for_server(base_url, opener=urllib.request.urlopen, sleep=time.sleep, t
     raise SystemExit(f"{base_url} ne répond plus depuis {timeout_s} s")
 
 
-def search(base_url, titles, language, start, precision, maximum, generator=generate, wait=wait_for_server):
+def search(base_url, titles, language, start, precision, maximum, generator=generate, wait=wait_for_server, save_dir=None):
     results = []
     passed, failed, count = 0, None, start
     while True:
-        results.append(measure_one(base_url, count, titles, language, generator))
+        results.append(measure_one(base_url, count, titles, language, generator, save_dir))
         if "error" in results[-1]:
             failed = count
             wait(base_url)
@@ -133,16 +134,17 @@ def main():
     parser.add_argument("--search", type=int, metavar="DEPART", help="dichotomie : double à partir de DEPART jusqu'au premier échec, puis coupe l'intervalle en deux")
     parser.add_argument("--precision", type=int, default=50)
     parser.add_argument("--max", type=int, default=2000, dest="maximum")
+    parser.add_argument("--save-pdf", type=Path, metavar="DOSSIER", help="enregistre chaque PDF reçu dans DOSSIER (limite-<N>-articles.pdf), par exemple ./tmp, ignoré par git")
     args = parser.parse_args()
     if args.search:
         titles = source_titles(args.source_page, args.language, args.maximum)
-        results, passed, failed = search(args.base_url, titles, args.language, args.search, args.precision, args.maximum)
+        results, passed, failed = search(args.base_url, titles, args.language, args.search, args.precision, args.maximum, save_dir=args.save_pdf)
         print(report(results))
         print(summary(passed, failed, args.maximum))
     else:
         steps = [int(step) for step in args.steps.split(",")]
         titles = source_titles(args.source_page, args.language, max(steps))
-        results = run(args.base_url, steps, titles, args.language)
+        results = run(args.base_url, steps, titles, args.language, save_dir=args.save_pdf)
         print(report(results))
     print(json.dumps(results, ensure_ascii=False))
 
