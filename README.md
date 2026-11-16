@@ -41,10 +41,10 @@ Functional and technical details
 ## Deployment
 
 ### Production deployment
-- [web app](https://wikipedia2book.toolforge.org)
+- [web app](https://wikipedia2book.toolforge.org) - [exemple](https://wikipedia2book.toolforge.org/?json=https://gmoulard.github.io/wikipedia2book/static/Wrecks-of-Saint-Pierre-harbor.json)
+
 - [API](https://wikipedia2book.toolforge.org/docs)
 - [Toolforge usage](https://gmoulard.github.io/wikipedia2book/stats.html)
-- [exemple](https://wikipedia2book.toolforge.org/?json=https://gmoulard.github.io/wikipedia2book/static/Wrecks-of-Saint-Pierre-harbor.json)
 
 ### developement 
 - [Northflank](https://prod--wikipedia2book--wkvpbnfj6h4v.code.run) 
