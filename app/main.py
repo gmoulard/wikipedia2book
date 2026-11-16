@@ -98,13 +98,13 @@ from app.wikipedia_api import (
 
 PROJECT_NAMESPACES_START = 100
 TOOLFORGE_DOWNLOADS = 4
-TOOLFORGE_ARTICLE_LIMIT = 300
+TOOLFORGE_ARTICLE_LIMIT = 2000
 
 
 def deployment_settings(environ: Mapping[str, str], on_toolforge: bool) -> tuple[int | None, int]:
     limit_text = environ.get("WIKIPEDIA2BOOK_ARTICLE_LIMIT", "").strip()
     if not limit_text:
-        # NE PAS lever cette limite sur Toolforge : chaque livre télécharge tous ses articles auprès du service PDF de Wikimédia, et au-delà un gros livre occupe aussi presque toute la mémoire du conteneur (2 Gio, docs/testLimitetoolforge.md).
+        # NE PAS supprimer cette limite sur Toolforge : chaque livre télécharge tous ses articles auprès du service PDF de Wikimédia. Sa valeur (2000, choix de l'utilisateur) dépasse la limite mesurée de la mémoire du conteneur, entre 800 et 1 000 articles avec 2 Gio (docs/testLimitetoolforge.md) : en dessous, un trop gros livre fait redémarrer le serveur au lieu d'être refusé.
         article_limit = TOOLFORGE_ARTICLE_LIMIT if on_toolforge else None
     elif limit_text.isdigit():
         article_limit = int(limit_text) or None

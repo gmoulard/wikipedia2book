@@ -115,6 +115,20 @@ class BookAssemblyTest(unittest.TestCase):
                 if index:
                     self.assertIn(str(index + 1), page.extract_text())
 
+    def test_a_part_listed_twice_is_merged_twice_and_deleted_once(self):
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as workdir:
+            twice = Path(workdir) / "twice.pdf"
+            once = Path(workdir) / "once.pdf"
+            twice.write_bytes(_make_pdf(2, size=(300, 400)))
+            once.write_bytes(_make_pdf(1, size=(300, 400)))
+            merged = Path(workdir) / "merged.pdf"
+            merge_files([twice, once, twice], merged)
+            self.assertEqual(len(PdfReader(str(merged)).pages), 5)
+            self.assertFalse(twice.exists() or once.exists())
+
     def test_parts_keep_their_order_and_the_outline_points_to_their_pages(self):
         outline = [OutlineEntry("Livre", 0, [OutlineEntry("A", 1), OutlineEntry("B", 3)])]
         reader = self._assemble(_make_pdf(1, (300, 400)), _make_pdf(2, (300, 400)), _make_pdf(1, (300, 400)), stamp=False, outline=outline)

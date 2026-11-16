@@ -146,7 +146,8 @@ def merge_files(parts: list[Path], merged: Path) -> None:
         finally:
             book.close()
     # NE PAS garder les fichiers des parties après la fusion : avec le fichier fusionné et le PDF final, l'espace temporaire monterait à trois fois la taille du livre, ce qui dépasse vite le quota d'espace temporaire d'un hébergeur.
-    for path in parts:
+    # NE PAS parcourir parts tel quel : une même partie peut y figurer plusieurs fois (deux titres de même clé d'article, « France Info » et « France info »), et sa seconde suppression échouerait.
+    for path in dict.fromkeys(parts):
         path.unlink()
 
 

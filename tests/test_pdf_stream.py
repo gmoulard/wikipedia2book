@@ -180,6 +180,13 @@ class PdfStreamTest(unittest.TestCase):
         response = self.client.post("/api/pdf/stream", json=project)
         self.assertEqual(response.status_code, 400)
 
+    def test_two_titles_with_the_same_key_still_give_a_pdf(self):
+        project = _project()
+        project["main_articles"].append({"title": "chat", "language": "fr", "url": "https://fr.wikipedia.org/wiki/chat", "selected": True})
+        response = self.client.post("/api/pdf", json=project)
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertGreater(len(PdfReader(BytesIO(response.content)).pages), 1 + 1 + 2 + 2 + 1)
+
     def test_plain_pdf_endpoint_still_returns_the_pdf(self):
         response = self.client.post("/api/pdf", json=_project())
         self.assertEqual(response.status_code, 200)
@@ -530,14 +537,14 @@ class PdfStreamTest(unittest.TestCase):
         self.assertIsNone(main.ARTICLE_LIMIT)
 
     def test_deployment_settings_defaults_per_platform(self):
-        self.assertEqual(main.deployment_settings({}, on_toolforge=True), (300, 4))
+        self.assertEqual(main.deployment_settings({}, on_toolforge=True), (2000, 4))
         self.assertEqual(main.deployment_settings({}, on_toolforge=False), (None, 2))
 
     def test_deployment_settings_from_the_environment(self):
         settings = main.deployment_settings
         self.assertEqual(settings({"WIKIPEDIA2BOOK_ARTICLE_LIMIT": "40", "WIKIPEDIA2BOOK_DOWNLOADS": "1"}, on_toolforge=False), (40, 1))
         self.assertEqual(settings({"WIKIPEDIA2BOOK_ARTICLE_LIMIT": "0"}, on_toolforge=True), (None, 4))
-        self.assertEqual(settings({"WIKIPEDIA2BOOK_ARTICLE_LIMIT": " "}, on_toolforge=True), (300, 4))
+        self.assertEqual(settings({"WIKIPEDIA2BOOK_ARTICLE_LIMIT": " "}, on_toolforge=True), (2000, 4))
         for environ, on_toolforge in (
             ({"WIKIPEDIA2BOOK_DOWNLOADS": "3"}, False),
             ({"WIKIPEDIA2BOOK_DOWNLOADS": "5"}, True),
