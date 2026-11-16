@@ -101,6 +101,8 @@ The software handles a single book at a time, built entirely in the browser's me
 
 * The user can import a previously downloaded JSON file to resume a book; the import replaces the current book.
 
+* A book can also be opened from the address of a JSON file published online, by passing it in the page address: `https://wikipedia2book.toolforge.org/?json=<file-url>` (for example `?json=https://gmoulard.github.io/wikipedia2book/static/Wrecks-of-Saint-Pierre-harbor.json`). The browser reads the file (`fetchWorkspaceText` in `app.js`), like an import: the site hosting it must allow it (CORS), as GitHub Pages and raw.githubusercontent.com do; otherwise, or if the file is not a valid book, an "Import JSON impossible: …" message is shown and the page stays on an empty book. The server never sees this address.
+
 * The server never persists any book or file on its disk: persistence is entirely up to the user, by downloading and later manually importing the JSON file. Only temporary files exist for the duration of a PDF generation (section 11.1), deleted as soon as it ends, fails or is abandoned.
 
 The book contains in particular:
@@ -616,6 +618,8 @@ GET endpoints can be opened directly in the address bar:
 
 * Generate the PDF of a Wikipedia book page: `http://localhost:8000/api/books/generate-from-wikipedia-book?url=https%3A%2F%2Ffr.wikipedia.org%2Fwiki%2FLivre%3AAnimaux`. The `url` parameter is required; `language` is optional and defaults to `fr`. Also accepted, all optional: `book_title`, `book_subtitle`, `book_author`, `book_conclusion`, `page_format`, `orientation`, `page_numbers`, `table_of_contents`. The PDF is returned as a download.
 
+* Generate the PDF of a book saved as JSON and published online: `http://localhost:8000/api/pdf/from-json?url=https%3A%2F%2Fgmoulard.github.io%2Fwikipedia2book%2Fstatic%2FWrecks-of-Saint-Pierre-harbor.json`, with optional `language` (`fr` by default, same values as `/api/pdf`). The server downloads the file (`app/json_source.py`, `fetch_project`): HTTPS only, a host that must resolve to public addresses (refusing `127.0.0.1`, `10.x`, `192.168.x`, link-local addresses…, checked again at each redirect, 3 redirects at most), 60 MB at most, 30 s at most; the file can be an interface export (`wikipedia2book-workspace`, first book), a list of books (the first one) or a single book. It is only kept in memory during the generation, like a book sent to `POST /api/pdf`, and the generation follows the same rules (selection, article limit, PDF as a download). Errors: 422 (refused address, invalid JSON or book, missing `url`), 413 (file too large), 502 (download impossible, HTTP other than 200, too many redirects). Tests: `tests/test_json_source.py`.
+
 * Check that the service responds: `http://localhost:8000/health`.
 
 * Show the interactive documentation and also call the POST endpoints: `http://localhost:8000/docs`.
@@ -953,6 +957,7 @@ flowchart TB
         BB["book_builder.py<br/>order, chapters, HTML of generated pages"]
         PDFG["pdf_generator.py<br/>WeasyPrint · pypdf · PyMuPDF · reportlab"]
         WAPI["wikipedia_api.py<br/>MediaWikiClient"]
+        JSRC["json_source.py<br/>JSON book from a URL"]
         MODELS["models.py<br/>Project · Article · UploadedDocument · BookChapter"]
         MAIN --> EXPL
         MAIN --> BB
@@ -960,6 +965,7 @@ flowchart TB
         MAIN --> ISO
         MAIN --> PDFG
         MAIN --> WAPI
+        MAIN --> JSRC
         EXPL --> WAPI
     end
 
@@ -978,7 +984,7 @@ flowchart TB
     classDef app fill:#eaf3ff,stroke:#3366cc,color:#202122
     classDef wiki fill:#fef6e7,stroke:#ac6600,color:#202122
     classDef shared fill:#f8f9fa,stroke:#a2a9b1,color:#202122
-    class I18N,APP,FILE,MAIN,EXPL,BB,PDFG,WAPI,ISO app
+    class I18N,APP,FILE,MAIN,EXPL,BB,PDFG,WAPI,ISO,JSRC app
     class MW,REST wiki
     class MODELS shared
 ```
@@ -1221,6 +1227,7 @@ Wikipedia2Book/
 │   ├── models.py
 │   ├── wikipedia_api.py
 │   ├── explorer.py
+│   ├── json_source.py
 │   ├── book_builder.py
 │   ├── pdf_generator.py
 │   ├── isolation.py
@@ -1252,6 +1259,7 @@ Wikipedia2Book/
 │   ├── test_wikipedia_api.py
 │   ├── test_pdf_stream.py
 │   ├── test_resolve_source.py
+│   ├── test_json_source.py
 │   ├── test_toolviews_stats.py
 │   ├── test_toolforge_hourly.py
 │   ├── test_hourly_stats.py

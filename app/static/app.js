@@ -597,6 +597,14 @@ async function loadProjects() {
   state.project = normalizeProject({ id: crypto.randomUUID(), name: t('heading.defaultName'), created_at: now, updated_at: now });
   renderWorkspace();
   setView('sources');
+  const jsonUrl = new URLSearchParams(window.location.search).get('json');
+  if (jsonUrl) await importWorkspace(() => fetchWorkspaceText(jsonUrl));
+}
+
+async function fetchWorkspaceText(url) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.text();
 }
 
 // NE PAS écraser introduction/book_author déjà renseignés ni appeler ailleurs qu'au passage de 0 à 1 article (wasFirst capturé avant le push).
@@ -1187,10 +1195,10 @@ function readWorkspace(payload) {
   throw new Error(t('export.invalidJsonFile'));
 }
 
-async function importWorkspace(file) {
+async function importWorkspace(readText) {
   if (state.isDirty && !window.confirm(t('export.confirmReplace'))) return;
   try {
-    const payload = JSON.parse(await file.text());
+    const payload = JSON.parse(await readText());
     const projects = readWorkspace(payload);
     if (projects.some((p) => !p || typeof p.id !== 'string' || typeof p.name !== 'string' || !p.name.trim())) throw new Error(t('export.invalidProjectInFile'));
     state.project = normalizeProject(projects[0]);
@@ -1321,7 +1329,7 @@ $('#documentFileInput').addEventListener('change', async (event) => {
 });
 $('#workspaceFileInput').addEventListener('change', async (event) => {
   const file = event.target.files?.[0];
-  if (file) await importWorkspace(file);
+  if (file) await importWorkspace(() => file.text());
 });
 window.addEventListener('beforeunload', (event) => {
   if (state.isDirty) { event.preventDefault(); event.returnValue = ''; }

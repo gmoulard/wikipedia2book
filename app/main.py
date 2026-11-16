@@ -56,6 +56,7 @@ from app.book_builder import (
 )
 from app.explorer import discover_related_articles
 from app.isolation import IsolatedProcessDied, preload, run_in_thread, run_isolated
+from app.json_source import JsonSourceError, fetch_project
 from app.models import (
     Article,
     ArticleRequest,
@@ -812,6 +813,18 @@ async def _pdf_chunks(path: Path):
 async def create_pdf(
     project: Project, language: str = Query(default="fr", pattern=PDF_LANGUAGE_PATTERN)
 ) -> Response:
+    return await _create_pdf_response(project, language)
+
+
+@app.get("/api/pdf/from-json")
+async def create_pdf_from_json(
+    url: str = Query(min_length=1, max_length=2048),
+    language: str = Query(default="fr", pattern=PDF_LANGUAGE_PATTERN),
+) -> Response:
+    try:
+        project = await fetch_project(url)
+    except JsonSourceError as error:
+        raise HTTPException(status_code=error.status_code, detail=str(error)) from error
     return await _create_pdf_response(project, language)
 
 

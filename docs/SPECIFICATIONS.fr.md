@@ -98,6 +98,8 @@ Le logiciel gère un seul livre à la fois, construit entièrement en mémoire d
 
 * L'utilisateur peut importer un fichier JSON précédemment téléchargé pour reprendre un livre; l'import remplace le livre en cours.
 
+* Un livre peut aussi s'ouvrir depuis l'adresse d'un fichier JSON publié en ligne, en la passant dans l'adresse de la page : `https://wikipedia2book.toolforge.org/?json=<url-du-fichier>` (par exemple `?json=https://gmoulard.github.io/wikipedia2book/static/Wrecks-of-Saint-Pierre-harbor.json`). C'est le navigateur qui lit le fichier (`fetchWorkspaceText` dans `app.js`), comme un import : il faut que le site qui l'héberge l'autorise (CORS), ce que font GitHub Pages et raw.githubusercontent.com ; sinon, ou si le fichier n'est pas un livre valide, un message « Import JSON impossible : … » s'affiche et la page reste sur un livre vide. Le serveur, lui, ne voit pas cette adresse.
+
 * Le serveur ne persiste aucun livre ni fichier sur son disque : la persistance est entièrement à la charge de l'utilisateur, via le téléchargement puis l'import manuel du fichier JSON. Seuls des fichiers temporaires existent le temps d'une génération de PDF (section 11.1), supprimés dès qu'elle se termine, échoue ou est abandonnée.
 
 Le livre contient notamment :
@@ -613,6 +615,8 @@ Les endpoints GET peuvent être ouverts directement dans la barre d'adresse :
 
 * Générer le PDF d'une page de livre Wikipédia : `http://localhost:8000/api/books/generate-from-wikipedia-book?url=https%3A%2F%2Ffr.wikipedia.org%2Fwiki%2FLivre%3AAnimaux`. Le paramètre `url` est obligatoire; `language` est facultatif et vaut `fr` par défaut. Sont aussi acceptés, facultatifs : `book_title`, `book_subtitle`, `book_author`, `book_conclusion`, `page_format`, `orientation`, `page_numbers`, `table_of_contents`. Le PDF est renvoyé en téléchargement.
 
+* Générer le PDF d'un livre enregistré en JSON et publié en ligne : `http://localhost:8000/api/pdf/from-json?url=https%3A%2F%2Fgmoulard.github.io%2Fwikipedia2book%2Fstatic%2FWrecks-of-Saint-Pierre-harbor.json`, avec `language` facultatif (`fr` par défaut, mêmes valeurs que `/api/pdf`). Le serveur télécharge le fichier (`app/json_source.py`, `fetch_project`) : HTTPS seulement, hôte qui doit se résoudre en adresses publiques (refus de `127.0.0.1`, `10.x`, `192.168.x`, adresses de lien local…, vérifié de nouveau à chaque redirection, 3 redirections au plus), 60 Mo au plus, 30 s au plus ; le fichier peut être un export de l'interface (`wikipedia2book-workspace`, premier livre), une liste de livres (le premier) ou un livre seul. Il n'est gardé qu'en mémoire le temps de la génération, comme un livre envoyé à `POST /api/pdf`, et la génération suit les mêmes règles (sélection, limite d'articles, PDF en téléchargement). Erreurs : 422 (adresse refusée, JSON ou livre invalide, `url` absent), 413 (fichier trop gros), 502 (téléchargement impossible, HTTP autre que 200, trop de redirections). Tests : `tests/test_json_source.py`.
+
 * Vérifier que le service répond : `http://localhost:8000/health`.
 
 * Afficher la documentation interactive et appeler également les endpoints POST : `http://localhost:8000/docs`.
@@ -950,6 +954,7 @@ flowchart TB
         BB["book_builder.py<br/>ordre, chapitres, HTML des pages générées"]
         PDFG["pdf_generator.py<br/>WeasyPrint · pypdf · PyMuPDF · reportlab"]
         WAPI["wikipedia_api.py<br/>MediaWikiClient"]
+        JSRC["json_source.py<br/>livre JSON depuis une URL"]
         MODELS["models.py<br/>Project · Article · UploadedDocument · BookChapter"]
         MAIN --> EXPL
         MAIN --> BB
@@ -957,6 +962,7 @@ flowchart TB
         MAIN --> ISO
         MAIN --> PDFG
         MAIN --> WAPI
+        MAIN --> JSRC
         EXPL --> WAPI
     end
 
@@ -975,7 +981,7 @@ flowchart TB
     classDef app fill:#eaf3ff,stroke:#3366cc,color:#202122
     classDef wiki fill:#fef6e7,stroke:#ac6600,color:#202122
     classDef shared fill:#f8f9fa,stroke:#a2a9b1,color:#202122
-    class I18N,APP,FILE,MAIN,EXPL,BB,PDFG,WAPI,ISO app
+    class I18N,APP,FILE,MAIN,EXPL,BB,PDFG,WAPI,ISO,JSRC app
     class MW,REST wiki
     class MODELS shared
 ```
@@ -1218,6 +1224,7 @@ Wikipedia2Book/
 │   ├── models.py
 │   ├── wikipedia_api.py
 │   ├── explorer.py
+│   ├── json_source.py
 │   ├── book_builder.py
 │   ├── pdf_generator.py
 │   ├── isolation.py
@@ -1249,6 +1256,7 @@ Wikipedia2Book/
 │   ├── test_wikipedia_api.py
 │   ├── test_pdf_stream.py
 │   ├── test_resolve_source.py
+│   ├── test_json_source.py
 │   ├── test_toolviews_stats.py
 │   ├── test_toolforge_hourly.py
 │   ├── test_hourly_stats.py

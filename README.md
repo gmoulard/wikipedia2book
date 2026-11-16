@@ -9,7 +9,7 @@ Available for: Wikipedia, Wikisource, Wikibooks, Wikivoyage, Wikiversity, Wikiqu
 
 ## Features
 
-- A single book, built in browser memory; its state can be exported/imported as a JSON file.
+- A single book, built in browser memory; its state can be exported/imported as a JSON file, or opened from the address of a published JSON file (`/?json=<url>`); `GET /api/pdf/from-json?url=<url>` returns the PDF of such a file directly.
 - A single input field for an article URL, a Wikipedia book page or a title: the kind of page is detected automatically on Wikipedia (`POST /api/sources/resolve`); the full content is only fetched at generation time.
 - Import the list of articles from a Wikipedia book page, in their actual order.
 - Pages of the other Wikimedia projects (Wikisource, Wikibooks, Wikivoyage, Wikiversity, Wikiquote, Wiktionary, Wikinews) accepted by URL or interwiki prefix (`b:Title`, `voy:fr:Title`), with the project's official PDF.
@@ -57,6 +57,7 @@ wikipedia2book/
 │   ├── models.py                # Pydantic models: the whole book state (Project, Article, UploadedDocument)
 │   ├── wikipedia_api.py         # Single MediaWiki client: search, links, book pages, official PDFs
 │   ├── explorer.py              # Breadth-first exploration of internal links
+│   ├── json_source.py           # Downloads a JSON book from a URL for /api/pdf/from-json
 │   ├── book_builder.py          # HTML for cover, table of contents, chapters, license and conclusion
 │   ├── pdf_generator.py         # WeasyPrint rendering, page fitting, page numbers, image import
 │   ├── isolation.py             # Runs the book assembly in a separate process (memory given back after each book)
