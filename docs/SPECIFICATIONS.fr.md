@@ -1,6 +1,6 @@
 # Wikipedia2Book — Spécifications fonctionnelles et techniques
 
-
+<img src="https://gmoulard.github.io/wikipedia2book/static/Wikipedia2bookLogoPrint.png" alt="Wikipedia2Book logo">
 Traduction anglaise : [SPECIFICATIONS.en.md](SPECIFICATIONS.en.md). Ce document en français fait référence.
 
 ## Table des matières
