@@ -532,6 +532,13 @@ class PdfStreamTest(unittest.TestCase):
         with patch.object(main, "ARTICLE_LIMIT", 2), patch.object(main, "MediaWikiClient", FakeClient), patch.object(main, "generate_pdf", lambda html: _make_pdf(1)):
             self.assertEqual(self.client.post("/api/pdf", json=_project()).status_code, 200)
 
+    def test_version_exposes_the_article_limit_for_volumes(self):
+        with patch.object(main, "ARTICLE_LIMIT", 300):
+            details = self.client.get("/api/version").json()
+        self.assertEqual(details["article_limit"], 300)
+        self.assertIn("version", details)
+        self.assertIsNone(self.client.get("/api/version").json()["article_limit"])
+
     def test_no_article_limit_outside_toolforge(self):
         self.assertFalse(main.ON_TOOLFORGE)
         self.assertIsNone(main.ARTICLE_LIMIT)

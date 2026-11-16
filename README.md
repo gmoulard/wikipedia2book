@@ -116,7 +116,7 @@ Two settings control how heavy a generation can be. They are environment variabl
 
 | Variable | Default in the `Dockerfile` | Meaning |
 |---|---|---|
-| `WIKIPEDIA2BOOK_ARTICLE_LIMIT` | `0` (no limit) | Maximum number of articles per book. Beyond it, generation is refused at once (HTTP 413, code `too_many_articles`) and the interface explains it is a deliberate limit. `0` lifts the limit. |
+| `WIKIPEDIA2BOOK_ARTICLE_LIMIT` | `0` (no limit) | Maximum number of articles per book. Beyond it, the API refuses the book at once (HTTP 413, code `too_many_articles`); the web interface reads the limit from `/api/version` and generates the book in several volumes instead, each under the limit. `0` lifts the limit. |
 | `WIKIPEDIA2BOOK_DOWNLOADS` | `2` | Number of article PDFs downloaded from Wikipedia at the same time for a book. |
 
 Change them in the `Dockerfile` and rebuild the image, or override them when starting the container, without rebuilding:

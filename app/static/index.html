@@ -100,6 +100,7 @@
             <p data-i18n="org.intro">Glissez-déposez les éléments pour les réorganiser. La table des matières peut être placée n'importe où, ou retirée.</p>
           </div>
           <div class="organization-toolbar"><div class="selection-summary"><span class="selection-number" id="organizationCount">0</span><span data-i18n="org.countLabel">articles retenus pour le livre</span></div><div class="organization-actions"><button class="button button-outline" id="addTocButton" type="button" hidden data-i18n-title="org.addTocTitle" title="Remettre la table des matières dans le livre"><span aria-hidden="true">+</span> <span data-i18n="org.toc">Table des matières</span></button><button class="button button-outline" id="addChapterButton" type="button"><span data-i18n="org.addChapter">Créer un chapitre</span> <span aria-hidden="true">+</span></button></div></div>
+          <p class="org-volumes-hint" id="organizationVolumes" role="status" hidden></p>
           <div class="upload-box">
             <div class="explore-head"><span class="explore-icon" aria-hidden="true">📎</span><div><strong data-i18n="org.uploadTitle">Importer un document</strong><small data-i18n="org.uploadSubtitle">Image ou PDF, intégré comme un article du livre</small></div></div>
             <input id="documentFileInput" type="file" accept="image/*,application/pdf" multiple hidden>
@@ -165,6 +166,7 @@
   <div id="pdfProgress" class="pdf-progress" hidden>
     <div class="pdf-progress-card" role="status" aria-live="polite">
       <p class="dialog-kicker" data-i18n="progress.title">GÉNÉRATION DU PDF</p>
+      <p class="pdf-progress-step" id="pdfProgressVolume" hidden></p>
       <p class="pdf-progress-step" id="pdfProgressStep"></p>
       <p class="pdf-progress-label" id="pdfProgressLabel"></p>
       <p class="pdf-progress-wait" id="pdfProgressWait" role="status" hidden></p>

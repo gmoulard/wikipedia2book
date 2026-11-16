@@ -24,6 +24,7 @@ const state = {
   searchTimer: null,
   toastTimer: null,
   isDirty: false,
+  articleLimit: null,
 };
 
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -264,6 +265,9 @@ function renderOrganization() {
   const articles = orderedSelectedArticles();
   $('#organizationCount').textContent = articles.length;
   $('#addTocButton').hidden = project.table_of_contents !== false;
+  const volumes = bookVolumes();
+  $('#organizationVolumes').hidden = !volumes;
+  if (volumes) $('#organizationVolumes').textContent = t('org.volumesHint', { limit: state.articleLimit, count: volumes.length });
 
   if (!articles.length) {
     $('#organizationList').innerHTML = `<div class="org-empty">${escapeHtml(t('org.emptyListLine1'))}<br>${escapeHtml(t('org.emptyListLine2'))}</div>`;
@@ -465,6 +469,7 @@ async function loadProjects() {
     const parts = [v.version, v.short, date, v.author].filter(Boolean);
     $('#appVersion').textContent = `v\u00a0${parts.join('\u00a0\u00b7\u00a0')}`;
     $('#appVersion').title = v.commit;
+    state.articleLimit = v.article_limit ?? null;
   } catch { /* version non critique */ }
   const now = new Date().toISOString();
   state.project = normalizeProject({ id: crypto.randomUUID(), name: t('heading.defaultName'), created_at: now, updated_at: now });
@@ -835,6 +840,7 @@ function hidePdfWait() {
 
 function hidePdfProgress() {
   hidePdfWait();
+  $('#pdfProgressVolume').hidden = true;
   $('#pdfProgressRetry').hidden = true;
   $('#pdfProgress').hidden = true;
 }
@@ -904,6 +910,89 @@ async function streamPdf(project) {
   }
 }
 
+function countsTowardLimit(item) {
+  return !item.kind;
+}
+
+function limitedArticleCount() {
+  return selectedArticles().filter(countsTowardLimit).length;
+}
+
+// NE PAS couper un chapitre tant qu'il tient dans un volume : la coupure se fait entre deux chapitres, et à l'intérieur d'un chapitre seulement s'il dépasse la limite à lui seul.
+function planVolumes(limit) {
+  const units = [];
+  buildOrgSlots().forEach((slot) => {
+    if (slot.type !== 'article') return;
+    const last = units[units.length - 1];
+    if (last && last.chapterId === slot.chapterId) last.items.push(slot.article);
+    else units.push({ chapterId: slot.chapterId, items: [slot.article] });
+  });
+  const volumes = [];
+  let current = [];
+  let count = 0;
+  const close = () => {
+    if (current.length) volumes.push(current);
+    current = [];
+    count = 0;
+  };
+  units.forEach((unit) => {
+    if (count + unit.items.filter(countsTowardLimit).length > limit) close();
+    unit.items.forEach((item) => {
+      if (countsTowardLimit(item) && count >= limit) close();
+      current.push(item);
+      if (countsTowardLimit(item)) count += 1;
+    });
+  });
+  close();
+  return volumes;
+}
+
+function bookVolumes() {
+  const limit = state.articleLimit;
+  if (!state.project || !limit || limitedArticleCount() <= limit) return null;
+  return planVolumes(limit);
+}
+
+function volumeProject(project, items, index, total) {
+  const keys = new Set(items.map(articleKey));
+  const copy = JSON.parse(JSON.stringify({ ...project, uploaded_documents: [] }));
+  copy.uploaded_documents = (project.uploaded_documents || []).filter((item) => keys.has(articleKey(item)));
+  [...copy.main_articles, ...copy.discovered_articles].forEach((item) => { item.selected = keys.has(articleKey(item)); });
+  const title = (project.book_title || defaultBookTitle() || project.name).slice(0, 170);
+  copy.book_title = t('export.volumeTitle', { title, index: index + 1, count: total });
+  if (index > 0) copy.introduction = '';
+  if (index < total - 1) copy.conclusion = '';
+  return copy;
+}
+
+async function generatePdf(project) {
+  let crashes = 0;
+  for (;;) {
+    try {
+      return await streamPdf(project);
+    } catch (error) {
+      // NE PAS relancer sur une erreur renvoyée par le serveur (article introuvable, requête invalide…) : seul un plantage (connexion coupée, serveur en redémarrage) justifie de repartir de zéro.
+      if (!(error instanceof ServerCrashError)) throw error;
+      crashes += 1;
+      if (crashes > PDF_AUTO_RETRIES && !window.confirm(t('export.retryConfirm', { count: crashes }))) throw error;
+      showPdfProgress(null);
+      showPdfRetry(crashes);
+      await waitForServer();
+    }
+  }
+}
+
+function downloadPdf(blob, name) {
+  const objectUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = objectUrl;
+  anchor.download = `${name}.pdf`;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+}
+
 // NE PAS désactiver les boutons pour une sélection vide : seulement pendant une génération (message ci-dessous sinon).
 async function exportPdf() {
   if (!state.project || !selectedArticles().length) {
@@ -915,29 +1004,29 @@ async function exportPdf() {
   setSaveState(t('export.generating'));
   showPdfProgress(null);
   try {
-    let crashes = 0;
-    let blob = null;
-    while (!blob) {
+    let volumes = bookVolumes();
+    if (!volumes) {
       try {
-        blob = await streamPdf(state.project);
+        downloadPdf(await generatePdf(state.project), bookFileName(state.project));
       } catch (error) {
-        // NE PAS relancer sur une erreur renvoyée par le serveur (article introuvable, requête invalide…) : seul un plantage (connexion coupée, serveur en redémarrage) justifie de repartir de zéro.
-        if (!(error instanceof ServerCrashError)) throw error;
-        crashes += 1;
-        if (crashes > PDF_AUTO_RETRIES && !window.confirm(t('export.retryConfirm', { count: crashes }))) throw error;
-        showPdfProgress(null);
-        showPdfRetry(crashes);
-        await waitForServer();
+        if (error.detail?.code !== 'too_many_articles') throw error;
+        state.articleLimit = error.detail.limit;
+        volumes = bookVolumes();
+        if (!volumes) throw error;
       }
     }
-    const objectUrl = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = objectUrl;
-    anchor.download = `${bookFileName(state.project)}.pdf`;
-    document.body.append(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(objectUrl);
+    if (volumes) {
+      const notice = t('export.volumesNotice', { articles: limitedArticleCount(), limit: state.articleLimit, count: volumes.length });
+      showToast(notice);
+      for (const [index, items] of volumes.entries()) {
+        showPdfProgress(null);
+        $('#pdfProgressVolume').hidden = false;
+        $('#pdfProgressVolume').textContent = t('progress.volume', { index: index + 1, count: volumes.length });
+        $('#pdfProgressVolume').title = notice;
+        // NE PAS envoyer tout le livre en une requête : chaque volume reste sous la limite, et sa numérotation des pages repart de 1.
+        downloadPdf(await generatePdf(volumeProject(state.project, items, index, volumes.length)), `${bookFileName(state.project)}-${index + 1}`);
+      }
+    }
     setSaveState(state.isDirty ? t('export.toDownload') : t('export.loadedInMemory'));
     showToast(t('export.ready'));
   } catch (error) {

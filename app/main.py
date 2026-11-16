@@ -281,7 +281,11 @@ def generation_journal(response: Response) -> dict:
 
 
 @app.get("/api/version")
-def version() -> dict[str, str]:
+def version() -> dict[str, str | int | None]:
+    return {**_version_details(), "article_limit": ARTICLE_LIMIT}
+
+
+def _version_details() -> dict[str, str]:
     try:
         commit = subprocess.check_output(
             ["git", "log", "-1", "--format=%H|%h|%ci|%an"], text=True, stderr=subprocess.DEVNULL
