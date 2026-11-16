@@ -1,0 +1,431 @@
+{
+  "format": "wikipedia2book-workspace",
+  "version": 1,
+  "projects": [
+    {
+      "id": "a94b220c-8f18-4384-9ce0-6741d9625bac",
+      "name": "Cosmologie",
+      "book_title": "Cosmologie",
+      "book_subtitle": "",
+      "book_author": "",
+      "introduction": "",
+      "conclusion": "",
+      "main_articles": [
+        {
+          "page_id": null,
+          "title": "Cosmologie/Le paradoxe d'Olbers",
+          "language": "fr",
+          "site": "wikibooks",
+          "url": "https://fr.wikibooks.org/wiki/Cosmologie%2FLe_paradoxe_d'Olbers",
+          "summary": "",
+          "origin_title": null,
+          "depth": 0,
+          "selected": true
+        },
+        {
+          "page_id": null,
+          "title": "Cosmologie/Le décalage vers le rouge (redshift)",
+          "language": "fr",
+          "site": "wikibooks",
+          "url": "https://fr.wikibooks.org/wiki/Cosmologie%2FLe_d%C3%A9calage_vers_le_rouge_(redshift)",
+          "summary": "",
+          "origin_title": null,
+          "depth": 0,
+          "selected": true
+        },
+        {
+          "page_id": null,
+          "title": "Cosmologie/L'expansion de l'univers",
+          "language": "fr",
+          "site": "wikibooks",
+          "url": "https://fr.wikibooks.org/wiki/Cosmologie%2FL'expansion_de_l'univers",
+          "summary": "",
+          "origin_title": null,
+          "depth": 0,
+          "selected": true
+        },
+        {
+          "page_id": null,
+          "title": "Cosmologie/Le facteur de Hubble",
+          "language": "fr",
+          "site": "wikibooks",
+          "url": "https://fr.wikibooks.org/wiki/Cosmologie%2FLe_facteur_de_Hubble",
+          "summary": "",
+          "origin_title": null,
+          "depth": 0,
+          "selected": true
+        },
+        {
+          "page_id": null,
+          "title": "Cosmologie/L'univers observable",
+          "language": "fr",
+          "site": "wikibooks",
+          "url": "https://fr.wikibooks.org/wiki/Cosmologie%2FL'univers_observable",
+          "summary": "",
+          "origin_title": null,
+          "depth": 0,
+          "selected": true
+        },
+        {
+          "page_id": null,
+          "title": "Cosmologie/Une introduction aux modèles cosmologiques",
+          "language": "fr",
+          "site": "wikibooks",
+          "url": "https://fr.wikibooks.org/wiki/Cosmologie%2FUne_introduction_aux_mod%C3%A8les_cosmologiques",
+          "summary": "",
+          "origin_title": null,
+          "depth": 0,
+          "selected": true
+        },
+        {
+          "page_id": null,
+          "title": "Cosmologie/Les équations de Friedmann newtoniennes",
+          "language": "fr",
+          "site": "wikibooks",
+          "url": "https://fr.wikibooks.org/wiki/Cosmologie%2FLes_%C3%A9quations_de_Friedmann_newtoniennes",
+          "summary": "",
+          "origin_title": null,
+          "depth": 0,
+          "selected": true
+        },
+        {
+          "page_id": null,
+          "title": "Cosmologie/Résoudre les équations de Friedmann newtoniennes",
+          "language": "fr",
+          "site": "wikibooks",
+          "url": "https://fr.wikibooks.org/wiki/Cosmologie%2FR%C3%A9soudre_les_%C3%A9quations_de_Friedmann_newtoniennes",
+          "summary": "",
+          "origin_title": null,
+          "depth": 0,
+          "selected": true
+        },
+        {
+          "page_id": null,
+          "title": "Cosmologie/La masse et la relativité générale",
+          "language": "fr",
+          "site": "wikibooks",
+          "url": "https://fr.wikibooks.org/wiki/Cosmologie%2FLa_masse_et_la_relativit%C3%A9_g%C3%A9n%C3%A9rale",
+          "summary": "",
+          "origin_title": null,
+          "depth": 0,
+          "selected": true
+        },
+        {
+          "page_id": null,
+          "title": "Cosmologie/Les équations de Friedmann relativistes",
+          "language": "fr",
+          "site": "wikibooks",
+          "url": "https://fr.wikibooks.org/wiki/Cosmologie%2FLes_%C3%A9quations_de_Friedmann_relativistes",
+          "summary": "",
+          "origin_title": null,
+          "depth": 0,
+          "selected": true
+        },
+        {
+          "page_id": null,
+          "title": "Cosmologie/Les équations de Friedmann pour un univers plat",
+          "language": "fr",
+          "site": "wikibooks",
+          "url": "https://fr.wikibooks.org/wiki/Cosmologie%2FLes_%C3%A9quations_de_Friedmann_pour_un_univers_plat",
+          "summary": "",
+          "origin_title": null,
+          "depth": 0,
+          "selected": true
+        },
+        {
+          "page_id": null,
+          "title": "Cosmologie/L'énergie noire et la constante cosmologique",
+          "language": "fr",
+          "site": "wikibooks",
+          "url": "https://fr.wikibooks.org/wiki/Cosmologie%2FL'%C3%A9nergie_noire_et_la_constante_cosmologique",
+          "summary": "",
+          "origin_title": null,
+          "depth": 0,
+          "selected": true
+        },
+        {
+          "page_id": null,
+          "title": "Cosmologie/Le destin de l'univers",
+          "language": "fr",
+          "site": "wikibooks",
+          "url": "https://fr.wikibooks.org/wiki/Cosmologie%2FLe_destin_de_l'univers",
+          "summary": "",
+          "origin_title": null,
+          "depth": 0,
+          "selected": true
+        },
+        {
+          "page_id": null,
+          "title": "Cosmologie/Le fluide cosmologique",
+          "language": "fr",
+          "site": "wikibooks",
+          "url": "https://fr.wikibooks.org/wiki/Cosmologie%2FLe_fluide_cosmologique",
+          "summary": "",
+          "origin_title": null,
+          "depth": 0,
+          "selected": true
+        },
+        {
+          "page_id": null,
+          "title": "Cosmologie/Les perturbations cosmologiques",
+          "language": "fr",
+          "site": "wikibooks",
+          "url": "https://fr.wikibooks.org/wiki/Cosmologie%2FLes_perturbations_cosmologiques",
+          "summary": "",
+          "origin_title": null,
+          "depth": 0,
+          "selected": true
+        },
+        {
+          "page_id": null,
+          "title": "Cosmologie/L'évolution adiabatique et isotherme des perturbations",
+          "language": "fr",
+          "site": "wikibooks",
+          "url": "https://fr.wikibooks.org/wiki/Cosmologie%2FL'%C3%A9volution_adiabatique_et_isotherme_des_perturbations",
+          "summary": "",
+          "origin_title": null,
+          "depth": 0,
+          "selected": true
+        },
+        {
+          "page_id": null,
+          "title": "Cosmologie/L'évolution des perturbations avant le découplage",
+          "language": "fr",
+          "site": "wikibooks",
+          "url": "https://fr.wikibooks.org/wiki/Cosmologie%2FL'%C3%A9volution_des_perturbations_avant_le_d%C3%A9couplage",
+          "summary": "",
+          "origin_title": null,
+          "depth": 0,
+          "selected": true
+        },
+        {
+          "page_id": null,
+          "title": "Cosmologie/L'évolution des perturbations après le découplage",
+          "language": "fr",
+          "site": "wikibooks",
+          "url": "https://fr.wikibooks.org/wiki/Cosmologie%2FL'%C3%A9volution_des_perturbations_apr%C3%A8s_le_d%C3%A9couplage",
+          "summary": "",
+          "origin_title": null,
+          "depth": 0,
+          "selected": true
+        },
+        {
+          "page_id": null,
+          "title": "Cosmologie/L'évolution de la matière",
+          "language": "fr",
+          "site": "wikibooks",
+          "url": "https://fr.wikibooks.org/wiki/Cosmologie%2FL'%C3%A9volution_de_la_mati%C3%A8re",
+          "summary": "",
+          "origin_title": null,
+          "depth": 0,
+          "selected": true
+        },
+        {
+          "page_id": null,
+          "title": "Cosmologie/L'évolution du rayonnement",
+          "language": "fr",
+          "site": "wikibooks",
+          "url": "https://fr.wikibooks.org/wiki/Cosmologie%2FL'%C3%A9volution_du_rayonnement",
+          "summary": "",
+          "origin_title": null,
+          "depth": 0,
+          "selected": true
+        },
+        {
+          "page_id": null,
+          "title": "Cosmologie/Les processus de baryogenèse et nucléosynthèse",
+          "language": "fr",
+          "site": "wikibooks",
+          "url": "https://fr.wikibooks.org/wiki/Cosmologie%2FLes_processus_de_baryogen%C3%A8se_et_nucl%C3%A9osynth%C3%A8se",
+          "summary": "",
+          "origin_title": null,
+          "depth": 0,
+          "selected": true
+        },
+        {
+          "page_id": null,
+          "title": "Cosmologie/Le découplage des photons",
+          "language": "fr",
+          "site": "wikibooks",
+          "url": "https://fr.wikibooks.org/wiki/Cosmologie%2FLe_d%C3%A9couplage_des_photons",
+          "summary": "",
+          "origin_title": null,
+          "depth": 0,
+          "selected": true
+        },
+        {
+          "page_id": null,
+          "title": "Cosmologie/Le spectre de puissance des perturbations",
+          "language": "fr",
+          "site": "wikibooks",
+          "url": "https://fr.wikibooks.org/wiki/Cosmologie%2FLe_spectre_de_puissance_des_perturbations",
+          "summary": "",
+          "origin_title": null,
+          "depth": 0,
+          "selected": true
+        },
+        {
+          "page_id": null,
+          "title": "Cosmologie/Les anisotropies du fond diffus",
+          "language": "fr",
+          "site": "wikibooks",
+          "url": "https://fr.wikibooks.org/wiki/Cosmologie%2FLes_anisotropies_du_fond_diffus",
+          "summary": "",
+          "origin_title": null,
+          "depth": 0,
+          "selected": true
+        },
+        {
+          "page_id": null,
+          "title": "Cosmologie/Preuves de la théorie du big-bang",
+          "language": "fr",
+          "site": "wikibooks",
+          "url": "https://fr.wikibooks.org/wiki/Cosmologie%2FPreuves_de_la_th%C3%A9orie_du_big-bang",
+          "summary": "",
+          "origin_title": null,
+          "depth": 0,
+          "selected": true
+        },
+        {
+          "page_id": null,
+          "title": "Cosmologie/L'hypothèse de l'inflation",
+          "language": "fr",
+          "site": "wikibooks",
+          "url": "https://fr.wikibooks.org/wiki/Cosmologie%2FL'hypoth%C3%A8se_de_l'inflation",
+          "summary": "",
+          "origin_title": null,
+          "depth": 0,
+          "selected": true
+        },
+        {
+          "page_id": null,
+          "title": "Cosmologie/Les solutions statiques des équations de Friedmann",
+          "language": "fr",
+          "site": "wikibooks",
+          "url": "https://fr.wikibooks.org/wiki/Cosmologie%2FLes_solutions_statiques_des_%C3%A9quations_de_Friedmann",
+          "summary": "",
+          "origin_title": null,
+          "depth": 0,
+          "selected": true
+        }
+      ],
+      "discovered_articles": [],
+      "uploaded_documents": [],
+      "chapters": [
+        {
+          "id": "66e02de7-b8df-475d-8b3f-21f3f8b763c4",
+          "title": "Sommaire",
+          "article_keys": [
+            "wikibooks:fr:title:cosmologie/le paradoxe d'olbers",
+            "wikibooks:fr:title:cosmologie/le décalage vers le rouge (redshift)"
+          ]
+        },
+        {
+          "id": "1fda99b7-d852-4c97-ac68-600a21c8bd7d",
+          "title": "L'expansion de l'univers : description",
+          "article_keys": [
+            "wikibooks:fr:title:cosmologie/l'expansion de l'univers",
+            "wikibooks:fr:title:cosmologie/le facteur de hubble",
+            "wikibooks:fr:title:cosmologie/l'univers observable"
+          ]
+        },
+        {
+          "id": "af493ff7-1b37-477c-bf39-d1fdb795509e",
+          "title": "Le modèle cosmologique pseudo-newtonien",
+          "article_keys": [
+            "wikibooks:fr:title:cosmologie/une introduction aux modèles cosmologiques",
+            "wikibooks:fr:title:cosmologie/les équations de friedmann newtoniennes",
+            "wikibooks:fr:title:cosmologie/résoudre les équations de friedmann newtoniennes"
+          ]
+        },
+        {
+          "id": "b6e0af13-2a31-4814-aa4f-08882889e310",
+          "title": "Les modèles cosmologiques de Friedmann",
+          "article_keys": [
+            "wikibooks:fr:title:cosmologie/la masse et la relativité générale",
+            "wikibooks:fr:title:cosmologie/les équations de friedmann relativistes",
+            "wikibooks:fr:title:cosmologie/les équations de friedmann pour un univers plat",
+            "wikibooks:fr:title:cosmologie/l'énergie noire et la constante cosmologique",
+            "wikibooks:fr:title:cosmologie/le destin de l'univers"
+          ]
+        },
+        {
+          "id": "7dcfc3f9-7850-4fb9-877e-e249fffd7a8d",
+          "title": "La théorie des perturbations cosmologiques",
+          "article_keys": [
+            "wikibooks:fr:title:cosmologie/le fluide cosmologique",
+            "wikibooks:fr:title:cosmologie/les perturbations cosmologiques",
+            "wikibooks:fr:title:cosmologie/l'évolution adiabatique et isotherme des perturbations",
+            "wikibooks:fr:title:cosmologie/l'évolution des perturbations avant le découplage",
+            "wikibooks:fr:title:cosmologie/l'évolution des perturbations après le découplage"
+          ]
+        },
+        {
+          "id": "b4f0b637-8dc2-44da-b581-f06bbead3185",
+          "title": "L'histoire thermique de l'expansion et le fond diffus cosmologique",
+          "article_keys": [
+            "wikibooks:fr:title:cosmologie/l'évolution de la matière",
+            "wikibooks:fr:title:cosmologie/l'évolution du rayonnement",
+            "wikibooks:fr:title:cosmologie/les processus de baryogenèse et nucléosynthèse",
+            "wikibooks:fr:title:cosmologie/le découplage des photons",
+            "wikibooks:fr:title:cosmologie/le spectre de puissance des perturbations",
+            "wikibooks:fr:title:cosmologie/les anisotropies du fond diffus"
+          ]
+        },
+        {
+          "id": "89d2ceab-d3e1-4543-8764-0567c0fa53a1",
+          "title": "Preuves et problèmes",
+          "article_keys": [
+            "wikibooks:fr:title:cosmologie/preuves de la théorie du big-bang",
+            "wikibooks:fr:title:cosmologie/l'hypothèse de l'inflation"
+          ]
+        },
+        {
+          "id": "7b05a1bc-81ac-4a59-a051-848ba102d734",
+          "title": "Annexes",
+          "article_keys": [
+            "wikibooks:fr:title:cosmologie/les solutions statiques des équations de friedmann"
+          ]
+        }
+      ],
+      "article_order": [
+        "wikibooks:fr:title:cosmologie/le paradoxe d'olbers",
+        "wikibooks:fr:title:cosmologie/le décalage vers le rouge (redshift)",
+        "wikibooks:fr:title:cosmologie/l'expansion de l'univers",
+        "wikibooks:fr:title:cosmologie/le facteur de hubble",
+        "wikibooks:fr:title:cosmologie/l'univers observable",
+        "wikibooks:fr:title:cosmologie/une introduction aux modèles cosmologiques",
+        "wikibooks:fr:title:cosmologie/les équations de friedmann newtoniennes",
+        "wikibooks:fr:title:cosmologie/résoudre les équations de friedmann newtoniennes",
+        "wikibooks:fr:title:cosmologie/la masse et la relativité générale",
+        "wikibooks:fr:title:cosmologie/les équations de friedmann relativistes",
+        "wikibooks:fr:title:cosmologie/les équations de friedmann pour un univers plat",
+        "wikibooks:fr:title:cosmologie/l'énergie noire et la constante cosmologique",
+        "wikibooks:fr:title:cosmologie/le destin de l'univers",
+        "wikibooks:fr:title:cosmologie/le fluide cosmologique",
+        "wikibooks:fr:title:cosmologie/les perturbations cosmologiques",
+        "wikibooks:fr:title:cosmologie/l'évolution adiabatique et isotherme des perturbations",
+        "wikibooks:fr:title:cosmologie/l'évolution des perturbations avant le découplage",
+        "wikibooks:fr:title:cosmologie/l'évolution des perturbations après le découplage",
+        "wikibooks:fr:title:cosmologie/l'évolution de la matière",
+        "wikibooks:fr:title:cosmologie/l'évolution du rayonnement",
+        "wikibooks:fr:title:cosmologie/les processus de baryogenèse et nucléosynthèse",
+        "wikibooks:fr:title:cosmologie/le découplage des photons",
+        "wikibooks:fr:title:cosmologie/le spectre de puissance des perturbations",
+        "wikibooks:fr:title:cosmologie/les anisotropies du fond diffus",
+        "wikibooks:fr:title:cosmologie/preuves de la théorie du big-bang",
+        "wikibooks:fr:title:cosmologie/l'hypothèse de l'inflation",
+        "wikibooks:fr:title:cosmologie/les solutions statiques des équations de friedmann"
+      ],
+      "unassigned_first": false,
+      "toc_position": "start",
+      "table_of_contents": true,
+      "page_numbers": true,
+      "volume_breaks": [],
+      "page_format": "A4",
+      "orientation": "portrait",
+      "created_at": "2026-11-16T21:34:00.000Z",
+      "updated_at": "2026-11-16T21:34:00.000Z"
+    }
+  ]
+}
