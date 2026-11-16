@@ -57,7 +57,6 @@ from app.book_builder import (
 from app.explorer import discover_related_articles
 from app.isolation import IsolatedProcessDied, preload, run_in_thread, run_isolated
 from app.models import (
-    DEFAULT_BOOK_CONCLUSION,
     Article,
     ArticleRequest,
     BookChapter,
@@ -762,7 +761,11 @@ def _finish_book(
     if toc_at == len(slots):
         root.children.append(OutlineEntry(pdf_label(language, "toc"), place_toc()))
     license_blocks = license_block_count(project, selected, language)
-    license_start = [place_pdf(render(build_license_page_html(project, selected, language, block))) for block in range(license_blocks)][0]
+    # NE PAS mettre le logo et les liens ailleurs qu'en dernière page : sur le dernier bloc de la licence, ou sur la conclusion quand le livre en a une.
+    license_start = [
+        place_pdf(render(build_license_page_html(project, selected, language, block, colophon=block == license_blocks - 1 and not project.conclusion)))
+        for block in range(license_blocks)
+    ][0]
     root.children.append(OutlineEntry(pdf_label(language, "license"), license_start))
     stage("render_license", blocks=license_blocks)
     if project.conclusion:
@@ -889,7 +892,7 @@ async def generate_book_from_wikipedia_book_get(
     book_title: str | None = Query(default=None, max_length=200),
     book_subtitle: str | None = Query(default=None, max_length=300),
     book_author: str | None = Query(default=None, max_length=200),
-    book_conclusion: str = Query(default=DEFAULT_BOOK_CONCLUSION, max_length=20000),
+    book_conclusion: str = Query(default="", max_length=20000),
     page_format: str = Query(default="A4", pattern=r"^(A[0-6]|Letter|Legal|custom)$"),
     orientation: str = Query(default="portrait", pattern=r"^(portrait|landscape)$"),
     page_numbers: bool = True,

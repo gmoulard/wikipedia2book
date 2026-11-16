@@ -14,10 +14,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import base64
 import math
 import re
 from datetime import date
 from html import escape
+from pathlib import Path
 from typing import get_args
 from urllib.parse import quote
 
@@ -275,6 +277,24 @@ h1 {{ font-size: 30pt; }}
 </style></head><body><main><p>{pdf_label(language, 'chapter')}</p><h1>{escape(title)}</h1></main></body></html>"""
 
 
+APP_URL = "https://wikipedia2book.toolforge.org/"
+SOURCE_URL = "https://github.com/gmoulard/wikipedia2book"
+COLOPHON_LOGO = Path(__file__).parent / "static" / "Wikipedia2bookLogoPrint.png"
+COLOPHON_CSS = (
+    ".colophon {{ margin-top: 28pt; text-align: center; break-inside: avoid; font: 9pt {fonts}; line-height: 1.6; }}"
+    ".colophon img {{ width: 50mm; }}"
+    ".colophon a {{ color: #36c; text-decoration: none; }}"
+)
+
+
+def _colophon_html() -> str:
+    logo = base64.b64encode(COLOPHON_LOGO.read_bytes()).decode("ascii")
+    return (
+        f'<footer class="colophon"><img src="data:image/png;base64,{logo}" alt="Wikipedia2Book">'
+        f'<p><a href="{APP_URL}">{APP_URL}</a><br><a href="{SOURCE_URL}">{SOURCE_URL}</a></p></footer>'
+    )
+
+
 def build_conclusion_page_html(project: Project, language: str = "fr") -> str:
     page_width, page_height, margin_top, margin_bottom, inner, outer = _page_layout(project)
     conclusion = escape(project.conclusion).replace("\n", "<br>")
@@ -285,7 +305,8 @@ def build_conclusion_page_html(project: Project, language: str = "fr") -> str:
 @page :right {{ margin-left: {outer:g}mm; margin-right: {inner:g}mm; }}
 body {{ color: #202020; font: 11pt {SERIF_FONTS}; line-height: 1.6; }}
 h1 {{ font-size: 22pt; }}
-</style></head><body><h1>{pdf_label(language, 'conclusion')}</h1><p>{conclusion}</p></body></html>"""
+{COLOPHON_CSS.format(fonts=SANS_FONTS)}
+</style></head><body><h1>{pdf_label(language, 'conclusion')}</h1><p>{conclusion}</p>{_colophon_html()}</body></html>"""
 
 
 def _history_url(article: Article) -> str:
@@ -315,7 +336,9 @@ def license_block_count(project: Project, items: list[BookItem], language: str =
     return max(1, math.ceil(len(articles) / GENERATED_BLOCK_ENTRIES))
 
 
-def build_license_page_html(project: Project, items: list[BookItem], language: str = "fr", block: int = 0) -> str:
+def build_license_page_html(
+    project: Project, items: list[BookItem], language: str = "fr", block: int = 0, colophon: bool = False
+) -> str:
     page_width, page_height, margin_top, margin_bottom, inner, outer = _page_layout(project)
     articles, documents = _license_articles(project, items, language)
     first = block * GENERATED_BLOCK_ENTRIES
@@ -361,7 +384,9 @@ ol {{ padding-left: 18pt; font-size: 9pt; }}
 li {{ margin-bottom: 6pt; }}
 .license-name {{ font-weight: bold; }}
 .url {{ direction: ltr; unicode-bidi: embed; }}
+{COLOPHON_CSS.format(fonts=SANS_FONTS)}
 </style></head><body>
 {header}
 {sources_section}
+{_colophon_html() if colophon else ""}
 </body></html>"""
