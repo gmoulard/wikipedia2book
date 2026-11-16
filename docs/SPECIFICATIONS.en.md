@@ -1349,13 +1349,9 @@ Possible developments, not implemented to date:
 
 * Filtering the exploration by language or by article category.
 
-* Independent extraction of image credits and licenses, beyond what the official Wikipedia PDF includes.
-
 * Error logging and rate limiting of API requests.
 
 * Broader automated test coverage (today: Python syntax, page numbering/table of contents, imported documents, Wikipedia API, translations, Toolviews statistics script, and the flow of `/api/pdf` and `/api/pdf/stream` through `tests/test_pdf_stream.py` — with Wikipedia and WeasyPrint simulated: the real rendering of pages by WeasyPrint and the interface are not covered).
-
-* Preview of the book before generation.
 
 * Rare Chinese characters (僻字) in the official Wikisource PDF: checked in November 2026, some characters of the CJK extensions B and later leave a blank there (LiberationSerif font without the glyph, for example 𡼢 U+21F22 in "大南寔錄/大南寔錄前編/卷10" on zh.wikisource.org), only those Wikisource provides as images are shown; the application does not change this PDF: to be reported to Wikimedia (Phabricator, PDF service). Request made by PacmanD on the technical Village pump of the Chinese Wikipedia (November 2026), whose other part — importing a whole work from its contents page — is done (section 3.1).
 

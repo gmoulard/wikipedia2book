@@ -1346,13 +1346,9 @@ L'essentiel du socle fonctionnel décrit dans ce document est implémenté : liv
 
 * Filtrage de l'exploration par langue ou par catégorie d'article.
 
-* Extraction indépendante des crédits et licences des images, au-delà de ce qu'intègre le PDF officiel Wikipédia.
-
 * Journalisation des erreurs et limitation du débit des requêtes API.
 
 * Couverture de tests automatisés plus large (aujourd'hui : syntaxe Python, numérotation des pages/table des matières, documents importés, API Wikipédia, traductions, script de statistiques Toolviews, et déroulement de `/api/pdf` et `/api/pdf/stream` via `tests/test_pdf_stream.py` — avec Wikipédia et WeasyPrint simulés : le rendu réel des pages par WeasyPrint et l'interface ne sont pas couverts).
-
-* Prévisualisation du livre avant génération.
 
 * Caractères chinois rares (僻字) dans le PDF officiel de Wikisource : vérifié en novembre 2026, une partie des caractères des extensions CJK B et suivantes y laisse un blanc (police LiberationSerif sans glyphe, par exemple 𡼢 U+21F22 dans « 大南寔錄/大南寔錄前編/卷10 » de zh.wikisource.org), seuls ceux que Wikisource fournit en image s'affichent ; l'application ne modifie pas ce PDF : à signaler à Wikimédia (Phabricator, service PDF). Demande exprimée par PacmanD sur le Bistro technique de la Wikipédia en chinois (novembre 2026), dont l'autre partie — importer une œuvre entière depuis sa page sommaire — est faite (section 3.1).
 
