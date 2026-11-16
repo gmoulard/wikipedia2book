@@ -19,7 +19,7 @@ from io import BytesIO
 from pathlib import Path
 from urllib.parse import unquote
 
-import pikepdf
+import pymupdf
 from pypdf import PageObject, PdfReader, PdfWriter, Transformation
 from pypdf.generic import RectangleObject
 from reportlab.lib.units import mm
@@ -126,30 +126,45 @@ class OutlineEntry:
     children: list["OutlineEntry"] = field(default_factory=list)
 
 
-QPDF_WARNINGS_EXIT_CODE = 3
+PAGE_NUMBER_SIZE = 8
+PAGE_NUMBER_COLOR = (0.33, 0.33, 0.33)
+MERGE_BATCH = 20
+
+
+# NE PAS revenir à qpdf (pikepdf.Job --pages) ni à pdf.pages.extend : ils gardent en mémoire tous les objets de toutes les pages, environ 10 fois la taille du livre (938 Mo pour 100 articles, mesuré en local) ; PyMuPDF par lots de MERGE_BATCH parties, écrits en mise à jour incrémentale, tient en 130 Mo.
+def merge_files(parts: list[Path], merged: Path) -> None:
+    for start in range(0, len(parts), MERGE_BATCH):
+        book = pymupdf.open(merged) if start else pymupdf.open()
+        try:
+            for path in parts[start:start + MERGE_BATCH]:
+                with pymupdf.open(path) as part:
+                    book.insert_pdf(part)
+            if start:
+                book.save(merged, incremental=True, encryption=pymupdf.PDF_ENCRYPT_KEEP)
+            else:
+                book.save(merged)
+        finally:
+            book.close()
+    # NE PAS garder les fichiers des parties après la fusion : avec le fichier fusionné et le PDF final, l'espace temporaire monterait à trois fois la taille du livre, ce qui dépasse vite le quota d'espace temporaire d'un hébergeur.
+    for path in parts:
+        path.unlink()
 
 
 class BookAssembly:
-    # NE PAS fusionner avec pdf.pages.extend ni un PdfWriter pypdf : les deux chargent le contenu de toutes les pages en mémoire (environ la taille du livre). La fusion par qpdf --pages lit les fichiers temporaires à l'écriture, le livre est ensuite rouvert depuis le disque.
-    def __init__(self, parts: list[Path], merged: Path) -> None:
-        job = pikepdf.Job(["qpdf", "--empty", "--stream-data=preserve", "--pages", *map(str, parts), "--", str(merged)])
-        job.run()
-        if job.exit_code not in (0, QPDF_WARNINGS_EXIT_CODE):
-            raise RuntimeError(f"qpdf n'a pas pu assembler le livre (code {job.exit_code}).")
-        # NE PAS garder les fichiers des parties après la fusion : avec le fichier fusionné et le PDF final, l'espace temporaire monterait à trois fois la taille du livre, ce qui dépasse vite le quota d'espace temporaire d'un hébergeur (piste retenue pour les plantages de Toolforge à 300 articles).
-        for path in parts:
-            path.unlink()
-        self.book = pikepdf.open(merged)
-        self.sources: list[pikepdf.Pdf] = []
+    def __init__(self, merged: Path) -> None:
+        self.book = pymupdf.open(merged)
 
     def add_outline(self, entries: list[OutlineEntry]) -> None:
-        def item(entry: OutlineEntry) -> pikepdf.OutlineItem:
-            node = pikepdf.OutlineItem(entry.title, entry.page)
-            node.children.extend(item(child) for child in entry.children)
-            return node
+        toc: list[list] = []
 
-        with self.book.open_outline() as outline:
-            outline.root.extend(item(entry) for entry in entries)
+        def walk(entry: OutlineEntry, level: int) -> None:
+            toc.append([level, entry.title, entry.page + 1])
+            for child in entry.children:
+                walk(child, level + 1)
+
+        for entry in entries:
+            walk(entry, 1)
+        self.book.set_toc(toc)
 
     def link_toc(
         self,
@@ -159,57 +174,42 @@ class BookAssembly:
         links: list[tuple[int, list[float], str]],
         targets: dict[str, int],
     ) -> None:
-        pages = self.book.pages
-        for page in pages[first_page:first_page + page_count]:
-            annotations = page.obj.get("/Annots")
-            if annotations is None:
-                continue
-            kept = [
-                annotation
-                for annotation in annotations
-                if not str((annotation.get("/A") or {}).get("/URI", "")).startswith(prefix)
-            ]
-            page.obj.Annots = pikepdf.Array(kept)
-        for offset, rect, key in links:
+        for number in range(first_page, first_page + page_count):
+            page = self.book[number]
+            for link in page.get_links():
+                if str(link.get("uri", "")).startswith(prefix):
+                    page.delete_link(link)
+        for offset, (x1, y1, x2, y2), key in links:
             if key not in targets:
                 continue
-            page = pages[first_page + offset].obj
-            annotation = self.book.make_indirect(pikepdf.Dictionary(
-                Type=pikepdf.Name.Annot,
-                Subtype=pikepdf.Name.Link,
-                Rect=pikepdf.Array(rect),
-                Border=pikepdf.Array([0, 0, 0]),
-                Dest=pikepdf.Array([pages[targets[key]].obj, pikepdf.Name.Fit]),
-            ))
-            if "/Annots" not in page:
-                page.Annots = pikepdf.Array()
-            page.Annots.append(annotation)
+            page = self.book[first_page + offset]
+            height = page.rect.height
+            page.insert_link({
+                "kind": pymupdf.LINK_GOTO,
+                "from": pymupdf.Rect(x1, height - y2, x2, height - y1),
+                "page": targets[key],
+                "to": pymupdf.Point(0, 0),
+            })
 
     # NE PAS appeler avant d'avoir ajouté toutes les pages, toutes déjà passées par fit_pdf_to_format : chaque page doit avoir une origine (0,0) propre.
+    # NE PAS revenir à une superposition de page (add_overlay, show_pdf_page) : elle réécrit le contenu de chaque page sans le compresser, ce qui faisait presque doubler la taille du livre (173 Mo au lieu de 96 pour 100 articles).
     def stamp_page_numbers(self) -> None:
-        buffer = BytesIO()
-        overlay = canvas.Canvas(buffer)
-        for index, page in enumerate(self.book.pages):
-            width, height = float(page.mediabox[2]), float(page.mediabox[3])
-            overlay.setPageSize((width, height))
-            overlay.setFont("Helvetica", 8)
-            overlay.setFillColorRGB(0.33, 0.33, 0.33)
-            overlay.drawCentredString(width / 2, 24, str(index + 1))
-            overlay.showPage()
-        overlay.save()
-        numbers = pikepdf.open(BytesIO(buffer.getvalue()))
-        self.sources.append(numbers)
-        for index, page in enumerate(self.book.pages):
-            if index == 0:
-                continue
-            page.add_overlay(numbers.pages[index])
+        for index in range(1, self.book.page_count):
+            page = self.book[index]
+            label = str(index + 1)
+            width = pymupdf.get_text_length(label, fontname="helv", fontsize=PAGE_NUMBER_SIZE)
+            page.insert_text(
+                (page.rect.width / 2 - width / 2, page.rect.height - 24),
+                label,
+                fontname="helv",
+                fontsize=PAGE_NUMBER_SIZE,
+                color=PAGE_NUMBER_COLOR,
+            )
 
     def save(self, path: Path) -> int:
-        # NE PAS laisser les options par défaut : qpdf décompresserait puis recompresserait chaque flux (images comprises), ce qui multiplie le temps d'écriture pour un gain de taille faible.
-        self.book.save(path, stream_decode_level=pikepdf.StreamDecodeLevel.none, compress_streams=False)
+        # NE PAS demander de compression ni de nettoyage (deflate, garbage, clean) : MuPDF décompresserait et réécrirait chaque flux, images comprises, ce qui multiplie le temps d'écriture et la mémoire pour un gain de taille faible.
+        self.book.save(path)
         return path.stat().st_size
 
     def close(self) -> None:
         self.book.close()
-        for source in self.sources:
-            source.close()

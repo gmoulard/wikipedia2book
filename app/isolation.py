@@ -20,7 +20,7 @@ import multiprocessing
 from collections.abc import AsyncIterator, Callable, Iterable
 from typing import Any
 
-# NE PAS passer à « fork » : le serveur a des fils d'exécution (asyncio.to_thread) qui peuvent tenir un verrou de WeasyPrint, Pango ou qpdf au moment du fork, et le processus enfant resterait bloqué. Le forkserver démarre ses enfants depuis un processus sans fil d'exécution.
+# NE PAS passer à « fork » : le serveur a des fils d'exécution (asyncio.to_thread) qui peuvent tenir un verrou de WeasyPrint, Pango ou MuPDF au moment du fork, et le processus enfant resterait bloqué. Le forkserver démarre ses enfants depuis un processus sans fil d'exécution.
 CONTEXT = multiprocessing.get_context(
     "forkserver" if "forkserver" in multiprocessing.get_all_start_methods() else "spawn"
 )

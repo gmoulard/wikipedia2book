@@ -31,7 +31,7 @@ from pypdf import PdfReader
 
 from app.book_builder import build_license_page_html, build_toc_html
 from app.models import Article, Project
-from app.pdf_generator import BookAssembly, OutlineEntry, fit_pdf_to_format
+from app.pdf_generator import BookAssembly, OutlineEntry, fit_pdf_to_format, merge_files
 
 
 def _make_pdf(num_pages, size):
@@ -55,7 +55,8 @@ class BookAssemblyTest(unittest.TestCase):
             for index, data in enumerate(pdfs):
                 parts.append(Path(workdir) / f"part-{index}.pdf")
                 parts[-1].write_bytes(data)
-            assembly = BookAssembly(parts, Path(workdir) / "merged.pdf")
+            merge_files(parts, Path(workdir) / "merged.pdf")
+            assembly = BookAssembly(Path(workdir) / "merged.pdf")
             self.assertEqual([path.exists() for path in parts], [False] * len(parts))
             try:
                 if outline:
@@ -77,6 +78,42 @@ class BookAssemblyTest(unittest.TestCase):
         self.assertIn("2", reader.pages[1].extract_text())
         self.assertIn("3", reader.pages[2].extract_text())
         self.assertEqual([float(page.mediabox.width) for page in reader.pages], [400, 300, 300])
+
+    def test_page_numbers_keep_inherited_resources_and_do_not_rewrite_page_content(self):
+        import tempfile
+        from pathlib import Path
+
+        import pymupdf
+        from pypdf import PdfWriter
+        from pypdf.generic import NameObject
+
+        def raw_contents(path):
+            with pymupdf.open(path) as document:
+                return [[document.xref_stream_raw(xref) for xref in page.get_contents()] for page in document]
+
+        with tempfile.TemporaryDirectory() as workdir:
+            source = Path(workdir) / "inherited.pdf"
+            writer = PdfWriter(clone_from=PdfReader(BytesIO(_make_pdf(3, size=(300, 400)))))
+            pages_root = writer.root_object["/Pages"]
+            pages_root[NameObject("/Resources")] = writer.pages[0]["/Resources"]
+            for page in writer.pages:
+                del page[NameObject("/Resources")]
+            writer.write(str(source))
+            originals = [streams[0] for streams in raw_contents(source)]
+            assembly = BookAssembly(source)
+            try:
+                assembly.stamp_page_numbers()
+                output = Path(workdir) / "book.pdf"
+                assembly.save(output)
+            finally:
+                assembly.close()
+            for index, streams in enumerate(raw_contents(output)):
+                self.assertIn(originals[index], streams)
+            reader = PdfReader(str(output))
+            for index, page in enumerate(reader.pages):
+                self.assertIn("page body", page.extract_text())
+                if index:
+                    self.assertIn(str(index + 1), page.extract_text())
 
     def test_parts_keep_their_order_and_the_outline_points_to_their_pages(self):
         outline = [OutlineEntry("Livre", 0, [OutlineEntry("A", 1), OutlineEntry("B", 3)])]

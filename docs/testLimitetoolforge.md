@@ -15,6 +15,90 @@ Réglages communs à toutes les mesures : `scripts/limit_check.py`, pages liées
 | 1.8.0   | 100 articles     | 150                     |
 | 1.8.2   | 100 articles     | 150                     |
 | 1.8.3   | 150 articles     | 200                     |
+| 1.8.5   | au moins 150 articles | test arrêté avant 200 |
+
+## Mesures locales de l'assemblage (16/11/2026)
+
+Pour comprendre le pic de la fusion vu sur Toolforge en 1.8.5, mesure sur ce poste (Windows, pikepdf 10.18.1, qpdf 12.4.2) avec de vrais PDF d'articles : les 100 premières pages liées depuis l'article *France*, téléchargées par `MediaWikiClient` et recomposées par `fit_pdf_to_format` comme dans l'application (97,7 Mo de parties, 1 625 pages). Chaque variante tourne dans un processus neuf ; mémoire = mémoire privée du processus. Sous Windows, la mémoire libérée est rendue au système aussitôt, contrairement à l'allocateur de Linux.
+
+Fusion par qpdf, pic de mémoire :
+
+| Variante (100 articles)                                   | Pic     | Durée  |
+|-----------------------------------------------------------|---------|--------|
+| actuelle (`--stream-data=preserve`)                       | 938 Mo  | 9,6 s  |
+| `--remove-unreferenced-resources=no`                      | 941 Mo  | 9,9 s  |
+| `--keep-files-open=y`                                     | 939 Mo  | 10,0 s |
+| `--object-streams=disable`                                | 938 Mo  | 9,6 s  |
+| options par défaut                                        | 938 Mo  | 9,9 s  |
+| par lots de 20 fichiers, puis fusion des lots             | 938 Mo  | 15,7 s |
+| copie des pages par pikepdf (`pages.extend`)              | 756 Mo  | 6,2 s  |
+| parties compressées (`compress_content_streams`)          | sans objet : les parties pèsent 97,7 Mo compressées ou non | |
+
+Le pic croît avec le livre, environ 10 fois sa taille : 141 Mo pour 25 articles (10,6 Mo), 411 Mo pour 50 (36 Mo), 938 Mo pour 100 (95,6 Mo). qpdf garde en mémoire tous les objets de toutes les pages (93 000 objets pour 100 articles, environ 3,4 ko chacun une fois lus) ; aucune option de qpdf, ni la fusion par lots, n'y change rien. Les PDF de Wikipédia sont déjà au format A4 et compressés : la recomposition les laisse tels quels, il n'y a rien à compresser.
+
+Numérotation des pages (après la fusion, 100 articles) :
+
+| Méthode                                                         | Taille du PDF | Mémoire après | Durée |
+|-----------------------------------------------------------------|---------------|---------------|-------|
+| superposition d'une page de numéros (`add_overlay`, jusqu'à 1.8.5) | 173,2 Mo   | 418 Mo        | 1,6 s |
+| deux petits flux autour du contenu existant (depuis cette mesure) | 96,0 Mo    | 378 Mo        | 1,0 s |
+
+La superposition réécrivait le contenu de chaque page sans le compresser : **les livres numérotés pesaient presque deux fois leur taille réelle** (d'où les 182 Mo de Toolforge pour 100 articles). La nouvelle méthode ne relit ni ne réécrit le contenu des pages. Le gain de mémoire est faible (le coût vient de la lecture de toutes les pages, pas de leur contenu), et le pic de la fusion reste le facteur limitant.
+
+Pistes restantes pour la fusion : écrire soi-même le livre en flux, partie par partie (objets renumérotés, une seule partie en mémoire à la fois), ou donner plus de mémoire au conteneur Toolforge (`--mem`).
+
+### PyMuPDF à la place de qpdf (16/11/2026)
+
+Même banc, PyMuPDF 2.1 (MuPDF 1.28.6), installé seulement dans l'environnement local pour l'essai.
+
+Fusion seule :
+
+| Variante (100 articles)                                     | Pic     | Durée  | Taille fusionnée |
+|-------------------------------------------------------------|---------|--------|------------------|
+| qpdf (actuel)                                               | 938 Mo  | 9,6 s  | 95,6 Mo          |
+| PyMuPDF, `insert_pdf` de toutes les parties puis écriture   | 211 Mo  | 10,1 s | 88,7 Mo          |
+| PyMuPDF, par lots de 20, écriture incrémentale après chaque lot | 119 Mo | 10,5 s | 88,7 Mo       |
+| PyMuPDF, par lots de 20, réécriture complète après chaque lot | 162 Mo | 11,8 s | 88,7 Mo        |
+
+Avec PyMuPDF tout d'un coup, le pic suit le livre environ 4,5 fois moins vite qu'avec qpdf : 67 Mo pour 25 articles, 113 Mo pour 50, 211 Mo pour 100.
+
+Assemblage complet avec PyMuPDF (fusion par lots incrémentale, signets par `set_toc`, 40 liens internes par `insert_link`, numéros par `insert_text`, écriture) :
+
+| Étape                    | qpdf + pikepdf (actuel) | PyMuPDF                     |
+|--------------------------|-------------------------|-----------------------------|
+| fusion                   | pic 957 Mo              | pic 131 Mo                  |
+| signets et liens         | 80 Mo                   | 72 Mo                       |
+| numérotation             | 378 Mo                  | 193 Mo                      |
+| écriture                 | 382 Mo                  | 62 Mo                       |
+| **pic de l'assemblage**  | **957 Mo**              | **196 Mo**                  |
+| durée                    | 11,6 s                  | 15,0 s                      |
+| taille du livre          | 96,0 Mo                 | 89,3 Mo                     |
+
+Livre produit vérifié : ouvert sans erreur par pikepdf, 1 625 pages, 100 signets, numéros « 2 », « 501 » et « 1625 » retrouvés dans le texte des pages correspondantes. Non vérifié : rendu visuel, conservation des liens et annotations internes des articles par `insert_pdf`, comportement sous Linux. PyMuPDF est sous licence AGPL-3.0, compatible avec Wikipedia2Book ; roues binaires disponibles pour Linux (Docker, Toolforge).
+
+## Version 1.8.5 (15/11/2026, 22:58 UTC)
+
+Table des matières et licence rendues par blocs, sans boîte flexible ni `overflow-wrap: anywhere`, polices DejaVu imposées ; premier test avec le journal `GET /api/health/generations`. Test arrêté à la demande après le palier de 150 articles (le palier de 200 n'a pas commencé).
+
+| Articles | Pages | Taille du PDF | Durée côté serveur | Résultat |
+|----------|-------|---------------|--------------------|----------|
+| 100      | —     | 182,2 Mo      | 176,1 s            | réussi   |
+| 150      | —     | 280,4 Mo      | 168,7 s            | réussi   |
+
+Journal de l'assemblage (mémoire du processus d'assemblage, RSS ; mémoire du conteneur entre parenthèses), en Mo :
+
+| Étape                          | 100 articles  | 150 articles  |
+|--------------------------------|---------------|---------------|
+| fin des téléchargements (serveur) | 267 (340)  | 341 (546)     |
+| début de l'assemblage          | 76 (422)      | 76 (554)      |
+| couverture et table des matières | 101 (471)   | 101 (602)     |
+| page de licence                | 149 (519)     | 150 (653)     |
+| **fusion (qpdf `--pages`)**    | **1 042 (1 407)** | **1 538 (1 933)** |
+| signets et liens               | 1 042 (1 407) | 1 538 (2 022) |
+| numérotation                   | 1 043 (1 408) | 1 539 (2 022) |
+| écriture du PDF final          | 1 043 (1 585) | 1 537 (2 048) |
+
+**Le pic vient de la fusion, pas de WeasyPrint** : tous les rendus WeasyPrint tiennent en 150 Mo, et la fusion ajoute environ 900 Mo pour 100 articles et 1 390 Mo pour 150, soit environ 5 fois la taille du livre. Le diagnostic de la 1.8.2 (« bond au début de la phase *Application*, WeasyPrint suspecté ») confondait les rendus et la fusion, qui se suivent en quelques secondes : seul le journal par étape les sépare. À 150 articles, le conteneur atteint sa limite de 2 Gio pendant l'écriture (cache du PDF final de 280 Mo) sans être arrêté. Piste suivante : réduire la mémoire de la fusion (option `--remove-unreferenced-resources=no` de qpdf, parties compressées, un seul passage qpdf), à mesurer d'abord en local.
 
 ## Version 1.8.3 (15/11/2026, 22:17 UTC)
 

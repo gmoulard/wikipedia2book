@@ -85,9 +85,9 @@ class GenerationLogTest(unittest.TestCase):
         self.assertEqual(entry["articles"], 2)
         self.assertGreater(entry["size_bytes"], 0)
         stages = [stage["stage"] for stage in entry["stages"]]
-        for name in ("start", "downloads_done", "assembly_start", "render_cover", "render_toc", "render_license", "merge", "outline_and_links", "save"):
+        for name in ("start", "downloads_done", "assembly_start", "render_cover", "render_toc", "render_license", "merge_parts", "merge_reopen", "outline_and_links", "save"):
             self.assertIn(name, stages)
-        self.assertLess(stages.index("render_license"), stages.index("merge"))
+        self.assertLess(stages.index("render_license"), stages.index("merge_parts"))
         assembly = [stage for stage in entry["stages"] if stage["process"] == "assembly"]
         self.assertTrue(assembly)
         for stage in entry["stages"]:

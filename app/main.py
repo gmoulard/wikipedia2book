@@ -79,6 +79,7 @@ from app.pdf_generator import (
     generate_pdf,
     image_to_pdf,
     internal_links,
+    merge_files,
 )
 from app.version import VERSION
 from app.wikipedia_api import (
@@ -732,9 +733,11 @@ def _finish_book(
         ))
         stage("render_conclusion")
 
-    assembly = BookAssembly(parts, workdir / "merged.pdf")
+    merge_files(parts, workdir / "merged.pdf")
+    stage("merge_parts", parts=len(parts), pages=pages_so_far)
+    assembly = BookAssembly(workdir / "merged.pdf")
     try:
-        stage("merge", parts=len(parts), pages=pages_so_far)
+        stage("merge_reopen")
         assembly.add_outline([root])
         for start, block in toc_placed:
             assembly.link_toc(

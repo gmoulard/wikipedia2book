@@ -595,7 +595,8 @@ class PdfStreamTest(unittest.TestCase):
         toc_page = pdf.pages[pages_by_title["Table des matières"]]
         annotations = [reference.get_object() for reference in toc_page.get("/Annots", [])]
         self.assertFalse([a for a in annotations if str((a.get("/A") or {}).get("/URI", "")).startswith(TOC_LINK_PREFIX)])
-        targets = [pdf.get_page_number(a["/Dest"][0].get_object()) for a in annotations if "/Dest" in a]
+        destinations = [a["/Dest"] if "/Dest" in a else a["/A"]["/D"] for a in annotations if "/Dest" in a or "/D" in (a.get("/A") or {})]
+        targets = [pdf.get_page_number(destination[0].get_object()) for destination in destinations]
         self.assertEqual(targets, [pages_by_title["Félins"], pages_by_title["Chat"], pages_by_title["Sans chapitre"], pages_by_title["Chien"]])
 
     def test_table_of_contents_can_be_placed_before_the_articles_without_chapter(self):
