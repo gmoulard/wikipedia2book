@@ -16,6 +16,7 @@
 
 import os
 import re
+import shutil
 import stat
 import subprocess
 import sys
@@ -82,6 +83,7 @@ class MergeTest(unittest.TestCase):
             self.assertEqual(toolforge_hourly.read_rows(path), rows)
 
 
+@unittest.skipUnless(shutil.which("bash"), "bash introuvable (poste Windows sans Git Bash dans le PATH) ; le test tourne en intégration continue sous Linux")
 class RemoteScriptTest(unittest.TestCase):
     def test_counts_requests_per_pod_and_hour(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -17,7 +17,76 @@ Réglages communs à toutes les mesures : `scripts/limit_check.py`, pages liées
 | 1.8.3   | 150 articles     | 200                     |
 | 1.8.5   | au moins 150 articles | test arrêté avant 200 |
 | 1.8.6   | 800 articles     | 1 000 (erreur sans redémarrage) |
-| 1.8.9   | au moins 1 000 articles | aucun échec (900 et 1 000 réussis) |
+| 1.8.9   | 1 000 articles   | 1 500 (redémarrage pendant la numérotation) |
+
+## Version 1.8.9, 1 500 articles (16/11/2026, 11:08 UTC)
+
+Troisième palier sur la 1.8.9, lancé après celui de 1 000 articles pour approcher la limite, avec `--save-pdf ./tmp`. Même serveur, toujours démarré à 08:40:01 UTC ; trois petits livres d'utilisateurs (22, 18 et 80 articles) ont été générés entre 10:53 et 10:59 UTC, avant ce palier.
+
+### Résultat
+
+| Articles | Pages  | Taille du PDF | Wikipédia | Application | Transfert | Total     | Résultat |
+|----------|--------|---------------|-----------|-------------|-----------|-----------|----------|
+| 1 500    | —      | —             | —         | —           | —         | 3 481,0 s | échec : `GenerationError: flux interrompu avant la fin de la génération` |
+
+Le serveur a redémarré à 12:06:15 UTC (nouvelle heure de démarrage dans `GET /api/health/details`), 3 481 s après le début, pendant la numérotation des pages. Le journal des générations, en mémoire, est perdu au redémarrage : les étapes ci-dessous viennent du dernier relevé avant celui-ci (12:06:00 UTC), où la génération n° 10 était encore `running`. Aucun PDF n'a été reçu.
+
+### Journal de la génération
+
+Génération n° 10, démarrée à 11:08:14 UTC, en Mo, mêmes colonnes que pour 1 000 articles :
+
+| Temps     | Étape                 | Processus  | Assemblage (pic) | Serveur | Conteneur | Détail |
+|-----------|-----------------------|------------|------------------|---------|-----------|--------|
+| 0,0 s     | `start`               | serveur    | —                | 346     | 412       | 1 500 articles, A4 portrait, numérotation et table des matières, français |
+| 1 713,4 s | `downloads_done`      | serveur    | —                | 403     | 2 048     | 27 976 pages d'articles |
+| 1 713,5 s | `assembly_start`      | assemblage | 90               | 403     | 2 048     | |
+| 1 713,6 s | `render_cover`        | assemblage | 101              | 403     | 2 048     | |
+| 1 718,7 s | `render_toc_count`    | assemblage | 119              | 403     | 2 048     | 15 blocs, 45 pages de table des matières |
+| 1 726,4 s | `render_toc`          | assemblage | 125              | 403     | 2 048     | 15 blocs |
+| 1 728,2 s | `render_chapters`     | assemblage | 127              | 403     | 2 048     | aucun chapitre |
+| 1 792,9 s | `render_license`      | assemblage | 178              | 403     | 2 048     | 15 blocs |
+| 2 436,9 s | `merge_parts`         | assemblage | 382 (433)        | 403     | 1 993     | 1 531 parties, 28 178 pages |
+| 2 437,0 s | `merge_reopen`        | assemblage | 382 (433)        | 403     | 2 001     | |
+| 2 646,1 s | `outline_and_links`   | assemblage | 520              | 403     | 2 048     | |
+| 3 481 s   | redémarrage           |            |                  |         |           | `stamp_page_numbers` jamais atteint |
+
+Durée de chaque étape de l'assemblage : pages générées 79 s ; fusion des 1 531 parties 644 s ; signets et liens 209 s ; numérotation des 28 178 pages interrompue après 835 s (628 s pour les 17 518 pages du palier de 1 000).
+
+### Mémoire du conteneur
+
+347 relevés de `GET /api/health/details`, de 11:08:06 à 12:08:10 UTC :
+
+| Heure (UTC) | Générations | Conteneur | Serveur | Fichiers | Phase |
+|-------------|-------------|-----------|---------|----------|-------|
+| 11:08:06    | 0           | 412       | 346     | 0        | avant le palier |
+| 11:16:48    | 1           | 905       | 335     | 483      | téléchargements |
+| 11:25:36    | 1           | 1 387     | 356     | 926      | téléchargements |
+| 11:34:24    | 1           | 1 935     | 403     | 1 410    | téléchargements |
+| 11:38:43    | 1           | 2 048     | 403     | 1 728    | fin des téléchargements |
+| 11:47:20    | 1           | 2 048     | 403     | 2 858    | fusion |
+| 11:51:38    | 1           | 2 048     | 403     | 1 397    | fusion terminée, parties supprimées |
+| 12:06:06    | 1           | 2 048     | 403     | 1 397    | numérotation, dernier relevé avant le redémarrage |
+| 12:06:17    | 0           | 105       | 126     | 0        | serveur redémarré à 12:06:15 |
+
+- Conteneur à 100 % dans 165 relevés, de 11:36:41 à 12:06:06 UTC (30 minutes), contre 14 minutes à 1 000 articles : dès la fin des téléchargements, puis pendant toute la fusion et la numérotation.
+- Fichiers temporaires au plus haut : 2 922 Mo ; mémoire du serveur au plus haut : 403 Mo. Le dossier temporaire a été supprimé avec le processus.
+
+### Générations simultanées
+
+Une seule génération en cours dans 334 relevés, aucune dans 13 (avant le début et après le redémarrage) : le palier était seul sur le serveur, l'échec ne vient pas d'une autre génération.
+
+### Comparaison
+
+| Étape (assemblage, Mo) | 900 (1.8.9) | 1 000 (1.8.9) | 1 500 (1.8.9) |
+|------------------------|-------------|---------------|---------------|
+| pages d'articles       | 15 540      | 17 403        | 27 976        |
+| fusion des parties     | 325         | 321 (pic 389) | 382 (pic 433), 644 s |
+| signets et liens       | 358         | 384           | 520, 209 s    |
+| numérotation           | 1 390 (565 s) | 1 504 (628 s) | redémarrage après 835 s |
+| pic du conteneur       | 2 048       | 2 048         | 2 048         |
+| total côté client      | 3 608,6 s   | 4 153,3 s     | échec à 3 481,0 s |
+
+**Conclusion** : 1 500 articles ne passent pas sur Toolforge en 1.8.9. Au rythme mesuré à 1 000 articles (environ 0,086 Mo par page pour la numérotation), les 28 178 pages demanderaient près de 2,4 Go au seul processus d'assemblage, au-delà des 2 Go du conteneur : le serveur est arrêté pendant `stamp_page_numbers`. La limite réelle est entre 1 000 (réussi) et 1 500 articles ; c'est la numérotation des pages qui la fixe, pas les téléchargements ni la fusion.
 
 ## Version 1.8.9, 1 000 articles (16/11/2026, 09:42 UTC)
 
