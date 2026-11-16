@@ -28,6 +28,10 @@ on:
         description: "Enregistrer ces mesures comme nouvelle référence (main uniquement)"
         type: boolean
         default: false
+      repeat:
+        description: "Générations par scénario (0 : celles du niveau, 3 en min, 2 en max)"
+        type: number
+        default: 0
 
 concurrency:
   group: perf-check
@@ -44,6 +48,7 @@ jobs:
       PERF_ENVIRONMENT: "GitHub Actions ubuntu-latest, image Docker de production"
       LEVEL: ${{ inputs.level }}
       SAVE_REFERENCE: ${{ inputs.save_reference && github.ref == 'refs/heads/main' }}
+      REPEAT: ${{ inputs.repeat }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -65,6 +70,7 @@ jobs:
         run: |
           args="--level $LEVEL --report perf-report.md"
           [ "$SAVE_REFERENCE" = true ] && args="$args --save-reference"
+          [ "${REPEAT:-0}" -gt 0 ] && args="$args --repeat $REPEAT"
           status=0
           python scripts/perf_check.py $args || status=$?
           [ -f perf-report.md ] && cat perf-report.md >> "$GITHUB_STEP_SUMMARY"
@@ -85,7 +91,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add scripts/perf/reference.json
           git diff --cached --quiet && exit 0
-          git commit -m "perf: référence $LEVEL $(date -u +%F)"
+          git commit -m "perf: référence $LEVEL $(date -u +%F)${REPEAT:+ sur $REPEAT générations}"
           for attempt in 1 2 3; do
             git fetch -q origin main && git rebase -q origin/main && git push -q origin HEAD:main && exit 0
             sleep $((attempt * 5))

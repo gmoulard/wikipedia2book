@@ -19,6 +19,7 @@ import sys
 import tempfile
 import threading
 import unittest
+from unittest.mock import patch
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from io import BytesIO
 from pathlib import Path
@@ -162,6 +163,22 @@ class PerfCheckTest(unittest.TestCase):
         runs = [{"total_s": t, "wikipedia_s": t, "app_s": t, "transfer_s": 0.0, "pages": 50, "size_bytes": 1} for t in (3.0, 1.0, 2.0)]
         self.assertEqual(perf_check.median_run(runs)["app_s"], 2.0)
         self.assertEqual(perf_check.median_run(runs)["runs"], 3)
+
+    def test_saving_a_reference_succeeds_despite_a_regression_against_the_old_one(self):
+        with tempfile.TemporaryDirectory() as folder:
+            scenarios = Path(folder) / "scenarios.json"
+            scenarios.write_text(json.dumps({"language": "fr", "levels": {"min": {"repeat": 3, "scenarios": ["x"]}}, "scenarios": {"x": {"articles": ["A"]}}}), encoding="utf-8")
+            reference = Path(folder) / "reference.json"
+            old = {"created": "2026-11-15", "environment": {"label": "ci"}, "scenarios": {"x": {"pages": 3, "app_s": 0.000001, "total_s": 1.0}, "autre": {"pages": 9}}}
+            arguments = ["perf_check.py", "--base-url", self.url, "--scenarios", str(scenarios), "--reference", str(reference), "--environment", "ci"]
+            for extra, code in (([], 1), (["--save-reference", "--repeat", "9"], 0)):
+                reference.write_text(json.dumps(old), encoding="utf-8")
+                with self.subTest(extra=extra), patch.object(sys, "argv", arguments + extra), patch.object(perf_check, "verdict", return_value=("régression", [])):
+                    self.assertEqual(perf_check.main(), code)
+            saved = json.loads(reference.read_text(encoding="utf-8"))
+            self.assertEqual(saved["scenarios"]["x"]["runs"], 9)
+            self.assertEqual(saved["scenarios"]["autre"], {"pages": 9})
+            self.assertEqual(len(FakeApp.received), 3 + 9)
 
 
 if __name__ == "__main__":

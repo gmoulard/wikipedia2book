@@ -250,6 +250,8 @@ def main():
                  "scenarios": {**(reference or {}).get("scenarios", {}), **measures}}
         args.reference.write_text(json.dumps(saved, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         print(f"Référence enregistrée dans {args.reference}", file=sys.stderr)
+        # NE PAS sortir en erreur pour une régression quand la référence est remplacée : l'étape qui la committe serait sautée, et l'écart porte sur l'ancienne référence, que l'on abandonne.
+        return 0
     return 1 if failures or "régression" in verdicts.values() else 0
 
 
