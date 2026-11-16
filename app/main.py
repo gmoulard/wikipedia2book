@@ -617,15 +617,19 @@ async def _build_book_pdf(
     async def document_data(document: UploadedDocument) -> tuple[bytes, bool]:
         if document.url is None:
             return base64.b64decode(document.data_base64), document.kind == "pdf"
+        started_at = time.monotonic()
         data, content_type = await fetch_remote_file(document.url, DOCUMENT_TYPES, f"le document « {document.title} »")
+        record.stage("fetch_document", "server", _memory_snapshot(), duration_s=round(time.monotonic() - started_at, 2), size_bytes=len(data), pdf=content_type == "application/pdf")
         return data, content_type == "application/pdf"
 
     # NE PAS garder l'image dans le livre reçu ni l'écrire sur disque : seule l'adresse est enregistrée dans le JSON, l'image est retéléchargée à chaque génération et ne vit que le temps de celle-ci.
     for field in remote_images:
         image = getattr(project, field)
         yield progress("fetch_image", title=image.title or image.url)
+        started_at = time.monotonic()
         data, content_type = await fetch_remote_file(image.url, BACKGROUND_TYPES, f"l’image « {image.title or image.url} »")
         project = project.model_copy(update={field: BookImage(title=image.title, mime_type=content_type, data_base64=base64.b64encode(data).decode("ascii"))})
+        record.stage("fetch_image", "server", _memory_snapshot(), image=field, duration_s=round(time.monotonic() - started_at, 2), size_bytes=len(data))
 
     fitted_items: dict[str, asyncio.Future[tuple[Path, int]]] = {}
     paper = WIKIPEDIA_PDF_PAPERS.get(project.page_format, "a4")
@@ -667,8 +671,8 @@ async def _build_book_pdf(
         except BaseException:
             for task in downloads:
                 task.cancel()
-            for task in fitted_items.values():
-                task.cancel()
+            # NE PAS annuler les recompositions en cours : annuler ne stoppe pas leur fil d'exécution, qui écrirait encore dans le dossier temporaire pendant sa suppression (échec « répertoire non vide » sous Windows).
+            await asyncio.gather(*fitted_items.values(), return_exceptions=True)
             raise
 
     fitted = {key: task.result() for key, task in fitted_items.items()}
@@ -710,6 +714,12 @@ def _finish_book(
     def render(html: str) -> bytes:
         return generate_pdf(html)
 
+    def render_cover() -> bytes:
+        started_at = time.monotonic()
+        html = build_cover_html(project, language)
+        stage("cover_html", duration_s=round(time.monotonic() - started_at, 2), background=project.cover_image is not None)
+        return render(html)
+
     def place_file(pdf_data: bytes) -> tuple[Path, int]:
         return _fit_to_file(pdf_data, workdir / f"page-{next(page_numbers)}.pdf", page_width_mm, page_height_mm)
 
@@ -723,7 +733,7 @@ def _finish_book(
     cover: bytes | None = None
     if project.page_numbers:
         step("compute_page_numbers")
-        cover = render(build_cover_html(project, language))
+        cover = render_cover()
         stage("render_cover")
         cursor = _page_count(cover) + 1
         toc_pages = 0
@@ -750,7 +760,7 @@ def _finish_book(
         ]
         stage("render_toc", blocks=toc_blocks)
     if cover is None:
-        cover = render(build_cover_html(project, language))
+        cover = render_cover()
         stage("render_cover")
 
     step("assemble")

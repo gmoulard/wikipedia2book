@@ -790,6 +790,25 @@ class RemoteFilesTest(unittest.TestCase):
         self.assertTrue(any(f"data:image/png;base64,{cover}" in html for html in self.htmls))
         self.assertFalse(any("https://upload.wikimedia.org" in html for html in self.htmls))
 
+    def test_image_processing_is_timed_in_the_generation_journal(self):
+        events = _parse_stream(self.client.post("/api/pdf/stream", json=self._project()).content)
+        self.assertEqual(events[-1]["type"], "done")
+        stages = main.generation_log[-1]["stages"]
+        images = [stage for stage in stages if stage["stage"] == "fetch_image"]
+        self.assertEqual([stage["image"] for stage in images], ["cover_image", "back_image"])
+        documents = [stage for stage in stages if stage["stage"] == "fetch_document"]
+        self.assertEqual(sorted(stage["pdf"] for stage in documents), [False, True])
+        cover = [stage for stage in stages if stage["stage"] == "cover_html"]
+        self.assertEqual(len(cover), 1)
+        self.assertTrue(cover[0]["background"])
+        for stage in images + documents + cover:
+            self.assertGreaterEqual(stage["duration_s"], 0)
+        for stage in images + documents:
+            self.assertGreater(stage["size_bytes"], 0)
+        journal = json.dumps(main.generation_log[-1])
+        for text in ("example.org", "wikimedia", "Couverture", "Notice", "Photo"):
+            self.assertNotIn(text, journal)
+
     def test_unreachable_image_stops_the_generation_with_its_address(self):
         del self.files[self.BACK]
         events = _parse_stream(self.client.post("/api/pdf/stream", json=self._project()).content)
