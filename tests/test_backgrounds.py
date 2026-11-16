@@ -119,6 +119,55 @@ class CoverTextStyleTest(unittest.TestCase):
         self.assertNotIn(".cover-text {", plain)
 
 
+def encoded(picture, fmt, **options):
+    buffer = io.BytesIO()
+    picture.save(buffer, fmt, **options)
+    return base64.b64encode(buffer.getvalue()).decode("ascii")
+
+
+def decoded(image):
+    return Image.open(io.BytesIO(base64.b64decode(image.data_base64)))
+
+
+class FitBackgroundTest(unittest.TestCase):
+    A4 = (2480, 3508)
+
+    def test_large_photo_is_reduced_to_the_page_at_300_dpi(self):
+        photo = BookImage(title="Photo", mime_type="image/jpeg", data_base64=encoded(Image.new("RGB", (5616, 3744), "navy"), "JPEG"))
+        fitted = book_builder.fit_background(photo, 210, 297)
+        self.assertEqual((fitted.title, fitted.mime_type), ("Photo", "image/jpeg"))
+        self.assertEqual(decoded(fitted).size, self.A4)
+        self.assertLess(len(fitted.data_base64), len(photo.data_base64))
+
+    def test_crop_keeps_the_center(self):
+        picture = Image.new("RGB", (9000, 3508), "white")
+        picture.paste((0, 0, 0), (3000, 0, 6000, 3508))
+        fitted = decoded(book_builder.fit_background(BookImage(mime_type="image/png", data_base64=encoded(picture, "PNG")), 210, 297))
+        self.assertEqual(fitted.size, self.A4)
+        self.assertLess(sum(fitted.getpixel((1240, 1754))), 30)
+
+    def test_transparency_is_kept_as_png(self):
+        picture = Image.new("RGBA", (5000, 7000), (255, 0, 0, 0))
+        fitted = book_builder.fit_background(BookImage(mime_type="image/png", data_base64=encoded(picture, "PNG")), 210, 297)
+        self.assertEqual(fitted.mime_type, "image/png")
+        self.assertEqual(decoded(fitted).mode, "RGBA")
+
+    def test_exif_rotation_is_applied_before_cropping(self):
+        picture = Image.new("RGB", (7000, 5000), "green")
+        exif = picture.getexif()
+        exif[0x0112] = 6
+        fitted = book_builder.fit_background(BookImage(mime_type="image/jpeg", data_base64=encoded(picture, "JPEG", exif=exif)), 210, 297)
+        self.assertEqual(decoded(fitted).size, self.A4)
+
+    def test_small_svg_and_unreadable_images_are_left_alone(self):
+        small = BookImage(mime_type="image/png", data_base64=encoded(Image.new("RGB", (800, 600), "red"), "PNG"))
+        svg = BookImage(mime_type="image/svg+xml", data_base64=base64.b64encode(b'<svg xmlns="http://www.w3.org/2000/svg"/>').decode("ascii"))
+        broken = BookImage(mime_type="image/png", data_base64=PNG)
+        for image in (small, svg, broken):
+            with self.subTest(mime=image.mime_type):
+                self.assertIs(book_builder.fit_background(image, 210, 297), image)
+
+
 class BackBackgroundTest(unittest.TestCase):
     def test_back_cover_page_is_the_image_alone(self):
         html = book_builder.build_back_cover_html(Project(name="Livre", back_image=BACK, page_format="A5"))

@@ -304,6 +304,46 @@ def _background_css(image: BookImage | None, page: str) -> str:
     return f'@page {page} {{ background: url("data:{image.mime_type};base64,{image.data_base64}") center / cover no-repeat fixed; }}'
 
 
+
+BACKGROUND_DPI = 300
+BACKGROUND_JPEG_QUALITY = 90
+_ROTATED_ORIENTATIONS = {5, 6, 7, 8}
+
+
+# NE PAS laisser WeasyPrint décoder l'image d'origine : une photo de 5 616 × 3 744 px y prenait 2 s et 200 Mo de plus pour une page A4 qui n'en affiche que 2 480 × 3 508.
+def fit_background(image: BookImage, width_mm: float, height_mm: float) -> BookImage:
+    if image.data_base64 is None or image.mime_type == "image/svg+xml":
+        return image
+    target = (round(width_mm / 25.4 * BACKGROUND_DPI), round(height_mm / 25.4 * BACKGROUND_DPI))
+    try:
+        picture = Image.open(io.BytesIO(base64.b64decode(image.data_base64)))
+        width, height = picture.size
+        rotated = picture.getexif().get(0x0112) in _ROTATED_ORIENTATIONS
+        if rotated:
+            width, height = height, width
+        scale = max(target[0] / width, target[1] / height)
+        if scale > 1 or (width, height) == target:
+            return image
+        needed = (math.ceil(width * scale), math.ceil(height * scale))
+        picture.draft("RGB", (needed[1], needed[0]) if rotated else needed)
+        picture = ImageOps.exif_transpose(picture)
+        scale = max(target[0] / picture.width, target[1] / picture.height)
+        picture = picture.resize((max(target[0], math.ceil(picture.width * scale)), max(target[1], math.ceil(picture.height * scale))), Image.LANCZOS)
+        left, top = (picture.width - target[0]) // 2, (picture.height - target[1]) // 2
+        picture = picture.crop((left, top, left + target[0], top + target[1]))
+        transparent = picture.mode in ("RGBA", "LA") or (picture.mode == "P" and "transparency" in picture.info)
+        buffer = io.BytesIO()
+        if transparent:
+            picture.convert("RGBA").save(buffer, "PNG", optimize=True)
+            mime_type = "image/png"
+        else:
+            picture.convert("RGB").save(buffer, "JPEG", quality=BACKGROUND_JPEG_QUALITY, optimize=True)
+            mime_type = "image/jpeg"
+    except (OSError, ValueError, binascii.Error, Image.DecompressionBombError):
+        return image
+    return BookImage(title=image.title, mime_type=mime_type, data_base64=base64.b64encode(buffer.getvalue()).decode("ascii"))
+
+
 BLACK_TEXT_MIN_LUMINANCE = 0.175
 WHITE_TEXT_MAX_LUMINANCE = 0.183
 READABLE_SHARE = 0.95

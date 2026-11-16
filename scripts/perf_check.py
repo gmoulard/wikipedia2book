@@ -32,7 +32,7 @@ ROOT = Path(__file__).resolve().parent
 SCENARIOS = ROOT / "perf" / "scenarios.json"
 REFERENCE = ROOT / "perf" / "reference.json"
 METRICS = ("total_s", "wikipedia_s", "app_s", "transfer_s")
-DOWNLOAD_CODES = {"fetch_article", "prepare_document"}
+DOWNLOAD_CODES = {"fetch_image", "fetch_article", "prepare_document"}
 WATCH = 0.50
 REGRESSION = 1.00
 PAGES_DRIFT = 0.05
@@ -43,7 +43,18 @@ class GenerationError(RuntimeError):
     pass
 
 
+def book_from_json(path):
+    payload = json.loads((ROOT.parent / path).read_text(encoding="utf-8"))
+    if isinstance(payload, dict) and payload.get("format") == "wikipedia2book-workspace":
+        payload = payload["projects"]
+    return payload[0] if isinstance(payload, list) else payload
+
+
 def project(name, scenario, language):
+    if "json_file" in scenario:
+        body = book_from_json(scenario["json_file"])
+        body.update(scenario.get("options", {}))
+        return body
     titles = scenario["articles"]
     articles = [
         {"title": title, "language": language, "selected": True,

@@ -5,7 +5,8 @@
       "repeat": 3,
       "scenarios": [
         "50-pages",
-        "200-pages"
+        "200-pages",
+        "livre-reference-images"
       ]
     },
     "max": {
@@ -17,7 +18,8 @@
         "50-pages-sans-numerotation",
         "200-pages-chapitres",
         "200-pages-a5-paysage",
-        "20-articles"
+        "20-articles",
+        "livre-reference-images"
       ]
     }
   },
@@ -134,6 +136,9 @@
         "Pain d'épices",
         "Gorges du Verdon"
       ]
+    },
+    "livre-reference-images": {
+      "json_file": "app/static/testPerformanceReference.json"
     }
   }
 }

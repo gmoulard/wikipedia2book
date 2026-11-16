@@ -498,9 +498,12 @@ function renderBackgrounds() {
     const image = state.project?.[field.dataset.background];
     const preview = field.querySelector('.background-preview');
     const warning = field.querySelector('.background-warning');
+    const sizeHint = field.querySelector('.background-size');
+    // NE PAS afficher la taille recommandée pour une image qui convient : elle ne s'affiche qu'avec l'alerte qui la justifie.
     const showWarning = () => {
       warning.textContent = size ? backgroundWarning(state.project?.[field.dataset.background], preview, size) : '';
       warning.hidden = !warning.textContent;
+      sizeHint.textContent = warning.textContent ? t('edition.backgroundRecommended', size) : '';
     };
     preview.hidden = !image;
     preview.onload = showWarning;
@@ -508,7 +511,6 @@ function renderBackgrounds() {
     if (image && preview.getAttribute('src') !== source) { preview.src = source; preview.alt = image.title || ''; }
     else if (!image) preview.removeAttribute('src');
     showWarning();
-    field.querySelector('.background-size').textContent = size ? t('edition.backgroundRecommended', size) : '';
     field.querySelector('.background-remove').hidden = !image;
   });
 }

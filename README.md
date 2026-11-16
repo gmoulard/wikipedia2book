@@ -69,7 +69,8 @@ wikipedia2book/
 │       ├── app.js               # Front-end logic
 │       ├── i18n.js              # Interface translations (12 languages)
 │       ├── styles.css
-│       └── Wikipedia2bookLogo.png
+│       ├── Wikipedia2bookLogo.png
+│       └── testPerformanceReference.json   (reference book of the performance workshop)
 ├── scripts/
 │   ├── docker-build.sh          # Docker build with git commit/date/author injected
 │   ├── toolforge-deploy.sh      # Deployment script run in the Toolforge tool account

@@ -16,6 +16,7 @@
 
 import json
 import sys
+import tempfile
 import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -81,7 +82,10 @@ class PerfCheckTest(unittest.TestCase):
 
     def test_scenarios_file_matches_levels(self):
         config = json.loads(perf_check.SCENARIOS.read_text(encoding="utf-8"))
-        self.assertEqual(config["levels"]["min"]["scenarios"], ["50-pages", "200-pages"])
+        self.assertEqual(config["levels"]["min"]["scenarios"], ["50-pages", "200-pages", "livre-reference-images"])
+        book = perf_check.book_from_json(config["scenarios"]["livre-reference-images"]["json_file"])
+        self.assertEqual(len(book["main_articles"]), 10)
+        self.assertTrue(book["cover_image"]["url"].startswith("https://"))
         for level in config["levels"].values():
             for name in level["scenarios"]:
                 self.assertIn(name, config["scenarios"])
@@ -95,6 +99,22 @@ class PerfCheckTest(unittest.TestCase):
         self.assertTrue(all(article["selected"] for article in body["main_articles"]))
         self.assertEqual([chapter["article_keys"] for chapter in body["chapters"]], [["fr:title:a", "fr:title:b", "fr:title:c"], ["fr:title:d", "fr:title:e"]])
         self.assertFalse(body["page_numbers"])
+
+    def test_project_can_be_a_book_published_as_json(self):
+        with tempfile.TemporaryDirectory() as folder:
+            book = {"name": "Exemple", "main_articles": [{"title": "Phare", "language": "fr", "url": "https://fr.wikipedia.org/wiki/Phare", "selected": True}],
+                    "cover_image": {"title": "Couverture", "url": "https://upload.wikimedia.org/couverture.jpg"}, "page_numbers": True}
+            path = Path(folder) / "livre.json"
+            path.write_text(json.dumps({"format": "wikipedia2book-workspace", "version": 1, "projects": [book]}), encoding="utf-8")
+            body = perf_check.project("x", {"json_file": str(path), "options": {"page_numbers": False}}, "fr")
+        self.assertEqual(body["name"], "Exemple")
+        self.assertEqual(body["cover_image"]["url"], "https://upload.wikimedia.org/couverture.jpg")
+        self.assertFalse(body["page_numbers"])
+        run = perf_check.generate(self.url, body, "fr")
+        self.assertEqual(run["pages"], 3)
+
+    def test_image_downloads_count_as_downloads(self):
+        self.assertIn("fetch_image", perf_check.DOWNLOAD_CODES)
 
     def test_generate_measures_phases_and_counts_pages(self):
         body = perf_check.project("x", {"articles": ["A", "B", "C"]}, "fr")

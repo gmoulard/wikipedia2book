@@ -43,6 +43,7 @@ from app.book_builder import (
     build_back_cover_html,
     build_conclusion_page_html,
     build_cover_html,
+    fit_background,
     PDF_LABELS,
     TOC_LINK_PREFIX,
     build_license_page_html,
@@ -724,6 +725,17 @@ def _finish_book(
         return _fit_to_file(pdf_data, workdir / f"page-{next(page_numbers)}.pdf", page_width_mm, page_height_mm)
 
     stage("assembly_start")
+    backgrounds = {field: image for field in ("cover_image", "back_image") if (image := getattr(project, field))}
+    if backgrounds:
+        started_at = time.monotonic()
+        fitted_backgrounds = {field: fit_background(image, page_width_mm, page_height_mm) for field, image in backgrounds.items()}
+        project = project.model_copy(update=fitted_backgrounds)
+        stage(
+            "fit_backgrounds",
+            duration_s=round(time.monotonic() - started_at, 2),
+            bytes_before=sum(len(image.data_base64 or "") * 3 // 4 for image in backgrounds.values()),
+            bytes_after=sum(len(image.data_base64 or "") * 3 // 4 for image in fitted_backgrounds.values()),
+        )
     slots = book_slots(groups)
     toc_at = toc_slot_index(project, groups, slots)
     toc_blocks = toc_block_count(project, selected, language)

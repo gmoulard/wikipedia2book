@@ -798,6 +798,9 @@ class RemoteFilesTest(unittest.TestCase):
         self.assertEqual([stage["image"] for stage in images], ["cover_image", "back_image"])
         documents = [stage for stage in stages if stage["stage"] == "fetch_document"]
         self.assertEqual(sorted(stage["pdf"] for stage in documents), [False, True])
+        fit = [stage for stage in stages if stage["stage"] == "fit_backgrounds"]
+        self.assertEqual(len(fit), 1)
+        self.assertGreater(fit[0]["bytes_before"], 0)
         cover = [stage for stage in stages if stage["stage"] == "cover_html"]
         self.assertEqual(len(cover), 1)
         self.assertTrue(cover[0]["background"])
