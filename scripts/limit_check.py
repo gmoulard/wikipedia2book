@@ -50,18 +50,58 @@ def source_titles(page, language, count):
     return titles[:count]
 
 
+def measure_one(base_url, count, titles, language, generator=generate):
+    body = project(f"{count} articles", {"articles": titles[:count]}, language)
+    start = time.perf_counter()
+    try:
+        measure = generator(base_url, body, language, timeout=3600)
+    except (GenerationError, OSError, ValueError) as error:
+        return {"articles": count, "error": f"{type(error).__name__}: {error}", "after_s": round(time.perf_counter() - start, 1)}
+    return {"articles": count, **{key: round(value, 1) if isinstance(value, float) else value for key, value in measure.items()}}
+
+
 def run(base_url, steps, titles, language, generator=generate):
     results = []
     for count in steps:
-        body = project(f"{count} articles", {"articles": titles[:count]}, language)
-        start = time.perf_counter()
-        try:
-            measure = generator(base_url, body, language, timeout=3600)
-        except (GenerationError, OSError, ValueError) as error:
-            results.append({"articles": count, "error": f"{type(error).__name__}: {error}", "after_s": round(time.perf_counter() - start, 1)})
+        results.append(measure_one(base_url, count, titles, language, generator))
+        if "error" in results[-1]:
             break
-        results.append({"articles": count, **{key: round(value, 1) if isinstance(value, float) else value for key, value in measure.items()}})
     return results
+
+
+def wait_for_server(base_url, opener=urllib.request.urlopen, sleep=time.sleep, timeout_s=600):
+    # NE PAS enchaîner le palier suivant sans attendre : après un échec, la plateforme redémarre souvent le serveur, et le palier suivant échouerait aussitôt sans rien mesurer.
+    waited = 0
+    while waited < timeout_s:
+        try:
+            with opener(urllib.request.Request(base_url + "/api/version", headers={"User-Agent": USER_AGENT}), timeout=10):
+                return
+        except OSError:
+            sleep(10)
+            waited += 10
+    raise SystemExit(f"{base_url} ne répond plus depuis {timeout_s} s")
+
+
+def search(base_url, titles, language, start, precision, maximum, generator=generate, wait=wait_for_server):
+    results = []
+    passed, failed, count = 0, None, start
+    while True:
+        results.append(measure_one(base_url, count, titles, language, generator))
+        if "error" in results[-1]:
+            failed = count
+            wait(base_url)
+        else:
+            passed = count
+        if failed is None:
+            if count >= maximum:
+                break
+            count = min(count * 2, maximum)
+            continue
+        middle = round((passed + failed) / 2 / precision) * precision
+        if failed - passed <= precision or not passed < middle < failed:
+            break
+        count = middle
+    return results, passed, failed
 
 
 def report(results):
@@ -76,17 +116,34 @@ def report(results):
     return "\n".join(lines)
 
 
+def summary(passed, failed, maximum):
+    if failed is None:
+        return f"Limite non atteinte : {passed} articles réussis (maximum demandé : {maximum})."
+    if not passed:
+        return f"Limite en dessous de {failed} articles : aucun palier réussi."
+    return f"Limite entre {passed} articles (réussi) et {failed} articles (échec)."
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Génère des livres de plus en plus gros jusqu'au premier échec.")
+    parser = argparse.ArgumentParser(description="Cherche la taille maximale d'un livre : paliers fixes jusqu'au premier échec, ou recherche par dichotomie.")
     parser.add_argument("--base-url", required=True)
     parser.add_argument("--language", default="fr")
     parser.add_argument("--source-page", default="France")
     parser.add_argument("--steps", default=",".join(map(str, DEFAULT_STEPS)))
+    parser.add_argument("--search", type=int, metavar="DEPART", help="dichotomie : double à partir de DEPART jusqu'au premier échec, puis coupe l'intervalle en deux")
+    parser.add_argument("--precision", type=int, default=50)
+    parser.add_argument("--max", type=int, default=2000, dest="maximum")
     args = parser.parse_args()
-    steps = [int(step) for step in args.steps.split(",")]
-    titles = source_titles(args.source_page, args.language, max(steps))
-    results = run(args.base_url, steps, titles, args.language)
-    print(report(results))
+    if args.search:
+        titles = source_titles(args.source_page, args.language, args.maximum)
+        results, passed, failed = search(args.base_url, titles, args.language, args.search, args.precision, args.maximum)
+        print(report(results))
+        print(summary(passed, failed, args.maximum))
+    else:
+        steps = [int(step) for step in args.steps.split(",")]
+        titles = source_titles(args.source_page, args.language, max(steps))
+        results = run(args.base_url, steps, titles, args.language)
+        print(report(results))
     print(json.dumps(results, ensure_ascii=False))
 
 

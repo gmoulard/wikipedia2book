@@ -52,8 +52,14 @@ async function request(path, options = {}) {
   }
   if (!response.ok) {
     let message = t('common.httpError', { status: response.status });
-    try { const p = await response.json(); message = p.detail || message; } catch { /* not json */ }
-    throw SERVER_DOWN_STATUSES.has(response.status) ? new ServerCrashError(message) : new Error(message);
+    let detail = null;
+    try { const p = await response.json(); detail = p.detail; } catch { /* not json */ }
+    if (typeof detail === 'string') message = detail;
+    else if (detail?.code === 'too_many_articles') message = t('export.tooManyArticles', { count: detail.count, limit: detail.limit });
+    else if (detail?.message) message = detail.message;
+    const error = SERVER_DOWN_STATUSES.has(response.status) ? new ServerCrashError(message) : new Error(message);
+    if (detail?.code) error.detail = detail;
+    throw error;
   }
   if (response.status === 204) return null;
   return response;
@@ -936,6 +942,11 @@ async function exportPdf() {
     showToast(t('export.ready'));
   } catch (error) {
     setSaveState(t('export.error'));
+    if (error.detail?.code === 'too_many_articles') {
+      hidePdfProgress();
+      window.alert(error.message);
+      return;
+    }
     showToast(t('export.failed', { error: error.message }), true);
   } finally {
     hidePdfProgress();

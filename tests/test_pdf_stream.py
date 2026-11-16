@@ -513,6 +513,22 @@ class PdfStreamTest(unittest.TestCase):
         self.assertEqual(len(seen), 3)
         self.assertEqual([path.exists() for path in seen], [False, False, False])
 
+    def test_article_limit_refuses_large_books_and_points_to_the_unlimited_server(self):
+        with patch.object(main, "ARTICLE_LIMIT", 1), patch.object(main, "MediaWikiClient", FakeClient):
+            for path in ("/api/pdf", "/api/pdf/stream"):
+                response = self.client.post(path, json=_project())
+                self.assertEqual(response.status_code, 413, path)
+                detail = response.json()["detail"]
+                self.assertEqual(detail["code"], "too_many_articles")
+                self.assertEqual((detail["count"], detail["limit"]), (2, 1))
+                self.assertIn("Wikimédia", detail["message"])
+        with patch.object(main, "ARTICLE_LIMIT", 2), patch.object(main, "MediaWikiClient", FakeClient), patch.object(main, "generate_pdf", lambda html: _make_pdf(1)):
+            self.assertEqual(self.client.post("/api/pdf", json=_project()).status_code, 200)
+
+    def test_no_article_limit_outside_toolforge(self):
+        self.assertFalse(main.ON_TOOLFORGE)
+        self.assertIsNone(main.ARTICLE_LIMIT)
+
     def test_api_pdf_streams_the_file_with_its_length(self):
         with patch.object(main, "MediaWikiClient", FakeClient), patch.object(main, "generate_pdf", lambda html: _make_pdf(1)):
             response = TestClient(main.app).post("/api/pdf", json=_project())

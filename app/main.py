@@ -97,6 +97,8 @@ from app.wikipedia_api import (
 
 PROJECT_NAMESPACES_START = 100
 DOWNLOAD_CONCURRENCY = 4 if ON_TOOLFORGE else MEDIA_CONCURRENCY
+# NE PAS lever cette limite sur Toolforge : chaque livre télécharge tous ses articles auprès du service PDF de Wikimédia, et au-delà un gros livre occupe aussi presque toute la mémoire du conteneur (2 Gio, docs/testLimitetoolforge.md).
+ARTICLE_LIMIT = 300 if ON_TOOLFORGE else None
 PDF_STREAM_CHUNK = 256 * 1024
 
 app = FastAPI(title="Wikipedia2Book", version=VERSION)
@@ -436,6 +438,17 @@ def _selected_items(project: Project) -> list[Article | UploadedDocument]:
     ]
     if not selected:
         raise HTTPException(status_code=400, detail="Sélectionnez au moins un article avant l’export.")
+    articles = sum(isinstance(item, Article) for item in selected)
+    if ARTICLE_LIMIT is not None and articles > ARTICLE_LIMIT:
+        raise HTTPException(status_code=413, detail={
+            "code": "too_many_articles",
+            "count": articles,
+            "limit": ARTICLE_LIMIT,
+            "message": (
+                f"Ce livre compte {articles} articles : la génération est limitée à {ARTICLE_LIMIT} articles par livre, "
+                "une limite volontaire pour ménager les serveurs de Wikimédia."
+            ),
+        })
     return selected
 
 
