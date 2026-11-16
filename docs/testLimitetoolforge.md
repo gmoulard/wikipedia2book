@@ -17,7 +17,80 @@ Réglages communs à toutes les mesures : `scripts/limit_check.py`, pages liées
 | 1.8.3   | 150 articles     | 200                     |
 | 1.8.5   | au moins 150 articles | test arrêté avant 200 |
 | 1.8.6   | 800 articles     | 1 000 (erreur sans redémarrage) |
-| 1.8.9   | au moins 900 articles | 1 000 en cours de mesure |
+| 1.8.9   | au moins 1 000 articles | aucun échec (900 et 1 000 réussis) |
+
+## Version 1.8.9, 1 000 articles (16/11/2026, 09:42 UTC)
+
+Deuxième palier sur la 1.8.9, lancé dès la fin de celui de 900 articles, avec `--save-pdf ./tmp` (le PDF reçu est gardé dans `./tmp/limite-1000-articles.pdf`, ignoré par git). Même serveur, toujours démarré à 08:40:01 UTC. Les 1 000 premiers liens de l'article *France* contiennent les deux titres de même clé, « France Info » (n° 900) et « France info » (n° 907) : ce palier met à l'épreuve le correctif de la 1.8.9.
+
+### Résultat
+
+| Articles | Pages  | Taille du PDF | Wikipédia | Application | Transfert | Total     | Résultat |
+|----------|--------|---------------|-----------|-------------|-----------|-----------|----------|
+| 1 000    | 17 518 | 949,2 Mo      | 1 104,6 s | 986,9 s     | 2 061,8 s | 4 153,3 s | réussi   |
+
+Aucun redémarrage du serveur : 403 relevés de `GET /api/health/details`, de 09:42:24 à 10:52:06 UTC, sans interruption de plus de 30 s, tous avec l'heure de démarrage 08:40:01 UTC. **Le correctif des parties en double fonctionne** : la fusion des 1 021 parties passe sans `FileNotFoundError`, contrairement à la 1.8.6.
+
+### Journal de la génération
+
+Génération n° 6 (`GET /api/health/generations`), en Mo, mêmes colonnes que pour 900 articles :
+
+| Temps     | Étape                 | Processus  | Assemblage (pic) | Serveur | Conteneur | Détail |
+|-----------|-----------------------|------------|------------------|---------|-----------|--------|
+| 0,0 s     | `start`               | serveur    | —                | 304     | 373       | 1 000 articles, A4 portrait, numérotation et table des matières, français |
+| 1 103,5 s | `downloads_done`      | serveur    | —                | 346     | 1 436     | 17 403 pages d'articles |
+| 1 103,6 s | `assembly_start`      | assemblage | 89               | 346     | 1 447     | |
+| 1 103,7 s | `render_cover`        | assemblage | 102              | 346     | 1 459     | |
+| 1 107,2 s | `render_toc_count`    | assemblage | 119 (120)        | 346     | 1 504     | 10 blocs, 30 pages de table des matières |
+| 1 112,3 s | `render_toc`          | assemblage | 123 (124)        | 346     | 1 508     | 10 blocs |
+| 1 113,4 s | `render_chapters`     | assemblage | 125              | 346     | 1 510     | aucun chapitre |
+| 1 155,9 s | `render_license`      | assemblage | 174              | 346     | 1 559     | 10 blocs |
+| 1 388,9 s | `merge_parts`         | assemblage | 321 (389)        | 346     | 1 610     | 1 021 parties, 17 518 pages |
+| 1 389,0 s | `merge_reopen`        | assemblage | 321 (389)        | 346     | 1 609     | |
+| 1 444,1 s | `outline_and_links`   | assemblage | 384 (389)        | 346     | 1 673     | |
+| 2 071,7 s | `stamp_page_numbers`  | assemblage | 1 504            | 346     | 2 048     | |
+| 2 089,2 s | `save`                | assemblage | 1 530            | 346     | 2 048     | 949 212 479 octets |
+| 4 149,7 s | fin (`done`)          |            |                  |         |           | durée côté serveur |
+
+Durée de chaque étape de l'assemblage : pages générées 52 s ; fusion des 1 021 parties 233 s ; signets et liens 55 s ; **numérotation des 17 518 pages 628 s** ; écriture 18 s.
+
+### Mémoire du conteneur
+
+| Heure (UTC) | Générations | Conteneur | Serveur | Fichiers | Phase |
+|-------------|-------------|-----------|---------|----------|-------|
+| 09:42:24    | 0           | 373       | 304     | 0        | avant le palier (cache du livre de 900 articles) |
+| 09:50:04    | 1           | 851       | 328     | 437      | téléchargements |
+| 10:00:02    | 1           | 1 387     | 340     | 943      | téléchargements |
+| 10:03:09    | 1           | 2 048     | 346     | 1 453    | fin des téléchargements, fusion |
+| 10:05:02    | 1           | 2 048     | 346     | 1 808    | fusion |
+| 10:07:07    | 1           | 1 836     | 346     | 904      | fusion terminée, parties supprimées |
+| 10:15:06    | 1           | 2 048     | 346     | 904      | numérotation |
+| 10:20:06    | 1           | 652       | 346     | 1 809    | PDF écrit, processus d'assemblage terminé, envoi |
+| 10:35:07    | 1           | 1 052     | 346     | 1 809    | envoi |
+| 10:50:02    | 1           | 1 419     | 347     | 1 809    | fin de l'envoi |
+
+- Conteneur à 100 % dans 65 relevés, de 10:02:59 à 10:17:20 UTC (fusion puis numérotation, 14 minutes), sans être arrêté.
+- Fichiers temporaires au plus haut : 1 873 Mo ; mémoire du serveur au plus haut : 357 Mo.
+
+### Générations simultanées
+
+Une seule génération en cours dans 399 relevés, aucune dans 4 : aucun autre livre n'a été généré pendant ce palier, au plus 1 génération à la fois.
+
+### PDF obtenu
+
+Vérifié avec PyMuPDF sur `./tmp/limite-1000-articles.pdf` : 17 518 pages, dernier numéro de page « 17518 » ; 1 003 signets (livre, table des matières, 1 000 articles, licence) ; « France Info » en page 15 572 et « France info » en page 15 729 ; 4 014 liens internes dans les 30 pages de table des matières, aucun lien provisoire restant. Les deux entrées « France Info » de la table des matières pointent vers la même page, la première : elles partagent la clé d'article, d'où 999 pages visées pour 1 000 entrées.
+
+### Comparaison
+
+| Étape (assemblage, Mo) | 800 (1.8.6) | 900 (1.8.9) | 1 000 (1.8.9) |
+|------------------------|-------------|-------------|---------------|
+| fusion des parties     | 283         | 325         | 321 (pic 389) |
+| numérotation           | 1 295 (428 s) | 1 390 (565 s) | 1 504 (628 s) |
+| écriture               | 1 316       | 1 415       | 1 530         |
+| pic du conteneur       | 2 048       | 2 048       | 2 048         |
+| total côté client      | 3 468,8 s   | 3 608,6 s   | 4 153,3 s     |
+
+**Conclusion** : 1 000 articles passent (17 518 pages, 949 Mo de PDF, 69 minutes), sans redémarrage, seul sur le serveur. Le processus d'assemblage culmine à 1,5 Go pendant la numérotation, et le conteneur reste à sa limite pendant 14 minutes : la marge est mince, et un autre gros livre généré en même temps la ferait dépasser. Pour la numérotation, environ 0,086 Mo par page.
 
 ## Version 1.8.9 (16/11/2026, 08:41 UTC)
 
