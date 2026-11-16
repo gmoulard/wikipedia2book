@@ -99,14 +99,8 @@
             <div><div class="eyebrow" data-i18n="org.eyebrow">COMPOSITION</div><h2 data-i18n="org.title">Donner un ordre aux idées</h2></div>
             <p data-i18n="org.intro">Glissez-déposez les éléments pour les réorganiser. La table des matières peut être placée n'importe où, ou retirée.</p>
           </div>
-          <div class="organization-toolbar"><div class="selection-summary"><span class="selection-number" id="organizationCount">0</span><span data-i18n="org.countLabel">articles retenus pour le livre</span></div><div class="organization-actions"><button class="button button-outline" id="addTocButton" type="button" hidden data-i18n-title="org.addTocTitle" title="Remettre la table des matières dans le livre"><span aria-hidden="true">+</span> <span data-i18n="org.toc">Table des matières</span></button><button class="button button-outline" id="addVolumeButton" type="button" data-i18n-title="org.addVolumeTitle" title="Couper le livre en plusieurs volumes : chaque volume donne un PDF"><span data-i18n="org.addVolume">Nouveau volume</span> <span aria-hidden="true">+</span></button><button class="button button-outline" id="addChapterButton" type="button"><span data-i18n="org.addChapter">Créer un chapitre</span> <span aria-hidden="true">+</span></button></div></div>
+          <div class="organization-toolbar"><div class="selection-summary"><span class="selection-number" id="organizationCount">0</span><span data-i18n="org.countLabel">articles retenus pour le livre</span></div><div class="organization-actions"><button class="button button-outline" id="addTocButton" type="button" hidden data-i18n-title="org.addTocTitle" title="Remettre la table des matières dans le livre"><span aria-hidden="true">+</span> <span data-i18n="org.toc">Table des matières</span></button><input id="documentFileInput" type="file" accept="image/*,application/pdf" multiple hidden><button class="button button-outline" id="uploadDocumentButton" type="button" data-i18n-title="org.uploadSubtitle" title="Image ou PDF, intégré comme un article du livre"><span data-i18n="org.chooseFile">Choisir un fichier</span> <span aria-hidden="true">+</span></button><button class="button button-outline" id="addVolumeButton" type="button" data-i18n-title="org.addVolumeTitle" title="Couper le livre en plusieurs volumes : chaque volume donne un PDF"><span data-i18n="org.addVolume">Nouveau volume</span> <span aria-hidden="true">+</span></button><button class="button button-outline" id="addChapterButton" type="button"><span data-i18n="org.addChapter">Créer un chapitre</span> <span aria-hidden="true">+</span></button></div></div>
           <p class="org-volumes-hint" id="organizationVolumes" role="status" hidden></p>
-          <div class="upload-box">
-            <div class="explore-head"><span class="explore-icon" aria-hidden="true">📎</span><div><strong data-i18n="org.uploadTitle">Importer un document</strong><small data-i18n="org.uploadSubtitle">Image ou PDF, intégré comme un article du livre</small></div></div>
-            <input id="documentFileInput" type="file" accept="image/*,application/pdf" multiple hidden>
-            <button class="button button-outline" id="uploadDocumentButton" type="button"><span data-i18n="org.chooseFile">Choisir un fichier</span> <span aria-hidden="true">+</span></button>
-            <div id="uploadedDocumentsList" class="uploaded-documents-list"></div>
-          </div>
           <div id="organizationList" class="organization-list"></div>
           <div class="step-footer"><button class="button button-teal" type="button" data-view="book" data-next-step="edition"><span class="step-footer-label">Étape suivante : Édition</span> <span class="step-arrow" aria-hidden="true">→</span></button></div>
         </section>
@@ -120,12 +114,35 @@
             <section class="settings-section">
               <div class="settings-heading"><span class="settings-index">A</span><div><h3 data-i18n="edition.identityTitle">Identité du livre</h3><p data-i18n="edition.identitySubtitle">Les informations de couverture et d'ouverture</p></div></div>
               <div class="form-grid">
+                <div class="field field-wide background-field" data-background="cover_image">
+                  <span data-i18n="edition.coverImageLabel">Image de fond de la couverture</span>
+                  <div class="background-picker">
+                    <img class="background-preview" alt="" hidden>
+                    <button class="button button-outline background-choose" type="button" data-i18n="edition.backgroundChoose">Choisir un fichier</button>
+                    <input class="background-url" type="url" placeholder="https://commons.wikimedia.org/wiki/File:…" autocomplete="off">
+                    <button class="button button-outline background-use-url" type="button" data-i18n="edition.backgroundUseUrl">Utiliser l'adresse</button>
+                    <button class="chapter-remove background-remove" type="button" data-i18n="edition.backgroundRemove" hidden>Retirer</button>
+                    <input class="background-file" type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" hidden>
+                  </div>
+                </div>
+                <p class="field-hint field-wide" data-i18n="edition.backgroundHint">Importez une image ou collez son adresse (une page de fichier Wikimedia Commons convient). Elle couvre toute la page.</p>
                 <label class="field field-wide"><span data-i18n="heading.nameLabel">Titre du livre</span><input id="bookTitle" type="text" maxlength="200" autocomplete="off"></label>
                 <label class="field field-wide"><span data-i18n="edition.subtitleLabel">Sous-titre</span><input id="bookSubtitle" type="text" placeholder="Facultatif" data-i18n-placeholder="common.optional"></label>
                 <label class="field field-wide"><span data-i18n="edition.authorLabel">Auteur ou éditeur</span><input id="bookAuthor" type="text" placeholder="Facultatif" data-i18n-placeholder="common.optional"></label>
                 <label class="field field-wide"><span data-i18n="heading.descLabel">Note de couverture</span><input id="bookDescription" type="text" maxlength="2000" placeholder="Note affichée sur la couverture (facultatif)" data-i18n-placeholder="heading.descPlaceholder" autocomplete="off"></label>
                 <label class="field field-wide"><span data-i18n="edition.introLabel">Introduction</span><textarea id="bookIntroduction" rows="4" placeholder="Quelques mots pour ouvrir le livre…" data-i18n-placeholder="edition.introPlaceholder"></textarea></label>
                 <label class="field field-wide"><span data-i18n="edition.conclusionLabel">Conclusion</span><textarea id="bookConclusion" rows="4" placeholder="Quelques mots pour refermer le livre…" data-i18n-placeholder="edition.conclusionPlaceholder"></textarea></label>
+                <div class="field field-wide background-field" data-background="back_image">
+                  <span data-i18n="edition.backImageLabel">Image de fond de la dernière page</span>
+                  <div class="background-picker">
+                    <img class="background-preview" alt="" hidden>
+                    <button class="button button-outline background-choose" type="button" data-i18n="edition.backgroundChoose">Choisir un fichier</button>
+                    <input class="background-url" type="url" placeholder="https://commons.wikimedia.org/wiki/File:…" autocomplete="off">
+                    <button class="button button-outline background-use-url" type="button" data-i18n="edition.backgroundUseUrl">Utiliser l'adresse</button>
+                    <button class="chapter-remove background-remove" type="button" data-i18n="edition.backgroundRemove" hidden>Retirer</button>
+                    <input class="background-file" type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" hidden>
+                  </div>
+                </div>
               </div>
             </section>
             <section class="settings-section">

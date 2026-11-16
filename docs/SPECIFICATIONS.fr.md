@@ -255,7 +255,7 @@ Fonctionnalités disponibles :
 
 * Dans « Vos articles », une case à cocher par article indique s'il est inclus dans le livre.
 
-La sélection est conservée avec le reste du livre, en mémoire et dans l'export JSON. À l'ouverture d'un fichier JSON plus ancien, les articles découverts qui y étaient cochés sont rangés dans « Vos articles », les autres restent dans les suggestions.
+La sélection est conservée avec le reste du livre, en mémoire et dans l'export JSON. Les suggestions, elles, ne sont pas enregistrées dans l'export JSON (`discovered_articles` y est toujours vide depuis la 1.9.6) : on les retrouve en relançant « Articles liés ». À l'ouverture d'un fichier JSON plus ancien, les articles découverts qui y étaient cochés sont rangés dans « Vos articles », les autres restent dans les suggestions.
 
 ## 6\. Organisation du livre
 
@@ -265,21 +265,27 @@ Fonctionnalités :
 
 * Réordonner les articles par glisser-déposer.
 
-* Créer des chapitres et leur donner un titre.
+* Créer des chapitres et leur donner un titre. Le premier chapitre créé s'ajoute après les articles déjà présents, qui restent en tête du livre sans intitulé (`unassigned_first`), sans faire apparaître « Sans chapitre » ; il suffit ensuite d'y glisser des articles.
 
-* Déplacer un article d'un chapitre à un autre, ou hors de tout chapitre, par glisser-déposer.
+* Déplacer un article d'un chapitre à un autre, ou hors de tout chapitre, par glisser-déposer : l'appartenance à un chapitre vient de la place de l'article sous la ligne du chapitre (il n'y a pas de menu de choix du chapitre). Un article lâché sur la ligne d'un chapitre entre en tête de ce chapitre ; lâché sur « Sans chapitre », il sort de tout chapitre ; lâché sur un autre article, il prend sa place (`applyOrgSequence` dans `app.js`, qui met à jour `chapters`, `article_order` et `unassigned_first`).
+
+* Déplacer un chapitre par glisser-déposer, en l'attrapant par n'importe quel endroit de sa ligne hors de son titre (le champ du titre n'est pas plus large que le titre, car Chrome ne lance pas de glisser-déposer depuis un champ de saisie). La liste se lit comme une suite : seule la ligne du chapitre se déplace, et chaque article appartient au chapitre placé au-dessus de lui ; les articles placés avant le premier chapitre sont en tête du livre, sans intitulé (`unassigned_first`). Quand le livre a un groupe « Sans chapitre » en fin de liste, un chapitre ne peut pas passer sous cette ligne.
+
+* Chaque ligne d'article ou de document importé tient sur une ligne (titre, puis origine en plus petit) et porte un bouton « × » qui le retire du livre (un article retiré disparaît aussi de « Vos articles », un document importé est supprimé) et un bouton « ↗ » qui ouvre l'article sur Wikipédia ou le document importé dans un nouvel onglet. Les chapitres, la table des matières et les coupures de volume ont la même croix « × ».
 
 * Placer la table des matières n'importe où dans le livre par glisser-déposer : au début, avant n'importe quel chapitre ou article (y compris au milieu d'un chapitre), ou à la fin. Sa position est enregistrée par rapport à l'élément qui la suit (`toc_position` : `start`, `end` ou `before:<clé>`, où la clé est celle d'un article/document, `chapter:<id>` pour un chapitre, ou `chapter:` pour le groupe « Sans chapitre »); si cet élément disparaît du livre, la table des matières revient au début.
 
-* Retirer la table des matières du livre (bouton « Retirer » sur sa ligne), puis la remettre (bouton « + Table des matières » dans la barre d'outils, qui la replace au début).
+* Retirer la table des matières du livre (croix « × » sur sa ligne), puis la remettre (bouton « + Table des matières » dans la barre d'outils, qui la replace au début).
 
 * Un livre d'un seul article ou document n'a pas de table des matières, même quand elle n'a pas été retirée : sa ligne et le bouton « + Table des matières » n'apparaissent pas dans l'étape Organisation, et le PDF n'en contient pas (`book_builder.toc_slot_index`, `buildOrgSlots`). Elle revient dès que le livre compte deux éléments ; un volume d'un seul article n'en a pas non plus.
 
-* Quand le livre a des chapitres, les articles qui n'appartiennent à aucun chapitre sont affichés à la fin de la liste, sous l'intitulé « Sans chapitre », comme dans le PDF. Exception : pour un livre importé d'une page de livre Wikipédia dont des articles précèdent le premier chapitre (section 3.1), ces articles sont affichés et placés dans le PDF en tête, avant le premier chapitre, sans intitulé ni page de chapitre.
+* Quand le livre a des chapitres, les articles qui n'appartiennent à aucun chapitre sont affichés à la fin de la liste, sous l'intitulé « Sans chapitre », comme dans le PDF. Exception : quand le premier chapitre a été créé après eux, qu'ils ont été glissés avant le premier chapitre, ou pour un livre importé d'une page de livre Wikipédia dont des articles précèdent le premier chapitre (section 3.1), ces articles sont affichés et placés dans le PDF en tête, avant le premier chapitre, sans intitulé ni page de chapitre.
 
-* Couper le livre en plusieurs volumes à sa guise, même sous la limite du serveur : le bouton « Nouveau volume + » de la barre d'outils ajoute une coupure au milieu du dernier volume ; la ligne « Début d'un volume » se déplace par glisser-déposer comme la table des matières, et se retire par son bouton « Retirer » (le volume rejoint alors le précédent). Chaque coupure est enregistrée par rapport à l'élément qui la suit (`volume_breaks`, liste de `before:<clé>`, mêmes clés que `toc_position`, gardée dans l'export JSON et ignorée par le serveur) ; une coupure dont l'élément disparaît, qui viserait le premier élément du livre ou un chapitre sans article est ignorée. Chaque volume est généré dans un PDF à part (section 11.1).
+* Couper le livre en plusieurs volumes à sa guise, même sous la limite du serveur : le bouton « Nouveau volume + » de la barre d'outils ajoute une coupure au milieu du dernier volume ; la ligne « Début d'un volume » se déplace par glisser-déposer comme la table des matières, et se retire par sa croix « × » (le volume rejoint alors le précédent). Chaque coupure est enregistrée par rapport à l'élément qui la suit (`volume_breaks`, liste de `before:<clé>`, mêmes clés que `toc_position`, gardée dans l'export JSON et ignorée par le serveur) ; une coupure dont l'élément disparaît, qui viserait le premier élément du livre ou un chapitre sans article est ignorée. Chaque volume est généré dans un PDF à part (section 11.1).
 
 * Ajouter une introduction générale et une conclusion.
+
+* Choisir dans l'étape Édition une image de fond pour la couverture et une autre pour la dernière page, chacune importée depuis un fichier ou depuis son adresse (section 11.1).
 
 * Activer ou non la numérotation des pages (activée par défaut).
 
@@ -287,15 +293,15 @@ Un article peut être déplacé librement dans la structure du livre.
 
 ### 6.1 Documents importés (images et PDF)
 
-Dans l'étape Organisation, l'utilisateur peut aussi importer ses propres fichiers (image ou PDF) pour les intégrer au livre comme s'il s'agissait d'articles :
+Dans l'étape Organisation, l'utilisateur peut aussi importer ses propres fichiers (image ou PDF), par le bouton « Choisir un fichier + » de la barre d'outils, à côté de « Nouveau volume + », pour les intégrer au livre comme s'il s'agissait d'articles :
 
 * Formats acceptés : images (`image/*`) et PDF (`application/pdf`); 15 Mo maximum par fichier.
 
-* Un document importé apparaît dans la liste des éléments à organiser au même titre qu'un article : il peut être réordonné, déplacé dans un chapitre, et sa page de départ apparaît dans la table des matières si la numérotation est activée.
+* Un document importé apparaît dans la liste des éléments à organiser au même titre qu'un article : il peut être réordonné et déplacé dans un chapitre par glisser-déposer, compte dans un volume, se retire par « × » et s'ouvre par « ↗ » (à partir d'une adresse `blob:`, Chrome refusant d'ouvrir une adresse `data:` dans un nouvel onglet), et sa page de départ apparaît dans la table des matières si la numérotation est activée.
 
 * Une image importée est intégrée comme une page entière, centrée et mise à l'échelle au format du livre; un PDF importé est intégré tel quel, page par page.
 
-* Le document peut être désélectionné (exclu du livre sans être supprimé) ou retiré définitivement, indépendamment des autres documents et articles.
+* Le document se retire du livre par son bouton « × », indépendamment des autres documents et articles ; il n'y a pas de liste séparée des documents importés ni de case pour les exclure sans les supprimer. Un document désélectionné dans un fichier JSON antérieur à la 1.9.6 revient dans le livre à l'ouverture du fichier.
 
 * Le contenu du fichier est conservé encodé en base64 dans l'état du livre et dans l'export JSON, afin de pouvoir régénérer le PDF ou reprendre le livre sans avoir à ré-importer le fichier.
 
@@ -459,6 +465,8 @@ Une fois le PDF lancé, le logiciel :
 
 * Termine la dernière page du PDF (la conclusion quand le livre en a une, sinon le dernier bloc de la page de licence) par le logo de Wikipedia2Book (`app/static/Wikipedia2bookLogoPrint.png`, incorporé au PDF, 100 mm de large au plus, lui-même cliquable vers https://wikipedia2book.toolforge.org/) et deux liens cliquables, https://wikipedia2book.toolforge.org/ et https://github.com/gmoulard/wikipedia2book ; un livre en volumes les a à la fin de chaque volume.
 
+* **Images de fond** (étape Édition, champs « Image de fond de la couverture » et « Image de fond de la dernière page ») : chaque image est importée depuis un fichier (PNG, JPEG, GIF, WebP ou SVG, 15 Mo au plus) ou depuis son adresse ; une adresse de page de fichier Wikimédia (`https://commons.wikimedia.org/wiki/File:…`, ou `Fichier:…` sur un projet en `<langue>.<projet>.org`) passe par l'API `imageinfo` de ce wiki, appelée par le navigateur (`origin=*`) pour obtenir une vignette de 2 000 px de large sur `upload.wikimedia.org` ; toute autre adresse est lue directement par le navigateur, ce qui n'aboutit que si le site l'autorise (CORS), sinon un message invite à télécharger l'image puis à importer le fichier. Le serveur ne télécharge jamais l'image : elle est gardée dans le livre (`cover_image`, `back_image` : `title`, `mime_type`, `data_base64`, modèle `BookImage`, base64 vérifié par le serveur), et donc dans l'export JSON, avec un aperçu et un bouton « Retirer ». L'image de couverture couvre toute la première page, marges comprises, sans déformation (`@page :first`, `background-size: cover`), sous le titre, le sous-titre et l'auteur ; les pages d'introduction n'en ont pas. Avec une image de dernière page, le logo et les liens ci-dessus quittent la conclusion ou la licence pour une dernière page à part (page nommée `back-cover`), couverte par l'image, où ils sont posés en bas dans un cadre blanc à 85 % d'opacité. Chaque volume d'un livre en volumes reprend les deux images. Tests : `tests/test_backgrounds.py`.
+
 * Ajoute une page de conclusion avec signet, si une conclusion a été saisie — toujours après la table des matières, même quand elle est positionnée en fin de livre.
 
 * Si la numérotation des pages est activée, superpose un numéro de page en bas de chaque page du document assemblé (sauf la couverture).
@@ -518,7 +526,7 @@ L'application est une page unique, organisée en trois étapes accessibles par d
 
 * 02 — Organisation : réorganisation des articles, chapitres, position ou retrait de la table des matières.
 
-* 03 — Édition : identité du livre (titre, sous-titre, auteur, note de couverture, introduction, conclusion) et format d'impression (format papier, orientation, préréglage de marges, numérotation des pages).
+* 03 — Édition : identité du livre (titre, sous-titre, auteur, note de couverture, introduction, conclusion, images de fond de la couverture et de la dernière page) et format d'impression (format papier, orientation, préréglage de marges, numérotation des pages).
 
 En bas des étapes Sources et Organisation, un bouton « Étape suivante : … » ouvre l'étape suivante et remonte en haut de la page.
 
@@ -1234,6 +1242,7 @@ Wikipedia2Book/
 │   ├── test_syntax.py
 │   ├── test_pdf_generation.py
 │   ├── test_uploaded_documents.py
+│   ├── test_backgrounds.py
 │   ├── test_wikipedia_api.py
 │   ├── test_pdf_stream.py
 │   ├── test_resolve_source.py
@@ -1396,5 +1405,6 @@ Numéro de version applicatif (`app/version.py`, repris par `app/main.py` et par
 | 1.9.3   | 2026-11-16 | GMoulard  | Dernière page de chaque PDF : logo de Wikipedia2Book et liens cliquables vers https://wikipedia2book.toolforge.org/ et https://github.com/gmoulard/wikipedia2book. Génération depuis une page de livre Wikipédia : plus de conclusion par défaut (`book_conclusion` vide) (sections 11.1, 13.3). |
 | 1.9.4   | 2026-11-16 | GMoulard  | Un livre d'un seul article ou document n'a plus de table des matières (ni à l'écran ni dans le PDF), même quand elle n'a pas été retirée ; logo de la dernière page deux fois plus grand et cliquable vers https://wikipedia2book.toolforge.org/ (sections 6, 11.1). |
 | 1.9.5   | 2026-11-16 | GMoulard  | Page de licence : plus de liste « Sources et auteurs » (adresse et historique de chaque article), redondante avec le lien vers la version reproduite à la fin de chaque article ; une phrase traduite indique que les auteurs sont crédités par ce lien. La page de licence tient en une page quelle que soit la taille du livre (sections 11.1, 12.1, 15). |
+| 1.9.6   | 2026-11-16 | GMoulard  | Images de fond au choix dans l'étape Édition, pour la couverture et pour une dernière page qui porte le logo et les liens, importées depuis un fichier ou une adresse (page de fichier Wikimedia Commons acceptée). Étape Organisation : chaque élément sur une ligne, chapitres et articles déplacés par glisser-déposer sans menu de choix du chapitre, boutons « × » (retirer) et « ↗ » (ouvrir, documents importés compris) sur chaque article et document, « Choisir un fichier + » dans la barre d'outils à la place du cadre « Importer un document », icône en double retirée de la table des matières ; les suggestions ne sont plus enregistrées dans le fichier JSON (sections 5, 6, 6.1, 11.1). |
 
 Fin du document

@@ -14,11 +14,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import binascii
+from base64 import b64decode
 from datetime import datetime, timezone
 from typing import Literal
 from uuid import uuid4
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 Site = Literal["wikipedia", "wikisource", "wikibooks", "wikivoyage", "wikiversity", "wikiquote", "wiktionary", "wikinews"]
@@ -61,6 +63,21 @@ class UploadedDocument(BaseModel):
         return f"doc:{self.id}"
 
 
+class BookImage(BaseModel):
+    title: str = Field(default="", max_length=300)
+    mime_type: str = Field(pattern=r"^image/(png|jpeg|gif|webp|svg\+xml)$")
+    data_base64: str = Field(min_length=1, max_length=30_000_000)
+
+    @field_validator("data_base64")
+    @classmethod
+    def decodable(cls, value: str) -> str:
+        try:
+            b64decode(value, validate=True)
+        except binascii.Error as error:
+            raise ValueError("Image illisible : contenu base64 invalide.") from error
+        return value
+
+
 class BookChapter(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()))
     title: str = Field(min_length=1, max_length=120)
@@ -79,6 +96,8 @@ class Project(BaseModel):
     book_author: str = Field(default="", max_length=200)
     introduction: str = Field(default="", max_length=20000)
     conclusion: str = Field(default="", max_length=20000)
+    cover_image: BookImage | None = None
+    back_image: BookImage | None = None
     page_format: Literal["A0", "A1", "A2", "A3", "A4", "A5", "A6", "Letter", "Legal", "custom"] = "A4"
     custom_width_mm: float = Field(default=148, ge=50, le=1000)
     custom_height_mm: float = Field(default=210, ge=50, le=1000)

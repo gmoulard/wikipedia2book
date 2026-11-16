@@ -115,13 +115,15 @@ function sameArticle(a, b) {
 function normalizeProject(input) {
   const project = {
     main_articles: [], discovered_articles: [], uploaded_documents: [],
-    book_title: '', book_subtitle: '', book_author: '', introduction: '', conclusion: '',
+    book_title: '', book_subtitle: '', book_author: '', introduction: '', conclusion: '', cover_image: null, back_image: null,
     page_format: 'A4', custom_width_mm: 148, custom_height_mm: 210, orientation: 'portrait',
     margin_top_mm: 18, margin_bottom_mm: 18, margin_inside_mm: 18, margin_outside_mm: 16,
     margin_binding_mm: 0, article_order: [], chapters: [], toc_position: 'start', volume_breaks: [], unassigned_first: false, table_of_contents: true, page_numbers: true, ...input,
   };
   project.main_articles = [...project.main_articles, ...project.discovered_articles.filter((a) => a.selected)];
   project.discovered_articles = project.discovered_articles.filter((a) => !a.selected);
+  // NE PAS garder un document importé désélectionné (fichier JSON antérieur à la 1.9.6) : il n'y a plus de case à cocher pour le reprendre, il serait invisible ; il revient dans le livre et se retire par « × ».
+  project.uploaded_documents = project.uploaded_documents.map((document) => ({ ...document, selected: true }));
   return project;
 }
 
@@ -137,7 +139,6 @@ function renderWorkspace() {
   $('#selectedCount').textContent = selectedArticles().length;
   $('#organizationCount').textContent = selectedArticles().length;
   renderArticles();
-  renderUploadedDocuments();
   renderOrganization();
   renderBookSettings();
 }
@@ -329,17 +330,16 @@ function renderOrganization() {
     if (slot.type === 'toc') {
       return `<div class="org-row org-toc" draggable="true" data-slot-type="toc" data-slot-index="${idx}">
         <span class="drag-handle" aria-hidden="true">\u2630</span>
-        <span class="toc-icon" aria-hidden="true">\u2261</span>
-        <div><div class="org-article-title">${escapeHtml(t('org.toc'))}</div><div class="org-article-origin">${escapeHtml(t('org.tocHint'))}</div></div>
-        <button class="chapter-remove toc-remove" type="button" title="${escapeHtml(t('org.removeTocTitle'))}">${escapeHtml(t('org.removeToc'))}</button>
+        <div class="org-article-text"><div class="org-article-title">${escapeHtml(t('org.toc'))}</div><div class="org-article-origin">${escapeHtml(t('org.tocHint'))}</div></div>
+        <button class="remove-article toc-remove" type="button" title="${escapeHtml(t('org.removeTocTitle'))}" aria-label="${escapeHtml(t('org.removeTocTitle'))}">×</button>
       </div>`;
     }
     if (slot.type === 'volume') {
       return `<div class="org-row org-volume" draggable="true" data-slot-type="volume" data-slot-index="${idx}" data-volume-anchor="${escapeHtml(slot.anchor)}">
         <span class="drag-handle" aria-hidden="true">\u2630</span>
         <span class="volume-icon" aria-hidden="true">\u2702</span>
-        <div><div class="org-article-title">${escapeHtml(t('org.volume'))}</div><div class="org-article-origin">${escapeHtml(t('org.volumeHint'))}</div></div>
-        <button class="chapter-remove volume-remove" type="button" title="${escapeHtml(t('org.removeVolumeTitle'))}">${escapeHtml(t('org.removeVolume'))}</button>
+        <div class="org-article-text"><div class="org-article-title">${escapeHtml(t('org.volume'))}</div><div class="org-article-origin">${escapeHtml(t('org.volumeHint'))}</div></div>
+        <button class="remove-article volume-remove" type="button" title="${escapeHtml(t('org.removeVolumeTitle'))}" aria-label="${escapeHtml(t('org.removeVolumeTitle'))}">×</button>
       </div>`;
     }
     if (slot.type === 'unassigned') {
@@ -353,25 +353,24 @@ function renderOrganization() {
         <span class="drag-handle" aria-hidden="true">\u2630</span>
         <span class="chapter-letter">${letter}</span>
         <input class="chapter-name" aria-label="${escapeHtml(t('org.chapterNameAria'))}" value="${escapeHtml(ch.title)}" maxlength="120">
-        <button class="chapter-remove" type="button" title="${escapeHtml(t('org.removeChapterTitle'))}">${escapeHtml(t('org.removeChapter'))}</button>
+        <button class="remove-article chapter-delete" type="button" title="${escapeHtml(t('org.removeChapterTitle'))}" aria-label="${escapeHtml(t('org.removeChapterTitle'))} : ${escapeHtml(ch.title)}">×</button>
       </div>`;
     }
     // article (or document import\u00e9, int\u00e9gr\u00e9 comme un article)
     const a = slot.article;
     const k = articleKey(a);
-    const chapters = project.chapters || [];
-    const chapter = chapters.find((c) => c.article_keys.includes(k));
     const isDoc = Boolean(a.kind);
     const origin = isDoc
       ? (a.kind === 'pdf' ? t('org.docPdf') : t('org.docImage'))
       : (a.origin_title ? t('org.discoveredFrom', { origin: a.origin_title }) : t('org.mainArticleOrigin', { lang: articleSiteLabel(a) }));
-    const openHref = isDoc ? `data:${a.mime_type};base64,${a.data_base64}` : a.url;
+    const openHref = isDoc ? '#' : a.url;
     const openTitle = isDoc ? t('org.openDocument') : t('org.openWikipedia');
+    const removeTitle = isDoc ? t('org.docRemoveTitle') : t('meta.removeArticle');
     return `<div class="org-row org-article" draggable="true" data-slot-type="article" data-slot-index="${idx}" data-article-key="${escapeHtml(k)}">
       <span class="drag-handle" aria-hidden="true">\u2630</span>
-      <div><div class="org-article-title">${escapeHtml(a.title)}</div><div class="org-article-origin">${escapeHtml(origin)}</div></div>
-      <select class="chapter-select" aria-label="${escapeHtml(t('org.chapterSelectAria', { title: a.title }))}"><option value="" ${!chapter ? 'selected' : ''}>${escapeHtml(t('org.noChapterOption'))}</option>${chapters.map((c) => `<option value="${escapeHtml(c.id)}" ${chapter?.id === c.id ? 'selected' : ''}>${escapeHtml(c.title)}</option>`).join('')}</select>
-      <a class="article-title org-open" href="${escapeHtml(openHref)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(openTitle)}" aria-label="${escapeHtml(openTitle)}\u00a0: ${escapeHtml(a.title)}">\u2197</a>
+      <div class="org-article-text"><div class="org-article-title">${escapeHtml(a.title)}</div><div class="org-article-origin">${escapeHtml(origin)}</div></div>
+      <button class="remove-article org-remove" type="button" title="${escapeHtml(removeTitle)}" aria-label="${escapeHtml(removeTitle)} : ${escapeHtml(a.title)}">×</button>
+      <a class="article-title org-open${isDoc ? ' doc-open' : ''}" href="${escapeHtml(openHref)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(openTitle)}" aria-label="${escapeHtml(openTitle)}\u00a0: ${escapeHtml(a.title)}">\u2197</a>
     </div>`;
   }).join('');
 
@@ -431,36 +430,46 @@ function applyDragDrop(fromIndex, toIndex) {
     return;
   }
 
-  // Moving an article: reorder article_order
-  if (from.type === 'article') {
-    const articles = orderedSelectedArticles();
-    const fromKey = articleKey(from.article);
-    const toKey = to.type === 'article' ? articleKey(to.article) : null;
-    const fromIdx = articles.findIndex((a) => articleKey(a) === fromKey);
-    const toIdx = toKey ? articles.findIndex((a) => articleKey(a) === toKey) : (toIndex < fromIndex ? 0 : articles.length - 1);
-    if (fromIdx < 0 || toIdx < 0) return;
-    const reordered = [...articles];
-    const [moved] = reordered.splice(fromIdx, 1);
-    reordered.splice(toIdx, 0, moved);
-    project.article_order = reordered.map(articleKey);
-    queueSave({ article_order: project.article_order });
+  if (from.type === 'article' || from.type === 'chapter') {
+    const sequence = slots.filter((slot) => slot.type !== 'toc' && slot.type !== 'volume');
+    const target = to.type === 'toc' || to.type === 'volume' ? slots.slice(toIndex).find((slot) => sequence.includes(slot)) : to;
+    if (target === from) return;
+    const rest = sequence.filter((slot) => slot !== from);
+    const into = from.type === 'article' && (target?.type === 'chapter' || target?.type === 'unassigned');
+    // NE PAS insérer avant un chapitre l'article lâché sur sa ligne : il entre dans ce chapitre, en tête, qu'il vienne d'en dessous ou d'au-dessus.
+    let at = target ? rest.indexOf(target) + (toIndex > fromIndex || into ? 1 : 0) : rest.length;
+    // NE PAS laisser un chapitre passer sous « Sans chapitre » : ce groupe reste en fin de livre, le chapitre s'arrête juste au-dessus.
+    const marker = rest.findIndex((slot) => slot.type === 'unassigned');
+    if (from.type === 'chapter' && marker >= 0) at = Math.min(at, marker);
+    rest.splice(at, 0, from);
+    applyOrgSequence(rest);
     renderOrganization();
-    return;
   }
+}
 
-  // Moving a chapter: reorder chapters array
-  if (from.type === 'chapter') {
-    const chapters = [...(project.chapters || [])];
-    const fromIdx = chapters.findIndex((c) => c.id === from.chapter.id);
-    const toChapterId = to.type === 'chapter' ? to.chapter.id : null;
-    const toIdx = toChapterId ? chapters.findIndex((c) => c.id === toChapterId) : (toIndex < fromIndex ? 0 : chapters.length - 1);
-    if (fromIdx < 0 || toIdx < 0) return;
-    const [moved] = chapters.splice(fromIdx, 1);
-    chapters.splice(toIdx, 0, moved);
-    project.chapters = chapters;
-    queueSave({ chapters });
-    renderOrganization();
-  }
+// NE PAS modifier sans aligner ordered_article_groups dans book_builder.py : l'appartenance à un chapitre vient de la place de l'article sous ce chapitre, l'ordre de article_order.
+function applyOrgSequence(sequence) {
+  const project = state.project;
+  const selected = new Set(orderedSelectedArticles().map(articleKey));
+  const members = new Map();
+  let current = null;
+  let leading = false;
+  sequence.forEach((slot) => {
+    if (slot.type === 'chapter') { current = slot.chapter.id; members.set(current, []); }
+    else if (slot.type === 'unassigned') current = '';
+    else if (current) members.get(current).push(articleKey(slot.article));
+    else if (current === null) leading = true;
+  });
+  const byId = new Map((project.chapters || []).map((chapter) => [chapter.id, chapter]));
+  const listed = sequence.filter((slot) => slot.type === 'chapter').map((slot) => slot.chapter.id);
+  const order = [...listed, ...(project.chapters || []).map((chapter) => chapter.id).filter((id) => !listed.includes(id))];
+  project.chapters = order.map((id) => ({
+    ...byId.get(id),
+    article_keys: [...byId.get(id).article_keys.filter((key) => !selected.has(key)), ...(members.get(id) || [])],
+  }));
+  project.article_order = sequence.filter((slot) => slot.type === 'article').map((slot) => articleKey(slot.article));
+  project.unassigned_first = leading && project.chapters.length > 0;
+  queueSave({ chapters: project.chapters, article_order: project.article_order, unassigned_first: project.unassigned_first });
 }
 
 function renderBookSettings() {
@@ -481,6 +490,75 @@ function renderBookSettings() {
   $('#pageNumbers').checked = project.page_numbers || false;
   $('#marginPreset').value = marginPresetOf(project);
   $('#bookTitle').placeholder = defaultBookTitle() || t('heading.namePlaceholder');
+  renderBackgrounds();
+}
+
+const BACKGROUND_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml'];
+
+function renderBackgrounds() {
+  document.querySelectorAll('.background-field').forEach((field) => {
+    const image = state.project?.[field.dataset.background];
+    const preview = field.querySelector('.background-preview');
+    preview.hidden = !image;
+    if (image) { preview.src = `data:${image.mime_type};base64,${image.data_base64}`; preview.alt = image.title || ''; }
+    else preview.removeAttribute('src');
+    field.querySelector('.background-remove').hidden = !image;
+  });
+}
+
+function readAsBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+    reader.onerror = () => reject(new Error(t('org.docReadError')));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function setBackground(field, blob, title) {
+  const type = (blob.type || '').split(';')[0].trim();
+  if (!BACKGROUND_TYPES.includes(type)) { showToast(t('edition.backgroundTypeError', { name: title }), true); return; }
+  if (blob.size > 15 * 1024 * 1024) { showToast(t('org.docTooLargeError', { name: title }), true); return; }
+  const image = { title: title.slice(0, 300), mime_type: type, data_base64: await readAsBase64(blob) };
+  state.project[field] = image;
+  queueSave({ [field]: image });
+  renderBackgrounds();
+  showToast(t('edition.backgroundAddedToast'));
+}
+
+async function wikimediaFileUrl(address) {
+  const match = address.hostname.match(/(^|\.)(wikimedia|wikipedia|wikisource|wikibooks|wikivoyage|wikiversity|wikiquote|wiktionary|wikinews)\.org$/);
+  const page = decodeURIComponent(address.pathname).match(/^\/wiki\/[^:/]+:(.+)$/);
+  if (!match || !page) return null;
+  const api = new URL(`https://${address.hostname}/w/api.php`);
+  Object.entries({ action: 'query', format: 'json', formatversion: '2', prop: 'imageinfo', iiprop: 'url|mime', iiurlwidth: '2000', titles: `File:${page[1]}`, origin: '*' })
+    .forEach(([name, value]) => api.searchParams.set(name, value));
+  const response = await fetch(api);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const info = (await response.json())?.query?.pages?.[0]?.imageinfo?.[0];
+  if (!info) throw new Error(page[1]);
+  return { url: info.thumburl || info.url, title: page[1] };
+}
+
+async function setBackgroundFromUrl(field, value) {
+  const text = value.trim();
+  if (!text) { showToast(t('edition.backgroundUrlEmpty'), true); return; }
+  try {
+    const address = new URL(text);
+    const file = await wikimediaFileUrl(address);
+    const response = await fetch(file ? file.url : address);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const title = file ? file.title : (decodeURIComponent(address.pathname.split('/').pop() || '') || address.hostname);
+    await setBackground(field, await response.blob(), title);
+  } catch (error) {
+    showToast(t('edition.backgroundUrlError', { error: error.message }), true);
+  }
+}
+
+function removeBackground(field) {
+  state.project[field] = null;
+  queueSave({ [field]: null });
+  renderBackgrounds();
 }
 
 function defaultBookTitle() {
@@ -777,18 +855,6 @@ function removeArticle(card) {
   showToast(t('discovered.removedToast'));
 }
 
-function renderUploadedDocuments() {
-  const docs = state.project.uploaded_documents || [];
-  $('#uploadedDocumentsList').innerHTML = docs.length
-    ? docs.map((d) => `<div class="uploaded-document-row" data-doc-id="${escapeHtml(d.id)}">
-        <input class="doc-check" type="checkbox" ${d.selected ? 'checked' : ''} aria-label="${d.selected ? escapeHtml(t('meta.deselect')) : escapeHtml(t('meta.select'))} ${escapeHtml(d.title)}">
-        <span class="doc-title">${escapeHtml(d.title)}</span>
-        <span class="doc-kind">${d.kind === 'pdf' ? 'PDF' : escapeHtml(t('common.image'))}</span>
-        <button class="icon-button doc-remove" type="button" title="${escapeHtml(t('org.docRemoveTitle'))}" aria-label="${escapeHtml(t('org.docRemoveTitle'))} : ${escapeHtml(d.title)}">×</button>
-      </div>`).join('')
-    : `<p class="field-hint">${escapeHtml(t('org.noDocuments'))}</p>`;
-}
-
 async function handleDocumentUpload(files) {
   const maxBytes = 15 * 1024 * 1024;
   let added = 0;
@@ -817,10 +883,14 @@ async function handleDocumentUpload(files) {
   }
 }
 
-function toggleUploadedDocument(id, selected) {
-  (state.project.uploaded_documents || []).forEach((d) => { if (d.id === id) d.selected = selected; });
-  queueSave({ uploaded_documents: state.project.uploaded_documents });
-  renderWorkspace();
+// NE PAS ouvrir le document par une adresse data: : Chrome refuse de l'afficher dans un nouvel onglet.
+function openUploadedDocument(id) {
+  const doc = (state.project.uploaded_documents || []).find((d) => d.id === id);
+  if (!doc) return;
+  const bytes = Uint8Array.from(atob(doc.data_base64), (c) => c.charCodeAt(0));
+  const url = URL.createObjectURL(new Blob([bytes], { type: doc.mime_type }));
+  window.open(url, '_blank', 'noopener');
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 function removeUploadedDocument(id) {
@@ -833,19 +903,13 @@ function removeUploadedDocument(id) {
   showToast(t('org.docRemovedToast'));
 }
 
-function updateChapterMembership(key, chapterId) {
-  const chapters = (state.project.chapters || []).map((ch) => ({ ...ch, article_keys: ch.article_keys.filter((k) => k !== key) }));
-  if (chapterId) chapters.find((ch) => ch.id === chapterId)?.article_keys.push(key);
-  state.project.chapters = chapters;
-  queueSave({ chapters });
-  renderOrganization();
-}
-
 function addChapter() {
   const chapters = [...(state.project.chapters || [])];
+  // NE PAS faire apparaître « Sans chapitre » à la création du premier chapitre : les articles déjà là restent en tête, sans intitulé, et le chapitre s'ajoute après eux.
+  const first = !chapters.length;
   chapters.push({ id: crypto.randomUUID(), title: t('org.newChapterTitle', { n: chapters.length + 1 }), article_keys: [] });
   state.project.chapters = chapters;
-  queueSave({ chapters });
+  queueSave(first ? { chapters, unassigned_first: true } : { chapters });
   renderOrganization();
   const last = $$('.chapter-name', $('#organizationList')).at(-1);
   last?.focus(); last?.select();
@@ -1123,7 +1187,8 @@ function bookFileName(project) {
 
 function exportWorkspace() {
   if (!state.project) return;
-  const workspace = { format: 'wikipedia2book-workspace', version: 1, saved_at: new Date().toISOString(), projects: [state.project] };
+  // NE PAS enregistrer les suggestions (articles découverts non retenus) : elles se retrouvent en relançant « Articles liés », et alourdissaient le fichier.
+  const workspace = { format: 'wikipedia2book-workspace', version: 1, saved_at: new Date().toISOString(), projects: [{ ...state.project, discovered_articles: [] }] };
   const blob = new Blob([JSON.stringify(workspace, null, 2)], { type: 'application/json' });
   const objectUrl = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
@@ -1206,17 +1271,26 @@ document.addEventListener('click', async (event) => {
   if (event.target.closest('#topExportButton, #exportButton')) { await exportPdf(); return; }
   const articleCardEl = event.target.closest('.article-card');
   if (articleCardEl && event.target.closest('.remove-article')) { await removeArticle(articleCardEl); return; }
+  const openDoc = event.target.closest('.doc-open');
+  if (openDoc) {
+    event.preventDefault();
+    const key = openDoc.closest('.org-article').dataset.articleKey;
+    openUploadedDocument(key.slice(4));
+    return;
+  }
+  const orgRow = event.target.closest('.org-article');
+  if (orgRow && event.target.closest('.org-remove')) {
+    const key = orgRow.dataset.articleKey;
+    if (key.startsWith('doc:')) removeUploadedDocument(key.slice(4)); else removeArticle(orgRow);
+    return;
+  }
   const chapterRow = event.target.closest('.org-chapter-row');
-  if (chapterRow && event.target.closest('.chapter-remove')) { removeChapter(chapterRow); return; }
-  const docRow = event.target.closest('.uploaded-document-row');
-  if (docRow && event.target.closest('.doc-remove')) { removeUploadedDocument(docRow.dataset.docId); return; }
+  if (chapterRow && event.target.closest('.chapter-delete')) { removeChapter(chapterRow); return; }
   if (!event.target.closest('#articleQuery, #searchResults')) $('#searchResults').hidden = true;
 });
 
 document.addEventListener('change', async (event) => {
   if (event.target.matches('.article-check')) { const card = event.target.closest('.article-card'); await toggleArticle(card, event.target.checked); return; }
-  if (event.target.matches('.doc-check')) { const row = event.target.closest('.uploaded-document-row'); toggleUploadedDocument(row.dataset.docId, event.target.checked); return; }
-  if (event.target.matches('.chapter-select')) { const row = event.target.closest('.org-article'); updateChapterMembership(row.dataset.articleKey, event.target.value); return; }
   if (event.target.matches('input[name="suggestionSort"]')) { state.suggestionSort = event.target.value; renderArticles(); return; }
   if (event.target.matches('#articleLanguage')) { if ($('#articleQuery').value.trim().length >= 2) searchArticles($('#articleQuery').value); return; }
   if (event.target.matches('input[name="orientation"]')) { const layout = collectLayoutSettings(); Object.assign(state.project, layout); queueSave(layout); return; }
@@ -1261,6 +1335,20 @@ $('#articleQuery').addEventListener('keydown', (event) => {
     event.preventDefault();
     $('#articleForm').requestSubmit();
   }
+});
+document.querySelectorAll('.background-field').forEach((field) => {
+  const name = field.dataset.background;
+  const input = field.querySelector('.background-file');
+  field.querySelector('.background-choose').addEventListener('click', () => input.click());
+  input.addEventListener('change', async () => {
+    const file = input.files?.[0];
+    input.value = '';
+    if (file) await setBackground(name, file, file.name);
+  });
+  const url = field.querySelector('.background-url');
+  field.querySelector('.background-use-url').addEventListener('click', () => setBackgroundFromUrl(name, url.value));
+  url.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); setBackgroundFromUrl(name, url.value); } });
+  field.querySelector('.background-remove').addEventListener('click', () => removeBackground(name));
 });
 $('#documentFileInput').addEventListener('change', async (event) => {
   const files = [...(event.target.files || [])];

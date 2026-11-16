@@ -258,7 +258,7 @@ Available features:
 
 * In "Your articles", a checkbox for each article indicates whether it is included in the book.
 
-The selection is kept with the rest of the book, in memory and in the JSON export. When an older JSON file is opened, the discovered articles that were checked in it are moved to "Your articles", the others stay in the suggestions.
+The selection is kept with the rest of the book, in memory and in the JSON export. Suggestions, however, are not saved in the JSON export (`discovered_articles` is always empty there since 1.9.6): they come back by running "Related articles" again. When an older JSON file is opened, the discovered articles that were checked in it are moved to "Your articles", the others stay in the suggestions.
 
 ## 6\. Organizing the book
 
@@ -268,21 +268,27 @@ Features:
 
 * Reorder articles by drag and drop.
 
-* Create chapters and give them a title.
+* Create chapters and give them a title. The first chapter created goes after the articles already there, which stay at the top of the book without a heading (`unassigned_first`), without "No chapter" appearing; articles are then dragged into it.
 
-* Move an article from one chapter to another, or out of any chapter, by drag and drop.
+* Move an article from one chapter to another, or out of any chapter, by drag and drop: membership of a chapter comes from the article's place under the chapter row (there is no chapter selection menu). An article dropped on a chapter row goes to the top of that chapter; dropped on "No chapter", it leaves every chapter; dropped on another article, it takes its place (`applyOrgSequence` in `app.js`, which updates `chapters`, `article_order` and `unassigned_first`).
+
+* Move a chapter by drag and drop, by grabbing any part of its row outside its title (the title field is no wider than the title, since Chrome does not start a drag from an input field). The list reads as a sequence: only the chapter row moves, and each article belongs to the chapter placed above it; the articles placed before the first chapter are at the top of the book, without a heading (`unassigned_first`). When the book has a "No chapter" group at the end of the list, a chapter cannot go below that row.
+
+* Each article or imported document row fits on one line (title, then origin in smaller type) and has a "×" button that removes it from the book (a removed article also disappears from "Your articles", an imported document is deleted) and a "↗" button that opens the article on Wikipedia or the imported document in a new tab. Chapters, the table of contents and volume breaks have the same "×".
 
 * Place the table of contents anywhere in the book by drag and drop: at the start, before any chapter or article (including in the middle of a chapter), or at the end. Its position is recorded relative to the item that follows it (`toc_position`: `start`, `end` or `before:<key>`, where the key is that of an article/document, `chapter:<id>` for a chapter, or `chapter:` for the "No chapter" group); if that item disappears from the book, the table of contents goes back to the start.
 
-* Remove the table of contents from the book ("Remove" button on its row), then put it back ("+ Table of contents" button in the toolbar, which places it back at the start).
+* Remove the table of contents from the book ("×" on its row), then put it back ("+ Table of contents" button in the toolbar, which places it back at the start).
 
 * A book of a single article or document has no table of contents, even when it has not been removed: its line and the "+ Table of contents" button do not appear in the Organization step, and the PDF has none (`book_builder.toc_slot_index`, `buildOrgSlots`). It comes back as soon as the book has two elements; a volume of a single article has none either.
 
-* When the book has chapters, the articles that belong to no chapter are shown at the end of the list, under the "No chapter" heading, as in the PDF. Exception: for a book imported from a Wikipedia book page in which articles precede the first chapter (section 3.1), those articles are shown and placed in the PDF at the start, before the first chapter, without a heading or chapter page.
+* When the book has chapters, the articles that belong to no chapter are shown at the end of the list, under the "No chapter" heading, as in the PDF. Exception: when the first chapter was created after them, when they were dragged before the first chapter, or for a book imported from a Wikipedia book page in which articles precede the first chapter (section 3.1), those articles are shown and placed in the PDF at the start, before the first chapter, without a heading or chapter page.
 
-* Split the book into several volumes at will, even under the server limit: the "New volume +" button in the toolbar adds a break in the middle of the last volume; the "Start of a volume" line is moved by drag and drop like the table of contents, and removed with its "Remove" button (the volume then joins the previous one). Each break is stored relative to the element that follows it (`volume_breaks`, a list of `before:<key>`, same keys as `toc_position`, kept in the JSON export and ignored by the server); a break whose element disappears, that would target the first element of the book or a chapter without articles is ignored. Each volume is generated as a separate PDF (section 11.1).
+* Split the book into several volumes at will, even under the server limit: the "New volume +" button in the toolbar adds a break in the middle of the last volume; the "Start of a volume" line is moved by drag and drop like the table of contents, and removed with its "×" (the volume then joins the previous one). Each break is stored relative to the element that follows it (`volume_breaks`, a list of `before:<key>`, same keys as `toc_position`, kept in the JSON export and ignored by the server); a break whose element disappears, that would target the first element of the book or a chapter without articles is ignored. Each volume is generated as a separate PDF (section 11.1).
 
 * Add a general introduction and a conclusion.
+
+* Choose in the Editing step a background image for the cover and another one for the last page, each imported from a file or from its address (section 11.1).
 
 * Turn page numbering on or off (on by default).
 
@@ -290,15 +296,15 @@ An article can be moved freely within the structure of the book.
 
 ### 6.1 Imported documents (images and PDFs)
 
-In the Organization step, the user can also import their own files (image or PDF) to include them in the book as if they were articles:
+In the Organization step, the user can also import their own files (image or PDF), with the "Choose a file +" button of the toolbar, next to "New volume +", to include them in the book as if they were articles:
 
 * Accepted formats: images (`image/*`) and PDF (`application/pdf`); 15 MB maximum per file.
 
-* An imported document appears in the list of items to organize just like an article: it can be reordered, moved into a chapter, and its starting page appears in the table of contents if page numbering is on.
+* An imported document appears in the list of items to organize just like an article: it can be reordered and moved into a chapter by drag and drop, counts in a volume, is removed with "×" and opened with "↗" (through a `blob:` address, since Chrome refuses to open a `data:` address in a new tab), and its starting page appears in the table of contents if page numbering is on.
 
 * An imported image is included as a full page, centered and scaled to the book format; an imported PDF is included as is, page by page.
 
-* The document can be deselected (excluded from the book without being deleted) or removed permanently, independently of the other documents and articles.
+* The document is removed from the book with its "×" button, independently of the other documents and articles; there is no separate list of imported documents nor any box to exclude them without deleting them. A document deselected in a JSON file older than 1.9.6 comes back into the book when the file is opened.
 
 * The file content is kept base64-encoded in the book state and in the JSON export, so that the PDF can be regenerated or the book resumed without importing the file again.
 
@@ -462,6 +468,8 @@ Once the PDF is started, the software:
 
 * Ends the last page of the PDF (the conclusion when the book has one, otherwise the last block of the license page) with the Wikipedia2Book logo (`app/static/Wikipedia2bookLogoPrint.png`, embedded in the PDF, at most 100 mm wide, itself clickable to https://wikipedia2book.toolforge.org/) and two clickable links, https://wikipedia2book.toolforge.org/ and https://github.com/gmoulard/wikipedia2book; a book in volumes has them at the end of each volume.
 
+* **Background images** (Editing step, fields "Cover background image" and "Last page background image"): each image is imported from a file (PNG, JPEG, GIF, WebP or SVG, 15 MB at most) or from its address; the address of a Wikimedia file page (`https://commons.wikimedia.org/wiki/File:…`, or a file page on a `<language>.<project>.org` project) goes through that wiki's `imageinfo` API, called by the browser (`origin=*`) to get a 2,000 px wide thumbnail on `upload.wikimedia.org`; any other address is read directly by the browser, which only works if the site allows it (CORS), otherwise a message suggests downloading the image and importing the file. The server never downloads the image: it is kept in the book (`cover_image`, `back_image`: `title`, `mime_type`, `data_base64`, `BookImage` model, base64 checked by the server), and so in the JSON export, with a preview and a "Remove" button. The cover image covers the whole first page, margins included, without distortion (`@page :first`, `background-size: cover`), under the title, subtitle and author; the introduction pages have none. With a last page image, the logo and links above leave the conclusion or license for a separate last page (named page `back-cover`), covered by the image, where they sit at the bottom in a white frame at 85% opacity. Each volume of a book in volumes repeats both images. Tests: `tests/test_backgrounds.py`.
+
 * Adds a conclusion page with a bookmark, if a conclusion was entered — always after the table of contents, even when it is placed at the end of the book.
 
 * If page numbering is on, overlays a page number at the bottom of every page of the assembled document (except the cover).
@@ -521,7 +529,7 @@ The application is a single page, organized in three steps reachable through tab
 
 * 02 — Organization: reordering articles, chapters, position or removal of the table of contents.
 
-* 03 — Editing: book identity (title, subtitle, author, cover note, introduction, conclusion) and print format (paper size, orientation, margin preset, page numbering).
+* 03 — Editing: book identity (title, subtitle, author, cover note, introduction, conclusion, background images of the cover and of the last page) and print format (paper size, orientation, margin preset, page numbering).
 
 At the bottom of the Sources and Organization steps, a "Next step: …" button opens the next step and scrolls back to the top of the page.
 
@@ -1237,6 +1245,7 @@ Wikipedia2Book/
 │   ├── test_syntax.py
 │   ├── test_pdf_generation.py
 │   ├── test_uploaded_documents.py
+│   ├── test_backgrounds.py
 │   ├── test_wikipedia_api.py
 │   ├── test_pdf_stream.py
 │   ├── test_resolve_source.py
@@ -1399,5 +1408,6 @@ Application version number (`app/version.py`, used by `app/main.py` and by the U
 | 1.9.3   | 2026-11-16 | GMoulard  | Last page of every PDF: Wikipedia2Book logo and clickable links to https://wikipedia2book.toolforge.org/ and https://github.com/gmoulard/wikipedia2book. Generation from a Wikipedia book page: no default conclusion any more (empty `book_conclusion`) (sections 11.1, 13.3). |
 | 1.9.4   | 2026-11-16 | GMoulard  | A book of a single article or document no longer has a table of contents (neither on screen nor in the PDF), even when it has not been removed; last-page logo twice as large and clickable to https://wikipedia2book.toolforge.org/ (sections 6, 11.1). |
 | 1.9.5   | 2026-11-16 | GMoulard  | License page: no more "Sources and authors" list (address and history of each article), redundant with the link to the reproduced version at the end of each article; a translated sentence states that the authors are credited by this link. The license page fits on one page whatever the size of the book (sections 11.1, 12.1, 15). |
+| 1.9.6   | 2026-11-16 | GMoulard  | Background images of your choice in the Editing step, for the cover and for a last page carrying the logo and links, imported from a file or an address (Wikimedia Commons file page accepted). Organization step: each item on one line, chapters and articles moved by drag and drop without a chapter selection menu, "×" (remove) and "↗" (open, imported documents included) buttons on each article and document, "Choose a file +" in the toolbar instead of the "Import a document" box, duplicate icon removed from the table of contents; suggestions are no longer saved in the JSON file (sections 5, 6, 6.1, 11.1). |
 
 End of document

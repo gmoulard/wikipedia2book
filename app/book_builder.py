@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import get_args
 from urllib.parse import quote
 
-from app.models import Article, Project, Site, UploadedDocument
+from app.models import Article, BookImage, Project, Site, UploadedDocument
 
 BookItem = Article | UploadedDocument
 
@@ -156,6 +156,7 @@ def build_cover_html(project: Project, language: str = "fr") -> str:
 @page {{ size: {page_width:g}mm {page_height:g}mm; margin: {margin_top:g}mm {outer:g}mm {margin_bottom:g}mm {inner:g}mm; }}
 @page :left {{ margin-left: {inner:g}mm; margin-right: {outer:g}mm; }}
 @page :right {{ margin-left: {outer:g}mm; margin-right: {inner:g}mm; }}
+{_background_css(project.cover_image, ':first')}
     body {{ color: #202020; font: 10pt {SERIF_FONTS}; line-height: 1.5; }}
     h1, h2 {{ line-height: 1.2; }}
 h1 {{ font-size: 26pt; }}
@@ -289,12 +290,32 @@ COLOPHON_CSS = (
 )
 
 
-def _colophon_html() -> str:
-    logo = base64.b64encode(COLOPHON_LOGO.read_bytes()).decode("ascii")
+def _background_css(image: BookImage | None, page: str) -> str:
+    if image is None:
+        return ""
+    return f'@page {page} {{ background: url("data:{image.mime_type};base64,{image.data_base64}") center / cover no-repeat; }}'
+
+
+def _colophon_css(project: Project) -> str:
+    if project.back_image is None:
+        return COLOPHON_CSS.format(fonts=SANS_FONTS)
+    _, page_height, margin_top, margin_bottom, _, _ = _page_layout(project)
     return (
+        COLOPHON_CSS.format(fonts=SANS_FONTS)
+        + _background_css(project.back_image, "back-cover")
+        + f".back-cover {{ page: back-cover; display: flex; height: {page_height - margin_top - margin_bottom - 2:g}mm; flex-direction: column; justify-content: flex-end; }}"
+        + ".back-cover .colophon { margin-top: 0; padding: 4mm 6mm; border-radius: 2mm; background: rgba(255, 255, 255, .85); }"
+    )
+
+
+# NE PAS laisser le logo et les liens sur la page de licence ou de conclusion quand une image de fond de dernière page est choisie : ils passent seuls sur une dernière page à part (page nommée back-cover), sinon le texte de la licence ou de la conclusion serait imprimé sur l'image.
+def _colophon_html(project: Project) -> str:
+    logo = base64.b64encode(COLOPHON_LOGO.read_bytes()).decode("ascii")
+    footer = (
         f'<footer class="colophon"><a href="{APP_URL}"><img src="data:image/png;base64,{logo}" alt="Wikipedia2Book"></a>'
         f'<p><a href="{APP_URL}">{APP_URL}</a><br><a href="{SOURCE_URL}">{SOURCE_URL}</a></p></footer>'
     )
+    return f'<section class="back-cover">{footer}</section>' if project.back_image else footer
 
 
 def build_conclusion_page_html(project: Project, language: str = "fr") -> str:
@@ -307,8 +328,8 @@ def build_conclusion_page_html(project: Project, language: str = "fr") -> str:
 @page :right {{ margin-left: {outer:g}mm; margin-right: {inner:g}mm; }}
 body {{ color: #202020; font: 11pt {SERIF_FONTS}; line-height: 1.6; }}
 h1 {{ font-size: 22pt; }}
-{COLOPHON_CSS.format(fonts=SANS_FONTS)}
-</style></head><body><h1>{pdf_label(language, 'conclusion')}</h1><p>{conclusion}</p>{_colophon_html()}</body></html>"""
+{_colophon_css(project)}
+</style></head><body><h1>{pdf_label(language, 'conclusion')}</h1><p>{conclusion}</p>{_colophon_html(project)}</body></html>"""
 
 
 def _site_names(language: str, sites: list[str]) -> str:
@@ -358,8 +379,8 @@ body {{ color: #202020; font: 10pt {SERIF_FONTS}; line-height: 1.5; }}
 h1 {{ font-size: 22pt; }}
 .license-name {{ font-weight: bold; }}
 .url {{ direction: ltr; unicode-bidi: embed; }}
-{COLOPHON_CSS.format(fonts=SANS_FONTS)}
+{_colophon_css(project)}
 </style></head><body>
 {header}
-{_colophon_html() if colophon else ""}
+{_colophon_html(project) if colophon else ""}
 </body></html>"""
