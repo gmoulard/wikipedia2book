@@ -17,7 +17,7 @@
 import sys
 import types
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 try:
     import weasyprint  # noqa: F401
@@ -26,6 +26,7 @@ except Exception:
     fake.HTML = lambda *a, **k: None
     sys.modules["weasyprint"] = fake
 
+from fastapi import Response
 from fastapi.testclient import TestClient
 
 import app.main as main
@@ -258,6 +259,84 @@ class ResolveSourceTest(unittest.TestCase):
 
 async def _empty_book():
     return WikipediaBook(subtitle="", chapters=[])
+
+
+
+class ParseSourceLineTest(unittest.TestCase):
+    def test_same_reading_as_the_sources_field(self):
+        cases = {
+            "Chat": ("Chat", "fr", "wikipedia"),
+            "b:Programmation Python": ("Programmation Python", "fr", "wikibooks"),
+            "[[voy:en:Lyon]]": ("Lyon", "en", "wikivoyage"),
+            "fr:wikt:chat": ("chat", "fr", "wiktionary"),
+            "nl:Kat": ("Kat", "nl", "wikipedia"),
+            "* https://fr.wikibooks.org/wiki/Cosmologie": ("https://fr.wikibooks.org/wiki/Cosmologie", "fr", "wikipedia"),
+            "2) b:Cosmologie": ("Cosmologie", "fr", "wikibooks"),
+            "[Cosmologie](https://fr.wikibooks.org/wiki/Cosmologie)": ("https://fr.wikibooks.org/wiki/Cosmologie", "fr", "wikipedia"),
+            "Paris: histoire": ("Paris: histoire", "fr", "wikipedia"),
+        }
+        for line, expected in cases.items():
+            with self.subTest(line=line):
+                self.assertEqual(main.parse_source_line(line, "fr"), expected)
+        self.assertIsNone(main.parse_source_line("  - ", "fr"))
+
+
+class PdfFromSourceTest(unittest.TestCase):
+    def setUp(self):
+        FakeClient.pages = {"Chat": ("Chat", 0), "Cosmologie": ("Cosmologie", 0)}
+        FakeClient.calls = []
+        FakeClient.fail = False
+        FakeClient.subpage_book = WikipediaBook(subtitle="", chapters=[("Bases", ["Cosmologie/Univers", "Cosmologie/Étoiles"]), ("Suite", ["Cosmologie/Galaxies"])])
+        self.patches = [
+            patch.object(main, "MediaWikiClient", FakeClient),
+            patch.object(main, "_create_pdf_response", AsyncMock(return_value=Response(b"%PDF-1.7", media_type="application/pdf"))),
+        ]
+        self.created = [p.start() for p in self.patches][1]
+        self.client = TestClient(main.app)
+
+    def tearDown(self):
+        for p in self.patches:
+            p.stop()
+
+    def project(self, **params):
+        response = self.client.get("/api/pdf/from-source", params=params)
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.content, b"%PDF-1.7")
+        project, language = self.created.await_args.args
+        return project, language
+
+    def test_whole_subpage_book_without_its_contents_page(self):
+        project, language = self.project(source="https://fr.wikibooks.org/wiki/Cosmologie", language="en")
+        self.assertEqual(language, "en")
+        self.assertEqual([a.title for a in project.main_articles], ["Cosmologie/Univers", "Cosmologie/Étoiles", "Cosmologie/Galaxies"])
+        self.assertEqual([c.title for c in project.chapters], ["Bases", "Suite"])
+        self.assertEqual(project.book_title, "Cosmologie")
+        self.assertFalse(project.unassigned_first)
+
+    def test_summary_puts_the_contents_page_first(self):
+        project, _ = self.project(source="b:Cosmologie", summary="1")
+        self.assertEqual(project.main_articles[0].title, "Cosmologie")
+        self.assertEqual(project.main_articles[0].site, "wikibooks")
+        self.assertTrue(project.unassigned_first)
+
+    def test_several_sources_in_order_without_duplicates(self):
+        project, _ = self.project(source=["Chat", "b:Cosmologie", "Chat"])
+        self.assertEqual([a.title for a in project.main_articles][:2], ["Chat", "Cosmologie/Univers"])
+        self.assertEqual(len(project.main_articles), 4)
+        self.assertTrue(project.unassigned_first)
+        self.assertEqual(project.book_title, "Cosmologie")
+
+    def test_wiki_language_for_titles(self):
+        FakeClient.pages = {"Kat": ("Kat", 0)}
+        project, language = self.project(source="Kat", wiki="nl")
+        self.assertEqual((project.main_articles[0].language, language), ("nl", "fr"))
+
+    def test_unknown_source_and_missing_parameter(self):
+        response = self.client.get("/api/pdf/from-source", params={"source": "Inexistant"})
+        self.assertEqual(response.status_code, 404)
+        self.assertIn("Inexistant", response.json()["detail"])
+        self.assertEqual(self.client.get("/api/pdf/from-source").status_code, 422)
+        self.created.assert_not_awaited()
 
 
 if __name__ == "__main__":

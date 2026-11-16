@@ -678,8 +678,25 @@ async function loadProjects() {
   state.project = normalizeProject({ id: crypto.randomUUID(), name: t('heading.defaultName'), created_at: now, updated_at: now });
   renderWorkspace();
   setView('sources');
-  const jsonUrl = new URLSearchParams(window.location.search).get('json');
+  const params = new URLSearchParams(window.location.search);
+  const jsonUrl = params.get('json');
   if (jsonUrl) await importWorkspace(() => fetchWorkspaceText(jsonUrl));
+  await addSourcesFromAddress(params);
+}
+
+// NE PAS ouvrir la fenêtre d'un sommaire sans laisser l'utilisateur choisir : ?source= ajoute comme le champ Sources, question comprise ; c'est /api/pdf/from-source qui prend le livre entier d'office.
+async function addSourcesFromAddress(params) {
+  const sources = params.getAll('source').map((source) => source.trim()).filter(Boolean);
+  const wiki = (params.get('wiki') || '').toLowerCase();
+  if (/^[a-z]{2,3}(?:-[a-z]{2,8})?$/.test(wiki)) {
+    const select = $('#articleLanguage');
+    if (![...select.options].some((option) => option.value === wiki)) select.add(new Option(wiki.toUpperCase(), wiki));
+    select.value = wiki;
+  }
+  if (sources.length === 1) {
+    setQuery(sources[0]);
+    await addSource(sources[0]);
+  } else if (sources.length > 1) await addSourceList(sources);
 }
 
 async function fetchWorkspaceText(url) {
@@ -747,8 +764,8 @@ function withSummary(book, summary) {
 async function addSubpageBook(resolved) {
   const choice = await chooseSubpageBook(resolved);
   if (choice === 'page') await addArticleToBook(resolved.article);
-  else if (choice === 'book') await importBook(resolved.book, resolved.book_title);
-  else if (choice === 'book-summary') await importBook(withSummary(resolved.book, resolved.article), resolved.book_title);
+  else if (choice === 'book') await importBook(resolved.book, resolved.book_title, resolved.article);
+  else if (choice === 'book-summary') await importBook(withSummary(resolved.book, resolved.article), resolved.book_title, resolved.article);
 }
 
 async function pushArticle(article) {
@@ -771,7 +788,7 @@ async function addArticleToBook(article) {
   showToast(t('sources.articleAdded'));
 }
 
-async function importBook(book, bookName) {
+async function importBook(book, bookName, contents = null) {
   try {
     const newArticles = book.articles.filter((a) => !activeArticles().some((e) => sameArticle(e, a)));
     if (!newArticles.length) throw new Error(t('sources.allBookPagesAlready'));
@@ -792,8 +809,12 @@ async function importBook(book, bookName) {
     renderWorkspace();
     if (wasFirst) await suggestIntroAndAuthor(newArticles[0]);
     setQuery('');
-    const bookLink = `<a href="https://fr.wikipedia.org/wiki/Aide:Livres" target="_blank" rel="noopener noreferrer">${escapeHtml(t('sources.bookLinkText'))}</a>`;
-    $('#entryHint').innerHTML = t('sources.pagesAddedHint', { n: newArticles.length, link: bookLink });
+    const bookLink = contents
+      ? `<a href="${escapeHtml(contents.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(contents.title)}</a>`
+      : `<a href="https://fr.wikipedia.org/wiki/Aide:Livres" target="_blank" rel="noopener noreferrer">${escapeHtml(t('sources.bookLinkText'))}</a>`;
+    $('#entryHint').innerHTML = contents
+      ? t('sources.subpagesAddedHint', { n: newArticles.length, link: bookLink, site: escapeHtml(t(`site.${contents.site}`)) })
+      : t('sources.pagesAddedHint', { n: newArticles.length, link: bookLink });
     showToast(t('sources.pagesAddedToast', { n: newArticles.length }));
   } catch (error) { throw new Error(t('sources.bookImportFailed', { error: error.message })); }
 }

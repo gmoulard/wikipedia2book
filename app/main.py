@@ -395,36 +395,104 @@ async def read_wikipedia_book(payload: BookImportRequest) -> WikipediaBookImport
 
 @app.post("/api/sources/resolve", response_model=SourceResolution)
 async def resolve_source(payload: SourceRequest) -> SourceResolution:
-    text = payload.input.strip()
-    is_url = bool(re.match(r"^[a-z]+://", text, re.IGNORECASE))
     try:
-        if not text:
-            raise ValueError("Saisissez une URL, une page de livre ou un titre Wikipédia.")
-        language, title, site = parse_article_url(text) if is_url else (validate_language(payload.language), text, payload.site)
         async with MediaWikiClient() as client:
-            page = await client.get_page(title, language, site)
-            if page is None:
-                if is_url:
-                    raise MediaWikiPageNotFound(f"La page « {title} » est introuvable sur {language}.{site}.org.")
-                return SourceResolution(kind="search", results=await client.search(title, language, 8, site))
-            title, namespace = page
-            # NE PAS réduire à l'espace principal hors Wikipédia, ni se fier au marquage « contenu » de l'API : les pages d'auteur de Wikisource sont dans un espace propre au projet dont le numéro change selon la langue (102 en français, 106 en espagnol, non marqué « contenu »).
-            if namespace == 0 or (site != "wikipedia" and namespace >= PROJECT_NAMESPACES_START and namespace % 2 == 0):
-                article = Article(title=title, language=language, site=site, url=article_url(language, title, site), selected=True)
-                if site in SUBPAGE_BOOK_SITES and namespace == 0:
-                    subpage_book = await client.get_subpage_book(title, language, site)
-                    if sum(len(pages) for _, pages in subpage_book.chapters) >= SUBPAGE_BOOK_MIN:
-                        return SourceResolution(
-                            kind="subpages", article=article, book=_book_import(subpage_book, language, site), book_title=_book_name(title)
-                        )
-                return SourceResolution(kind="article", article=article)
-            if site != "wikipedia":
-                raise ValueError(f"Seules les pages de contenu de {language}.{site}.org (textes, pages d’auteur…) sont acceptées.")
-            return SourceResolution(
-                kind="book", book=await _wikipedia_book(client, language, title), book_title=_book_name(title)
-            )
+            return await _resolve_source(client, payload.input, payload.language, payload.site)
     except (MediaWikiError, ValueError) as error:
         raise _mediawiki_error(error) from error
+
+
+async def _resolve_source(client: MediaWikiClient, text: str, default_language: str, default_site: Site) -> SourceResolution:
+    text = text.strip()
+    if not text:
+        raise ValueError("Saisissez une URL, une page de livre ou un titre Wikipédia.")
+    is_url = bool(re.match(r"^[a-z]+://", text, re.IGNORECASE))
+    language, title, site = parse_article_url(text) if is_url else (validate_language(default_language), text, default_site)
+    page = await client.get_page(title, language, site)
+    if page is None:
+        if is_url:
+            raise MediaWikiPageNotFound(f"La page « {title} » est introuvable sur {language}.{site}.org.")
+        return SourceResolution(kind="search", results=await client.search(title, language, 8, site))
+    title, namespace = page
+    # NE PAS réduire à l'espace principal hors Wikipédia, ni se fier au marquage « contenu » de l'API : les pages d'auteur de Wikisource sont dans un espace propre au projet dont le numéro change selon la langue (102 en français, 106 en espagnol, non marqué « contenu »).
+    if namespace == 0 or (site != "wikipedia" and namespace >= PROJECT_NAMESPACES_START and namespace % 2 == 0):
+        article = Article(title=title, language=language, site=site, url=article_url(language, title, site), selected=True)
+        if site in SUBPAGE_BOOK_SITES and namespace == 0:
+            subpage_book = await client.get_subpage_book(title, language, site)
+            if sum(len(pages) for _, pages in subpage_book.chapters) >= SUBPAGE_BOOK_MIN:
+                return SourceResolution(
+                    kind="subpages", article=article, book=_book_import(subpage_book, language, site), book_title=_book_name(title)
+                )
+        return SourceResolution(kind="article", article=article)
+    if site != "wikipedia":
+        raise ValueError(f"Seules les pages de contenu de {language}.{site}.org (textes, pages d’auteur…) sont acceptées.")
+    return SourceResolution(kind="book", book=await _wikipedia_book(client, language, title), book_title=_book_name(title))
+
+
+INTERWIKI_SITES = {"w": "wikipedia", "s": "wikisource", "b": "wikibooks", "voy": "wikivoyage", "v": "wikiversity", "q": "wikiquote", "wikt": "wiktionary", "n": "wikinews"}
+MAX_URL_SOURCES = 50
+
+
+# NE PAS modifier sans aligner parseSourceLine et INTERWIKI_SITES dans app.js : une ligne du champ Sources et un paramètre source= doivent désigner la même page.
+def parse_source_line(line: str, default_language: str) -> tuple[str, str, Site] | None:
+    text = re.sub(r"^(?:\d+[.)]|[#*•\-–]+)\s*", "", line.strip()).strip()
+    if not text:
+        return None
+    markdown = re.match(r"^\[[^\]]*\]\((.+)\)$", text)
+    if markdown:
+        return markdown.group(1).strip(), default_language, "wikipedia"
+    wikilink = re.match(r"^\[\[\s*:?([^\]|]+?)\s*(?:\|[^\]]*)?\]\]", text)
+    if wikilink:
+        text = wikilink.group(1)
+    if re.match(r"^[a-z]+://", text, re.IGNORECASE):
+        return text, default_language, "wikipedia"
+    language, site = None, None
+    while prefixed := re.match(r"^([a-z][a-z-]*):(.+)$", text):
+        if site is None and prefixed.group(1) in INTERWIKI_SITES:
+            site = INTERWIKI_SITES[prefixed.group(1)]
+        elif language is None and re.fullmatch(r"[a-z]{2,3}(?:-[a-z]{2,8})?", prefixed.group(1)):
+            language = prefixed.group(1)
+        else:
+            break
+        text = prefixed.group(2).strip()
+    return text, language or default_language, site or "wikipedia"
+
+
+async def project_from_sources(sources: list[str], wiki_language: str, with_summary: bool) -> Project:
+    articles: list[Article] = []
+    chapters: list[BookChapter] = []
+    names: list[str] = []
+    subtitle = ""
+    async with MediaWikiClient() as client:
+        for line in sources:
+            parsed = parse_source_line(line, wiki_language)
+            if parsed is None:
+                continue
+            resolved = await _resolve_source(client, *parsed)
+            if resolved.kind == "search":
+                raise MediaWikiPageNotFound(f"Aucune page ne correspond exactement à « {line.strip()} ».")
+            if resolved.kind == "article":
+                articles.append(resolved.article)
+                continue
+            if resolved.kind == "subpages" and with_summary:
+                articles.append(resolved.article)
+            articles.extend(resolved.book.articles)
+            chapters.extend(resolved.book.chapters)
+            names.append(resolved.book_title)
+            subtitle = subtitle or resolved.book.subtitle
+    unique = list({article.key: article for article in articles}.values())
+    if not unique:
+        raise ValueError("Aucune page à mettre dans le livre.")
+    in_chapters = {key for chapter in chapters for key in chapter.article_keys}
+    name = names[0] if len(names) == 1 else ""
+    return Project(
+        name=(name or unique[0].title)[:120],
+        book_title=name[:200],
+        book_subtitle=subtitle[:300],
+        main_articles=unique,
+        chapters=chapters,
+        unassigned_first=bool(chapters) and unique[0].key not in in_chapters,
+    )
 
 
 def _book_page_url(url: str) -> tuple[str, str]:
@@ -876,6 +944,20 @@ async def _pdf_chunks(path: Path):
 async def create_pdf(
     project: Project, language: str = Query(default="fr", pattern=PDF_LANGUAGE_PATTERN)
 ) -> Response:
+    return await _create_pdf_response(project, language)
+
+
+@app.get("/api/pdf/from-source")
+async def create_pdf_from_source(
+    source: list[str] = Query(min_length=1, max_length=MAX_URL_SOURCES),
+    language: str = Query(default="fr", pattern=PDF_LANGUAGE_PATTERN),
+    wiki: str = Query(default="", max_length=12),
+    summary: bool = False,
+) -> Response:
+    try:
+        project = await project_from_sources(source, wiki or language, summary)
+    except (MediaWikiError, ValueError) as error:
+        raise _mediawiki_error(error) from error
     return await _create_pdf_response(project, language)
 
 
