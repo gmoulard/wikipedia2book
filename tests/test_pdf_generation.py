@@ -307,7 +307,7 @@ class GeneratedPageBlocksTest(unittest.TestCase):
         items = self.articles(1000)
         html = build_license_page_html(Project(name="T"), items, "fr")
         self.assertNotIn("Article 000", html)
-        self.assertLess(len(html), 6000)
+        self.assertLess(len(html.split('<footer class="colophon">')[0]), 6000)
 
 
 if __name__ == "__main__":

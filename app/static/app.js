@@ -124,6 +124,8 @@ function normalizeProject(input) {
   project.discovered_articles = project.discovered_articles.filter((a) => !a.selected);
   // NE PAS garder un document importé désélectionné (fichier JSON antérieur à la 1.9.6) : il n'y a plus de case à cocher pour le reprendre, il serait invisible ; il revient dans le livre et se retire par « × ».
   project.uploaded_documents = project.uploaded_documents.map((document) => ({ ...document, selected: true }));
+  // NE PAS garder une table des matières placée au milieu du livre (ancien fichier JSON) : l'étape Édition ne propose que le début ou la fin, elle revient au début.
+  if (String(project.toc_position).startsWith('before:')) project.toc_position = 'start';
   return project;
 }
 
@@ -245,19 +247,14 @@ function buildOrgSlots() {
   if (chapters.length && unassigned.length && !project.unassigned_first) unassignedSlots.unshift({ type: 'unassigned' });
   const slots = project.unassigned_first ? [...unassignedSlots, ...chapterSlots] : [...chapterSlots, ...unassignedSlots];
   const contentSlots = [...slots];
-  // NE PAS montrer de table des matières pour un seul article ou document : le PDF n'en a pas (toc_slot_index dans book_builder.py).
-  if (project.table_of_contents !== false && slots.filter((slot) => slot.type === 'article').length > 1) slots.splice(tocSlotIndex(slots), 0, { type: 'toc' });
   volumeStarts(contentSlots).forEach((start) => {
-    let at = slots.indexOf(contentSlots[start]);
-    // NE PAS laisser la table des matières avant la coupure quand elles visent le même élément : elle ouvre alors le volume suivant.
-    if (slots[at - 1]?.type === 'toc') at -= 1;
-    slots.splice(at, 0, { type: 'volume', anchor: slotAnchor(contentSlots[start]) });
+    slots.splice(slots.indexOf(contentSlots[start]), 0, { type: 'volume', anchor: slotAnchor(contentSlots[start]) });
   });
   return slots;
 }
 
 function contentOrgSlots() {
-  return buildOrgSlots().filter((slot) => slot.type !== 'toc' && slot.type !== 'volume');
+  return buildOrgSlots().filter((slot) => slot.type !== 'volume');
 }
 
 // NE PAS compter une coupure sur le premier élément ou sur un chapitre sans article : elle ne séparerait aucun article.
@@ -302,19 +299,10 @@ function slotAnchor(slot) {
   return slot.type === 'chapter' ? `chapter:${slot.chapter.id}` : articleKey(slot.article);
 }
 
-// NE PAS modifier sans aligner toc_slot_index dans book_builder.py.
-function tocSlotIndex(slots) {
-  const position = state.project.toc_position || 'start';
-  if (position === 'end') return slots.length;
-  const index = slots.findIndex((slot) => slotAnchor(slot) === position.replace(/^before:/, ''));
-  return index < 0 ? 0 : index;
-}
-
 function renderOrganization() {
   const project = state.project;
   const articles = orderedSelectedArticles();
   $('#organizationCount').textContent = articles.length;
-  $('#addTocButton').hidden = project.table_of_contents !== false || articles.length <= 1;
   const volumes = bookVolumes();
   const split = Boolean(volumes) && volumes.length > articleSegments().length;
   $('#organizationVolumes').hidden = !split;
@@ -327,13 +315,6 @@ function renderOrganization() {
 
   const slots = buildOrgSlots();
   const html = slots.map((slot, idx) => {
-    if (slot.type === 'toc') {
-      return `<div class="org-row org-toc" draggable="true" data-slot-type="toc" data-slot-index="${idx}">
-        <span class="drag-handle" aria-hidden="true">\u2630</span>
-        <div class="org-article-text"><div class="org-article-title">${escapeHtml(t('org.toc'))}</div><div class="org-article-origin">${escapeHtml(t('org.tocHint'))}</div></div>
-        <button class="remove-article toc-remove" type="button" title="${escapeHtml(t('org.removeTocTitle'))}" aria-label="${escapeHtml(t('org.removeTocTitle'))}">×</button>
-      </div>`;
-    }
     if (slot.type === 'volume') {
       return `<div class="org-row org-volume" draggable="true" data-slot-type="volume" data-slot-index="${idx}" data-volume-anchor="${escapeHtml(slot.anchor)}">
         <span class="drag-handle" aria-hidden="true">\u2630</span>
@@ -408,10 +389,10 @@ function applyDragDrop(fromIndex, toIndex) {
   const from = slots[fromIndex];
   let to = slots[toIndex];
   if (!from || !to) return;
-  if (to.type === 'volume' && from.type !== 'volume' && from.type !== 'toc') to = slots[toIndex + 1] || slots[toIndex - 1];
+  if (to.type === 'volume' && from.type !== 'volume') to = slots[toIndex + 1] || slots[toIndex - 1];
 
   if (from.type === 'volume') {
-    const others = slots.filter((slot) => slot.type !== 'toc' && slot.type !== 'volume');
+    const others = slots.filter((slot) => slot.type !== 'volume');
     const following = slots.slice(toIndex).find((slot) => others.includes(slot));
     const at = others.includes(to) ? others.indexOf(to) + (toIndex > fromIndex ? 1 : 0) : (following ? others.indexOf(following) : others.length);
     if (at <= 0 || at >= others.length) return;
@@ -421,18 +402,9 @@ function applyDragDrop(fromIndex, toIndex) {
     return;
   }
 
-  if (from.type === 'toc') {
-    const others = slots.filter((slot) => slot.type !== 'toc' && slot.type !== 'volume');
-    const at = others.indexOf(to) + (toIndex > fromIndex ? 1 : 0);
-    const position = at >= others.length ? 'end' : at === 0 ? 'start' : `before:${slotAnchor(others[at])}`;
-    queueSave({ toc_position: position });
-    renderOrganization();
-    return;
-  }
-
   if (from.type === 'article' || from.type === 'chapter') {
-    const sequence = slots.filter((slot) => slot.type !== 'toc' && slot.type !== 'volume');
-    const target = to.type === 'toc' || to.type === 'volume' ? slots.slice(toIndex).find((slot) => sequence.includes(slot)) : to;
+    const sequence = slots.filter((slot) => slot.type !== 'volume');
+    const target = to.type === 'volume' ? slots.slice(toIndex).find((slot) => sequence.includes(slot)) : to;
     if (target === from) return;
     const rest = sequence.filter((slot) => slot !== from);
     const into = from.type === 'article' && (target?.type === 'chapter' || target?.type === 'unassigned');
@@ -488,6 +460,8 @@ function renderBookSettings() {
   if (orientation) orientation.checked = true;
   $('#customDimensions').hidden = project.page_format !== 'custom';
   $('#pageNumbers').checked = project.page_numbers || false;
+  const toc = project.table_of_contents === false ? 'none' : project.toc_position === 'end' ? 'end' : 'start';
+  $(`input[name="tocChoice"][value="${toc}"]`).checked = true;
   $('#marginPreset').value = marginPresetOf(project);
   $('#bookTitle').placeholder = defaultBookTitle() || t('heading.namePlaceholder');
   renderBackgrounds();
@@ -1254,17 +1228,6 @@ document.addEventListener('click', async (event) => {
   if (event.target.closest('#addVolumeButton')) { addVolumeBreak(); return; }
   const volumeRow = event.target.closest('.org-volume');
   if (volumeRow && event.target.closest('.volume-remove')) { removeVolumeBreak(volumeRow.dataset.volumeAnchor); return; }
-  if (event.target.closest('.toc-remove')) {
-    queueSave({ table_of_contents: false });
-    renderOrganization();
-    showToast(t('org.tocRemovedToast'));
-    return;
-  }
-  if (event.target.closest('#addTocButton')) {
-    queueSave({ table_of_contents: true, toc_position: 'start' });
-    renderOrganization();
-    return;
-  }
   if (event.target.closest('#uploadDocumentButton')) { $('#documentFileInput').click(); return; }
   if (event.target.closest('#importWorkspaceButton')) { $('#workspaceFileInput').click(); return; }
   if (event.target.closest('#saveWorkspaceButton')) { exportWorkspace(); return; }
@@ -1295,6 +1258,7 @@ document.addEventListener('change', async (event) => {
   if (event.target.matches('#articleLanguage')) { if ($('#articleQuery').value.trim().length >= 2) searchArticles($('#articleQuery').value); return; }
   if (event.target.matches('input[name="orientation"]')) { const layout = collectLayoutSettings(); Object.assign(state.project, layout); queueSave(layout); return; }
   if (event.target.matches('#pageNumbers')) { queueSave({ page_numbers: event.target.checked }); return; }
+  if (event.target.matches('input[name="tocChoice"]')) { queueSave({ table_of_contents: event.target.value !== 'none', toc_position: event.target.value === 'end' ? 'end' : 'start' }); return; }
   const textSettings = { bookTitle: 'book_title', bookDescription: 'description', bookSubtitle: 'book_subtitle', bookAuthor: 'book_author', bookIntroduction: 'introduction', bookConclusion: 'conclusion' };
   if (textSettings[event.target.id]) patchSetting(event.target.id, textSettings[event.target.id]);
   const numericSettings = { customWidth: 'custom_width_mm', customHeight: 'custom_height_mm', marginTop: 'margin_top_mm', marginBottom: 'margin_bottom_mm', marginInside: 'margin_inside_mm', marginOutside: 'margin_outside_mm', marginBinding: 'margin_binding_mm' };

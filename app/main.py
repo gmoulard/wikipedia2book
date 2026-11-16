@@ -40,6 +40,7 @@ from pypdf import PdfReader
 
 from app.book_builder import (
     build_chapter_page_html,
+    build_back_cover_html,
     build_conclusion_page_html,
     build_cover_html,
     PDF_LABELS,
@@ -759,16 +760,19 @@ def _finish_book(
     stage("render_chapters", chapters=chapters)
     if toc_at == len(slots):
         root.children.append(OutlineEntry(pdf_label(language, "toc"), place_toc()))
-    # NE PAS mettre le logo et les liens ailleurs qu'en dernière page : sur la licence, ou sur la conclusion quand le livre en a une.
-    license_start = place_pdf(render(build_license_page_html(project, selected, language, colophon=not project.conclusion)))
-    root.children.append(OutlineEntry(pdf_label(language, "license"), license_start))
-    stage("render_license")
     if project.conclusion:
         root.children.append(OutlineEntry(
             pdf_label(language, "conclusion"),
             place_pdf(render(build_conclusion_page_html(project, language))),
         ))
         stage("render_conclusion")
+    # NE PAS remettre la conclusion après la licence : le logo et les liens suivent la licence et terminent le texte du livre, seule l'image de fond de dernière page vient après.
+    license_start = place_pdf(render(build_license_page_html(project, selected, language)))
+    root.children.append(OutlineEntry(pdf_label(language, "license"), license_start))
+    stage("render_license")
+    if project.back_image:
+        place_pdf(render(build_back_cover_html(project)))
+        stage("render_back_cover")
 
     merge_files(parts, workdir / "merged.pdf")
     stage("merge_parts", parts=len(parts), pages=pages_so_far)

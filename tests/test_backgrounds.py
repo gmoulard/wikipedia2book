@@ -59,23 +59,22 @@ class CoverBackgroundTest(unittest.TestCase):
 
 
 class BackBackgroundTest(unittest.TestCase):
-    def test_colophon_on_its_own_last_page_with_background(self):
+    def test_back_cover_page_is_the_image_alone(self):
+        html = book_builder.build_back_cover_html(Project(name="Livre", back_image=BACK, page_format="A5"))
+        self.assertIn("@page { size: 148mm 210mm; margin: 0; }", html)
+        self.assertIn(f'@page  {{ background: url("data:image/jpeg;base64,{PNG}") center / cover no-repeat; }}', html)
+        self.assertNotIn("colophon", html)
+
+    def test_edition_date_follows_the_logo_not_the_cover(self):
+        project = Project(name="Livre")
+        license_html = book_builder.build_license_page_html(project, [ARTICLE], "en")
+        self.assertLess(license_html.index('<img src="data:image/png;base64,'), license_html.index('<p class="edition">Edition of '))
+        self.assertNotIn("Edition of", book_builder.build_cover_html(project, "en"))
+
+    def test_colophon_follows_the_license_not_the_conclusion(self):
         project = Project(name="Livre", back_image=BACK, conclusion="Fin.")
-        html = book_builder.build_conclusion_page_html(project)
-        self.assertIn(f'@page back-cover {{ background: url("data:image/jpeg;base64,{PNG}")', html)
-        self.assertIn("page: back-cover", html)
-        self.assertIn('<section class="back-cover"><footer class="colophon">', html)
-        self.assertLess(html.index("Fin."), html.index('<section class="back-cover">'))
-
-    def test_license_page_carries_back_page_without_conclusion(self):
-        html = book_builder.build_license_page_html(Project(name="Livre", back_image=BACK), [ARTICLE], colophon=True)
-        self.assertIn('<section class="back-cover">', html)
-        self.assertNotIn('<section class="back-cover">', book_builder.build_license_page_html(Project(name="Livre", back_image=BACK), [ARTICLE]))
-
-    def test_colophon_unchanged_without_image(self):
-        html = book_builder.build_conclusion_page_html(Project(name="Livre", conclusion="Fin."))
-        self.assertNotIn("back-cover", html)
-        self.assertIn('<footer class="colophon">', html)
+        self.assertIn('<footer class="colophon">', book_builder.build_license_page_html(project, [ARTICLE]))
+        self.assertNotIn("colophon", book_builder.build_conclusion_page_html(project))
 
 
 if __name__ == "__main__":

@@ -102,7 +102,7 @@ def toc_slot_index(
 ) -> int | None:
     if not project.table_of_contents:
         return None
-    # NE PAS donner de table des matières à un livre d'un seul article ou document : elle n'aurait qu'une ligne (même règle dans buildOrgSlots).
+    # NE PAS donner de table des matières à un livre d'un seul article ou document : elle n'aurait qu'une ligne.
     if sum(kind == "item" for kind, _ in slots) <= 1:
         return None
     if project.toc_position == "end":
@@ -170,7 +170,7 @@ h2 {{ font-size: 18pt; }}
     </style>
     </head>
     <body>
-<header class="cover"><h1>{book_title}</h1>{subtitle}{author}<p class="cover-note">{description}</p><p class="cover-note">{escape(pdf_label(language, 'edition', date=date.today().strftime('%d/%m/%Y')))}</p></header>
+<header class="cover"><h1>{book_title}</h1>{subtitle}{author}<p class="cover-note">{description}</p></header>
 {introduction}
     </body>
     </html>"""
@@ -296,26 +296,23 @@ def _background_css(image: BookImage | None, page: str) -> str:
     return f'@page {page} {{ background: url("data:{image.mime_type};base64,{image.data_base64}") center / cover no-repeat; }}'
 
 
-def _colophon_css(project: Project) -> str:
-    if project.back_image is None:
-        return COLOPHON_CSS.format(fonts=SANS_FONTS)
-    _, page_height, margin_top, margin_bottom, _, _ = _page_layout(project)
-    return (
-        COLOPHON_CSS.format(fonts=SANS_FONTS)
-        + _background_css(project.back_image, "back-cover")
-        + f".back-cover {{ page: back-cover; display: flex; height: {page_height - margin_top - margin_bottom - 2:g}mm; flex-direction: column; justify-content: flex-end; }}"
-        + ".back-cover .colophon { margin-top: 0; padding: 4mm 6mm; border-radius: 2mm; background: rgba(255, 255, 255, .85); }"
-    )
-
-
-# NE PAS laisser le logo et les liens sur la page de licence ou de conclusion quand une image de fond de dernière page est choisie : ils passent seuls sur une dernière page à part (page nommée back-cover), sinon le texte de la licence ou de la conclusion serait imprimé sur l'image.
-def _colophon_html(project: Project) -> str:
+def _colophon_html(language: str) -> str:
     logo = base64.b64encode(COLOPHON_LOGO.read_bytes()).decode("ascii")
-    footer = (
+    edition = escape(pdf_label(language, "edition", date=date.today().strftime("%d/%m/%Y")))
+    return (
         f'<footer class="colophon"><a href="{APP_URL}"><img src="data:image/png;base64,{logo}" alt="Wikipedia2Book"></a>'
+        f'<p class="edition">{edition}</p>'
         f'<p><a href="{APP_URL}">{APP_URL}</a><br><a href="{SOURCE_URL}">{SOURCE_URL}</a></p></footer>'
     )
-    return f'<section class="back-cover">{footer}</section>' if project.back_image else footer
+
+
+def build_back_cover_html(project: Project) -> str:
+    page_width, page_height, *_ = _page_layout(project)
+    return f"""<!doctype html>
+<html><head><meta charset="utf-8"><style>
+@page {{ size: {page_width:g}mm {page_height:g}mm; margin: 0; }}
+{_background_css(project.back_image, "")}
+</style></head><body><div></div></body></html>"""
 
 
 def build_conclusion_page_html(project: Project, language: str = "fr") -> str:
@@ -328,8 +325,7 @@ def build_conclusion_page_html(project: Project, language: str = "fr") -> str:
 @page :right {{ margin-left: {outer:g}mm; margin-right: {inner:g}mm; }}
 body {{ color: #202020; font: 11pt {SERIF_FONTS}; line-height: 1.6; }}
 h1 {{ font-size: 22pt; }}
-{_colophon_css(project)}
-</style></head><body><h1>{pdf_label(language, 'conclusion')}</h1><p>{conclusion}</p>{_colophon_html(project)}</body></html>"""
+</style></head><body><h1>{pdf_label(language, 'conclusion')}</h1><p>{conclusion}</p></body></html>"""
 
 
 def _site_names(language: str, sites: list[str]) -> str:
@@ -346,7 +342,7 @@ def _license_articles(project: Project, items: list[BookItem], language: str) ->
 
 
 # NE PAS remettre la liste des articles avec leurs adresses (« Sources et auteurs ») : chaque PDF d'article se termine déjà par le lien vers la version reproduite, qui crédite ses auteurs, et cette liste pesait plusieurs pages et autant de rendus WeasyPrint sur un gros livre.
-def build_license_page_html(project: Project, items: list[BookItem], language: str = "fr", colophon: bool = False) -> str:
+def build_license_page_html(project: Project, items: list[BookItem], language: str = "fr") -> str:
     page_width, page_height, margin_top, margin_bottom, inner, outer = _page_layout(project)
     articles, documents = _license_articles(project, items, language)
     present = [site for site in get_args(Site) if any(article.site == site for article in articles)] or ["wikipedia"]
@@ -379,8 +375,8 @@ body {{ color: #202020; font: 10pt {SERIF_FONTS}; line-height: 1.5; }}
 h1 {{ font-size: 22pt; }}
 .license-name {{ font-weight: bold; }}
 .url {{ direction: ltr; unicode-bidi: embed; }}
-{_colophon_css(project)}
+{COLOPHON_CSS.format(fonts=SANS_FONTS)}
 </style></head><body>
 {header}
-{_colophon_html(project) if colophon else ""}
+{_colophon_html(language)}
 </body></html>"""
