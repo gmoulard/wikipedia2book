@@ -1,6 +1,13 @@
 # Wikipedia2Book — Functional and technical specifications
 
+
+<table border="0" ><tr><td>
+<img src="https://gmoulard.github.io/wikipedia2book/static/Wikipedia2bookLogo.png" alt="Wikipedia2Book logo" width="100"  >
+</td><td>
 This is the English translation of [SPECIFICATIONS.fr.md](SPECIFICATIONS.fr.md). The French document is the reference: if the two ever differ, the French version prevails. Interface labels are quoted as they appear in the English interface.
+</td></tr></table>
+
+
 
 ## Table of contents
 
