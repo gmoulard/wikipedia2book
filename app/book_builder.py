@@ -15,12 +15,16 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import base64
+import binascii
+import io
 import math
 from datetime import date
 from html import escape
 from pathlib import Path
 from typing import get_args
 from urllib.parse import quote
+
+from PIL import Image, ImageOps
 
 from app.models import Article, BookImage, Project, Site, UploadedDocument
 
@@ -147,6 +151,8 @@ def build_cover_html(project: Project, language: str = "fr") -> str:
         if project.introduction else ""
     )
     description = escape(project.description)
+    text_area = (outer, margin_top, page_width - inner, margin_top + (page_height - margin_top - margin_bottom) * 0.65)
+    text_css = COVER_TEXT_CSS[cover_text_style(project.cover_image, page_width, page_height, text_area)] if project.cover_image else ""
     return f"""<!doctype html>
     <html {_html_attrs(language)}>
     <head>
@@ -167,10 +173,11 @@ h2 {{ font-size: 18pt; }}
 .author {{ margin-top: 32pt; color: #555; }}
 .cover-note {{ margin-top: 20pt; color: #555; font-size: 9pt; }}
 .opening {{ page-break-after: always; }}
+{text_css}
     </style>
     </head>
     <body>
-<header class="cover"><h1>{book_title}</h1>{subtitle}{author}<p class="cover-note">{description}</p></header>
+<header class="cover"><div class="cover-text"><h1>{book_title}</h1>{subtitle}{author}<p class="cover-note">{description}</p></div></header>
 {introduction}
     </body>
     </html>"""
@@ -293,7 +300,53 @@ COLOPHON_CSS = (
 def _background_css(image: BookImage | None, page: str) -> str:
     if image is None:
         return ""
-    return f'@page {page} {{ background: url("data:{image.mime_type};base64,{image.data_base64}") center / cover no-repeat; }}'
+    # NE PAS retirer « fixed » : sans lui, WeasyPrint dimensionne le fond d'une page sur la zone intérieure aux marges, l'image ne couvre plus toute la feuille.
+    return f'@page {page} {{ background: url("data:{image.mime_type};base64,{image.data_base64}") center / cover no-repeat fixed; }}'
+
+
+BLACK_TEXT_MIN_LUMINANCE = 0.175
+WHITE_TEXT_MAX_LUMINANCE = 0.183
+READABLE_SHARE = 0.95
+_LINEAR = [((v / 255) / 12.92) if v <= 10 else (((v / 255) + 0.055) / 1.055) ** 2.4 for v in range(256)]
+
+
+def _cover_luminances(image: BookImage, width: float, height: float, area: tuple[float, float, float, float]) -> list[float]:
+    picture = Image.open(io.BytesIO(base64.b64decode(image.data_base64)))
+    picture.draft("RGB", (512, 512))
+    picture = ImageOps.exif_transpose(picture).convert("RGBA")
+    flat = Image.new("RGBA", picture.size, "white")
+    flat.alpha_composite(picture)
+    scale = max(width / flat.width, height / flat.height)
+    left, top, right, bottom = area
+    box = tuple(round(v) for v in (
+        flat.width / 2 + (left - width / 2) / scale, flat.height / 2 + (top - height / 2) / scale,
+        flat.width / 2 + (right - width / 2) / scale, flat.height / 2 + (bottom - height / 2) / scale,
+    ))
+    region = flat.crop(box).convert("RGB")
+    region.thumbnail((96, 96))
+    return [0.2126 * _LINEAR[r] + 0.7152 * _LINEAR[g] + 0.0722 * _LINEAR[b] for r, g, b in region.getdata()]
+
+
+def cover_text_style(image: BookImage, width: float, height: float, area: tuple[float, float, float, float]) -> str:
+    try:
+        luminances = sorted(_cover_luminances(image, width, height, area))
+    except (OSError, ValueError, binascii.Error, Image.DecompressionBombError):
+        return "band"
+    if not luminances:
+        return "band"
+    margin = int(len(luminances) * (1 - READABLE_SHARE))
+    if luminances[margin] >= BLACK_TEXT_MIN_LUMINANCE:
+        return "dark"
+    if luminances[len(luminances) - 1 - margin] <= WHITE_TEXT_MAX_LUMINANCE:
+        return "light"
+    return "band"
+
+
+COVER_TEXT_CSS = {
+    "dark": "",
+    "light": ".cover, .cover .author, .cover .cover-note { color: #fff; }",
+    "band": ".cover-text { padding: 14pt 18pt; background: rgba(255, 255, 255, 0.85); }",
+}
 
 
 def _colophon_html(language: str) -> str:

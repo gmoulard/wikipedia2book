@@ -469,13 +469,46 @@ function renderBookSettings() {
 
 const BACKGROUND_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml'];
 
+// NE PAS modifier ces formats sans _PAGE_SIZES de book_builder.py : la taille recommandée ne correspondrait plus à la page du PDF.
+const PAGE_SIZES_MM = {
+  A0: [841, 1189], A1: [594, 841], A2: [420, 594], A3: [297, 420], A4: [210, 297], A5: [148, 210],
+  A6: [105, 148], Letter: [216, 279], Legal: [216, 356],
+};
+const BACKGROUND_DPI = 300;
+
+function recommendedBackgroundSize(project) {
+  let [width, height] = PAGE_SIZES_MM[project.page_format] || [project.custom_width_mm, project.custom_height_mm];
+  if (project.orientation === 'landscape') [width, height] = [height, width];
+  return { width: Math.round(width / 25.4 * BACKGROUND_DPI), height: Math.round(height / 25.4 * BACKGROUND_DPI) };
+}
+
+function backgroundWarning(image, preview, size) {
+  if (!image || image.mime_type === 'image/svg+xml' || !preview.naturalWidth || !preview.naturalHeight) return '';
+  const width = preview.naturalWidth;
+  const height = preview.naturalHeight;
+  const warnings = [];
+  if (Math.max(size.width / width, size.height / height) > 2) warnings.push(t('edition.backgroundTooSmall', { width, height }));
+  if (width !== height && size.width !== size.height && (width > height) !== (size.width > size.height)) warnings.push(t('edition.backgroundOrientation'));
+  return warnings.join(' ');
+}
+
 function renderBackgrounds() {
+  const size = state.project ? recommendedBackgroundSize(state.project) : null;
   document.querySelectorAll('.background-field').forEach((field) => {
     const image = state.project?.[field.dataset.background];
     const preview = field.querySelector('.background-preview');
+    const warning = field.querySelector('.background-warning');
+    const showWarning = () => {
+      warning.textContent = size ? backgroundWarning(state.project?.[field.dataset.background], preview, size) : '';
+      warning.hidden = !warning.textContent;
+    };
     preview.hidden = !image;
-    if (image) { preview.src = `data:${image.mime_type};base64,${image.data_base64}`; preview.alt = image.title || ''; }
-    else preview.removeAttribute('src');
+    preview.onload = showWarning;
+    const source = image ? `data:${image.mime_type};base64,${image.data_base64}` : '';
+    if (image && preview.getAttribute('src') !== source) { preview.src = source; preview.alt = image.title || ''; }
+    else if (!image) preview.removeAttribute('src');
+    showWarning();
+    field.querySelector('.background-size').textContent = size ? t('edition.backgroundRecommended', size) : '';
     field.querySelector('.background-remove').hidden = !image;
   });
 }
@@ -1264,7 +1297,7 @@ document.addEventListener('change', async (event) => {
   if (event.target.matches('.article-check')) { const card = event.target.closest('.article-card'); await toggleArticle(card, event.target.checked); return; }
   if (event.target.matches('input[name="suggestionSort"]')) { state.suggestionSort = event.target.value; renderArticles(); return; }
   if (event.target.matches('#articleLanguage')) { if ($('#articleQuery').value.trim().length >= 2) searchArticles($('#articleQuery').value); return; }
-  if (event.target.matches('input[name="orientation"]')) { const layout = collectLayoutSettings(); Object.assign(state.project, layout); queueSave(layout); return; }
+  if (event.target.matches('input[name="orientation"]')) { const layout = collectLayoutSettings(); Object.assign(state.project, layout); queueSave(layout); renderBackgrounds(); return; }
   if (event.target.matches('#pageNumbers')) { queueSave({ page_numbers: event.target.checked }); return; }
   if (event.target.matches('input[name="tocChoice"]')) { queueSave({ table_of_contents: event.target.value !== 'none', toc_position: event.target.value === 'end' ? 'end' : 'start' }); return; }
   const textSettings = { bookTitle: 'book_title', bookDescription: 'description', bookSubtitle: 'book_subtitle', bookAuthor: 'book_author', bookIntroduction: 'introduction', bookConclusion: 'conclusion' };
@@ -1272,6 +1305,7 @@ document.addEventListener('change', async (event) => {
   const numericSettings = { customWidth: 'custom_width_mm', customHeight: 'custom_height_mm', marginTop: 'margin_top_mm', marginBottom: 'margin_bottom_mm', marginInside: 'margin_inside_mm', marginOutside: 'margin_outside_mm', marginBinding: 'margin_binding_mm' };
   if (numericSettings[event.target.id]) patchSetting(event.target.id, numericSettings[event.target.id], Number);
   if (event.target.matches('#pageFormat')) patchSetting('pageFormat', 'page_format');
+  if (event.target.matches('#pageFormat, #customWidth, #customHeight')) renderBackgrounds();
   if (event.target.matches('#marginPreset')) applyMarginPreset(event.target.value);
   if (numericSettings[event.target.id]?.startsWith('margin_')) $('#marginPreset').value = marginPresetOf(state.project);
 });

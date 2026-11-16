@@ -7,3 +7,4 @@ weasyprint==69.0
 pypdf==6.21.4
 pymupdf==2.1
 reportlab==4.5.1
+pillow==13.0.0
