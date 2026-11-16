@@ -70,7 +70,7 @@ wikipedia2book/
 ├── CITATION.cff                 # Citation metadata
 ├── codemeta.json                # CodeMeta software metadata
 ├── requirements.txt             # Python dependencies
-├── .claude/skills/              # Generic Claude Code procedures: code-style, spec-sync, debug-frontend, release, deploy-production
+├── .claude/skills/              # Git submodule (gmoulard/claude_skills): generic Claude Code procedures code-style, spec-sync, debug-frontend, release, deploy-production
 ├── docs/                        # Documentation site (GitHub Pages source)
 │   ├── SPECIFICATIONS.fr.md     # Reference behaviour (French original)
 │   ├── SPECIFICATIONS.en.md     # English translation of the specifications

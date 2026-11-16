@@ -1234,7 +1234,7 @@ Wikipedia2Book/
 ├── requirements.txt
 ├── .gitignore
 ├── CLAUDE.md
-├── .claude/skills/              (generic procedures for Claude Code: code-style, spec-sync, debug-frontend, release, deploy-production; their values for this repository are in CLAUDE.md)
+├── .claude/skills/              (git submodule gmoulard/claude_skills, generic procedures for Claude Code: code-style, spec-sync, debug-frontend, release, deploy-production; their values for this repository are in CLAUDE.md)
 ├── CODE_OF_CONDUCT.md
 ├── LICENSE
 ├── README.md

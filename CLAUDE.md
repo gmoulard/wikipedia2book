@@ -48,6 +48,8 @@ Le numéro de version de l'application est dans `app/version.py` (`VERSION = "x.
 
 ## Paramètres des skills
 
+`.claude/skills/` est un sous-module git, le dépôt partagé https://github.com/gmoulard/claude_skills : `git submodule update --init` après un clone. Modifier un skill = commit et push dans ce dépôt-là (demander avant de pousser), puis commit ici du nouveau pointeur du sous-module. Ne jamais y écrire de valeur propre à Wikipedia2Book : elle va ci-dessous.
+
 Valeurs propres à ce dépôt, lues par les skills génériques de `.claude/skills/` :
 
 - **`code-style`** :
