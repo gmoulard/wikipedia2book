@@ -1063,15 +1063,10 @@ Deux séries de mesures, dans des tableaux aux colonnes communes alignées (date
 
   | Date | Version | Cible | Téléchargements simultanés | Pages | Wikipédia | Application | Transfert | Total | Tests |
   |---|---|---|---|---|---|---|---|---|---|
-  | 2026-11-14 | 1.6.10 | Railway | 1 | 104 | 31 s | 9,7 s ¹ | — | 40,7 s | 83 |
-  | 2026-11-14 | 1.7.1 | Railway | 4 | 104 | 10,5 s | 1,7 s | 1,4 s | 13,6 s | 85 |
-  | 2026-11-15 | 1.7.5 | Railway | 2 | 104 | 17,2 s | 1,6 s | 1,6 s | 20,4 s | 117 |
   | 2026-11-15 | 1.7.5 | Toolforge | 4 | 104 | 10,9 s | 2,3 s | 2,8 s | 16,0 s | 117 |
-  | 2026-11-16 | 1.9.5 | Toolforge | 4 | 101 | 12,9 s | 1,0 s | 2,4 s | 16,3 s ² | 186 |
+  | 2026-11-16 | 1.9.5 | Toolforge | 4 | 101 | 12,9 s | 1,0 s | 2,4 s | 16,3 s ¹ | 186 |
 
-  ¹ En 1.6.10, le PDF voyageait en base64 dans le flux : application et transfert ne se distinguaient pas.
-
-  ² Mesurée quatre heures après la mise en ligne (12:24 UTC), pas à la première génération : d'autres livres avaient déjà été générés, une partie des PDF d'articles pouvait être en cache chez Wikimédia.
+  ¹ Mesurée quatre heures après la mise en ligne (12:24 UTC), pas à la première génération : d'autres livres avaient déjà été générés, une partie des PDF d'articles pouvait être en cache chez Wikimédia.
 
 * **Résultats de l'atelier** : chaque passage de l'atelier est reporté ici, médiane des générations de chaque scénario, regroupé par passage (date, version, cible) ; le bilan de chaque passage suit le tableau.
 

@@ -1066,15 +1066,10 @@ Two series of measurements, in tables whose common columns are aligned (date, ve
 
   | Date | Version | Target | Simultaneous downloads | Pages | Wikipedia | Application | Transfer | Total | Tests |
   |---|---|---|---|---|---|---|---|---|---|
-  | 2026-11-14 | 1.6.10 | Railway | 1 | 104 | 31 s | 9.7 s ¹ | — | 40.7 s | 83 |
-  | 2026-11-14 | 1.7.1 | Railway | 4 | 104 | 10.5 s | 1.7 s | 1.4 s | 13.6 s | 85 |
-  | 2026-11-15 | 1.7.5 | Railway | 2 | 104 | 17.2 s | 1.6 s | 1.6 s | 20.4 s | 117 |
   | 2026-11-15 | 1.7.5 | Toolforge | 4 | 104 | 10.9 s | 2.3 s | 2.8 s | 16.0 s | 117 |
-  | 2026-11-16 | 1.9.5 | Toolforge | 4 | 101 | 12.9 s | 1.0 s | 2.4 s | 16.3 s ² | 186 |
+  | 2026-11-16 | 1.9.5 | Toolforge | 4 | 101 | 12.9 s | 1.0 s | 2.4 s | 16.3 s ¹ | 186 |
 
-  ¹ In 1.6.10 the PDF travelled in base64 inside the stream: application and transfer could not be told apart.
-
-  ² Measured four hours after going live (12:24 UTC), not at the first generation: other books had already been generated, some article PDFs may have been in Wikimedia's cache.
+  ¹ Measured four hours after going live (12:24 UTC), not at the first generation: other books had already been generated, some article PDFs may have been in Wikimedia's cache.
 
 * **Workshop results**: every run of the workshop is recorded here, median of the generations of each scenario, grouped by run (date, version, target); the summary of each run follows the table.
 
