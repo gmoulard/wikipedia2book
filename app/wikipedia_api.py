@@ -49,6 +49,12 @@ MEDIA_WINDOW_BYTES = 25_000_000 // 8 * MEDIA_WINDOW_S
 RETRY_STATUSES = {429, 503}
 RETRY_DELAYS_S = (2, 4, 8, 16)
 MAX_RETRY_WAIT_S = 20
+WIKIBOOK_PRINT_VERSIONS = {
+    "version imprimable", "print version", "printable version", "druckversion", "versione stampabile",
+    "versión para imprimir", "versión imprimible", "versão para impressão", "versão para imprimir", "afdrukbare versie",
+    "yazdırılabilir sürüm", "印刷版", "印刷用", "打印版", "نسخه چاپی", "نسخة للطباعة", "نسخة قابلة للطباعة",
+}
+WIKIBOOK_MIN_SUBPAGES = 2
 RATE_LIMITED = "Wikipédia limite le nombre de requêtes en ce moment (HTTP {status}) : réessayez dans quelques minutes."
 
 
@@ -299,6 +305,12 @@ class MediaWikiClient:
             links.append(link_title)
         return links
 
+    async def get_wikibook(self, title: str, language: str = "fr", limit: int = 500) -> WikipediaBook:
+        # NE PAS passer à prop=links : tri alphabétique, l'ordre des chapitres du sommaire serait perdu.
+        result = await self._get(language, {"action": "parse", "page": title, "prop": "text", "redirects": 1, "disabletoc": 1}, "wikibooks")
+        parsed = result.get("parse", {})
+        return WikipediaBook(subtitle="", chapters=wikibook_chapters(parsed.get("text", ""), parsed.get("title", title), min(max(limit, 1), 500)))
+
     async def get_book(self, title: str, language: str = "fr", limit: int = 200) -> WikipediaBook:
         language = validate_language(language)
         limit = min(max(limit, 1), 500)
@@ -341,6 +353,42 @@ class MediaWikiClient:
             if count >= limit:
                 break
         return WikipediaBook(subtitle=subtitle, chapters=[chapter for chapter in chapters if chapter[1]])
+
+
+def wikibook_chapters(html: str, title: str, limit: int = 500) -> list[tuple[str, list[str]]]:
+    soup = BeautifulSoup(html, "html.parser")
+    for edit_link in soup.select(".mw-editsection"):
+        edit_link.decompose()
+    prefix = title + "/"
+    seen: set[str] = set()
+    sequence: list[tuple[int, str]] = []
+    for element in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "a"]):
+        if element.name != "a":
+            sequence.append((int(element.name[1]), element.get_text(" ", strip=True)))
+            continue
+        href = element.get("href", "")
+        if not href.startswith("/wiki/") or "new" in (element.get("class") or []):
+            continue
+        link_title = unquote(href[len("/wiki/"):].split("#", 1)[0]).replace("_", " ").strip()
+        # NE PAS garder la version imprimable : elle contient tout le livre, qui serait en double dans le PDF.
+        if not link_title.startswith(prefix) or link_title in seen or link_title.rsplit("/", 1)[-1].casefold() in WIKIBOOK_PRINT_VERSIONS:
+            continue
+        seen.add(link_title)
+        sequence.append((0, link_title))
+        if len(seen) >= limit:
+            break
+    for level in (2, 3, 4):
+        chapters: list[tuple[str, list[str]]] = [("", [])]
+        for heading_level, text in sequence:
+            if heading_level == 0:
+                chapters[-1][1].append(text)
+            elif heading_level <= level:
+                chapters.append((text, []))
+        chapters = [chapter for chapter in chapters if chapter[1]]
+        if sum(1 for name, _ in chapters if name) >= 2:
+            return chapters
+    pages = [text for heading_level, text in sequence if heading_level == 0]
+    return [("", pages)] if pages else []
 
 
 def _plain_wikitext(text: str) -> str:

@@ -277,6 +277,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .pdf-progress { position: fixed; z-index: 9; inset: 0; display: grid; place-items: center; padding: 16px; background: rgb(255 255 255 / 65%); }
 @media (prefers-color-scheme: dark) { .pdf-progress { background: rgb(0 0 0 / 65%); } }
 .pdf-progress[hidden] { display: none; }
+.choice-dialog { width: min(480px, calc(100vw - 32px)); padding: 20px 24px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--paper); box-shadow: var(--shadow-large); color: var(--ink); }
+.choice-dialog::backdrop { background: rgb(0 0 0 / 35%); }
+.choice-question { margin: 0 0 16px; font-size: 15px; line-height: 1.5; overflow-wrap: anywhere; }
+.choice-actions { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
 .pdf-progress-card { width: min(440px, 100%); padding: 20px 24px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--paper); box-shadow: var(--shadow-large); color: var(--ink); }
 .pdf-progress-card p { margin: 0; }
 .pdf-progress-card .pdf-progress-step { margin-top: 10px; font-family: var(--serif); font-size: 21px; }

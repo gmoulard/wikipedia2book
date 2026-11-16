@@ -185,6 +185,17 @@
     </footer>
   </div>
 
+  <dialog id="wikibookDialog" class="choice-dialog">
+    <form method="dialog">
+      <p class="choice-question" id="wikibookQuestion"></p>
+      <div class="choice-actions">
+        <button class="button button-dark" value="book" data-i18n="sources.wikibookAll">Le livre entier</button>
+        <button class="button button-outline" value="book-summary" data-i18n="sources.wikibookAllWithSummary">Le livre entier et son sommaire</button>
+        <button class="button button-outline" value="page" data-i18n="sources.wikibookPageOnly">Seulement cette page</button>
+        <button class="text-button" value="cancel" data-i18n="common.cancel">Annuler</button>
+      </div>
+    </form>
+  </dialog>
   <div id="pdfProgress" class="pdf-progress" hidden>
     <div class="pdf-progress-card" role="status" aria-live="polite">
       <p class="dialog-kicker" data-i18n="progress.title">GÉNÉRATION DU PDF</p>

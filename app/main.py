@@ -88,10 +88,12 @@ from app.version import VERSION
 from app.wikipedia_api import (
     MEDIA_CONCURRENCY,
     ON_TOOLFORGE,
+    WIKIBOOK_MIN_SUBPAGES,
     WIKIPEDIA_PDF_PAPERS,
     MediaWikiClient,
     MediaWikiError,
     MediaWikiPageNotFound,
+    WikipediaBook,
     article_url,
     parse_article_url,
     validate_language,
@@ -407,12 +409,14 @@ async def resolve_source(payload: SourceRequest) -> SourceResolution:
             title, namespace = page
             # NE PAS réduire à l'espace principal hors Wikipédia, ni se fier au marquage « contenu » de l'API : les pages d'auteur de Wikisource sont dans un espace propre au projet dont le numéro change selon la langue (102 en français, 106 en espagnol, non marqué « contenu »).
             if namespace == 0 or (site != "wikipedia" and namespace >= PROJECT_NAMESPACES_START and namespace % 2 == 0):
-                return SourceResolution(
-                    kind="article",
-                    article=Article(
-                        title=title, language=language, site=site, url=article_url(language, title, site), selected=True
-                    ),
-                )
+                article = Article(title=title, language=language, site=site, url=article_url(language, title, site), selected=True)
+                if site == "wikibooks" and namespace == 0:
+                    wikibook = await client.get_wikibook(title, language)
+                    if sum(len(pages) for _, pages in wikibook.chapters) >= WIKIBOOK_MIN_SUBPAGES:
+                        return SourceResolution(
+                            kind="wikibook", article=article, book=_book_import(wikibook, language, site), book_title=_book_name(title)
+                        )
+                return SourceResolution(kind="article", article=article)
             if site != "wikipedia":
                 raise ValueError(f"Seules les pages de contenu de {language}.{site}.org (textes, pages d’auteur…) sont acceptées.")
             return SourceResolution(
@@ -436,11 +440,15 @@ async def _wikipedia_book(client: MediaWikiClient, language: str, title: str) ->
             status_code=422,
             detail="Cette page de livre ne contient aucun lien vers des articles Wikipédia.",
         )
+    return _book_import(book, language, "wikipedia")
+
+
+def _book_import(book: WikipediaBook, language: str, site: Site) -> WikipediaBookImport:
     articles: list[Article] = []
     chapters: list[BookChapter] = []
     for chapter_title, titles in book.chapters:
         chapter_articles = [
-            Article(title=article_title, language=language, url=article_url(language, article_title), selected=True)
+            Article(title=article_title, language=language, site=site, url=article_url(language, article_title, site), selected=True)
             for article_title in titles
         ]
         articles.extend(chapter_articles)
@@ -649,7 +657,8 @@ async def _build_book_pdf(
             # NE PAS appeler pypdf directement ici : un calcul bloquant gèle le serveur et retarde l'envoi des messages de progression.
             fitted_items[item.key] = asyncio.ensure_future(asyncio.to_thread(fit_to_file, data))
             # NE PAS libérer le créneau avant la fin de la recomposition : sur un serveur au processeur limité (Toolforge), les PDF bruts téléchargés s'accumuleraient en mémoire en attendant d'être recomposés.
-            await fitted_items[item.key]
+            # NE PAS attendre la recomposition sans shield : annuler ce téléchargement l'annulerait aussi, et la suppression du dossier temporaire n'attendrait plus son fil d'exécution.
+            await asyncio.shield(fitted_items[item.key])
 
     async with MediaWikiClient() as client:
         client.on_wait = lambda seconds: started.put_nowait({"type": "wait", "seconds": math.ceil(seconds)})

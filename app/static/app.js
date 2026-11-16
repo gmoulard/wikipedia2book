@@ -727,8 +727,28 @@ function addSource(value) {
     const resolved = await getJson('/api/sources/resolve', { method: 'POST', body: JSON.stringify({ input: source.input, language: source.language, site: source.site }) });
     if (resolved.kind === 'article') await addArticleToBook(resolved.article);
     else if (resolved.kind === 'book') await importBook(resolved.book, resolved.book_title);
+    else if (resolved.kind === 'wikibook') await addWikibook(resolved);
     else showSearchResults(resolved.results, source, t('sources.noExactPage', { query: value }));
   });
+}
+
+function chooseWikibook(resolved) {
+  const dialog = $('#wikibookDialog');
+  $('#wikibookQuestion').textContent = t('sources.wikibookQuestion', { title: resolved.article.title, site: t('site.wikibooks'), n: resolved.book.articles.length });
+  dialog.returnValue = '';
+  dialog.showModal();
+  return new Promise((resolve) => dialog.addEventListener('close', () => resolve(dialog.returnValue || 'cancel'), { once: true }));
+}
+
+function withSummary(book, summary) {
+  return { ...book, articles: [summary, ...book.articles], unassigned_first: book.unassigned_first || book.chapters.length > 0 };
+}
+
+async function addWikibook(resolved) {
+  const choice = await chooseWikibook(resolved);
+  if (choice === 'page') await addArticleToBook(resolved.article);
+  else if (choice === 'book') await importBook(resolved.book, resolved.book_title);
+  else if (choice === 'book-summary') await importBook(withSummary(resolved.book, resolved.article), resolved.book_title);
 }
 
 async function pushArticle(article) {
@@ -832,8 +852,10 @@ async function addSourceList(lines) {
         const resolved = await getJson('/api/sources/resolve', { method: 'POST', body: JSON.stringify({ input: source.input, language: source.language, site: source.site }) });
         if (resolved.kind === 'article') {
           if (await pushArticle(resolved.article)) added += 1; else already += 1;
-        } else if (resolved.kind === 'book') {
-          for (const article of resolved.book.articles) {
+        } else if (resolved.kind === 'book' || resolved.kind === 'wikibook') {
+          const choice = resolved.kind === 'wikibook' ? await chooseWikibook(resolved) : 'book';
+          const articles = { book: resolved.book.articles, 'book-summary': [resolved.article, ...resolved.book.articles], page: [resolved.article] }[choice] || [];
+          for (const article of articles) {
             if (await pushArticle(article)) added += 1; else already += 1;
           }
         } else missing.push(line.trim());

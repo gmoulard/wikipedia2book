@@ -174,7 +174,7 @@ class SourceRequest(BaseModel):
 
 
 class SourceResolution(BaseModel):
-    kind: Literal["article", "book", "search"]
+    kind: Literal["article", "book", "wikibook", "search"]
     article: Article | None = None
     book: WikipediaBookImport | None = None
     book_title: str = ""

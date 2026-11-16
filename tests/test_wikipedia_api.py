@@ -21,7 +21,7 @@ import httpx
 from unittest.mock import AsyncMock
 
 from app.models import Article
-from app.wikipedia_api import USER_AGENT, MediaWikiClient, MediaWikiPageNotFound, article_url, parse_article_url
+from app.wikipedia_api import USER_AGENT, MediaWikiClient, MediaWikiPageNotFound, article_url, parse_article_url, wikibook_chapters
 
 
 def _book_client(wikitext):
@@ -191,8 +191,51 @@ class GetLinksPageOrderTest(unittest.TestCase):
         self.assertEqual((params["action"], params["page"], params["prop"]), ("parse", "Volcan", "text"))
 
 
-if __name__ == "__main__":
-    unittest.main()
+
+def _toc(*parts):
+    return "<div>" + "".join(parts) + "</div>"
+
+
+def _sub(title, label="x", css=""):
+    return f'<a{css} href="/wiki/{title.replace(" ", "_")}">{label}</a>'
+
+
+class WikibookChaptersTest(unittest.TestCase):
+    def test_subpages_in_page_order_without_print_version_red_links_or_others(self):
+        html = _toc(
+            '<h2>Sommaire<span class="mw-editsection">[modifier]</span></h2>',
+            _sub("Python/Version imprimable"), _sub("Python/Introduction"), _sub("Python/Variables"),
+            _sub("Autre livre/Page"), _sub("Python/Rouge", css=' class="new"'), _sub("Python/Introduction"),
+            _sub("Python/Boucles#Exemple"), _sub("Python/Boucles/Exercices"), _sub("Fichier:Logo.png"),
+        )
+        self.assertEqual(wikibook_chapters(html, "Python"), [("", ["Python/Introduction", "Python/Variables", "Python/Boucles", "Python/Boucles/Exercices"])])
+
+    def test_sections_become_chapters_at_the_first_level_that_splits_the_book(self):
+        html = _toc(
+            "<h2>Contents</h2>", _sub("Py/Print version"),
+            "<h3>Intro</h3>", _sub("Py/Overview"), _sub("Py/Setup"),
+            "<h3>Basics</h3>", _sub("Py/Variables"),
+            "<h4>Details</h4>", _sub("Py/Strings"),
+            "<h2>See also</h2>", '<a href="/wiki/Python">Python</a>',
+        )
+        self.assertEqual(wikibook_chapters(html, "Py"), [("Intro", ["Py/Overview", "Py/Setup"]), ("Basics", ["Py/Variables", "Py/Strings"])])
+
+    def test_pages_before_the_first_section_stay_without_chapter(self):
+        html = _toc(_sub("L/Préface"), '<div class="mw-heading"><h2>Partie 1</h2></div>', _sub("L/A"), "<h2>Partie 2</h2>", _sub("L/B"))
+        self.assertEqual(wikibook_chapters(html, "L"), [("", ["L/Préface"]), ("Partie 1", ["L/A"]), ("Partie 2", ["L/B"])])
+
+    def test_page_without_subpage_and_limit(self):
+        self.assertEqual(wikibook_chapters(_toc(_sub("Autre")), "L"), [])
+        html = _toc(*[_sub(f"L/P{index}") for index in range(10)])
+        self.assertEqual(wikibook_chapters(html, "L", limit=3), [("", ["L/P0", "L/P1", "L/P2"])])
+
+    def test_get_wikibook_parses_the_rendered_page_on_wikibooks(self):
+        client = MediaWikiClient()
+        client._get = AsyncMock(return_value={"parse": {"title": "Python", "text": _toc(_sub("Python/A"), _sub("Python/B"))}})
+        book = asyncio.run(client.get_wikibook("python", "fr"))
+        self.assertEqual(book.chapters, [("", ["Python/A", "Python/B"])])
+        language, params, site = client._get.call_args.args
+        self.assertEqual((language, params["action"], params["prop"], site), ("fr", "parse", "text", "wikibooks"))
 
 
 class GetPageTest(unittest.TestCase):
@@ -244,3 +287,7 @@ class ParseArticleUrlTest(unittest.TestCase):
         self.assertEqual(wikipedia.key, "fr:title:chat")
         self.assertEqual(wikisource.key, "wikisource:fr:title:chat")
         self.assertEqual(article_url("fr", "Les Fleurs du mal", "wikisource"), "https://fr.wikisource.org/wiki/Les_Fleurs_du_mal")
+
+
+if __name__ == "__main__":
+    unittest.main()

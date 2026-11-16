@@ -36,6 +36,7 @@ class FakeClient:
     pages = {}
     calls = []
     fail = False
+    wikibook = WikipediaBook(subtitle="", chapters=[])
 
     async def __aenter__(self):
         return self
@@ -53,6 +54,10 @@ class FakeClient:
         FakeClient.calls.append(("book", title, language))
         return WikipediaBook(subtitle="Sous-titre", chapters=[("", ["Chat"]), ("Partie", ["Chien"])])
 
+    async def get_wikibook(self, title, language, limit=500):
+        FakeClient.calls.append(("wikibook", title, language, "wikibooks"))
+        return FakeClient.wikibook
+
     async def search(self, query, language, limit, site="wikipedia"):
         FakeClient.calls.append(("search", query, language, site))
         return [{"page_id": 1, "title": "Chat domestique", "snippet": "", "url": "https://fr.wikipedia.org/wiki/Chat_domestique"}]
@@ -63,6 +68,7 @@ class ResolveSourceTest(unittest.TestCase):
         FakeClient.pages = {}
         FakeClient.calls = []
         FakeClient.fail = False
+        FakeClient.wikibook = WikipediaBook(subtitle="", chapters=[])
         self.patch = patch.object(main, "MediaWikiClient", FakeClient)
         self.patch.start()
         self.client = TestClient(main.app)
@@ -203,6 +209,33 @@ class ResolveSourceTest(unittest.TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json()["url"], "https://fr.wikivoyage.org/wiki/Lyon")
         self.assertEqual(response.json()["site"], "wikivoyage")
+
+    def test_wikibooks_table_of_contents_offers_the_whole_book(self):
+        FakeClient.pages = {"Programmation Python": ("Programmation Python", 0)}
+        FakeClient.wikibook = WikipediaBook(subtitle="", chapters=[
+            ("Bases", ["Programmation Python/Variables", "Programmation Python/Boucles"]),
+            ("Modules", ["Programmation Python/Modules"]),
+        ])
+        body = self.resolve("https://fr.wikibooks.org/wiki/Programmation_Python").json()
+        self.assertEqual(body["kind"], "wikibook")
+        self.assertEqual((body["article"]["title"], body["article"]["site"]), ("Programmation Python", "wikibooks"))
+        self.assertEqual(body["book_title"], "Programmation Python")
+        articles = body["book"]["articles"]
+        self.assertEqual([a["title"] for a in articles], ["Programmation Python/Variables", "Programmation Python/Boucles", "Programmation Python/Modules"])
+        self.assertTrue(all(a["site"] == "wikibooks" and a["url"].startswith("https://fr.wikibooks.org/wiki/") for a in articles))
+        self.assertEqual([c["title"] for c in body["book"]["chapters"]], ["Bases", "Modules"])
+        self.assertEqual(body["book"]["chapters"][0]["article_keys"], ["wikibooks:fr:title:programmation python/variables", "wikibooks:fr:title:programmation python/boucles"])
+
+    def test_wikibooks_page_without_subpages_is_an_article(self):
+        FakeClient.pages = {"Programmation Python/Variables": ("Programmation Python/Variables", 0)}
+        FakeClient.wikibook = WikipediaBook(subtitle="", chapters=[("", ["Programmation Python/Variables/Exemple"])])
+        body = self.resolve("Programmation Python/Variables", site="wikibooks").json()
+        self.assertEqual(body["kind"], "article")
+
+    def test_other_projects_never_look_for_a_table_of_contents(self):
+        FakeClient.pages = {"Lyon": ("Lyon", 0)}
+        self.assertEqual(self.resolve("Lyon", site="wikivoyage").json()["kind"], "article")
+        self.assertNotIn("wikibook", [call[0] for call in FakeClient.calls])
 
     def test_wikipedia_unreachable_is_502(self):
         FakeClient.fail = True
