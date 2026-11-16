@@ -1343,12 +1343,6 @@ L'essentiel du socle fonctionnel décrit dans ce document est implémenté : liv
 
 * Wikisource, au-delà des pages isolées (section 3.1) : remarque — il faudra peut-être étendre la fonctionnalité pour répondre aux besoins exprimés par PacmanD sur le Bistro technique de la Wikipédia en chinois (novembre 2026) : importer une œuvre entière à partir de sa page sommaire (sous-pages dans l'ordre, comme une page de livre, avec chapitres), et bon rendu des caractères chinois rares (僻字) — à vérifier dans le PDF officiel de Wikisource, que le logiciel ne modifie pas, et dans les pages générées par le logiciel, qui n'ont que les polices Noto CJK (extensions CJK B et suivantes non couvertes).
 
-* Projets Wikimédia à domaine unique, sans langue dans l'adresse (Commons, Meta-Wiki, MediaWiki.org, Wikispecies) : non acceptés, peu utiles pour un livre; Wikidata est sans intérêt ici.
-
-* Personnalisation avancée de la couverture et des styles typographiques.
-
-* Volumes : table des matières commune à tous les volumes ; aujourd'hui, chaque volume a sa propre table des matières (section 11.1).
-
 Toute évolution doit préserver les principes fondamentaux du logiciel, notamment le contrôle total de l'utilisateur sur la sélection des articles et la gestion d'un seul livre à la fois.
 
 ## 19\. Historique des versions
