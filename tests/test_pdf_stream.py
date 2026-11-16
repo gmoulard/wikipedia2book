@@ -254,7 +254,7 @@ class PdfStreamTest(unittest.TestCase):
             last = pages[-1]
             self.assertIn('href="https://wikipedia2book.toolforge.org/"', last)
             self.assertIn('href="https://github.com/gmoulard/wikipedia2book"', last)
-            self.assertIn('src="data:image/png;base64,', last)
+            self.assertIn('<a href="https://wikipedia2book.toolforge.org/"><img src="data:image/png;base64,', last)
             self.assertEqual("Fin du livre" in last, bool(conclusion))
 
     def test_wikipedia_book_conclusion_can_be_replaced_or_removed(self):

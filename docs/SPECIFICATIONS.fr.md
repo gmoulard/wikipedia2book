@@ -452,7 +452,7 @@ Une fois le PDF lancé, le logiciel :
 
 * Ajoute une page de licence avec signet « Licence » (section 15), après le dernier chapitre/article et la table des matières éventuellement placée en fin de livre.
 
-* Termine la dernière page du PDF (la conclusion quand le livre en a une, sinon le dernier bloc de la page de licence) par le logo de Wikipedia2Book (`app/static/Wikipedia2bookLogoPrint.png`, incorporé au PDF) et deux liens cliquables, https://wikipedia2book.toolforge.org/ et https://github.com/gmoulard/wikipedia2book ; un livre en volumes les a à la fin de chaque volume.
+* Termine la dernière page du PDF (la conclusion quand le livre en a une, sinon le dernier bloc de la page de licence) par le logo de Wikipedia2Book (`app/static/Wikipedia2bookLogoPrint.png`, incorporé au PDF, 100 mm de large au plus, lui-même cliquable vers https://wikipedia2book.toolforge.org/) et deux liens cliquables, https://wikipedia2book.toolforge.org/ et https://github.com/gmoulard/wikipedia2book ; un livre en volumes les a à la fin de chaque volume.
 
 * Ajoute une page de conclusion avec signet, si une conclusion a été saisie — toujours après la table des matières, même quand elle est positionnée en fin de livre.
 

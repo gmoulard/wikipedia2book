@@ -451,7 +451,7 @@ Once the PDF is started, the software:
 
 * Adds a license page with a "License" bookmark (section 15), after the last chapter/article and after the table of contents if it is placed at the end of the book.
 
-* Ends the last page of the PDF (the conclusion when the book has one, otherwise the last block of the license page) with the Wikipedia2Book logo (`app/static/Wikipedia2bookLogoPrint.png`, embedded in the PDF) and two clickable links, https://wikipedia2book.toolforge.org/ and https://github.com/gmoulard/wikipedia2book; a book in volumes has them at the end of each volume.
+* Ends the last page of the PDF (the conclusion when the book has one, otherwise the last block of the license page) with the Wikipedia2Book logo (`app/static/Wikipedia2bookLogoPrint.png`, embedded in the PDF, at most 100 mm wide, itself clickable to https://wikipedia2book.toolforge.org/) and two clickable links, https://wikipedia2book.toolforge.org/ and https://github.com/gmoulard/wikipedia2book; a book in volumes has them at the end of each volume.
 
 * Adds a conclusion page with a bookmark, if a conclusion was entered — always after the table of contents, even when it is placed at the end of the book.
 

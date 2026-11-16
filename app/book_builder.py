@@ -282,7 +282,7 @@ SOURCE_URL = "https://github.com/gmoulard/wikipedia2book"
 COLOPHON_LOGO = Path(__file__).parent / "static" / "Wikipedia2bookLogoPrint.png"
 COLOPHON_CSS = (
     ".colophon {{ margin-top: 28pt; text-align: center; break-inside: avoid; font: 9pt {fonts}; line-height: 1.6; }}"
-    ".colophon img {{ width: 50mm; }}"
+    ".colophon img {{ width: 100mm; max-width: 100%; }}"
     ".colophon a {{ color: #36c; text-decoration: none; }}"
 )
 
@@ -290,7 +290,7 @@ COLOPHON_CSS = (
 def _colophon_html() -> str:
     logo = base64.b64encode(COLOPHON_LOGO.read_bytes()).decode("ascii")
     return (
-        f'<footer class="colophon"><img src="data:image/png;base64,{logo}" alt="Wikipedia2Book">'
+        f'<footer class="colophon"><a href="{APP_URL}"><img src="data:image/png;base64,{logo}" alt="Wikipedia2Book"></a>'
         f'<p><a href="{APP_URL}">{APP_URL}</a><br><a href="{SOURCE_URL}">{SOURCE_URL}</a></p></footer>'
     )
 
