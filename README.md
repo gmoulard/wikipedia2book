@@ -41,7 +41,9 @@ Functional and technical details
 ## Deployment
 
 ### Production deployment
-- [web app](https://wikipedia2book.toolforge.org) - [exemple](https://wikipedia2book.toolforge.org/?json=https://gmoulard.github.io/wikipedia2book/static/Wrecks-of-Saint-Pierre-harbor.json)
+- [web app](https://wikipedia2book.toolforge.org) - exemple  [PDF](https://wikipedia2book.toolforge.org/api/pdf/from-json?url=https%3A%2F%2Fgmoulard.github.io%2Fwikipedia2book%2Fstatic%2FWrecks-of-Saint-Pierre-harbor.json
+) / [website](https://wikipedia2book.toolforge.org/?json=https://gmoulard.github.io/wikipedia2book/static/Wrecks-of-Saint-Pierre-harbor.json)
+
 
 - [API](https://wikipedia2book.toolforge.org/docs)
 - [Toolforge usage](https://gmoulard.github.io/wikipedia2book/stats.html)
