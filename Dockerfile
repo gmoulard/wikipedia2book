@@ -20,6 +20,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
 
+# NE PAS monter WIKIPEDIA2BOOK_DOWNLOADS au-delà de 2 : la politique robots de Wikimédia l'interdit hors Toolforge, et le serveur refuse de démarrer. WIKIPEDIA2BOOK_ARTICLE_LIMIT = 0 : pas de limite ; à régler d'après la mémoire du conteneur (README, « Deploying your own container »).
+ENV WIKIPEDIA2BOOK_ARTICLE_LIMIT=0 \
+    WIKIPEDIA2BOOK_DOWNLOADS=2
+
 WORKDIR /app
 
 RUN apt-get update \

@@ -529,6 +529,31 @@ class PdfStreamTest(unittest.TestCase):
         self.assertFalse(main.ON_TOOLFORGE)
         self.assertIsNone(main.ARTICLE_LIMIT)
 
+    def test_deployment_settings_defaults_per_platform(self):
+        self.assertEqual(main.deployment_settings({}, on_toolforge=True), (300, 4))
+        self.assertEqual(main.deployment_settings({}, on_toolforge=False), (None, 2))
+
+    def test_deployment_settings_from_the_environment(self):
+        settings = main.deployment_settings
+        self.assertEqual(settings({"WIKIPEDIA2BOOK_ARTICLE_LIMIT": "40", "WIKIPEDIA2BOOK_DOWNLOADS": "1"}, on_toolforge=False), (40, 1))
+        self.assertEqual(settings({"WIKIPEDIA2BOOK_ARTICLE_LIMIT": "0"}, on_toolforge=True), (None, 4))
+        self.assertEqual(settings({"WIKIPEDIA2BOOK_ARTICLE_LIMIT": " "}, on_toolforge=True), (300, 4))
+        for environ, on_toolforge in (
+            ({"WIKIPEDIA2BOOK_DOWNLOADS": "3"}, False),
+            ({"WIKIPEDIA2BOOK_DOWNLOADS": "5"}, True),
+            ({"WIKIPEDIA2BOOK_DOWNLOADS": "0"}, False),
+            ({"WIKIPEDIA2BOOK_ARTICLE_LIMIT": "-1"}, False),
+            ({"WIKIPEDIA2BOOK_ARTICLE_LIMIT": "beaucoup"}, False),
+        ):
+            with self.assertRaises(ValueError, msg=environ):
+                settings(environ, on_toolforge)
+
+    def test_dockerfile_sets_both_settings_within_the_policy(self):
+        dockerfile = (Path(main.__file__).resolve().parent.parent / "Dockerfile").read_text(encoding="utf-8")
+        self.assertIn("WIKIPEDIA2BOOK_ARTICLE_LIMIT=0", dockerfile)
+        self.assertIn("WIKIPEDIA2BOOK_DOWNLOADS=2", dockerfile)
+        self.assertNotIn("WIKIPEDIA2BOOK_PLATFORM", dockerfile.split("# NE PAS")[0])
+
     def test_api_pdf_streams_the_file_with_its_length(self):
         with patch.object(main, "MediaWikiClient", FakeClient), patch.object(main, "generate_pdf", lambda html: _make_pdf(1)):
             response = TestClient(main.app).post("/api/pdf", json=_project())

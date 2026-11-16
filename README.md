@@ -110,6 +110,40 @@ The `scripts/docker-build.sh` script automatically injects the git commit, date 
 
 The application is then reachable at `http://localhost:8000`.
 
+## Deploying your own container
+
+Two settings control how heavy a generation can be. They are environment variables, set in the `Dockerfile` (`ENV` line) and read when the server starts:
+
+| Variable | Default in the `Dockerfile` | Meaning |
+|---|---|---|
+| `WIKIPEDIA2BOOK_ARTICLE_LIMIT` | `0` (no limit) | Maximum number of articles per book. Beyond it, generation is refused at once (HTTP 413, code `too_many_articles`) and the interface explains it is a deliberate limit. `0` lifts the limit. |
+| `WIKIPEDIA2BOOK_DOWNLOADS` | `2` | Number of article PDFs downloaded from Wikipedia at the same time for a book. |
+
+Change them in the `Dockerfile` and rebuild the image, or override them when starting the container, without rebuilding:
+
+```bash
+docker run --rm -p 8000:8000 -e WIKIPEDIA2BOOK_ARTICLE_LIMIT=100 -e WIKIPEDIA2BOOK_DOWNLOADS=1 wikipedia2book
+```
+
+The server refuses to start with an invalid value and says why.
+
+**Number of parallel downloads.** It can only be lowered, to `1`, not raised above `2`: the [Wikimedia robot policy](https://wikitech.wikimedia.org/wiki/Robot_policy) limits the PDF service to a few simultaneous requests, and the server enforces at most 2 downloads and 25 Mbps for the whole process, whatever this setting. Only the Toolforge instance, which the policy exempts, downloads 4 PDFs at a time. Lower it to `1` to make generation gentler on Wikimedia and on a small server, at the cost of a longer download phase.
+
+**Article limit and container memory.** Lifting the limit (`0`) is safe only if the container has enough memory: a book that does not fit makes the platform stop and restart the whole container, which also cuts the generations of every other user. Set the limit from the memory of your container, with margin for several users at once. Measurements with real articles (about 17 pages per article):
+
+| Container memory | Largest book generated | Notes |
+|---|---|---|
+| 256 MB | under 20 articles | Northflank: restart at 20 articles, already very slow at 10 |
+| 2 GiB | about 800 articles (14,000 pages, 780 MB of PDF) | Toolforge: failure at 1,000 articles; the official instance keeps a limit of 300 |
+
+Count about 250 MB for the server and the assembly process themselves, plus roughly 2 to 2.5 MB per article at the peak, and keep the limit well below what your container can hold, for example a third to a half: with 2 GiB, that gives a few hundred articles; with 256 MB, nothing is left for a book of any size. To find the real maximum of your deployment, run the limit test against it (it can make the server restart, so not during busy hours):
+
+```bash
+python scripts/limit_check.py --base-url https://your-server --search 50
+```
+
+It doubles the number of articles until the first failure, then narrows down by bisection. `GET /api/health/details` shows the memory of the container and its limit, and `GET /api/health/generations` the memory reached at each stage of the last generations (details in section 13 of the [specifications](docs/SPECIFICATIONS.en.md)).
+
 ## Deployment Toolforge
 - [web app](https://wikipedia2book.toolforge.org)
 - [API](https://wikipedia2book.toolforge.org/docs)

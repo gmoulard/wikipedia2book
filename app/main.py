@@ -27,6 +27,7 @@ import subprocess
 import tempfile
 import time
 from collections import deque
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
@@ -96,9 +97,30 @@ from app.wikipedia_api import (
 
 
 PROJECT_NAMESPACES_START = 100
-DOWNLOAD_CONCURRENCY = 4 if ON_TOOLFORGE else MEDIA_CONCURRENCY
-# NE PAS lever cette limite sur Toolforge : chaque livre télécharge tous ses articles auprès du service PDF de Wikimédia, et au-delà un gros livre occupe aussi presque toute la mémoire du conteneur (2 Gio, docs/testLimitetoolforge.md).
-ARTICLE_LIMIT = 300 if ON_TOOLFORGE else None
+TOOLFORGE_DOWNLOADS = 4
+TOOLFORGE_ARTICLE_LIMIT = 300
+
+
+def deployment_settings(environ: Mapping[str, str], on_toolforge: bool) -> tuple[int | None, int]:
+    limit_text = environ.get("WIKIPEDIA2BOOK_ARTICLE_LIMIT", "").strip()
+    if not limit_text:
+        # NE PAS lever cette limite sur Toolforge : chaque livre télécharge tous ses articles auprès du service PDF de Wikimédia, et au-delà un gros livre occupe aussi presque toute la mémoire du conteneur (2 Gio, docs/testLimitetoolforge.md).
+        article_limit = TOOLFORGE_ARTICLE_LIMIT if on_toolforge else None
+    elif limit_text.isdigit():
+        article_limit = int(limit_text) or None
+    else:
+        raise ValueError(f"WIKIPEDIA2BOOK_ARTICLE_LIMIT doit être un entier positif, ou 0 pour ne pas limiter (reçu : {limit_text!r}).")
+    # NE PAS autoriser plus de MEDIA_CONCURRENCY téléchargements hors Toolforge : la politique robots de Wikimédia l'interdit, seul Toolforge en est exempté.
+    maximum = TOOLFORGE_DOWNLOADS if on_toolforge else MEDIA_CONCURRENCY
+    downloads_text = environ.get("WIKIPEDIA2BOOK_DOWNLOADS", "").strip()
+    if not downloads_text:
+        return article_limit, maximum
+    if not downloads_text.isdigit() or not 1 <= int(downloads_text) <= maximum:
+        raise ValueError(f"WIKIPEDIA2BOOK_DOWNLOADS doit être compris entre 1 et {maximum} sur cet hébergement (reçu : {downloads_text!r}).")
+    return article_limit, int(downloads_text)
+
+
+ARTICLE_LIMIT, DOWNLOAD_CONCURRENCY = deployment_settings(os.environ, ON_TOOLFORGE)
 PDF_STREAM_CHUNK = 256 * 1024
 
 app = FastAPI(title="Wikipedia2Book", version=VERSION)
