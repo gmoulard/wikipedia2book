@@ -1032,37 +1032,45 @@ Workshop to run before any production deployment of a version (`deploy-productio
 * **Running it**: "Performance check" workflow (`.github/workflows/perf-check.yml`), started manually from the Actions tab with the level (`min` or `max`) and, on `main` only, the option to save the reference (commit of `scripts/perf/reference.json` to `main`). It builds the production Docker image, starts it on the GitHub runner, runs the workshop against `http://localhost:8000` and publishes the report in the run summary (and as the `perf-report` artifact). Measurements are only comparable between runs in the same environment: the reference is measured by this workflow. By hand: `python scripts/perf_check.py --base-url <url> --level min|max` (divergences only indicative on another machine).
 * **Tests**: `tests/test_perf_check.py` (fake local server imitating `/api/pdf/stream`).
 
-* **Measurements by version**: generation of the same real book, *Épaves de la rade de Saint-Pierre* (11 articles, 104 pages, 13.7 MB), through `POST /api/pdf/stream` from a client machine, first generation after the version went live. A repeated generation is faster, because Wikimedia keeps article PDFs in its cache: only the *Wikipedia* phase depends on it. The phases are those of the workshop. *Tests*: number of automated tests, all passing at release.
+#### Measured results
 
-  | Version | Date       | Host      | Simultaneous downloads | Wikipedia | Application | Transfer | Total  | Tests |
-  |---------|------------|-----------|------------------------|-----------|-------------|----------|--------|-------|
-  | 1.6.10  | 2026-11-14 | Railway   | 1                      | 31 s      | 9.7 s (application and transfer, PDF in base64) | —        | 40.7 s | 83    |
-  | 1.7.1   | 2026-11-14 | Railway   | 4                      | 10.5 s    | 1.7 s       | 1.4 s    | 13.6 s | 85    |
-  | 1.7.5   | 2026-11-15 | Railway   | 2                      | 17.2 s    | 1.6 s       | 1.6 s    | 20.4 s | 117   |
-  | 1.7.5   | 2026-11-15 | Toolforge | 4                      | 10.9 s    | 2.3 s       | 2.8 s    | 16.0 s | 117   |
+Two series of measurements, in tables whose common columns are aligned (date, version, target, then pages and the *Wikipedia*, *Application*, *Transfer*, *Total* phases defined above). The *target* is the measured host or the workflow. Only measurements of the same target compare with each other: a target other than the workflow (Toolforge, Northflank, measured from a client computer) is not in the reference environment, its deviations are only indicative and its transfer includes the network up to the client. Measurements of the maximum size of a book are separate, in `docs/testLimitetoolforge.md` (section 13.12).
 
-* **Workshop results**: every run of the workshop is recorded here (median of the generations of each scenario). A target other than the workflow (Toolforge, Northflank, measured from a client computer) is not measured in the reference environment: its deviations are only indicative, and its transfer includes the network up to the client.
+* **Measurements by version**: generation of the same real book, *Épaves de la rade de Saint-Pierre* (11 articles: 104 pages and 13.7 MB up to 1.9.4, 101 pages and 9.8 MB from 1.9.5 on, without the "Sources and authors" list), through `POST /api/pdf/stream` from a client machine, first generation after the version went live. A repeated generation is faster, because Wikimedia keeps article PDFs in its cache: only the *Wikipedia* phase depends on it. *Tests*: number of automated tests, all passing at release.
 
-  | Date       | Version | Target | Level | Scenario | Pages | Total | Wikipedia | Application | Transfer | Application per page vs reference | Verdict |
-  |------------|---------|-------|--------|----------|-------|-------|-----------|-------------|-----------|---------------------------|---------|
-  | 2026-11-15 | 1.8.2   | Toolforge | max | `50-pages` | 51 | 9.24 s | 6.88 s | 0.4 s | 1.96 s | -47% | ok |
-  | 2026-11-15 | 1.8.2   | Toolforge | max | `200-pages` | 200 | 17.38 s | 10.41 s | 0.94 s | 6.04 s | -57% | ok |
-  | 2026-11-15 | 1.8.2   | Toolforge | max | `1-article` | 5 | 0.9 s | 0.37 s | 0.22 s | 0.31 s | +57% | to watch |
-  | 2026-11-15 | 1.8.2   | Toolforge | max | `50-pages-sans-numerotation` | 50 | 3.69 s | 2.7 s | 0.05 s | 0.94 s | -91% | ok |
-  | 2026-11-15 | 1.8.2   | Toolforge | max | `200-pages-chapitres` | 205 | 12.18 s | 4.76 s | 1.18 s | 6.24 s | -50% | ok |
-  | 2026-11-15 | 1.8.2   | Toolforge | max | `200-pages-a5-paysage` | 201 | 53.57 s | 47.03 s | 0.9 s | 5.63 s | -93% | ok |
-  | 2026-11-15 | 1.8.2   | Toolforge | max | `20-articles` | 253 | 17.89 s | 9.61 s | 1.53 s | 6.75 s | -47% | ok |
-  | 2026-11-16 | 1.8.6   | Toolforge | max | `50-pages` | 51 | 15.7 s | 6.89 s | 0.78 s | 8.03 s | +3% | ok |
-  | 2026-11-16 | 1.8.6   | Toolforge | max | `200-pages` | 200 | 16.74 s | 8.49 s | 2.13 s | 6.12 s | -4% | ok |
-  | 2026-11-16 | 1.8.6   | Toolforge | max | `1-article` | 5 | 1.76 s | 0.5 s | 0.27 s | 0.98 s | +93% | to watch |
-  | 2026-11-16 | 1.8.6   | Toolforge | max | `50-pages-sans-numerotation` | 50 | 4.07 s | 1.78 s | 0.4 s | 1.9 s | -25% | ok |
-  | 2026-11-16 | 1.8.6   | Toolforge | max | `200-pages-chapitres` | 205 | 23.69 s | 5.08 s | 2.41 s | 16.2 s | +2% | ok |
-  | 2026-11-16 | 1.8.6   | Toolforge | max | `200-pages-a5-paysage` | 201 | 85.05 s | 48.84 s | 2.17 s | 34.05 s | -83% | ok |
-  | 2026-11-16 | 1.8.6   | Toolforge | max | `20-articles` | 253 | 23.26 s | 8.38 s | 3.24 s | 11.64 s | +12% | ok |
+  | Date | Version | Target | Simultaneous downloads | Pages | Wikipedia | Application | Transfer | Total | Tests |
+  |---|---|---|---|---|---|---|---|---|---|
+  | 2026-11-14 | 1.6.10 | Railway | 1 | 104 | 31 s | 9.7 s ¹ | — | 40.7 s | 83 |
+  | 2026-11-14 | 1.7.1 | Railway | 4 | 104 | 10.5 s | 1.7 s | 1.4 s | 13.6 s | 85 |
+  | 2026-11-15 | 1.7.5 | Railway | 2 | 104 | 17.2 s | 1.6 s | 1.6 s | 20.4 s | 117 |
+  | 2026-11-15 | 1.7.5 | Toolforge | 4 | 104 | 10.9 s | 2.3 s | 2.8 s | 16.0 s | 117 |
+  | 2026-11-16 | 1.9.5 | Toolforge | 4 | 101 | 12.9 s | 1.0 s | 2.4 s | 16.3 s ² | 186 |
 
-  Run of 2026-11-15 on Toolforge (4 simultaneous downloads): no failure or regression. The only "to watch" (`1-article`) concerns 0.22 s for 5 pages, a gap of a few hundredths of a second, within measurement noise. The Wikipedia phase of `200-pages-a5-paysage` (47 s) includes recomposing every page to A5 landscape, done during the downloads.
+  ¹ In 1.6.10 the PDF travelled in base64 inside the stream: application and transfer could not be told apart.
 
-  Run of 2026-11-16 on Toolforge, version 1.8.6 (assembly by PyMuPDF in a separate process): no failure or regression compared with the reference. The only "to watch" (`1-article`) is again a matter of a few hundredths of a second. Compared with 1.8.2 on the same target, the *Application* phase takes about twice as long (0.78 s instead of 0.4 s for `50-pages`, 2.13 s instead of 0.94 s for `200-pages`): starting the assembly process, the stage journal and numbering by MuPDF; this is the price of an assembly that holds up to 800 articles instead of 150 (docs/testLimitetoolforge.md). The longer transfers depend on the network to the client computer.
+  ² Measured four hours after going live (12:24 UTC), not at the first generation: other books had already been generated, some article PDFs may have been in Wikimedia's cache.
+
+* **Workshop results**: every run of the workshop is recorded here, median of the generations of each scenario, grouped by run (date, version, target); the summary of each run follows the table.
+
+  | Date | Version | Target | Level | Scenario | Pages | Wikipedia | Application | Transfer | Total | Application per page vs reference | Verdict |
+  |---|---|---|---|---|---|---|---|---|---|---|---|
+  | 2026-11-15 | 1.8.2 | Toolforge | max | `50-pages` | 51 | 6.88 s | 0.4 s | 1.96 s | 9.24 s | -47% | ok |
+  | 2026-11-15 | 1.8.2 | Toolforge | max | `200-pages` | 200 | 10.41 s | 0.94 s | 6.04 s | 17.38 s | -57% | ok |
+  | 2026-11-15 | 1.8.2 | Toolforge | max | `1-article` | 5 | 0.37 s | 0.22 s | 0.31 s | 0.9 s | +57% | to watch |
+  | 2026-11-15 | 1.8.2 | Toolforge | max | `50-pages-sans-numerotation` | 50 | 2.7 s | 0.05 s | 0.94 s | 3.69 s | -91% | ok |
+  | 2026-11-15 | 1.8.2 | Toolforge | max | `200-pages-chapitres` | 205 | 4.76 s | 1.18 s | 6.24 s | 12.18 s | -50% | ok |
+  | 2026-11-15 | 1.8.2 | Toolforge | max | `200-pages-a5-paysage` | 201 | 47.03 s | 0.9 s | 5.63 s | 53.57 s | -93% | ok |
+  | 2026-11-15 | 1.8.2 | Toolforge | max | `20-articles` | 253 | 9.61 s | 1.53 s | 6.75 s | 17.89 s | -47% | ok |
+  | 2026-11-16 | 1.8.6 | Toolforge | max | `50-pages` | 51 | 6.89 s | 0.78 s | 8.03 s | 15.7 s | +3% | ok |
+  | 2026-11-16 | 1.8.6 | Toolforge | max | `200-pages` | 200 | 8.49 s | 2.13 s | 6.12 s | 16.74 s | -4% | ok |
+  | 2026-11-16 | 1.8.6 | Toolforge | max | `1-article` | 5 | 0.5 s | 0.27 s | 0.98 s | 1.76 s | +93% | to watch |
+  | 2026-11-16 | 1.8.6 | Toolforge | max | `50-pages-sans-numerotation` | 50 | 1.78 s | 0.4 s | 1.9 s | 4.07 s | -25% | ok |
+  | 2026-11-16 | 1.8.6 | Toolforge | max | `200-pages-chapitres` | 205 | 5.08 s | 2.41 s | 16.2 s | 23.69 s | +2% | ok |
+  | 2026-11-16 | 1.8.6 | Toolforge | max | `200-pages-a5-paysage` | 201 | 48.84 s | 2.17 s | 34.05 s | 85.05 s | -83% | ok |
+  | 2026-11-16 | 1.8.6 | Toolforge | max | `20-articles` | 253 | 8.38 s | 3.24 s | 11.64 s | 23.26 s | +12% | ok |
+
+  * Run of 2026-11-15 on Toolforge (4 simultaneous downloads): no failure or regression. The only "to watch" (`1-article`) concerns 0.22 s for 5 pages, a gap of a few hundredths of a second, within measurement noise. The Wikipedia phase of `200-pages-a5-paysage` (47 s) includes recomposing every page to A5 landscape, done during the downloads.
+  * Run of 2026-11-16 on Toolforge, version 1.8.6 (assembly by PyMuPDF in a separate process): no failure or regression compared with the reference. The only "to watch" (`1-article`) is again a matter of a few hundredths of a second. Compared with 1.8.2 on the same target, the *Application* phase takes about twice as long (0.78 s instead of 0.4 s for `50-pages`, 2.13 s instead of 0.94 s for `200-pages`): starting the assembly process, the stage journal and numbering by MuPDF; this is the price of an assembly that holds up to 800 articles instead of 150 (docs/testLimitetoolforge.md). The longer transfers depend on the network to the client computer.
 
 ### 13.12 Limit test
 
@@ -1070,34 +1078,31 @@ Test to run by hand to find the largest book a deployment can generate. Unlike t
 
 * **Script**: `scripts/limit_check.py --base-url <url> [--steps 25,50,100,200,400,800] [--source-page France] [--language fr]`, or by bisection: `--search <start> [--precision 50] [--max 2000]` doubles the number of articles from `<start>` up to the first failure, then halves the interval between the last success and the first failure down to the requested precision; after each failure, it waits until the server answers again (`/api/version`, at most 10 minutes); the steps tested on the way down reuse articles already requested from Wikimedia, which serves them from its cache; it ends with "Limite entre N articles (réussi) et M articles (échec)". `--save-pdf <folder>` saves each PDF received (`limite-<N>-articles.pdf`), for example in `./tmp`, which git ignores; without this option, the PDF is checked, counted and then discarded. It takes the pages linked from a Wikipedia page (by default, the French article *France*; existing pages only, red links excluded, in alphabetical order), generates bigger and bigger books with the first N, measures each generation like the performance workshop (same phases, PDF checked and pages counted), and stops at the first failure. Each step reuses the articles of the previous one, already cached by Wikimedia.
 * **Tests**: `tests/test_limit_check.py` (fake generator, no network).
-* **Results on Toolforge, version 1.7.5** (2026-11-15, A4 format, page numbers and table of contents, from a client machine):
+* **Results on Toolforge, from version 1.8.3 on** (A4 format, page numbers and table of contents, pages linked from the article *France*, from a client machine; details of each run: [testLimitetoolforge.md](testLimitetoolforge.md), in French):
 
-  | Articles | Pages | PDF size | Wikipedia | Application | Transfer | Total   | Result  |
-  |----------|-------|----------|-----------|-------------|----------|---------|---------|
-  | 25       | 202   | 20.4 MB  | 24.7 s    | 5.6 s       | 4.1 s    | 34.3 s  | passed  |
-  | 50       | 684   | 73.6 MB  | 33.2 s    | 17.1 s      | 15.1 s   | 65.3 s  | passed  |
-  | 100      | 1,636 | 182.4 MB | 107.6 s   | 42.7 s      | 37.5 s   | 187.8 s | passed  |
-  | 150      | —     | —        | —         | —           | —        | 181 s   | failed  |
-  | 200      | —     | —        | —         | —           | —        | 266 s   | failed  |
+  | Version | Date       | Articles | Pages  | PDF size   | Total     | Result |
+  |---------|------------|----------|--------|------------|-----------|--------|
+  | 1.8.3   | 2026-11-15 | 100      | 1,637  | 181.8 MB   | 154.0 s   | passed |
+  | 1.8.3   | 2026-11-15 | 150      | 2,586  | 280.0 MB   | 163.5 s   | passed |
+  | 1.8.3   | 2026-11-15 | 200      | —      | —          | 217.2 s   | failed, server restart |
+  | 1.8.5   | 2026-11-15 | 100      | —      | 182.2 MB   | 176.1 s ¹ | passed |
+  | 1.8.5   | 2026-11-15 | 150      | —      | 280.4 MB   | 168.7 s ¹ | passed (test stopped afterwards) |
+  | 1.8.6   | 2026-11-16 | 400      | 7,305  | 420.6 MB   | 1,422.7 s | passed |
+  | 1.8.6   | 2026-11-16 | 600      | 10,629 | 603.6 MB   | 2,411.6 s | passed |
+  | 1.8.6   | 2026-11-16 | 800      | 14,092 | 778.6 MB   | 3,468.8 s | passed |
+  | 1.8.6   | 2026-11-16 | 1,000    | —      | —          | 1,403.8 s | failed, error message without restart |
+  | 1.8.9   | 2026-11-16 | 900      | 15,641 | 855.8 MB   | 3,608.6 s | passed |
+  | 1.8.9   | 2026-11-16 | 1,000    | 17,518 | 949.2 MB   | 4,153.3 s | passed |
+  | 1.8.9   | 2026-11-16 | 1,500    | —      | —          | 3,481.0 s | failed, server restart |
+  | 1.9.5   | 2026-11-16 | 1,500 in 6 volumes of 250 | 28,072 | 1,467.0 MB | 2,592.3 s | passed (6 volumes) |
 
-  **Limit found in 1.7.5: about 100 articles, that is 1,600 pages and 180 MB of PDF.** At 150 and 200 articles, the stream stops during generation: the server restarts (start time of `GET /api/stats/hourly` reset to the time of the failure), most likely because it runs out of memory, since the book is assembled entirely in memory. The limit depends mostly on the number of pages and the weight of the articles' images, not on the number of articles itself. Northflank was not tested. Since 1.7.7, the book is assembled on temporary disk (section 11.1).
+  ¹ Server-side duration; pages not counted.
 
-  **Results on Toolforge, version 1.7.7** (2026-11-15, same settings; the Toolforge network was slow that day, hence long transfers, unrelated to the application):
-
-  | Articles | Pages | PDF size | Wikipedia | Application | Transfer | Total     | Result |
-  |----------|-------|----------|-----------|-------------|----------|-----------|--------|
-  | 100      | 1,637 | 181.8 MB | 116.2 s   | 7.1 s       | 390.1 s  | 513.5 s   | passed |
-  | 150      | 2,586 | 280.0 MB | 144.3 s   | 9.0 s       | 814.2 s  | 967.5 s   | passed |
-  | 200      | 3,435 | 375.5 MB | 137.0 s   | 11.5 s      | 911.6 s  | 1,060.1 s | passed |
-  | 300      | —     | —        | —         | —           | —        | 174 s     | failed |
-
-  **Limit found in 1.7.7: about 200 articles, that is 3,400 pages and 375 MB of PDF**, with no server restart up to that point; the *Application* phase is about 6 times faster than in 1.7.5 (7.1 s instead of 42.7 s for 100 articles). At 300 articles, the server still restarts: copying pages with pikepdf (`pages.extend`) loaded their content into memory. Since 1.7.9, merging goes through qpdf (`--pages`) and each download keeps its slot until its recomposition is finished (section 11.1); peak memory measured locally: 158 MB for 100 articles, 200 MB for 200, 262 MB for 300 (instead of 360, 630 and 912 MB in 1.7.7). 
-
-  **Result on Toolforge, version 1.7.9**: 300 articles still make the server restart, after 347 s. Since the memory measured locally stays low, the most likely cause is temporary space: in 1.7.9, the part files, the merged file and the final PDF coexisted, about three times the size of the book (588 MB for a 197 MB book, measured locally). Since 1.7.10, the part files are deleted as soon as they are merged: twice the size of the book (392 MB). The exact cause (memory or the pod's temporary space quota) could not be read from the Toolforge Kubernetes events.
-
-  **Result on Toolforge, version 1.7.10**: limit of about 100 articles (1,637 pages, 182 MB), failure at 150 and 200 articles, a regression compared with 1.7.7; the temporary space hypothesis is not enough to explain it. Details of each measurement, version by version: [testLimitetoolforge.md](testLimitetoolforge.md) (in French).
-
-  **Result on Toolforge, version 1.8.6** (assembly by PyMuPDF): **limit of about 800 articles (14,092 pages, 779 MB of PDF)**, with no server restart during the whole test. At 1,000 articles, the generation fails with an error message (a part file deleted twice after merging), without a restart. Merging now costs only 283 MB at 800 articles; the heaviest step is now page numbering (1,295 MB at 800 articles).
+  * **1.8.3**: limit of 150 articles; at 200 articles, the whole container is stopped during assembly.
+  * **1.8.5**: 150 articles passed; the generation journal shows that the memory peak comes from merging (1,538 MB at 150 articles).
+  * **1.8.6**: limit of 800 articles, with no restart; at 1,000 articles, failure with an error message (the same part deleted twice). Page numbering becomes the most memory-hungry step (1,295 MB at 800 articles).
+  * **1.8.9**: limit between 1,000 articles (passed) and 1,500 (failed); at 1,500 articles, the server restarts while numbering the 28,178 pages (about 0.086 MB per page).
+  * **1.9.5**: the deliberate limit of 300 articles per book refuses a 1,500-article book; the same 1,500 articles in 6 volumes of 250 pass in 44 minutes, with the container at 58% at most.
 
 ## 14\. Security and robustness
 

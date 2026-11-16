@@ -4,6 +4,45 @@ Taille maximale d'un livre que l'instance Toolforge (`https://wikipedia2book.too
 
 Réglages communs à toutes les mesures : `scripts/limit_check.py`, pages liées depuis l'article *France* en français (pages existantes, par ordre alphabétique), format A4, numérotation et table des matières, génération depuis un poste client par `POST /api/pdf/stream`. Un échec signifie que le flux s'est interrompu pendant la génération : le serveur a redémarré.
 
+## Table des matières
+
+- [Synthèse](#synth%C3%A8se)
+- [Version 1.9.5, 1 500 articles en 6 volumes (16/11/2026, 14:27 UTC)](#version-195-1-500-articles-en-6-volumes-16112026-1427-utc)
+	- [Résultat](#r%C3%A9sultat)
+	- [Journal des générations](#journal-des-g%C3%A9n%C3%A9rations)
+	- [Mémoire du conteneur](#m%C3%A9moire-du-conteneur)
+	- [Générations simultanées](#g%C3%A9n%C3%A9rations-simultan%C3%A9es)
+- [Version 1.8.9, 1 500 articles (16/11/2026, 11:08 UTC)](#version-189-1-500-articles-16112026-1108-utc)
+	- [Résultat](#r%C3%A9sultat-1)
+	- [Journal de la génération](#journal-de-la-g%C3%A9n%C3%A9ration)
+	- [Mémoire du conteneur](#m%C3%A9moire-du-conteneur-1)
+	- [Générations simultanées](#g%C3%A9n%C3%A9rations-simultan%C3%A9es-1)
+	- [Comparaison](#comparaison)
+- [Version 1.8.9, 1 000 articles (16/11/2026, 09:42 UTC)](#version-189-1-000-articles-16112026-0942-utc)
+	- [Résultat](#r%C3%A9sultat-2)
+	- [Journal de la génération](#journal-de-la-g%C3%A9n%C3%A9ration-1)
+	- [Mémoire du conteneur](#m%C3%A9moire-du-conteneur-2)
+	- [Générations simultanées](#g%C3%A9n%C3%A9rations-simultan%C3%A9es-2)
+	- [PDF obtenu](#pdf-obtenu)
+	- [Comparaison](#comparaison-1)
+- [Version 1.8.9 (16/11/2026, 08:41 UTC)](#version-189-16112026-0841-utc)
+	- [Résultat](#r%C3%A9sultat-3)
+	- [Journal de la génération](#journal-de-la-g%C3%A9n%C3%A9ration-2)
+	- [Mémoire du conteneur](#m%C3%A9moire-du-conteneur-3)
+	- [Générations simultanées](#g%C3%A9n%C3%A9rations-simultan%C3%A9es-3)
+	- [Comparaison avec la 1.8.6](#comparaison-avec-la-186)
+- [Version 1.8.6 (16/11/2026, 04:35 UTC)](#version-186-16112026-0435-utc)
+- [Mesures locales de l'assemblage (16/11/2026)](#mesures-locales-de-lassemblage-16112026)
+	- [PyMuPDF à la place de qpdf (16/11/2026)](#pymupdf-%C3%A0-la-place-de-qpdf-16112026)
+- [Version 1.8.5 (15/11/2026, 22:58 UTC)](#version-185-15112026-2258-utc)
+- [Version 1.8.3 (15/11/2026, 22:17 UTC)](#version-183-15112026-2217-utc)
+- [Version 1.8.2 (15/11/2026, 21:52 UTC)](#version-182-15112026-2152-utc)
+- [Version 1.8.0 (15/11/2026, 21:12 UTC)](#version-180-15112026-2112-utc)
+- [Version 1.7.10 (15/11/2026)](#version-1710-15112026)
+- [Version 1.7.9 (15/11/2026)](#version-179-15112026)
+- [Version 1.7.7 (15/11/2026)](#version-177-15112026)
+- [Version 1.7.5 (15/11/2026)](#version-175-15112026)
+
 ## Synthèse
 
 | Version | Limite constatée | Premier palier en échec |

@@ -1029,37 +1029,45 @@ Atelier à jouer avant toute mise en production d'une version (skill `deploy-pro
 * **Exécution** : workflow « Performance check » (`.github/workflows/perf-check.yml`), lancement manuel depuis l'onglet Actions avec le niveau (`min` ou `max`) et, sur `main` seulement, l'option d'enregistrer la référence (commit de `scripts/perf/reference.json` sur `main`). Il construit l'image Docker de production, la démarre sur l'exécuteur GitHub, joue l'atelier contre `http://localhost:8000` et publie le rapport dans le résumé de l'exécution (et en artefact `perf-report`). Les mesures ne sont comparables qu'entre exécutions du même environnement : la référence est mesurée par ce workflow. À la main : `python scripts/perf_check.py --base-url <url> --level min|max` (écarts seulement indicatifs sur une autre machine).
 * **Tests** : `tests/test_perf_check.py` (faux serveur local qui imite `/api/pdf/stream`).
 
-* **Mesures par version** : génération d'un même livre réel, *Épaves de la rade de Saint-Pierre* (11 articles, 104 pages, 13,7 Mo), par `POST /api/pdf/stream` depuis un poste client, première génération après la mise en ligne de la version. Une génération répétée est plus rapide, car Wikimédia garde les PDF d'articles en cache : seule la phase *Wikipédia* en dépend. Les phases sont celles de l'atelier. *Tests* : nombre de tests automatisés, tous réussis à la publication.
+#### Résultats mesurés
 
-  | Version | Date       | Hébergement | Téléchargements simultanés | Wikipédia | Application | Transfert | Total  | Tests |
-  |---------|------------|-------------|----------------------------|-----------|-------------|-----------|--------|-------|
-  | 1.6.10  | 2026-11-14 | Railway     | 1                          | 31 s      | 9,7 s (application et transfert, PDF en base64) | —         | 40,7 s | 83    |
-  | 1.7.1   | 2026-11-14 | Railway     | 4                          | 10,5 s    | 1,7 s       | 1,4 s     | 13,6 s | 85    |
-  | 1.7.5   | 2026-11-15 | Railway     | 2                          | 17,2 s    | 1,6 s       | 1,6 s     | 20,4 s | 117   |
-  | 1.7.5   | 2026-11-15 | Toolforge   | 4                          | 10,9 s    | 2,3 s       | 2,8 s     | 16,0 s | 117   |
+Deux séries de mesures, dans des tableaux aux colonnes communes alignées (date, version, cible, puis pages et phases *Wikipédia*, *Application*, *Transfert*, *Total*, définies plus haut). La *cible* est l'hébergement mesuré ou le workflow. Seules les mesures d'une même cible se comparent entre elles : une cible autre que le workflow (Toolforge, Northflank, mesuré depuis un poste client) n'est pas dans l'environnement de la référence, ses écarts ne sont qu'indicatifs et son transfert inclut le réseau jusqu'au poste. Les mesures de taille maximale d'un livre sont à part, dans `docs/testLimitetoolforge.md` (section 13.12).
 
-* **Résultats de l'atelier** : chaque passage de l'atelier est reporté ici (médiane des générations de chaque scénario). Une cible autre que le workflow (Toolforge, Northflank, mesuré depuis un poste client) n'est pas mesurée dans l'environnement de la référence : ses écarts ne sont qu'indicatifs, et son transfert inclut le réseau jusqu'au poste.
+* **Mesures par version** : génération d'un même livre réel, *Épaves de la rade de Saint-Pierre* (11 articles : 104 pages et 13,7 Mo jusqu'à la 1.9.4, 101 pages et 9,8 Mo depuis la 1.9.5, sans la liste « Sources et auteurs »), par `POST /api/pdf/stream` depuis un poste client, première génération après la mise en ligne de la version. Une génération répétée est plus rapide, car Wikimédia garde les PDF d'articles en cache : seule la phase *Wikipédia* en dépend. *Tests* : nombre de tests automatisés, tous réussis à la publication.
 
-  | Date       | Version | Cible | Niveau | Scénario | Pages | Total | Wikipédia | Application | Transfert | Écart application / page | Verdict |
-  |------------|---------|-------|--------|----------|-------|-------|-----------|-------------|-----------|---------------------------|---------|
-  | 2026-11-15 | 1.8.2   | Toolforge | max | `50-pages` | 51 | 9,24 s | 6,88 s | 0,4 s | 1,96 s | −47 % | ok |
-  | 2026-11-15 | 1.8.2   | Toolforge | max | `200-pages` | 200 | 17,38 s | 10,41 s | 0,94 s | 6,04 s | −57 % | ok |
-  | 2026-11-15 | 1.8.2   | Toolforge | max | `1-article` | 5 | 0,9 s | 0,37 s | 0,22 s | 0,31 s | +57 % | à surveiller |
-  | 2026-11-15 | 1.8.2   | Toolforge | max | `50-pages-sans-numerotation` | 50 | 3,69 s | 2,7 s | 0,05 s | 0,94 s | −91 % | ok |
-  | 2026-11-15 | 1.8.2   | Toolforge | max | `200-pages-chapitres` | 205 | 12,18 s | 4,76 s | 1,18 s | 6,24 s | −50 % | ok |
-  | 2026-11-15 | 1.8.2   | Toolforge | max | `200-pages-a5-paysage` | 201 | 53,57 s | 47,03 s | 0,9 s | 5,63 s | −93 % | ok |
-  | 2026-11-15 | 1.8.2   | Toolforge | max | `20-articles` | 253 | 17,89 s | 9,61 s | 1,53 s | 6,75 s | −47 % | ok |
-  | 2026-11-16 | 1.8.6   | Toolforge | max | `50-pages` | 51 | 15,7 s | 6,89 s | 0,78 s | 8,03 s | +3 % | ok |
-  | 2026-11-16 | 1.8.6   | Toolforge | max | `200-pages` | 200 | 16,74 s | 8,49 s | 2,13 s | 6,12 s | −4 % | ok |
-  | 2026-11-16 | 1.8.6   | Toolforge | max | `1-article` | 5 | 1,76 s | 0,5 s | 0,27 s | 0,98 s | +93 % | à surveiller |
-  | 2026-11-16 | 1.8.6   | Toolforge | max | `50-pages-sans-numerotation` | 50 | 4,07 s | 1,78 s | 0,4 s | 1,9 s | −25 % | ok |
-  | 2026-11-16 | 1.8.6   | Toolforge | max | `200-pages-chapitres` | 205 | 23,69 s | 5,08 s | 2,41 s | 16,2 s | +2 % | ok |
-  | 2026-11-16 | 1.8.6   | Toolforge | max | `200-pages-a5-paysage` | 201 | 85,05 s | 48,84 s | 2,17 s | 34,05 s | −83 % | ok |
-  | 2026-11-16 | 1.8.6   | Toolforge | max | `20-articles` | 253 | 23,26 s | 8,38 s | 3,24 s | 11,64 s | +12 % | ok |
+  | Date | Version | Cible | Téléchargements simultanés | Pages | Wikipédia | Application | Transfert | Total | Tests |
+  |---|---|---|---|---|---|---|---|---|---|
+  | 2026-11-14 | 1.6.10 | Railway | 1 | 104 | 31 s | 9,7 s ¹ | — | 40,7 s | 83 |
+  | 2026-11-14 | 1.7.1 | Railway | 4 | 104 | 10,5 s | 1,7 s | 1,4 s | 13,6 s | 85 |
+  | 2026-11-15 | 1.7.5 | Railway | 2 | 104 | 17,2 s | 1,6 s | 1,6 s | 20,4 s | 117 |
+  | 2026-11-15 | 1.7.5 | Toolforge | 4 | 104 | 10,9 s | 2,3 s | 2,8 s | 16,0 s | 117 |
+  | 2026-11-16 | 1.9.5 | Toolforge | 4 | 101 | 12,9 s | 1,0 s | 2,4 s | 16,3 s ² | 186 |
 
-  Passage du 2026-11-15 sur Toolforge (4 téléchargements simultanés) : aucun échec ni régression. Le seul « à surveiller » (`1-article`) porte sur 0,22 s pour 5 pages, un écart de quelques centièmes de seconde, dans le bruit de la mesure. La phase Wikipédia de `200-pages-a5-paysage` (47 s) comprend la recomposition de chaque page au format A5 paysage, faite pendant les téléchargements.
+  ¹ En 1.6.10, le PDF voyageait en base64 dans le flux : application et transfert ne se distinguaient pas.
 
-  Passage du 2026-11-16 sur Toolforge, version 1.8.6 (assemblage par PyMuPDF dans un processus séparé) : aucun échec ni régression par rapport à la référence. Le seul « à surveiller » (`1-article`) porte encore sur quelques centièmes de seconde. Par rapport à la 1.8.2 sur la même cible, la phase *Application* est environ deux fois plus longue (0,78 s au lieu de 0,4 s pour `50-pages`, 2,13 s au lieu de 0,94 s pour `200-pages`) : démarrage du processus d'assemblage, journal des étapes et numérotation par MuPDF ; c'est le prix d'un assemblage qui tient jusqu'à 800 articles au lieu de 150 (docs/testLimitetoolforge.md). Les transferts, plus longs, dépendent du réseau jusqu'au poste client.
+  ² Mesurée quatre heures après la mise en ligne (12:24 UTC), pas à la première génération : d'autres livres avaient déjà été générés, une partie des PDF d'articles pouvait être en cache chez Wikimédia.
+
+* **Résultats de l'atelier** : chaque passage de l'atelier est reporté ici, médiane des générations de chaque scénario, regroupé par passage (date, version, cible) ; le bilan de chaque passage suit le tableau.
+
+  | Date | Version | Cible | Niveau | Scénario | Pages | Wikipédia | Application | Transfert | Total | Écart application / page | Verdict |
+  |---|---|---|---|---|---|---|---|---|---|---|---|
+  | 2026-11-15 | 1.8.2 | Toolforge | max | `50-pages` | 51 | 6,88 s | 0,4 s | 1,96 s | 9,24 s | −47 % | ok |
+  | 2026-11-15 | 1.8.2 | Toolforge | max | `200-pages` | 200 | 10,41 s | 0,94 s | 6,04 s | 17,38 s | −57 % | ok |
+  | 2026-11-15 | 1.8.2 | Toolforge | max | `1-article` | 5 | 0,37 s | 0,22 s | 0,31 s | 0,9 s | +57 % | à surveiller |
+  | 2026-11-15 | 1.8.2 | Toolforge | max | `50-pages-sans-numerotation` | 50 | 2,7 s | 0,05 s | 0,94 s | 3,69 s | −91 % | ok |
+  | 2026-11-15 | 1.8.2 | Toolforge | max | `200-pages-chapitres` | 205 | 4,76 s | 1,18 s | 6,24 s | 12,18 s | −50 % | ok |
+  | 2026-11-15 | 1.8.2 | Toolforge | max | `200-pages-a5-paysage` | 201 | 47,03 s | 0,9 s | 5,63 s | 53,57 s | −93 % | ok |
+  | 2026-11-15 | 1.8.2 | Toolforge | max | `20-articles` | 253 | 9,61 s | 1,53 s | 6,75 s | 17,89 s | −47 % | ok |
+  | 2026-11-16 | 1.8.6 | Toolforge | max | `50-pages` | 51 | 6,89 s | 0,78 s | 8,03 s | 15,7 s | +3 % | ok |
+  | 2026-11-16 | 1.8.6 | Toolforge | max | `200-pages` | 200 | 8,49 s | 2,13 s | 6,12 s | 16,74 s | −4 % | ok |
+  | 2026-11-16 | 1.8.6 | Toolforge | max | `1-article` | 5 | 0,5 s | 0,27 s | 0,98 s | 1,76 s | +93 % | à surveiller |
+  | 2026-11-16 | 1.8.6 | Toolforge | max | `50-pages-sans-numerotation` | 50 | 1,78 s | 0,4 s | 1,9 s | 4,07 s | −25 % | ok |
+  | 2026-11-16 | 1.8.6 | Toolforge | max | `200-pages-chapitres` | 205 | 5,08 s | 2,41 s | 16,2 s | 23,69 s | +2 % | ok |
+  | 2026-11-16 | 1.8.6 | Toolforge | max | `200-pages-a5-paysage` | 201 | 48,84 s | 2,17 s | 34,05 s | 85,05 s | −83 % | ok |
+  | 2026-11-16 | 1.8.6 | Toolforge | max | `20-articles` | 253 | 8,38 s | 3,24 s | 11,64 s | 23,26 s | +12 % | ok |
+
+  * Passage du 2026-11-15 sur Toolforge (4 téléchargements simultanés) : aucun échec ni régression. Le seul « à surveiller » (`1-article`) porte sur 0,22 s pour 5 pages, un écart de quelques centièmes de seconde, dans le bruit de la mesure. La phase Wikipédia de `200-pages-a5-paysage` (47 s) comprend la recomposition de chaque page au format A5 paysage, faite pendant les téléchargements.
+  * Passage du 2026-11-16 sur Toolforge, version 1.8.6 (assemblage par PyMuPDF dans un processus séparé) : aucun échec ni régression par rapport à la référence. Le seul « à surveiller » (`1-article`) porte encore sur quelques centièmes de seconde. Par rapport à la 1.8.2 sur la même cible, la phase *Application* est environ deux fois plus longue (0,78 s au lieu de 0,4 s pour `50-pages`, 2,13 s au lieu de 0,94 s pour `200-pages`) : démarrage du processus d'assemblage, journal des étapes et numérotation par MuPDF ; c'est le prix d'un assemblage qui tient jusqu'à 800 articles au lieu de 150 (docs/testLimitetoolforge.md). Les transferts, plus longs, dépendent du réseau jusqu'au poste client.
 
 ### 13.12 Test aux limites
 
@@ -1067,34 +1075,31 @@ Test à jouer à la main pour connaître la taille maximale d'un livre qu'un dé
 
 * **Script** : `scripts/limit_check.py --base-url <url> [--steps 25,50,100,200,400,800] [--source-page France] [--language fr]`, ou par dichotomie : `--search <départ> [--precision 50] [--max 2000]` double le nombre d'articles à partir de `<départ>` jusqu'au premier échec, puis coupe en deux l'intervalle entre le dernier succès et le premier échec jusqu'à la précision demandée ; après chaque échec, il attend que le serveur réponde de nouveau (`/api/version`, 10 minutes au plus) ; les paliers testés en redescendant réutilisent des articles déjà demandés à Wikimédia, qui les sert depuis son cache ; il termine par « Limite entre N articles (réussi) et M articles (échec) ». `--save-pdf <dossier>` enregistre chaque PDF reçu (`limite-<N>-articles.pdf`), par exemple dans `./tmp`, que git ignore ; sans cette option, le PDF est vérifié, compté puis oublié. Il prend les pages liées depuis une page Wikipédia (par défaut, l'article *France* en français ; pages existantes seulement, liens rouges exclus, par ordre alphabétique), génère des livres de plus en plus gros avec les N premiers, mesure chaque génération comme l'atelier de performance (mêmes phases, PDF vérifié et pages comptées), et s'arrête au premier échec. Chaque palier réutilise les articles du précédent, déjà en cache chez Wikimédia.
 * **Tests** : `tests/test_limit_check.py` (faux générateur, sans réseau).
-* **Résultats sur Toolforge, version 1.7.5** (15/11/2026, format A4, numérotation et table des matières, depuis un poste client) :
+* **Résultats sur Toolforge, depuis la version 1.8.3** (format A4, numérotation et table des matières, pages liées depuis l'article *France*, depuis un poste client ; détail de chaque passage : [testLimitetoolforge.md](testLimitetoolforge.md)) :
 
-  | Articles | Pages | Taille du PDF | Wikipédia | Application | Transfert | Total  | Résultat |
-  |----------|-------|---------------|-----------|-------------|-----------|--------|----------|
-  | 25       | 202   | 20,4 Mo       | 24,7 s    | 5,6 s       | 4,1 s     | 34,3 s | réussi   |
-  | 50       | 684   | 73,6 Mo       | 33,2 s    | 17,1 s      | 15,1 s    | 65,3 s | réussi   |
-  | 100      | 1 636 | 182,4 Mo      | 107,6 s   | 42,7 s      | 37,5 s    | 187,8 s | réussi  |
-  | 150      | —     | —             | —         | —           | —         | 181 s  | échec    |
-  | 200      | —     | —             | —         | —           | —         | 266 s  | échec    |
+  | Version | Date       | Articles | Pages  | Taille du PDF | Total     | Résultat |
+  |---------|------------|----------|--------|---------------|-----------|----------|
+  | 1.8.3   | 2026-11-15 | 100      | 1 637  | 181,8 Mo      | 154,0 s   | réussi   |
+  | 1.8.3   | 2026-11-15 | 150      | 2 586  | 280,0 Mo      | 163,5 s   | réussi   |
+  | 1.8.3   | 2026-11-15 | 200      | —      | —             | 217,2 s   | échec, redémarrage du serveur |
+  | 1.8.5   | 2026-11-15 | 100      | —      | 182,2 Mo      | 176,1 s ¹ | réussi   |
+  | 1.8.5   | 2026-11-15 | 150      | —      | 280,4 Mo      | 168,7 s ¹ | réussi (test arrêté ensuite) |
+  | 1.8.6   | 2026-11-16 | 400      | 7 305  | 420,6 Mo      | 1 422,7 s | réussi   |
+  | 1.8.6   | 2026-11-16 | 600      | 10 629 | 603,6 Mo      | 2 411,6 s | réussi   |
+  | 1.8.6   | 2026-11-16 | 800      | 14 092 | 778,6 Mo      | 3 468,8 s | réussi   |
+  | 1.8.6   | 2026-11-16 | 1 000    | —      | —             | 1 403,8 s | échec, message d'erreur sans redémarrage |
+  | 1.8.9   | 2026-11-16 | 900      | 15 641 | 855,8 Mo      | 3 608,6 s | réussi   |
+  | 1.8.9   | 2026-11-16 | 1 000    | 17 518 | 949,2 Mo      | 4 153,3 s | réussi   |
+  | 1.8.9   | 2026-11-16 | 1 500    | —      | —             | 3 481,0 s | échec, redémarrage du serveur |
+  | 1.9.5   | 2026-11-16 | 1 500 en 6 volumes de 250 | 28 072 | 1 467,0 Mo | 2 592,3 s | réussi (6 volumes) |
 
-  **Limite constatée en 1.7.5 : environ 100 articles, soit 1 600 pages et 180 Mo de PDF.** À 150 et 200 articles, le flux s'interrompt pendant la génération : le serveur redémarre (heure de démarrage de `GET /api/stats/hourly` remise à l'heure de l'échec), très probablement par manque de mémoire, le livre étant assemblé entièrement en mémoire. La limite dépend surtout du nombre de pages et du poids des images des articles, pas du nombre d'articles lui-même. Northflank n'a pas été testé. Depuis la 1.7.7, le livre est assemblé sur disque temporaire (section 11.1).
+  ¹ Durée côté serveur ; pages non comptées.
 
-  **Résultats sur Toolforge, version 1.7.7** (15/11/2026, mêmes réglages; le réseau de Toolforge était lent ce jour-là, d'où des transferts longs, sans lien avec l'application) :
-
-  | Articles | Pages | Taille du PDF | Wikipédia | Application | Transfert | Total    | Résultat |
-  |----------|-------|---------------|-----------|-------------|-----------|----------|----------|
-  | 100      | 1 637 | 181,8 Mo      | 116,2 s   | 7,1 s       | 390,1 s   | 513,5 s  | réussi   |
-  | 150      | 2 586 | 280,0 Mo      | 144,3 s   | 9,0 s       | 814,2 s   | 967,5 s  | réussi   |
-  | 200      | 3 435 | 375,5 Mo      | 137,0 s   | 11,5 s      | 911,6 s   | 1 060,1 s | réussi  |
-  | 300      | —     | —             | —         | —           | —         | 174 s    | échec    |
-
-  **Limite constatée en 1.7.7 : environ 200 articles, soit 3 400 pages et 375 Mo de PDF**, sans redémarrage du serveur jusque-là ; la phase *Application* est environ 6 fois plus rapide qu'en 1.7.5 (7,1 s au lieu de 42,7 s pour 100 articles). À 300 articles, le serveur redémarre encore : la copie des pages par pikepdf (`pages.extend`) chargeait leur contenu en mémoire. Depuis la 1.7.9, la fusion passe par qpdf (`--pages`) et chaque téléchargement garde son créneau jusqu'à la fin de sa recomposition (section 11.1) ; mémoire au pic mesurée en local : 158 Mo pour 100 articles, 200 Mo pour 200, 262 Mo pour 300 (au lieu de 360, 630 et 912 Mo en 1.7.7). 
-
-  **Résultat sur Toolforge, version 1.7.9** : 300 articles font encore redémarrer le serveur, après 347 s. La mémoire mesurée en local restant basse, la piste retenue est l'espace temporaire : en 1.7.9, les fichiers des parties, le fichier fusionné et le PDF final coexistaient, soit environ trois fois la taille du livre (588 Mo pour un livre de 197 Mo, mesuré en local). Depuis la 1.7.10, les fichiers des parties sont supprimés dès la fusion : deux fois la taille du livre (392 Mo). La cause exacte (mémoire ou quota d'espace temporaire du pod) n'a pas pu être lue dans les événements Kubernetes de Toolforge.
-
-  **Résultat sur Toolforge, version 1.7.10** : limite d'environ 100 articles (1 637 pages, 182 Mo), échec à 150 et 200 articles, soit une régression par rapport à la 1.7.7 ; l'hypothèse de l'espace temporaire ne suffit pas à l'expliquer. Détail de chaque mesure, version par version : [testLimitetoolforge.md](testLimitetoolforge.md).
-
-  **Résultat sur Toolforge, version 1.8.6** (assemblage par PyMuPDF) : **limite d'environ 800 articles (14 092 pages, 779 Mo de PDF)**, sans aucun redémarrage du serveur pendant tout le test. À 1 000 articles, la génération échoue avec un message d'erreur (fichier d'une partie supprimé deux fois après la fusion), sans redémarrage. La fusion ne coûte plus que 283 Mo à 800 articles ; le poste le plus lourd est désormais la numérotation des pages (1 295 Mo à 800 articles).
+  * **1.8.3** : limite de 150 articles ; à 200 articles, tout le conteneur est arrêté pendant l'assemblage.
+  * **1.8.5** : 150 articles réussis ; le journal des générations montre que le pic de mémoire vient de la fusion (1 538 Mo à 150 articles).
+  * **1.8.6** : limite de 800 articles, sans redémarrage ; à 1 000 articles, échec par un message d'erreur (une même partie supprimée deux fois). La numérotation des pages devient l'étape la plus gourmande (1 295 Mo à 800 articles).
+  * **1.8.9** : limite entre 1 000 articles (réussi) et 1 500 (échec) ; à 1 500 articles, le serveur redémarre pendant la numérotation des 28 178 pages (environ 0,086 Mo par page).
+  * **1.9.5** : la limite volontaire de 300 articles par livre refuse un livre de 1 500 articles ; les mêmes 1 500 articles en 6 volumes de 250 passent en 44 minutes, avec un conteneur à 58 % au plus.
 
 ## 14\. Sécurité et robustesse
 
