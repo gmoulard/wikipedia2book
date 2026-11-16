@@ -18,6 +18,62 @@ Réglages communs à toutes les mesures : `scripts/limit_check.py`, pages liées
 | 1.8.5   | au moins 150 articles | test arrêté avant 200 |
 | 1.8.6   | 800 articles     | 1 000 (erreur sans redémarrage) |
 | 1.8.9   | 1 000 articles   | 1 500 (redémarrage pendant la numérotation) |
+| 1.9.5   | limite volontaire de 300 articles par livre | aucun : 1 500 articles réussis en 6 volumes de 250 |
+
+## Version 1.9.5, 1 500 articles en 6 volumes (16/11/2026, 14:27 UTC)
+
+Les 1 500 mêmes articles que le palier en échec de la 1.8.9, cette fois en volumes. Depuis la 1.9.5, Toolforge refuse tout livre de plus de 300 articles (`WIKIPEDIA2BOOK_ARTICLE_LIMIT=300`, HTTP 413 `too_many_articles`) : 3 volumes manuels de 500 articles seraient chacun recoupés en deux par l'interface (`planVolumes`), soit 6 générations de 250 articles. Le test les enchaîne l'une après l'autre (articles 1 à 250, 251 à 500, etc.), sans titre « Volume N » ni répartition de l'introduction et de la conclusion de `volumeProject` : seul le découpage est le même. PDF gardés dans `./tmp/volumes-1500-v<N>.pdf` (ignoré par git). Serveur démarré à 12:24:33 UTC, aucun redémarrage pendant le test.
+
+### Résultat
+
+| Volume | Articles (premier – dernier) | Pages | Taille du PDF | Wikipédia | Application | Transfert | Total | Résultat |
+|--------|------------------------------|-------|---------------|-----------|-------------|-----------|-------|----------|
+| 1 | *.eu* – *Aéroport de Paris-Charles-de-Gaulle* | 4 344 | 247,2 Mo | 285,9 s | 80,4 s | 69,3 s | 435,6 s | réussi |
+| 2 | *Aéroport de Paris-Orly* – *Clermont-Ferrand* | 4 974 | 292,9 Mo | 298,3 s | 102,7 s | 72,1 s | 473,1 s | réussi |
+| 3 | *Climat de la France* – *Délinquance en France* | 3 769 | 190,8 Mo | 258,5 s | 65,4 s | 46,1 s | 369,9 s | réussi |
+| 4 | *Délocalisation* – *Georges Clemenceau* | 4 360 | 219,8 Mo | 276,5 s | 81,7 s | 44,9 s | 403,1 s | réussi |
+| 5 | *Georges Didi-Huberman* – *Illettrisme* | 5 553 | 278,0 Mo | 315,4 s | 98,3 s | 53,7 s | 467,3 s | réussi |
+| 6 | *Immigration* – *Liechtenstein* | 5 072 | 238,3 Mo | 293,6 s | 98,4 s | 51,2 s | 443,3 s | réussi |
+| **total** | **1 500** | **28 072** | **1 467,0 Mo** | **1 728,2 s** | **526,9 s** | **337,3 s** | **2 592,3 s** | **6 réussis** |
+
+De 14:27:59 à 15:11:41 UTC : 43 min 42 s pour les 1 500 articles, contre un échec après 58 minutes pour le livre d'un seul tenant en 1.8.9.
+
+### Journal des générations
+
+Générations n° 12, 15 et 18 à 21 (`GET /api/health/generations`), en Mo :
+
+| Volume | Génération | Pages d'articles | Téléchargements | Assemblage (pic) | Serveur (pic) | Conteneur (pic du journal) | Numérotation |
+|--------|------------|------------------|-----------------|------------------|---------------|----------------------------|--------------|
+| 1 | 12 | 4 334 | 285,0 s | 482 | 297 | 1 275 | 42,4 s |
+| 2 | 15 | 4 964 | 297,4 s | 546 | 318 | 1 450 | 57,1 s |
+| 3 | 18 | 3 759 | 257,6 s | 476 | 329 | 1 190 | 34,5 s |
+| 4 | 19 | 4 347 | 275,6 s | 485 | 363 | 1 291 | 43,0 s |
+| 5 | 20 | 5 511 | 314,4 s | 517 | 364 | 1 438 | 51,1 s |
+| 6 | 21 | 5 062 | 292,8 s | 584 | 385 | 1 449 | 54,7 s |
+
+Le processus d'assemblage reste sous 600 Mo (1,5 Go à 1 000 articles d'un seul tenant), et la numérotation prend moins d'une minute par volume (628 s pour 17 518 pages d'un seul tenant).
+
+### Mémoire du conteneur
+
+254 relevés de `GET /api/health/details`, de 14:27:55 à 15:11:52 UTC :
+
+| Heure (UTC) | Générations | Conteneur | Serveur | Fichiers | Phase |
+|-------------|-------------|-----------|---------|----------|-------|
+| 14:27:55    | 0           | 250       | 177     | 0        | avant le test |
+| 14:32:15    | 1           | 584       | 285     | 220      | volume 1, téléchargements |
+| 14:41:00    | 1           | 818       | 318     | 278      | volume 2, fin |
+| 14:49:40    | 1           | 404       | 329     | 3        | début du volume 4 |
+| 15:02:41    | 1           | 1 034     | 364     | 263      | volume 5, assemblage |
+| 15:11:21    | 1           | 927       | 385     | 453      | volume 6, fin |
+| 15:12:02    | 0           | 458       | 385     | 0        | après le test |
+
+- Mémoire du conteneur au plus haut : 1 185 Mo (58 %), jamais à 100 % ; fichiers temporaires au plus haut : 557 Mo ; mémoire du serveur au plus haut : 385 Mo, qui monte d'environ 35 Mo par volume sans redescendre (177 Mo avant, 385 Mo après).
+
+### Générations simultanées
+
+Une génération en cours dans 243 relevés, deux dans 2 (14:35:02 et 14:40:40 UTC), aucune dans 10. Quatre petits livres d'utilisateurs ont été générés pendant le test (générations n° 13, 14, 16 et 17 : 3, 5, 5 et 1 articles, de 4 à 14 s), sans gêne visible.
+
+**Conclusion** : 1 500 articles passent sans difficulté en 6 volumes de 250 : 28 072 pages, 1,47 Go de PDF, 44 minutes, conteneur à 58 % au plus. Le découpage en volumes qu'impose la limite de 300 articles supprime le problème de mémoire de la numérotation, et le tout est plus rapide que le livre d'un seul tenant. Seul point à surveiller : la mémoire du serveur, qui augmente d'un volume à l'autre.
 
 ## Version 1.8.9, 1 500 articles (16/11/2026, 11:08 UTC)
 
