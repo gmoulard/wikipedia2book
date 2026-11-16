@@ -270,6 +270,8 @@ Fonctionnalités :
 
 * Retirer la table des matières du livre (bouton « Retirer » sur sa ligne), puis la remettre (bouton « + Table des matières » dans la barre d'outils, qui la replace au début).
 
+* Un livre d'un seul article ou document n'a pas de table des matières, même quand elle n'a pas été retirée : sa ligne et le bouton « + Table des matières » n'apparaissent pas dans l'étape Organisation, et le PDF n'en contient pas (`book_builder.toc_slot_index`, `buildOrgSlots`). Elle revient dès que le livre compte deux éléments ; un volume d'un seul article n'en a pas non plus.
+
 * Quand le livre a des chapitres, les articles qui n'appartiennent à aucun chapitre sont affichés à la fin de la liste, sous l'intitulé « Sans chapitre », comme dans le PDF. Exception : pour un livre importé d'une page de livre Wikipédia dont des articles précèdent le premier chapitre (section 3.1), ces articles sont affichés et placés dans le PDF en tête, avant le premier chapitre, sans intitulé ni page de chapitre.
 
 * Couper le livre en plusieurs volumes à sa guise, même sous la limite du serveur : le bouton « Nouveau volume + » de la barre d'outils ajoute une coupure au milieu du dernier volume ; la ligne « Début d'un volume » se déplace par glisser-déposer comme la table des matières, et se retire par son bouton « Retirer » (le volume rejoint alors le précédent). Chaque coupure est enregistrée par rapport à l'élément qui la suit (`volume_breaks`, liste de `before:<clé>`, mêmes clés que `toc_position`, gardée dans l'export JSON et ignorée par le serveur) ; une coupure dont l'élément disparaît, qui viserait le premier élément du livre ou un chapitre sans article est ignorée. Chaque volume est généré dans un PDF à part (section 11.1).
@@ -1368,5 +1370,6 @@ Numéro de version applicatif (`app/version.py`, repris par `app/main.py` et par
 | 1.9.1   | 2026-11-16 | GMoulard  | Limite volontaire de 300 articles par livre sur tous les hébergements (2 000 sur Toolforge seulement auparavant) ; au-delà, l'interface génère le livre en volumes (section 11.1). |
 | 1.9.2   | 2026-11-16 | GMoulard  | Volumes au choix de l'utilisateur : dans l'étape Organisation, le bouton « Nouveau volume + » ajoute une coupure, déplaçable par glisser-déposer et retirable ; chaque volume est généré dans un PDF à part, même sous la limite du serveur, et le découpage automatique s'applique encore à tout volume qui la dépasse (sections 6, 11.1). |
 | 1.9.3   | 2026-11-16 | GMoulard  | Dernière page de chaque PDF : logo de Wikipedia2Book et liens cliquables vers https://wikipedia2book.toolforge.org/ et https://github.com/gmoulard/wikipedia2book. Génération depuis une page de livre Wikipédia : plus de conclusion par défaut (`book_conclusion` vide) (sections 11.1, 13.3). |
+| 1.9.4   | 2026-11-16 | GMoulard  | Un livre d'un seul article ou document n'a plus de table des matières (ni à l'écran ni dans le PDF), même quand elle n'a pas été retirée ; logo de la dernière page deux fois plus grand et cliquable vers https://wikipedia2book.toolforge.org/ (sections 6, 11.1). |
 
 Fin du document

@@ -711,7 +711,7 @@ def _finish_book(
 
     step("cover_and_toc")
     toc: list[bytes] = []
-    if project.table_of_contents:
+    if toc_at is not None:
         toc = [
             render(build_toc_html(project, selected, article_pages, chapter_pages, language, block))
             for block in range(toc_blocks)

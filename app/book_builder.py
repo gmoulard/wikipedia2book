@@ -103,6 +103,9 @@ def toc_slot_index(
 ) -> int | None:
     if not project.table_of_contents:
         return None
+    # NE PAS donner de table des matières à un livre d'un seul article ou document : elle n'aurait qu'une ligne (même règle dans buildOrgSlots).
+    if sum(kind == "item" for kind, _ in slots) <= 1:
+        return None
     if project.toc_position == "end":
         return len(slots)
     anchor = project.toc_position.removeprefix("before:")

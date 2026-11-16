@@ -269,6 +269,8 @@ Features:
 
 * Remove the table of contents from the book ("Remove" button on its row), then put it back ("+ Table of contents" button in the toolbar, which places it back at the start).
 
+* A book of a single article or document has no table of contents, even when it has not been removed: its line and the "+ Table of contents" button do not appear in the Organization step, and the PDF has none (`book_builder.toc_slot_index`, `buildOrgSlots`). It comes back as soon as the book has two elements; a volume of a single article has none either.
+
 * When the book has chapters, the articles that belong to no chapter are shown at the end of the list, under the "No chapter" heading, as in the PDF. Exception: for a book imported from a Wikipedia book page in which articles precede the first chapter (section 3.1), those articles are shown and placed in the PDF at the start, before the first chapter, without a heading or chapter page.
 
 * Split the book into several volumes at will, even under the server limit: the "New volume +" button in the toolbar adds a break in the middle of the last volume; the "Start of a volume" line is moved by drag and drop like the table of contents, and removed with its "Remove" button (the volume then joins the previous one). Each break is stored relative to the element that follows it (`volume_breaks`, a list of `before:<key>`, same keys as `toc_position`, kept in the JSON export and ignored by the server); a break whose element disappears, that would target the first element of the book or a chapter without articles is ignored. Each volume is generated as a separate PDF (section 11.1).
@@ -1367,5 +1369,6 @@ Application version number (`app/version.py`, used by `app/main.py` and by the U
 | 1.9.1   | 2026-11-16 | GMoulard  | Deliberate limit of 300 articles per book on every host (previously 2,000, on Toolforge only); beyond it, the interface generates the book in volumes (section 11.1). |
 | 1.9.2   | 2026-11-16 | GMoulard  | Volumes at the user's choice: in the Organization step, the "New volume +" button adds a break, movable by drag and drop and removable; each volume is generated as a separate PDF, even under the server limit, and the automatic split still applies to any volume above it (sections 6, 11.1). |
 | 1.9.3   | 2026-11-16 | GMoulard  | Last page of every PDF: Wikipedia2Book logo and clickable links to https://wikipedia2book.toolforge.org/ and https://github.com/gmoulard/wikipedia2book. Generation from a Wikipedia book page: no default conclusion any more (empty `book_conclusion`) (sections 11.1, 13.3). |
+| 1.9.4   | 2026-11-16 | GMoulard  | A book of a single article or document no longer has a table of contents (neither on screen nor in the PDF), even when it has not been removed; last-page logo twice as large and clickable to https://wikipedia2book.toolforge.org/ (sections 6, 11.1). |
 
 End of document

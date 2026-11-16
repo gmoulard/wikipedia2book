@@ -207,7 +207,19 @@ class PdfStreamTest(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers["content-type"], "application/pdf")
-        self.assertEqual(len(PdfReader(BytesIO(response.content)).pages), 1 + 1 + 2 + 1)
+        pdf = PdfReader(BytesIO(response.content))
+        self.assertEqual(len(pdf.pages), 1 + 2 + 1)
+        self.assertNotIn("Table des matières", [item.title for item in pdf.outline[1] if not isinstance(item, list)])
+
+    def test_single_article_book_has_no_table_of_contents_even_when_asked(self):
+        project = _project(table_of_contents=True)
+        project["main_articles"] = project["main_articles"][:1]
+        pages = []
+        with patch.object(main, "generate_pdf", lambda html: pages.append(html) or _make_pdf(1)):
+            response = self.client.post("/api/pdf", json=project)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(any("<nav>" in html for html in pages))
+        self.assertEqual([item.title for item in PdfReader(BytesIO(response.content)).outline[1] if not isinstance(item, list)], ["Chat", "Licence"])
 
     def test_high_level_generation_from_wikipedia_book_keeps_article_order(self):
         response = self.client.post(

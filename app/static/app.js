@@ -244,7 +244,8 @@ function buildOrgSlots() {
   if (chapters.length && unassigned.length && !project.unassigned_first) unassignedSlots.unshift({ type: 'unassigned' });
   const slots = project.unassigned_first ? [...unassignedSlots, ...chapterSlots] : [...chapterSlots, ...unassignedSlots];
   const contentSlots = [...slots];
-  if (project.table_of_contents !== false) slots.splice(tocSlotIndex(slots), 0, { type: 'toc' });
+  // NE PAS montrer de table des matières pour un seul article ou document : le PDF n'en a pas (toc_slot_index dans book_builder.py).
+  if (project.table_of_contents !== false && slots.filter((slot) => slot.type === 'article').length > 1) slots.splice(tocSlotIndex(slots), 0, { type: 'toc' });
   volumeStarts(contentSlots).forEach((start) => {
     let at = slots.indexOf(contentSlots[start]);
     // NE PAS laisser la table des matières avant la coupure quand elles visent le même élément : elle ouvre alors le volume suivant.
@@ -312,7 +313,7 @@ function renderOrganization() {
   const project = state.project;
   const articles = orderedSelectedArticles();
   $('#organizationCount').textContent = articles.length;
-  $('#addTocButton').hidden = project.table_of_contents !== false;
+  $('#addTocButton').hidden = project.table_of_contents !== false || articles.length <= 1;
   const volumes = bookVolumes();
   const split = Boolean(volumes) && volumes.length > articleSegments().length;
   $('#organizationVolumes').hidden = !split;
