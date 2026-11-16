@@ -9,17 +9,17 @@ Available for: Wikipedia, Wikisource, Wikibooks, Wikivoyage, Wikiversity, Wikiqu
 
 ## Features
 
-- A single book, built in browser memory; returns the PDF of such a file directly.
-- A single input field for an article URL, a Wikipedia book page or a title: the kind of page is detected automatically on Wikipedia (`POST /api/sources/resolve`); the full content is only fetched at generation time.
-- Import the list of articles from a Wikipedia book page, in their actual order.
-- Pages of the other Wikimedia projects (Wikisource, Wikibooks, Wikivoyage, Wikiversity, Wikiquote, Wiktionary, Wikinews) accepted by URL or interwiki prefix (`b:Title`, `voy:fr:Title`), with the project's official PDF.
-- Book introduction and author suggested automatically from the first article added.
-- Exploration of Wikipedia internal links with configurable depth and number of articles.
-- Manual selection of the articles to include; discovered articles are never added automatically.
-- Organization of articles into chapters, reorderable by drag and drop, and configuration of the book format.
-- Import of personal images or PDFs, integrated into the book like articles.
-- Book generation by assembling the official full PDFs downloaded from Wikipedia, with navigation bookmarks and continuous page numbering (table of contents included).
-- Interface available in 12 languages: French, English, Spanish, Portuguese, Italian, German, Dutch, Turkish, Chinese, Japanese, Arabic and Persian (Arabic and Persian right-to-left). The titles the app adds to the generated PDF (table of contents, chapter, conclusion, license, bookmarks…) follow the interface language.
+Assemble the official PDFs of Wikipedia (and other Wikimedia projects) pages into a single printable book.
+
+* A single input field takes an article URL, a Wikipedia "book" page or a plain title; the page type is detected automatically, and the full content is only downloaded at generation time.
+* Import the articles of a Wikipedia "book" page in their original order.
+* Pages from Wikisource, Wikibooks, Wikivoyage, Wikiversity, Wikiquote, Wiktionary and Wikinews are accepted by URL or interwiki prefix (`b:Title`, `voy:fr:Title`), using each project's official PDF.
+* Explore internal links with a configurable depth and number of articles; discovered articles are never added automatically, you pick the ones to keep.
+* Organize articles into chapters and volumes with drag and drop.
+* Add your own images or PDF files alongside the articles.
+* Customize the title, author, table of contents, page format and cover image.
+* Generate the book with navigation bookmarks, continuous page numbering and a table of contents.
+* Interface in 12 languages: French, English, Spanish, Portuguese, Italian, German, Dutch, Turkish, Chinese, Japanese, Arabic and Persian (right-to-left for Arabic and Persian). The headings the app adds to the PDF (table of contents, chapters, conclusion, license, bookmarks…) follow the interface language.
 
 ## Architecture
 
