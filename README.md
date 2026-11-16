@@ -1,6 +1,7 @@
 # Wikipedia2Book
 
-<p align="center"><img src="app/static/Wikipedia2bookLogo.png" alt="Wikipedia2Book logo" width="180"></p>
+<p align="center"><img src="https://gmoulard.github.io/wikipedia2book/static/Wikipedia2bookLogo.png" alt="Wikipedia2Book logo" width="180"></p>
+
 
 
 Wikipedia2Book is a web application that allows you to compile a book in a printable PDF format. 
