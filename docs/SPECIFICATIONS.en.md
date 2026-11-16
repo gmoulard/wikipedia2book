@@ -1036,8 +1036,17 @@ Workshop to run before any production deployment of a version (`deploy-productio
   | 2026-11-15 | 1.8.2   | Toolforge | max | `200-pages-chapitres` | 205 | 12.18 s | 4.76 s | 1.18 s | 6.24 s | -50% | ok |
   | 2026-11-15 | 1.8.2   | Toolforge | max | `200-pages-a5-paysage` | 201 | 53.57 s | 47.03 s | 0.9 s | 5.63 s | -93% | ok |
   | 2026-11-15 | 1.8.2   | Toolforge | max | `20-articles` | 253 | 17.89 s | 9.61 s | 1.53 s | 6.75 s | -47% | ok |
+  | 2026-11-16 | 1.8.6   | Toolforge | max | `50-pages` | 51 | 15.7 s | 6.89 s | 0.78 s | 8.03 s | +3% | ok |
+  | 2026-11-16 | 1.8.6   | Toolforge | max | `200-pages` | 200 | 16.74 s | 8.49 s | 2.13 s | 6.12 s | -4% | ok |
+  | 2026-11-16 | 1.8.6   | Toolforge | max | `1-article` | 5 | 1.76 s | 0.5 s | 0.27 s | 0.98 s | +93% | to watch |
+  | 2026-11-16 | 1.8.6   | Toolforge | max | `50-pages-sans-numerotation` | 50 | 4.07 s | 1.78 s | 0.4 s | 1.9 s | -25% | ok |
+  | 2026-11-16 | 1.8.6   | Toolforge | max | `200-pages-chapitres` | 205 | 23.69 s | 5.08 s | 2.41 s | 16.2 s | +2% | ok |
+  | 2026-11-16 | 1.8.6   | Toolforge | max | `200-pages-a5-paysage` | 201 | 85.05 s | 48.84 s | 2.17 s | 34.05 s | -83% | ok |
+  | 2026-11-16 | 1.8.6   | Toolforge | max | `20-articles` | 253 | 23.26 s | 8.38 s | 3.24 s | 11.64 s | +12% | ok |
 
   Run of 2026-11-15 on Toolforge (4 simultaneous downloads): no failure or regression. The only "to watch" (`1-article`) concerns 0.22 s for 5 pages, a gap of a few hundredths of a second, within measurement noise. The Wikipedia phase of `200-pages-a5-paysage` (47 s) includes recomposing every page to A5 landscape, done during the downloads.
+
+  Run of 2026-11-16 on Toolforge, version 1.8.6 (assembly by PyMuPDF in a separate process): no failure or regression compared with the reference. The only "to watch" (`1-article`) is again a matter of a few hundredths of a second. Compared with 1.8.2 on the same target, the *Application* phase takes about twice as long (0.78 s instead of 0.4 s for `50-pages`, 2.13 s instead of 0.94 s for `200-pages`): starting the assembly process, the stage journal and numbering by MuPDF; this is the price of an assembly that holds up to 800 articles instead of 150 (docs/testLimitetoolforge.md). The longer transfers depend on the network to the client computer.
 
 ### 13.12 Limit test
 
@@ -1071,6 +1080,8 @@ Test to run by hand to find the largest book a deployment can generate. Unlike t
   **Result on Toolforge, version 1.7.9**: 300 articles still make the server restart, after 347 s. Since the memory measured locally stays low, the most likely cause is temporary space: in 1.7.9, the part files, the merged file and the final PDF coexisted, about three times the size of the book (588 MB for a 197 MB book, measured locally). Since 1.7.10, the part files are deleted as soon as they are merged: twice the size of the book (392 MB). The exact cause (memory or the pod's temporary space quota) could not be read from the Toolforge Kubernetes events.
 
   **Result on Toolforge, version 1.7.10**: limit of about 100 articles (1,637 pages, 182 MB), failure at 150 and 200 articles, a regression compared with 1.7.7; the temporary space hypothesis is not enough to explain it. Details of each measurement, version by version: [testLimitetoolforge.md](testLimitetoolforge.md) (in French).
+
+  **Result on Toolforge, version 1.8.6** (assembly by PyMuPDF): **limit of about 800 articles (14,092 pages, 779 MB of PDF)**, with no server restart during the whole test. At 1,000 articles, the generation fails with an error message (a part file deleted twice after merging), without a restart. Merging now costs only 283 MB at 800 articles; the heaviest step is now page numbering (1,295 MB at 800 articles).
 
 ## 14\. Security and robustness
 

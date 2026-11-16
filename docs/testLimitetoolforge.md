@@ -16,6 +16,37 @@ Réglages communs à toutes les mesures : `scripts/limit_check.py`, pages liées
 | 1.8.2   | 100 articles     | 150                     |
 | 1.8.3   | 150 articles     | 200                     |
 | 1.8.5   | au moins 150 articles | test arrêté avant 200 |
+| 1.8.6   | 800 articles     | 1 000 (erreur sans redémarrage) |
+
+## Version 1.8.6 (16/11/2026, 04:35 UTC)
+
+Assemblage par PyMuPDF : fusion par lots de 20 en mise à jour incrémentale, signets, liens, numéros par `insert_text`, écriture. Test en deux temps (paliers 100 à 600, puis 800 à 1 500), suivi par `GET /api/health/generations` et `GET /api/health/details`. Le serveur n'a redémarré à aucun moment (démarré à 04:34:06 UTC). Pendant le test, d'autres utilisateurs ont généré des livres (7 générations de 12 à 200 articles) : la mémoire du conteneur additionne leurs livres et les nôtres.
+
+| Articles | Pages  | Taille du PDF | Wikipédia | Application | Transfert  | Total      | Résultat |
+|----------|--------|---------------|-----------|-------------|------------|------------|----------|
+| 100      | 1 637  | 93,2 Mo       | 127,5 s   | 25,4 s      | 58,8 s     | 211,8 s    | réussi   |
+| 200      | 3 435  | 195,7 Mo      | 215,6 s   | 62,1 s      | 365,4 s    | 643,0 s    | réussi   |
+| 300      | 5 119  | 290,0 Mo      | 264,0 s   | 117,3 s     | 570,4 s    | 951,8 s    | réussi   |
+| 400      | 7 305  | 420,6 Mo      | 246,5 s   | 216,0 s     | 960,2 s    | 1 422,7 s  | réussi   |
+| 600      | 10 629 | 603,6 Mo      | 663,4 s   | 425,0 s     | 1 323,2 s  | 2 411,6 s  | réussi   |
+| 800      | 14 092 | 778,6 Mo      | 886,0 s   | 670,7 s     | 1 912,1 s  | 3 468,8 s  | réussi   |
+| 1 000    | —      | —             | —         | —           | —          | 1 403,8 s  | échec    |
+
+Journal de l'assemblage, mémoire du processus d'assemblage (RSS), en Mo :
+
+| Étape                 | 100 | 300 | 400 | 600   | 800   |
+|-----------------------|-----|-----|-----|-------|-------|
+| page de licence       | 160 | 162 | 169 | 173   | 173   |
+| fusion des parties    | 222 | 231 | 253 | 264   | 283   |
+| numérotation          | 292 | 551 | 719 | 1 010 | 1 295 |
+| écriture              | 292 | 559 | 730 | 1 022 | 1 316 |
+| pic du conteneur      | 740 | 1 448 | 1 936 | 2 048 | 2 048 |
+
+**Limite : environ 800 articles (14 000 pages, 780 Mo de PDF), contre 150 en 1.8.5.** La fusion par PyMuPDF ne coûte presque plus rien (283 Mo à 800 articles, contre plus de 1 Go à 100 articles avec qpdf). Le nouveau poste est la numérotation : `insert_text` garde chaque page modifiée en mémoire (environ 0,09 Mo par page) et prend 7 minutes à 800 articles. Le conteneur touche sa limite de 2 Gio dès 600 articles sans être arrêté, une partie étant du cache de fichiers récupérable.
+
+À 1 000 articles, la génération échoue avec un message d'erreur, sans redémarrage du serveur : `FileNotFoundError` juste après la fusion, avant l'étape `merge_parts` du journal. Cause probable : une même partie figure deux fois dans la liste à fusionner (deux titres de même clé d'article), et la suppression des fichiers des parties après la fusion échoue sur la seconde. À corriger ; la numérotation aurait de toute façon dépassé la mémoire (1 806 Mo pour le conteneur dès la page de licence).
+
+Pistes suivantes : numéroter les pages pendant la fusion, lot par lot, pour libérer la mémoire tous les 20 articles ; corriger la double suppression des parties.
 
 ## Mesures locales de l'assemblage (16/11/2026)
 
