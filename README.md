@@ -3,7 +3,7 @@
 <p align="center"><img src="app/static/Wikipedia2bookLogo.png" alt="Wikipedia2Book logo" width="180"></p>
 
 
-WWikipedia2Book is a web application that allows you to compile a book in PDF format, ready for printing. Users can select a book or specific articles, explore related sub-links, organize the content into chapters, and configure the layout before exporting the final PDF.
+Wikipedia2Book is a web application that allows you to compile a book in PDF format, ready for printing. Users can select a book or specific articles, explore related sub-links, organize the content into chapters, and configure the layout before exporting the final PDF.
 
 
 ## Features
