@@ -44,7 +44,7 @@ Functional and technical details
 ### Production deployment
 - [web app](https://wikipedia2book.toolforge.org)
 - [API](https://wikipedia2book.toolforge.org/docs)
-- [Wikipedia usage](https://gmoulard.github.io/wikipedia2book/stats.html)
+- [Toolforge usage](https://gmoulard.github.io/wikipedia2book/stats.html)
 
 ### developement 
 - [Northflank](https://prod--wikipedia2book--wkvpbnfj6h4v.code.run) 
