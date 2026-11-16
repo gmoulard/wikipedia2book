@@ -15,6 +15,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import sys
+import threading
+import time
 import unittest
 from pathlib import Path
 
@@ -115,6 +117,51 @@ class LimitCheckTest(unittest.TestCase):
         ])
         self.assertIn("| 25 | 250 | 2.5 Mo |", table)
         self.assertIn("échec : GenerationError: flux interrompu", table)
+
+
+class ParallelTest(unittest.TestCase):
+    def setUp(self):
+        self.lock = threading.Lock()
+        self.running = 0
+        self.peak = 0
+        self.waited = []
+
+    def fake(self, limit):
+
+        def generator(base_url, body, language, timeout):
+            with self.lock:
+                self.running += 1
+                self.peak = max(self.peak, self.running)
+                position = self.running
+            time.sleep(0.05)
+            with self.lock:
+                self.running -= 1
+            if position > limit:
+                raise GenerationError("flux interrompu avant la fin de la génération")
+            return {"total_s": 2.0 + position / 10}
+        return generator
+
+    def test_generations_of_a_step_run_at_the_same_time_until_a_step_fails(self):
+        body = {"name": "Épaves", "main_articles": []}
+        results = limit_check.run_parallel("http://x", [3, 6, 12], body, "fr", generator=self.fake(8), wait=self.waited.append)
+        self.assertEqual([r["books"] for r in results], [3, 6, 12])
+        self.assertEqual([(r["passed"], r["failed"]) for r in results[:2]], [(3, 0), (6, 0)])
+        self.assertEqual(results[2]["failed"], 4)
+        self.assertEqual(self.peak, 12)
+        self.assertEqual(self.waited, ["http://x"])
+        self.assertIn("GenerationError: flux interrompu avant la fin de la génération", results[2]["errors"])
+
+    def test_parallel_report(self):
+        table = limit_check.parallel_report([
+            {"books": 10, "passed": 10, "failed": 0, "wall_s": 30.0, "median_s": 25.0, "slowest_s": 29.0, "errors": []},
+            {"books": 50, "passed": 0, "failed": 50, "wall_s": 90.0, "median_s": None, "slowest_s": None, "errors": ["OSError: boom"]},
+        ])
+        self.assertIn("| 10 | 10 | 0 | 30.0 s | 25.0 s | 29.0 s | — |", table)
+        self.assertIn("| 50 | 0 | 50 | 90.0 s | — | — | OSError: boom |", table)
+
+    def test_reference_book_is_the_frozen_sample(self):
+        book = limit_check.book_from_json(limit_check.REFERENCE_BOOK)
+        self.assertEqual(len(book["main_articles"]), 10)
 
 
 if __name__ == "__main__":

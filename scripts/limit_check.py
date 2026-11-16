@@ -16,6 +16,8 @@
 
 import argparse
 import json
+import statistics
+from concurrent.futures import ThreadPoolExecutor
 import sys
 import time
 import urllib.parse
@@ -24,10 +26,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from perf_check import GenerationError, generate, project
+from perf_check import GenerationError, book_from_json, generate, project
 
 USER_AGENT = "Wikipedia2Book-limit/1.0 (https://github.com/gmoulard/wikipedia2book)"
 DEFAULT_STEPS = (25, 50, 100, 200, 400, 800)
+REFERENCE_BOOK = "app/static/testPerformanceReference.json"
 
 
 def source_titles(page, language, count):
@@ -105,6 +108,51 @@ def search(base_url, titles, language, start, precision, maximum, generator=gene
     return results, passed, failed
 
 
+def measure_parallel(base_url, count, body, language, generator=generate):
+    def one(index):
+        start = time.perf_counter()
+        try:
+            return {"total_s": generator(base_url, body, language, timeout=3600)["total_s"]}
+        except (GenerationError, OSError, ValueError) as error:
+            return {"error": f"{type(error).__name__}: {error}", "after_s": time.perf_counter() - start}
+
+    start = time.perf_counter()
+    # NE PAS limiter le nombre de fils sous count : les générations doivent être demandées toutes en même temps, c'est ce que le palier mesure.
+    with ThreadPoolExecutor(max_workers=count) as pool:
+        runs = list(pool.map(one, range(count)))
+    done = [run["total_s"] for run in runs if "error" not in run]
+    errors = [run["error"] for run in runs if "error" in run]
+    return {
+        "books": count,
+        "passed": len(done),
+        "failed": len(errors),
+        "wall_s": round(time.perf_counter() - start, 1),
+        "median_s": round(statistics.median(done), 1) if done else None,
+        "slowest_s": round(max(done), 1) if done else None,
+        "errors": sorted(set(errors))[:3],
+    }
+
+
+def run_parallel(base_url, steps, body, language, generator=generate, wait=wait_for_server):
+    results = []
+    for count in steps:
+        results.append(measure_parallel(base_url, count, body, language, generator))
+        if results[-1]["failed"]:
+            wait(base_url)
+            break
+    return results
+
+
+def parallel_report(results):
+    lines = ["| Livres en parallèle | Réussis | Échecs | Durée totale | Génération médiane | Plus lente | Erreurs |",
+             "|---|---|---|---|---|---|---|"]
+    for result in results:
+        median = "—" if result["median_s"] is None else f"{result['median_s']} s"
+        slowest = "—" if result["slowest_s"] is None else f"{result['slowest_s']} s"
+        lines.append(f"| {result['books']} | {result['passed']} | {result['failed']} | {result['wall_s']} s | {median} | {slowest} | {'; '.join(result['errors']) or '—'} |")
+    return "\n".join(lines)
+
+
 def report(results):
     lines = ["| Articles | Pages | Taille | Wikipédia | Application | Transfert | Total | Résultat |",
              "|---|---|---|---|---|---|---|---|"]
@@ -135,8 +183,14 @@ def main():
     parser.add_argument("--precision", type=int, default=50)
     parser.add_argument("--max", type=int, default=2000, dest="maximum")
     parser.add_argument("--save-pdf", type=Path, metavar="DOSSIER", help="enregistre chaque PDF reçu dans DOSSIER (limite-<N>-articles.pdf), par exemple ./tmp, ignoré par git")
+    parser.add_argument("--parallel", metavar="PALIERS", help="générations simultanées du même livre, par paliers (par exemple 10,20,50), jusqu'au premier palier qui échoue")
+    parser.add_argument("--book", default=REFERENCE_BOOK, help=f"livre JSON généré par --parallel (par défaut {REFERENCE_BOOK})")
     args = parser.parse_args()
-    if args.search:
+    if args.parallel:
+        steps = [int(step) for step in args.parallel.split(",")]
+        results = run_parallel(args.base_url, steps, book_from_json(args.book), args.language)
+        print(parallel_report(results))
+    elif args.search:
         titles = source_titles(args.source_page, args.language, args.maximum)
         results, passed, failed = search(args.base_url, titles, args.language, args.search, args.precision, args.maximum, save_dir=args.save_pdf)
         print(report(results))
