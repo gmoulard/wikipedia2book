@@ -58,7 +58,8 @@ def measure_one(base_url, count, titles, language, generator=generate, save_dir=
     options = {"save_to": save_dir / f"limite-{count}-articles.pdf"} if save_dir else {}
     start = time.perf_counter()
     try:
-        measure = generator(base_url, body, language, timeout=3600, **options)
+        # NE PAS remettre de délai : une génération qui attend son tour (« Serveur occupé ») peut durer longtemps sans échouer, et le test la compterait à tort en échec.
+        measure = generator(base_url, body, language, timeout=None, **options)
     except (GenerationError, OSError, ValueError) as error:
         return {"articles": count, "error": f"{type(error).__name__}: {error}", "after_s": round(time.perf_counter() - start, 1)}
     return {"articles": count, **{key: round(value, 1) if isinstance(value, float) else value for key, value in measure.items()}}
@@ -112,7 +113,7 @@ def measure_parallel(base_url, count, body, language, generator=generate):
     def one(index):
         start = time.perf_counter()
         try:
-            return {"total_s": generator(base_url, body, language, timeout=3600)["total_s"]}
+            return {"total_s": generator(base_url, body, language, timeout=None)["total_s"]}
         except (GenerationError, OSError, ValueError) as error:
             return {"error": f"{type(error).__name__}: {error}", "after_s": time.perf_counter() - start}
 

@@ -151,6 +151,17 @@ class ParallelTest(unittest.TestCase):
         self.assertEqual(self.waited, ["http://x"])
         self.assertIn("GenerationError: flux interrompu avant la fin de la génération", results[2]["errors"])
 
+    def test_generations_are_never_abandoned(self):
+        timeouts = []
+
+        def generator(base_url, body, language, timeout):
+            timeouts.append(timeout)
+            return {"total_s": 1.0, "wikipedia_s": 0.5, "app_s": 0.3, "transfer_s": 0.2, "pages": 10, "size_bytes": 1}
+
+        limit_check.run_parallel("http://x", [2], {"main_articles": []}, "fr", generator=generator, wait=self.waited.append)
+        limit_check.run("http://x", [1], ["A"], "fr", generator=generator)
+        self.assertEqual(timeouts, [None, None, None])
+
     def test_parallel_report(self):
         table = limit_check.parallel_report([
             {"books": 10, "passed": 10, "failed": 0, "wall_s": 30.0, "median_s": 25.0, "slowest_s": 29.0, "errors": []},
