@@ -109,7 +109,8 @@ def table(rows: list[dict], lang: str) -> str:
 
 def block(rows: list[dict], lang: str) -> str:
     body = "\n".join("  " + line for line in table(rows, lang).split("\n"))
-    return f"  {START}\n{body}\n\n  {TEXT[lang]['legend']}\n  {END}"
+    # NE PAS coller le tableau au marqueur : sans ligne vide après le commentaire HTML, kramdown (GitHub Pages) lit le tableau comme un paragraphe.
+    return f"  {START}\n\n{body}\n\n  {TEXT[lang]['legend']}\n  {END}"
 
 
 def update_spec(text: str, lang: str, rows: list[dict]) -> str:

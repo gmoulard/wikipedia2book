@@ -1136,6 +1136,7 @@ Deux séries de mesures, dans des tableaux aux colonnes communes alignées (date
 * **Résultats du benchmark** : chaque passage du benchmark est reporté ici (médiane des générations de chaque scénario) ; le bilan de chaque passage suit le tableau. Le tableau est produit par `scripts/benchmark_table.py` à partir de [benchmark-results.csv](benchmark-results.csv) : ajouter au CSV une ligne par scénario du passage (verdict `ok`, `watch`, `regression`, `failure` ou `new`), puis lancer `python scripts/benchmark_table.py`, qui réécrit le tableau des deux spécifications entre ses marqueurs.
 
   <!-- benchmark-table:start -->
+
   | Version | Date | Cible | Niveau | 50 p. | 200 p. | 1 art. | 50 p. sans n° | 200 p. chapitres | 200 p. A5 paysage | 20 art. | Livre exemple | Livre de référence |
   |---|---|---|---|---|---|---|---|---|---|---|---|---|
   | 1.8.2 | 2026-11-15 | Toolforge | max | ✅ | ✅ | ⚠️ (+57 %) | ✅ | ✅ | ✅ | ✅ |  |  |
