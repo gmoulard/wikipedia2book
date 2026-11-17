@@ -11,7 +11,7 @@ Une action réalisée est retirée de cette liste (pas cochée) : l'historique G
 
 ## 2. Nouvelle fonctionnalisées
 
-- [ ] wikibooks autre langues https://de.wikibooks.org/wiki/Tauchen_in_Hilfeleistungsunternehmen:_-Teil_D-_Tauchermedizin
+- [ ] wikibooks autre langues DE, IT, JA, ID, HI, HU, ZH, PL, DE, EN https://de.wikibooks.org/wiki/Tauchen_in_Hilfeleistungsunternehmen:_-Teil_D-_Tauchermedizin
 
 
 
