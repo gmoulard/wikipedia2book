@@ -18,6 +18,7 @@ exemple d'erreur https://fr.wikiversity.org/wiki/D%C3%A9veloppement_durable
 - pour chaque ligne dans todo-mediawiki2latex-visibility.md regarde comment ont peut ajouté une inforamtion sur wikipedia2book
 - sauvegarde en plus de la logs sur le serveur le json de la demande de génération pour la mettre a disposition a coté du téléchargement de la log.
 - garde un tableaux des url qui ont été refusé par wikipedia2book
+- dans l'interface propose de mettre sur la première et la dernière page des couleurs. propose aussi de pouvoir insérer le logo wikipédia à la première et à la dernière page. 
 
 ## 3. Améliorations possibles
 
