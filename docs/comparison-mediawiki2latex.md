@@ -2,7 +2,7 @@
 
 As of 15 November 2026.
 
-- **Wikipedia2Book 1.7.5**: version on `main` (`app/version.py`), described by `docs/SPECIFICATIONS.en.md`.
+- **Wikipedia2Book 1.7.5**: version on `main` (`app/version.py`), described by `docs/FunctionalSpec.en.md` and `docs/TechnicalSpec.en.md`.
 - **mediawiki2latex**: version of the web service `mediawiki2latex.wmcloud.org` and of the author's manual (Dirk Hünniger, Wikibooks page last edited on 9 July 2025). The service does not show a version number. The latest version published on Hackage is 7.33 (January 2019); Debian sid offers an 8.7 package, not checked here (Debian site unreachable).
 
 ## 1. Approach
@@ -83,7 +83,7 @@ As of 15 November 2026.
 
 ## 8. Performance
 
-Wikipedia2Book figures are measured on Toolforge (sections 13.11 and 13.12 of `docs/SPECIFICATIONS.en.md`, versions 1.9.5 to 1.11.0, 16 November 2026). mediawiki2latex figures come from its manual and the limits of its web service: they have not been measured.
+Wikipedia2Book figures are measured on Toolforge (sections 13.11 and 13.12 of `docs/TechnicalSpec.en.md`, versions 1.9.5 to 1.11.0, 16 November 2026). mediawiki2latex figures come from its manual and the limits of its web service: they have not been measured.
 
 | | Wikipedia2Book (measured on Toolforge) | mediawiki2latex (from its manual) |
 |---|---|---|
@@ -109,4 +109,4 @@ The gaps that Wikipedia2Book could close without giving up the official PDF are 
 - [mediawiki2latex web service](https://mediawiki2latex.wmcloud.org/)
 - [mediawiki2latex on Hackage](https://hackage.haskell.org/package/mediawiki2latex)
 - [PDF export (mediawiki.org)](https://www.mediawiki.org/wiki/PDF_export)
-- `docs/SPECIFICATIONS.en.md` (Wikipedia2Book 1.7.5)
+- `docs/FunctionalSpec.en.md` and `docs/TechnicalSpec.en.md` (Wikipedia2Book 1.7.5, then a single `SPECIFICATIONS.en.md`)

@@ -21,7 +21,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 CSV_PATH = ROOT / "docs" / "benchmark-results.csv"
-SPECS = {"fr": ROOT / "docs" / "SPECIFICATIONS.fr.md", "en": ROOT / "docs" / "SPECIFICATIONS.en.md"}
+SPECS = {"fr": ROOT / "docs" / "TechnicalSpec.fr.md", "en": ROOT / "docs" / "TechnicalSpec.en.md"}
 FIELDS = ["date", "version", "target", "level", "scenario", "pages", "wikipedia_s", "application_s", "transfer_s", "total_s", "app_per_page_delta_pct", "verdict"]
 VERDICTS = ("ok", "watch", "regression", "failure", "new")
 START = "<!-- benchmark-table:start -->"

@@ -34,9 +34,10 @@ Assemble the official PDFs of Wikipedia (and other Wikimedia projects) pages int
 
 - [documentation](https://gmoulard.github.io/wikipedia2book/) on site GitHub Pages
 
-Functional and technical details 
-- [SPECIFICATIONS.fr.md](docs/SPECIFICATIONS.fr.md) (French, the reference version).
-- [SPECIFICATIONS.en.md](docs/SPECIFICATIONS.en.md) (English translation) 
+Every document is listed in [docs.md](docs/docs.md):
+- functional specification: [FunctionalSpec.fr.md](docs/FunctionalSpec.fr.md) (French, the reference version), [FunctionalSpec.en.md](docs/FunctionalSpec.en.md) (English translation);
+- technical specification: [TechnicalSpec.fr.md](docs/TechnicalSpec.fr.md), [TechnicalSpec.en.md](docs/TechnicalSpec.en.md);
+- version history: [CHANGELOG.fr.md](docs/CHANGELOG.fr.md), [CHANGELOG.en.md](docs/CHANGELOG.en.md).
 
 ## Deployment
 
@@ -94,15 +95,18 @@ wikipedia2book/
 ├── requirements.txt             # Python dependencies
 ├── .claude/skills/              # Git submodule (gmoulard/claude_skills): generic Claude Code procedures code-style, spec-sync, debug-frontend, release, deploy-production
 ├── docs/                        # Documentation site (GitHub Pages source)
-│   ├── SPECIFICATIONS.fr.md     # Reference behaviour (French original)
-│   ├── SPECIFICATIONS.en.md     # English translation of the specifications
+│   ├── docs.md                  # List of every document
+│   ├── FunctionalSpec.fr.md, FunctionalSpec.en.md  # Functional specification (French original, English translation)
+│   ├── TechnicalSpec.fr.md, TechnicalSpec.en.md    # Technical specification
+│   ├── CHANGELOG.fr.md, CHANGELOG.en.md            # Version history
+│   ├── _config.yml              # Just the Docs theme for the site
 │   ├── benchmark-results.csv    # Every benchmark measurement, for analysis
 │   ├── toolviews.csv, toolforge_hourly.csv, stats.md  # Usage statistics and their charts (generated)
 │   ├── comparison-mediawiki2latex.md  # Comparison with mediawiki2latex
 │   ├── comparison-ws-export.md  # Comparison with WS Export
 │   ├── tests-manuels.md  # Possible uses and manual tests (browser and API, in French)
 │   ├── testLimitetoolforge.md   # Limit test results on Toolforge, by version (French)
-│   └── _includes/head-custom.html  # Mermaid rendering on the site
+│   └── _includes/head_custom.html  # Mermaid rendering and statistics chart on the site
 ├── CODE_OF_CONDUCT.md
 └── LICENSE                      # GNU AGPL v3.0
 ```
@@ -137,7 +141,7 @@ The application is then reachable at `http://localhost:8000`.
 
 ## Administration page
 
-`/admin` shows the state, usage and performance of the service (memory, generations in progress, requests per hour, durations, limits and alerts) to administrators, who sign in with their Wikimedia account (OAuth 2.0, identification only). Details in section 12.2 of the [specifications](docs/SPECIFICATIONS.en.md). To enable it on a deployment:
+`/admin` shows the state, usage and performance of the service (memory, generations in progress, requests per hour, durations, limits and alerts) to administrators, who sign in with their Wikimedia account (OAuth 2.0, identification only). Details in section 12.2 of the [functional specification](docs/FunctionalSpec.en.md). To enable it on a deployment:
 
 1. Register an OAuth 2.0 application on [Special:OAuthConsumerRegistration](https://meta.wikimedia.org/wiki/Special:OAuthConsumerRegistration/propose/oauth2): "User identity verification only", callback URL `https://<your-host>/admin/callback`. It is approved automatically.
 2. Give the server the client ID, the client secret and the callback URL. On Toolforge, the callback is set in the `Procfile`; the two secrets go in the tool's environment:
@@ -190,7 +194,7 @@ Count about 250 MB for the server and the assembly process themselves, plus roug
 python scripts/limit_check.py --base-url https://your-server --search 50
 ```
 
-It doubles the number of articles until the first failure, then narrows down by bisection. Add `--save-pdf ./tmp` to keep each generated book (`./tmp` is ignored by git). With the monitoring token (`Authorization: Bearer`, see "Administration page"), `GET /api/health/details` shows the memory of the container and its limit, and `GET /api/health/generations` the memory reached at each stage of the last generations (details in section 13 of the [specifications](docs/SPECIFICATIONS.en.md)).
+It doubles the number of articles until the first failure, then narrows down by bisection. Add `--save-pdf ./tmp` to keep each generated book (`./tmp` is ignored by git). With the monitoring token (`Authorization: Bearer`, see "Administration page"), `GET /api/health/details` shows the memory of the container and its limit, and `GET /api/health/generations` the memory reached at each stage of the last generations (details in section 13 of the [technical specification](docs/TechnicalSpec.en.md)).
 
 
 ## Technology stack

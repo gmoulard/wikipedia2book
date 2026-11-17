@@ -2,7 +2,7 @@
 
 As of 17 November 2026.
 
-- **Wikipedia2Book 1.11.0**: version on `main` (`app/version.py`), described by `docs/SPECIFICATIONS.en.md`. Toolforge still serves 1.9.7, which cannot yet import a Wikisource work from its table of contents.
+- **Wikipedia2Book 1.11.0**: version on `main` (`app/version.py`), described by `docs/FunctionalSpec.en.md` and `docs/TechnicalSpec.en.md`. Toolforge still serves 1.9.7, which cannot yet import a Wikisource work from its table of contents.
 - **WS Export** ("Wikisource Book Export"): web service `ws-export.wmcloud.org`, its user documentation (`Wikisource:WS_Export` on Multilingual Wikisource) and the README of its source code. The service does not show a version number. The code has moved from GitHub to the Wikimedia GitLab (`toolforge-repos/wsexport`, T395398).
 
 ## 1. Approach
@@ -48,7 +48,7 @@ As of 17 November 2026.
 
 ## 5. Performance
 
-Wikipedia2Book figures are measured on Toolforge (sections 13.11 and 13.12 of `docs/SPECIFICATIONS.en.md`, versions 1.9.5 to 1.11.0, 16 November 2026). WS Export figures come from the Community Tech "Ebook Export Improvement" page on Meta-Wiki: they have not been measured on the same books.
+Wikipedia2Book figures are measured on Toolforge (sections 13.11 and 13.12 of `docs/TechnicalSpec.en.md`, versions 1.9.5 to 1.11.0, 16 November 2026). WS Export figures come from the Community Tech "Ebook Export Improvement" page on Meta-Wiki: they have not been measured on the same books.
 
 | | Wikipedia2Book (measured on Toolforge) | WS Export (published by Community Tech) |
 |---|---|---|
@@ -80,4 +80,4 @@ Wikipedia2Book figures are measured on Toolforge (sections 13.11 and 13.12 of `d
 - [WS Export README (GitHub, moved to the Wikimedia GitLab)](https://github.com/wikimedia/ws-export)
 - [Community Tech: Ebook Export Improvement (Meta-Wiki)](https://meta.wikimedia.org/wiki/Community_Tech/Ebook_Export_Improvement)
 - [WS Export on Phabricator](https://phabricator.wikimedia.org/tag/ws_export/)
-- `docs/SPECIFICATIONS.en.md` (Wikipedia2Book 1.11.0)
+- `docs/FunctionalSpec.en.md` and `docs/TechnicalSpec.en.md` (Wikipedia2Book 1.11.0, then a single `SPECIFICATIONS.en.md`)

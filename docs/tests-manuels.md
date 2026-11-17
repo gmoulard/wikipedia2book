@@ -2,7 +2,7 @@
 
 Ce document liste tout ce que Wikipedia2Book accepte, avec pour chaque cas un exemple à essayer **dans le navigateur** et le même cas **par l'API**. Il sert à deux choses : montrer les usages possibles, et dérouler une recette à la main avant une mise en production.
 
-Le comportement de référence est décrit dans [SPECIFICATIONS.fr.md](SPECIFICATIONS.fr.md) (section 3.1 pour les sources, 13.3 pour l'API).
+Le comportement de référence est décrit dans la [spécification fonctionnelle](FunctionalSpec.fr.md) (section 3.1 pour les sources) et la [spécification technique](TechnicalSpec.fr.md) (section 13.3 pour l'API).
 
 ## Comment s'en servir
 

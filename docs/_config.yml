@@ -1,0 +1,52 @@
+title: Wikipedia2Book
+description: Livres PDF imprimables à partir de pages Wikimédia — documentation / documentation
+remote_theme: just-the-docs/just-the-docs@v0.12.0
+plugins:
+  - jekyll-remote-theme
+  - jekyll-redirect-from
+  - jekyll-relative-links
+  - jekyll-optional-front-matter
+  - jekyll-titles-from-headings
+
+logo: /static/Wikipedia2bookLogo.png
+search_enabled: true
+heading_anchors: true
+back_to_top: true
+back_to_top_text: Haut de page / Back to top
+aux_links:
+  Wikipedia2Book: https://wikipedia2book.toolforge.org/
+  GitHub: https://github.com/gmoulard/wikipedia2book
+aux_links_new_tab: true
+footer_content: Wikipedia2Book — GNU AGPL v3.0 — <a href="https://github.com/gmoulard/wikipedia2book">github.com/gmoulard/wikipedia2book</a>
+
+relative_links:
+  enabled: true
+  collections: false
+
+defaults:
+  - scope: { path: "index.md" }
+    values: { title: Accueil / Home, nav_order: 1 }
+  - scope: { path: "docs.md" }
+    values: { title: Documents, nav_order: 2 }
+  - scope: { path: "FunctionalSpec.fr.md" }
+    values: { title: Spécification fonctionnelle, nav_order: 3, redirect_from: [/SPECIFICATIONS.fr.html] }
+  - scope: { path: "FunctionalSpec.en.md" }
+    values: { title: Functional specification, nav_order: 4, redirect_from: [/SPECIFICATIONS.en.html] }
+  - scope: { path: "TechnicalSpec.fr.md" }
+    values: { title: Spécification technique, nav_order: 5 }
+  - scope: { path: "TechnicalSpec.en.md" }
+    values: { title: Technical specification, nav_order: 6 }
+  - scope: { path: "CHANGELOG.fr.md" }
+    values: { title: Historique des versions, nav_order: 7 }
+  - scope: { path: "CHANGELOG.en.md" }
+    values: { title: Version history, nav_order: 8 }
+  - scope: { path: "tests-manuels.md" }
+    values: { title: Tests manuels, nav_order: 9 }
+  - scope: { path: "testLimitetoolforge.md" }
+    values: { title: Test aux limites, nav_order: 10 }
+  - scope: { path: "comparison-mediawiki2latex.md" }
+    values: { title: Comparison with mediawiki2latex, nav_order: 11 }
+  - scope: { path: "comparison-ws-export.md" }
+    values: { title: Comparison with WS Export, nav_order: 12 }
+  - scope: { path: "stats.md" }
+    values: { title: Statistiques / Statistics, nav_order: 13 }
