@@ -83,8 +83,10 @@ function fillTable(id, headers, rows, numeric = []) {
       if (content.href) {
         const link = element('a', content.text);
         link.href = content.href;
-        link.target = '_blank';
-        link.rel = 'noopener';
+        if (content.external) {
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+        }
         td.append(link);
       } else {
         td.textContent = content.text ?? '';
@@ -110,6 +112,24 @@ function renderSummary(data) {
     ['admin.disk', formatBytes(server.temporary?.free_bytes)],
     ['admin.waiting', gates.join(' / ')],
   ]);
+
+  const system = data.system || {};
+  fillTiles('adminSystem', [
+    ['admin.host', system.host || '—'],
+    ['admin.platform', system.platform || '—'],
+    ['admin.os', system.os || '—'],
+    ['admin.python', system.python || '—'],
+    ['admin.uptime', formatDuration(system.uptime_s)],
+    ['admin.cpus', `${formatNumber(system.cpu_count)} (${system.cpu_limit == null ? '—' : formatNumber(system.cpu_limit)})`],
+    ['admin.load', system.load_average ? system.load_average.map((value) => formatNumber(value)).join(' / ') : '—'],
+    ['admin.processCpu', formatSeconds(system.process_cpu_s)],
+    ['admin.threads', formatNumber(system.threads)],
+    ['admin.openFiles', formatNumber(system.open_files)],
+    ['admin.processes', `${formatNumber(system.processes)} / ${formatNumber(system.processes_limit)}`],
+    ['admin.oomKills', formatNumber(system.oom_kills)],
+    ['admin.workers', formatNumber(system.worker_processes)],
+  ]);
+  fillTable('adminLibraries', [t('admin.library'), t('admin.version')], Object.entries(system.libraries || {}).map(([name, version]) => [name, version || '—']));
 
   const usage = data.usage;
   const counts = ADMIN_STATUSES.filter((status) => usage.generations[status]).map((status) => `${statusLabel(status)} ${formatNumber(usage.generations[status])}`);
@@ -153,7 +173,7 @@ function renderSummary(data) {
 
   fillTable('adminRecent', [t('admin.colJournal'), t('admin.colStarted'), t('admin.colStatus'), t('admin.colDuration'), t('admin.colArticles'), t('admin.colSize'), t('admin.colWaited'), t('admin.colPeak'), t('admin.version')],
     data.recent.map((row) => [
-      { text: `#${row.id}`, href: `/admin/api/generations/${row.id}` },
+      { text: `#${row.id}`, href: `/admin/generation?id=${row.id}` },
       formatTime(row.started),
       { text: statusLabel(row.status), className: `admin-status-${row.status}` },
       formatSeconds(row.duration_s),
@@ -235,5 +255,118 @@ async function startAdmin() {
   adminTimer = setInterval(loadSummary, ADMIN_REFRESH_MS);
 }
 
-adminById('adminRefresh').addEventListener('click', loadSummary);
-startAdmin();
+const STAGE_FIELDS = new Set(['at_s', 'stage', 'process', 'container_bytes', 'rss_bytes', 'peak_rss_bytes', 'server_rss_bytes', 'url']);
+
+function formatDuration(seconds) {
+  if (seconds == null) return '—';
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const parts = [];
+  if (hours) parts.push(formatNumber(hours, { style: 'unit', unit: 'hour' }));
+  parts.push(formatNumber(minutes, { style: 'unit', unit: 'minute' }));
+  return parts.join(' ');
+}
+
+function yesNo(value) {
+  return value == null ? '—' : t(value ? 'admin.yes' : 'admin.no');
+}
+
+function stageDetails(stage) {
+  return Object.entries(stage)
+    .filter(([key, value]) => !STAGE_FIELDS.has(key) && value != null)
+    .map(([key, value]) => `${key}=${typeof value === 'number' && key.endsWith('_bytes') ? formatBytes(value) : value}`)
+    .join(' · ');
+}
+
+function renderGeneration(entry) {
+  const generation = entry.generation;
+  document.title = `Wikipedia2Book · ${t('admin.generationTitle', { id: generation.id })}`;
+  adminById('generationTitle').textContent = t('admin.generationTitle', { id: generation.id });
+  adminById('generationStatus').textContent = `${statusLabel(generation.status)} · ${formatSeconds(generation.duration_s)} · ${formatTime(generation.started)}`;
+  fillTiles('generationSummary', [
+    ['admin.colStatus', statusLabel(generation.status)],
+    ['admin.colStarted', formatTime(generation.started)],
+    ['admin.colDuration', formatSeconds(generation.duration_s)],
+    ['admin.colSize', formatBytes(generation.size_bytes)],
+    ['admin.version', generation.version || '—'],
+    ['admin.language', generation.language || '—'],
+    ['admin.colArticles', formatNumber(generation.articles)],
+    ['admin.documents', formatNumber(generation.documents)],
+    ['admin.chapters', formatNumber(generation.chapters)],
+    ['admin.format', `${generation.page_format || '—'} · ${generation.orientation || '—'}`],
+    ['admin.pageNumbers', yesNo(generation.page_numbers)],
+    ['admin.toc', yesNo(generation.table_of_contents)],
+    ...(generation.error ? [['admin.error', generation.error]] : []),
+  ]);
+
+  const downloads = generation.stages.filter((stage) => stage.stage === 'download' || stage.stage === 'fetch_image');
+  fillTable('generationDownloads', [t('admin.colKind'), t('admin.colUrl'), t('admin.colSize'), t('admin.colDownload'), t('admin.colFit'), t('admin.colPages'), t('admin.colAt')],
+    downloads.length ? downloads.map((stage) => [
+      t(`admin.kind_${stage.stage === 'fetch_image' ? 'image' : stage.kind}`),
+      stage.url ? { text: stage.url, href: stage.url, external: true, className: 'admin-wrap' } : '—',
+      formatBytes(stage.size_bytes),
+      formatSeconds(stage.download_s ?? stage.duration_s),
+      stage.fit_s == null ? '—' : formatSeconds(stage.fit_s),
+      stage.pages == null ? '—' : formatNumber(stage.pages),
+      formatSeconds(stage.at_s),
+    ]) : [[t('admin.noDownloads'), '', '', '', '', '', '']],
+    [2, 3, 4, 5, 6]);
+
+  fillTable('generationStages', [t('admin.colAt'), t('admin.colStage'), t('admin.colProcess'), t('admin.colMemory'), t('admin.colDetails')],
+    generation.stages.map((stage) => [
+      formatSeconds(stage.at_s),
+      stage.stage,
+      stage.process,
+      formatBytes(stage.rss_bytes),
+      stageDetails(stage),
+    ]),
+    [0, 3]);
+
+  adminById('generationDownload').onclick = () => {
+    const blob = new Blob([JSON.stringify(entry, null, 2)], { type: 'application/json' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `wikipedia2book-generation-${generation.id}.json`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 60000);
+  };
+}
+
+async function startGeneration() {
+  applyTranslations();
+  const id = Number(new URLSearchParams(window.location.search).get('id'));
+  if (!Number.isInteger(id) || id < 1) {
+    showMessage(t('admin.notFound'));
+    return;
+  }
+  let response;
+  try {
+    response = await fetch(`/admin/api/generations/${id}`, { cache: 'no-store', credentials: 'same-origin' });
+  } catch (error) {
+    showMessage(t('admin.loadFailed', { error: error.message }));
+    return;
+  }
+  if (response.status === 401) {
+    window.location.href = '/admin';
+    return;
+  }
+  if (response.status === 404) {
+    showMessage(t('admin.notFound'));
+    return;
+  }
+  if (!response.ok) {
+    showMessage(t('admin.loadFailed', { error: `HTTP ${response.status}` }));
+    return;
+  }
+  adminById('generationBoard').hidden = false;
+  renderGeneration(await response.json());
+}
+
+if (document.body.dataset.adminPage === 'generation') {
+  startGeneration();
+} else {
+  adminById('adminRefresh').addEventListener('click', loadSummary);
+  startAdmin();
+}

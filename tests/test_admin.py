@@ -136,7 +136,7 @@ class AdminEndpointsTest(unittest.TestCase):
         summary = self.client.get("/admin/api/summary")
         self.assertEqual(summary.status_code, 200)
         self.assertEqual(summary.headers["cache-control"], "no-store")
-        self.assertEqual(set(summary.json()), {"user", "version", "server", "settings", "usage", "performance", "recent"})
+        self.assertEqual(set(summary.json()), {"user", "version", "server", "system", "settings", "usage", "performance", "recent"})
         self.client.get("/admin/logout")
         self.assertIsNone(self.client.get("/admin/api/session").json()["user"])
 
@@ -178,6 +178,16 @@ class AdminEndpointsTest(unittest.TestCase):
         self.assertIn("frame-ancestors 'none'", page.headers["content-security-policy"])
         self.assertEqual((page.headers["x-frame-options"], page.headers["x-content-type-options"], page.headers["referrer-policy"]), ("DENY", "nosniff", "no-referrer"))
         self.assertNotIn("content-security-policy", self.client.get("/api/version").headers)
+
+    def test_generation_page_and_system_information(self):
+        page = self.client.get("/admin/generation", params={"id": 3})
+        self.assertIn('data-admin-page="generation"', page.text)
+        self.assertIn("frame-ancestors 'none'", page.headers["content-security-policy"])
+        self.login("GMoulard")
+        system = self.client.get("/admin/api/summary").json()["system"]
+        for key in ("host", "python", "cpu_count", "uptime_s", "threads", "oom_kills", "libraries"):
+            self.assertIn(key, system)
+        self.assertIn("weasyprint", system["libraries"])
 
     def test_admin_generation_journal_needs_the_session(self):
         self.assertEqual(self.client.get("/admin/api/generations/1").status_code, 401)

@@ -16,6 +16,8 @@
 
 import asyncio
 import base64
+import contextlib
+import io
 import json
 import sys
 import types
@@ -927,7 +929,9 @@ class RemoteFilesTest(unittest.TestCase):
         self.assertFalse(any("https://upload.wikimedia.org" in html for html in self.htmls))
 
     def test_image_processing_is_timed_in_the_generation_journal(self):
-        events = _parse_stream(self.client.post("/api/pdf/stream", json=self._project()).content)
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            events = _parse_stream(self.client.post("/api/pdf/stream", json=self._project()).content)
         self.assertEqual(events[-1]["type"], "done")
         stages = main.generation_log[-1]["stages"]
         images = [stage for stage in stages if stage["stage"] == "fetch_image"]
@@ -945,8 +949,18 @@ class RemoteFilesTest(unittest.TestCase):
         for stage in images + documents:
             self.assertGreater(stage["size_bytes"], 0)
         journal = json.dumps(main.generation_log[-1])
-        for text in ("example.org", "wikimedia", "Couverture", "Notice", "Photo"):
+        for text in ("Couverture", "Notice", "Photo"):
             self.assertNotIn(text, journal)
+        self.assertEqual([stage["url"] for stage in images], ["https://upload.wikimedia.org/couverture.png", "https://example.org/dos.png"])
+        downloads = [stage for stage in stages if stage["stage"] == "download"]
+        self.assertEqual(sorted(stage["kind"] for stage in downloads), ["article", "article", "document", "document"])
+        self.assertIn("https://fr.wikipedia.org/api/rest_v1/page/pdf/Chat/a4", [stage["url"] for stage in downloads])
+        for stage in downloads:
+            self.assertGreaterEqual(stage["download_s"], 0)
+            self.assertGreaterEqual(stage["fit_s"], 0)
+            self.assertGreater(stage["pages"], 0)
+        for text in ("example.org", "wikimedia", "rest_v1", '"url"'):
+            self.assertNotIn(text, output.getvalue())
 
     def test_background_images_go_to_disk_not_to_the_assembly_project(self):
         seen = {}

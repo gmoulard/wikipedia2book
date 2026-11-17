@@ -38,6 +38,9 @@
 .admin-table th, .admin-table td { padding: 6px 10px; border-bottom: 1px solid var(--line-muted); text-align: start; white-space: nowrap; }
 .admin-table th { position: sticky; top: 0; background: var(--subtle); color: var(--ink-soft); font-weight: 700; }
 .admin-table td.number { text-align: end; }
+.admin-table td.admin-wrap { min-width: 16em; white-space: normal; overflow-wrap: anywhere; }
+.admin-libraries { width: auto; margin-top: 12px; }
+#generationStages td:last-child { white-space: normal; overflow-wrap: anywhere; }
 .admin-status-done { color: var(--success); }
 .admin-status-error { color: var(--danger); }
 .admin-status-aborted, .admin-status-running { color: var(--ink-soft); }

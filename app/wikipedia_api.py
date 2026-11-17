@@ -87,6 +87,12 @@ def validate_language(language: str) -> str:
     return normalized
 
 
+def article_pdf_url(title: str, language: str, paper: str, site: str = "wikipedia") -> str:
+    if paper not in WIKIPEDIA_PDF_PAPERS.values():
+        raise ValueError("Format de PDF Wikipédia invalide.")
+    return f"https://{site_host(language, site)}/api/rest_v1/page/pdf/{quote(title.replace(' ', '_'), safe='')}/{paper}"
+
+
 def site_host(language: str, site: str) -> str:
     if site not in SITES:
         raise ValueError(f"Site Wikimédia invalide : seuls {', '.join(SITES)} sont acceptés.")
@@ -306,13 +312,9 @@ class MediaWikiClient:
         return introduction, creator
 
     async def get_article_pdf(self, title: str, language: str, paper: str, site: str = "wikipedia") -> bytes:
-        host = site_host(language, site)
-        if paper not in WIKIPEDIA_PDF_PAPERS.values():
-            raise ValueError("Format de PDF Wikipédia invalide.")
+        url = article_pdf_url(title, language, paper, site)
         if self._client is None:
             raise RuntimeError("MediaWikiClient doit être utilisé dans un bloc async with.")
-        page_path = quote(title.replace(" ", "_"), safe="")
-        url = f"https://{host}/api/rest_v1/page/pdf/{page_path}/{paper}"
         try:
             response = await self._send(url, media=True, timeout=120)
             response.raise_for_status()

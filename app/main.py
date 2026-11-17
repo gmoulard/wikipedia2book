@@ -18,13 +18,16 @@ import asyncio
 import base64
 import contextlib
 import hashlib
+import importlib.metadata
 import itertools
 import json
 import math
 import os
+import platform
 import re
 import secrets
 import shutil
+import socket
 import subprocess
 import tempfile
 import time
@@ -80,7 +83,7 @@ from app.admin import (
     wikimedia_username,
 )
 from app.explorer import discover_related_articles
-from app.isolation import IsolatedProcessDied, preload, run_in_thread, run_in_worker, run_isolated
+from app.isolation import WORKER_PROCESSES, IsolatedProcessDied, preload, run_in_thread, run_in_worker, run_isolated
 from app.resource_gate import Reservation, ResourceGate, release_memory
 from app.request_limits import Alerts, ClosingStreamingResponse, GenerationLimits, LimitRefused, RequestGuard, client_keys, count_setting
 from app import wikipedia_api
@@ -123,6 +126,7 @@ from app.wikipedia_api import (
     SUBPAGE_BOOK_SITES,
     WIKIPEDIA_PDF_PAPERS,
     MediaWikiClient,
+    article_pdf_url,
     MediaWikiError,
     MediaWikiPageNotFound,
     WikipediaBook,
@@ -278,6 +282,7 @@ UNCOUNTED_PATHS = {HOURLY_STATS_PATH, HEALTH_DETAILS_PATH, GENERATION_LOG_PATH}
 HOURLY_KEEP = 48
 hourly_hits: dict[str, int] = {}
 started_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+started_monotonic = time.monotonic()
 CGROUP_DIRECTORY = Path("/sys/fs/cgroup")
 PROCESS_STATUS = Path("/proc/self/status")
 TEMPORARY_PREFIX = "wikipedia2book-"
@@ -306,7 +311,7 @@ async def count_hourly_hits(request: Request, call_next):
 @app.middleware("http")
 async def revalidate_web_app_files(request: Request, call_next):
     response = await call_next(request)
-    if request.url.path in ("/", ADMIN_PATH) or request.url.path.startswith("/static/"):
+    if request.url.path in ("/", ADMIN_PATH, ADMIN_PATH + "/generation") or request.url.path.startswith("/static/"):
         response.headers["Cache-Control"] = "no-cache"
     if request.url.path == ADMIN_PATH or request.url.path.startswith((ADMIN_PATH + "/", "/api/health/")):
         response.headers.update(SECURITY_HEADERS)
@@ -503,6 +508,11 @@ def admin_page() -> FileResponse:
     return FileResponse(static_directory / "admin.html", media_type="text/html")
 
 
+@app.get("/admin/generation", include_in_schema=False)
+def admin_generation_page() -> FileResponse:
+    return FileResponse(static_directory / "admin-generation.html", media_type="text/html")
+
+
 def _login_refused(request: Request) -> Response | None:
     try:
         ADMIN_LOGIN_LIMITS.admit(client_keys((request.client or (None,))[0], {name.lower(): value for name, value in request.headers.items()}, CLIENT_IP_HEADER)).release()
@@ -561,6 +571,85 @@ def admin_session(request: Request, response: Response) -> dict:
     return {"configured": ADMIN.configured, "user": session_user(request, ADMIN)}
 
 
+LIBRARIES = ("fastapi", "starlette", "uvicorn", "pydantic", "httpx", "weasyprint", "pypdf", "pymupdf", "pillow", "reportlab")
+PROCESS_FD_DIRECTORY = Path("/proc/self/fd")
+
+
+def _read_text(path: Path) -> str | None:
+    try:
+        return path.read_text().strip()
+    except OSError:
+        return None
+
+
+def _cgroup_cpu_limit() -> float | None:
+    text = _read_text(CGROUP_DIRECTORY / "cpu.max")
+    parts = (text or "").split()
+    if len(parts) != 2 or not parts[0].isdigit() or not parts[1].isdigit() or int(parts[1]) == 0:
+        return None
+    return round(int(parts[0]) / int(parts[1]), 2)
+
+
+def _cgroup_counters(name: str) -> dict[str, int]:
+    counters = {}
+    for line in (_read_text(CGROUP_DIRECTORY / name) or "").splitlines():
+        key, _, value = line.partition(" ")
+        if value.strip().isdigit():
+            counters[key] = int(value)
+    return counters
+
+
+def _process_threads() -> int | None:
+    for line in (_read_text(PROCESS_STATUS) or "").splitlines():
+        name, _, value = line.partition(":")
+        if name == "Threads" and value.strip().isdigit():
+            return int(value)
+    return None
+
+
+def _open_files() -> int | None:
+    try:
+        return len(os.listdir(PROCESS_FD_DIRECTORY))
+    except OSError:
+        return None
+
+
+def _library_versions() -> dict[str, str | None]:
+    versions = {}
+    for name in LIBRARIES:
+        try:
+            versions[name] = importlib.metadata.version(name)
+        except importlib.metadata.PackageNotFoundError:
+            versions[name] = None
+    return versions
+
+
+def system_info() -> dict:
+    load = os.getloadavg() if hasattr(os, "getloadavg") else None
+    times = os.times()
+    pids_max = _read_text(CGROUP_DIRECTORY / "pids.max")
+    return {
+        "host": socket.gethostname(),
+        "platform": "toolforge" if ON_TOOLFORGE else "container",
+        "os": platform.platform(),
+        "python": platform.python_version(),
+        "pid": os.getpid(),
+        "uptime_s": round(time.monotonic() - started_monotonic),
+        "cpu_count": os.cpu_count(),
+        "cpu_limit": _cgroup_cpu_limit(),
+        "load_average": [round(value, 2) for value in load] if load else None,
+        "process_cpu_s": round(times.user + times.system, 1),
+        "threads": _process_threads(),
+        "open_files": _open_files(),
+        "processes": _read_bytes(CGROUP_DIRECTORY / "pids.current"),
+        "processes_limit": int(pids_max) if pids_max and pids_max.isdigit() else None,
+        "oom_kills": _cgroup_counters("memory.events").get("oom_kill"),
+        "worker_processes": WORKER_PROCESSES,
+        "isolate_assembly": ISOLATE_ASSEMBLY,
+        "libraries": _library_versions(),
+    }
+
+
 def _percentile(values: list[float], share: float) -> float | None:
     if not values:
         return None
@@ -600,6 +689,7 @@ def admin_summary_payload(user: str) -> dict:
         "user": user,
         "version": _version_details(),
         "server": _health_payload(),
+        "system": system_info(),
         "settings": {
             "on_toolforge": ON_TOOLFORGE,
             "article_limit": ARTICLE_LIMIT,
@@ -979,7 +1069,7 @@ def _memory_snapshot() -> dict[str, int | None]:
 
 
 class GenerationRecord:
-    # NE PAS y mettre de titre, d'adresse IP ni rien qui identifie l'utilisateur : le journal est lu par la supervision et la page d'admin (GET /api/health/generations) et recopié dans les journaux de la plateforme.
+    # NE PAS y mettre de titre, d'adresse IP ni rien qui identifie l'utilisateur, hors des adresses téléchargées (paramètre url de stage, jamais recopié sur la sortie standard) : le journal est lu par la supervision et la page d'admin (GET /api/health/generations) et recopié dans les journaux de la plateforme.
     def __init__(self, project: Project, selected: list[Article | UploadedDocument], language: str) -> None:
         self.started = time.monotonic()
         self.data: dict = {
@@ -1003,9 +1093,10 @@ class GenerationRecord:
     def _elapsed(self) -> float:
         return round(time.monotonic() - self.started, 1)
 
-    def stage(self, name: str, process: str, memory: dict, **details) -> None:
+    def stage(self, name: str, process: str, memory: dict, url: str | None = None, **details) -> None:
         event = {"at_s": self._elapsed(), "stage": name, "process": process, **memory, **details}
-        self.data["stages"].append(event)
+        # NE PAS écrire l'adresse sur la sortie standard : elle contient le titre de l'article ou l'adresse d'un fichier de l'utilisateur ; elle ne reste que dans le journal en mémoire, lu par la page d'admin et le jeton de supervision (choix de l'utilisateur).
+        self.data["stages"].append({**event, "url": url} if url else event)
         # NE PAS enlever cette écriture sur la sortie standard : quand la plateforme arrête tout le conteneur faute de mémoire, le journal en mémoire disparaît avec le serveur et seuls les journaux de la plateforme gardent la dernière étape atteinte.
         print(json.dumps({"generation": self.data["id"], **event}), flush=True)
 
@@ -1118,7 +1209,7 @@ async def _build_book_pdf(
             return base64.b64decode(document.data_base64), document.kind == "pdf"
         started_at = time.monotonic()
         data, content_type = await fetch_remote_file(document.url, DOCUMENT_TYPES, f"le document « {document.title} »")
-        record.stage("fetch_document", "server", _memory_snapshot(), duration_s=round(time.monotonic() - started_at, 2), size_bytes=len(data), pdf=content_type == "application/pdf")
+        record.stage("fetch_document", "server", _memory_snapshot(), url=document.url, duration_s=round(time.monotonic() - started_at, 2), size_bytes=len(data), pdf=content_type == "application/pdf")
         return data, content_type == "application/pdf"
 
     # NE PAS garder les images de fond en mémoire ni dans le livre transmis à l'assemblage : chaque génération en garderait deux copies (octets et base64) pendant toute sa durée. Elles vont dans le dossier temporaire, supprimé à la fin de la génération ; une image donnée par son adresse est retéléchargée à chaque génération, seule l'adresse est enregistrée dans le JSON.
@@ -1142,7 +1233,7 @@ async def _build_book_pdf(
                 data, content_type = await fetch_remote_file(image.url, BACKGROUND_TYPES, f"l’image « {image.title or image.url} »")
             finally:
                 reservation.release()
-            record.stage("fetch_image", "server", _memory_snapshot(), image=field, duration_s=round(time.monotonic() - started_at, 2), size_bytes=len(data))
+            record.stage("fetch_image", "server", _memory_snapshot(), url=image.url, image=field, duration_s=round(time.monotonic() - started_at, 2), size_bytes=len(data))
         path = workdir / f"{field}.image"
         path.write_bytes(data)
         background_files[field] = (path, content_type, image.title)
@@ -1164,13 +1255,17 @@ async def _build_book_pdf(
             note_wait(disk, "disk")
             async with MEMORY_GATE.reserve(DOWNLOAD_RESERVE_BYTES, announce_busy) as reservation:
                 note_wait(reservation, "download")
+                fetch_started = time.monotonic()
                 if isinstance(item, Article):
                     await started.put(progress("fetch_article", title=item.title))
+                    url = article_pdf_url(item.title, item.language, paper, item.site)
                     data = await client.get_article_pdf(item.title, item.language, paper, item.site)
                     is_pdf = True
                 else:
                     await started.put(progress("prepare_document", title=item.title))
+                    url = item.url
                     data, is_pdf = await document_data(item)
+                download_s, size = round(time.monotonic() - fetch_started, 2), len(data)
             async with MEMORY_GATE.reserve(fit_reserve(len(data)), announce_busy) as reservation:
                 note_wait(reservation, "fit")
                 if not is_pdf:
@@ -1179,7 +1274,9 @@ async def _build_book_pdf(
                 fitted_items[item.key] = asyncio.ensure_future(fit_part(data))
                 # NE PAS libérer le créneau avant la fin de la recomposition : sur un serveur au processeur limité (Toolforge), les PDF bruts téléchargés s'accumuleraient en mémoire en attendant d'être recomposés.
                 # NE PAS attendre la recomposition sans shield : annuler ce téléchargement l'annulerait aussi, et la suppression du dossier temporaire n'attendrait plus son fil d'exécution.
-                await asyncio.shield(fitted_items[item.key])
+                fit_started = time.monotonic()
+                _, pages = await asyncio.shield(fitted_items[item.key])
+            record.stage("download", "server", _memory_snapshot(), url=url, kind="article" if isinstance(item, Article) else "document", download_s=download_s, fit_s=round(time.monotonic() - fit_started, 2), size_bytes=size, pages=pages)
             data = None
             release_memory()
 

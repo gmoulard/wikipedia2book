@@ -1,0 +1,69 @@
+<!doctype html>
+<!--
+  This file is part of Wikipedia2Book
+  <https://github.com/gmoulard/wikipedia2book>.
+  Copyright (c) 2026 Guillaume Moulard.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License as published
+  by the Free Software Foundation, version 3.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-->
+
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Wikipedia2Book · Administration</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/admin.css">
+  <script src="/static/i18n.js" defer></script>
+  <script src="/static/admin.js" defer></script>
+</head>
+<body data-admin-page="generation">
+  <div class="admin-shell">
+    <header class="admin-header">
+      <a class="brand" href="/">
+        <img class="brand-logo" src="/static/Wikipedia2bookLogo.png" width="28" height="28" alt="" aria-hidden="true">
+        <span>Wikipedia<span class="brand-light">2Book</span></span>
+      </a>
+      <h1 id="generationTitle" data-i18n="admin.title">Administration</h1>
+      <div class="admin-account">
+        <a class="button" href="/admin" data-i18n="admin.back">Tableau de bord</a>
+      </div>
+    </header>
+
+    <p class="admin-message" id="adminMessage" role="status" hidden></p>
+
+    <main id="generationBoard" hidden>
+      <div class="admin-toolbar">
+        <span id="generationStatus"></span>
+        <button class="button button-teal" type="button" id="generationDownload" data-i18n="admin.downloadLog">Télécharger le journal (JSON)</button>
+      </div>
+
+      <section class="admin-section">
+        <h2 data-i18n="admin.summary">Résumé</h2>
+        <dl class="admin-tiles" id="generationSummary"></dl>
+      </section>
+
+      <section class="admin-section">
+        <h2 data-i18n="admin.downloads">Téléchargements</h2>
+        <div class="admin-scroll"><table class="admin-table" id="generationDownloads"></table></div>
+      </section>
+
+      <section class="admin-section">
+        <h2 data-i18n="admin.stages">Étapes</h2>
+        <div class="admin-scroll"><table class="admin-table" id="generationStages"></table></div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
