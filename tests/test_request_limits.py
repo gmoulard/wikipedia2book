@@ -124,39 +124,15 @@ class ClientKeysTest(unittest.TestCase):
 
 
 class AlertsTest(unittest.TestCase):
-    def test_counts_log_line_and_one_email_per_hour(self):
-        clock = Clock()
-        sent = []
-        alerts = Alerts("outil.maintainers@toolforge.org", "smtp.example.org", "outil.alerts@toolforge.org", clock=clock, mailer=lambda message, host: sent.append((message, host)))
+    def test_counts_and_log_line_without_identifying_data(self):
+        alerts = Alerts()
         output = io.StringIO()
-        with contextlib.redirect_stdout(output), patch.object(request_limits.threading, "Thread", lambda target, args, daemon: types.SimpleNamespace(start=lambda: target(*args))):
+        with contextlib.redirect_stdout(output):
             alerts.raise_alert("queue_full", path="/api/pdf/stream", limit=100)
-            clock.now += 60
             alerts.raise_alert("queue_full", path="/api/pdf/stream", limit=100)
-            clock.now += request_limits.ALERT_EMAIL_EVERY_S
-            alerts.raise_alert("queue_full", path="/api/pdf/stream", limit=100)
-        self.assertEqual(alerts.state()["queue_full"]["count"], 3)
-        self.assertEqual(output.getvalue().count('"alert": "queue_full"'), 3)
-        self.assertEqual(len(sent), 2)
-        message, host = sent[0]
-        self.assertEqual((message["To"], message["From"], host), ("outil.maintainers@toolforge.org", "outil.alerts@toolforge.org", "smtp.example.org"))
-        self.assertIn("queue_full", message["Subject"])
-
-    def test_failed_email_is_logged_not_raised(self):
-        def broken(message, host):
-            raise OSError("relais injoignable")
-
-        alerts = Alerts("a@example.org", "smtp.example.org", mailer=broken)
-        output = io.StringIO()
-        with contextlib.redirect_stdout(output), patch.object(request_limits.threading, "Thread", lambda target, args, daemon: types.SimpleNamespace(start=lambda: target(*args))):
-            alerts.raise_alert("send_timeout")
-        self.assertIn("alert_email_failed", output.getvalue())
-
-    def test_no_email_without_settings(self):
-        sent = []
-        with contextlib.redirect_stdout(io.StringIO()):
-            Alerts(mailer=lambda message, host: sent.append(message)).raise_alert("request_too_large")
-        self.assertEqual(sent, [])
+        self.assertEqual(alerts.state()["queue_full"]["count"], 2)
+        self.assertEqual(output.getvalue().count('"alert": "queue_full"'), 2)
+        self.assertNotIn("ip", output.getvalue().replace("api", ""))
 
 
 class EndpointLimitsTest(unittest.TestCase):

@@ -360,11 +360,7 @@ GENERATION_LIMITS = GenerationLimits(
 )
 WAITING_GENERATIONS = count_setting(os.environ, "WIKIPEDIA2BOOK_WAITING_GENERATIONS", 100)
 CLIENT_IP_HEADER = os.environ.get("WIKIPEDIA2BOOK_CLIENT_IP_HEADER", "").strip().lower()
-ALERTS = Alerts(
-    os.environ.get("WIKIPEDIA2BOOK_ALERT_EMAIL", "").strip(),
-    os.environ.get("WIKIPEDIA2BOOK_SMTP_HOST", "").strip(),
-    os.environ.get("WIKIPEDIA2BOOK_ALERT_FROM", "").strip(),
-)
+ALERTS = Alerts()
 app.add_middleware(
     RequestGuard,
     limits=lambda: GENERATION_LIMITS,

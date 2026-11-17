@@ -22,13 +22,10 @@ import json
 import math
 import re
 import secrets
-import smtplib
-import threading
 import time
 from collections import deque
 from collections.abc import Callable, Mapping
 from datetime import datetime, timezone
-from email.message import EmailMessage
 
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
@@ -39,7 +36,6 @@ SEND_TIMEOUT_S = 20
 WINDOW_S = 60
 CONCURRENT_RETRY_S = 10
 QUEUE_RETRY_S = 30
-ALERT_EMAIL_EVERY_S = 3600
 CLIENT_HEADER = "x-wikipedia2book-client"
 CLIENT_TOKEN = re.compile(r"^[A-Za-z0-9-]{8,64}$")
 GENERATION_PATHS = {
@@ -194,24 +190,8 @@ def client_keys(peer: str | None, headers: Mapping[str, str], ip_header: str) ->
 
 
 class Alerts:
-    def __init__(self, email_to: str = "", smtp_host: str = "", email_from: str = "", clock: Callable[[], float] = time.monotonic, mailer: Callable[[EmailMessage, str], None] | None = None) -> None:
-        self.email_to = email_to
-        self.smtp_host = smtp_host
-        self.email_from = email_from or email_to
-        self.clock = clock
-        self.mailer = mailer or self._smtp
+    def __init__(self) -> None:
         self.counts: dict[str, dict] = {}
-        self.emailed_at: dict[str, float] = {}
-
-    def _smtp(self, message: EmailMessage, host: str) -> None:
-        with smtplib.SMTP(host, 25, timeout=20) as smtp:
-            smtp.send_message(message)
-
-    def _mail(self, message: EmailMessage) -> None:
-        try:
-            self.mailer(message, self.smtp_host)
-        except Exception as error:
-            print(json.dumps({"alert_email_failed": type(error).__name__, "detail": str(error)[:200]}), flush=True)
 
     def raise_alert(self, kind: str, **details) -> None:
         # NE PAS y mettre d'adresse IP, de jeton ni de titre : les alertes sont publiques (GET /api/health/details) et recopiées dans les journaux de la plateforme.
@@ -220,21 +200,6 @@ class Alerts:
         entry["count"] += 1
         entry["last"] = at
         print(json.dumps({"alert": kind, "at": at, "count": entry["count"], **details}, ensure_ascii=False), flush=True)
-        if not (self.email_to and self.smtp_host):
-            return
-        now = self.clock()
-        if kind in self.emailed_at and now - self.emailed_at[kind] < ALERT_EMAIL_EVERY_S:
-            return
-        self.emailed_at[kind] = now
-        message = EmailMessage()
-        message["Subject"] = f"Wikipedia2Book : limite franchie ({kind})"
-        message["From"] = self.email_from
-        message["To"] = self.email_to
-        lines = [f"Limite franchie : {kind}", f"Heure (UTC) : {at}", f"Franchissements depuis le démarrage : {entry['count']}"]
-        lines += [f"{name} : {value}" for name, value in details.items()]
-        lines.append("Au plus un message par heure pour cette limite. Détail : /api/health/details.")
-        message.set_content("\n".join(lines))
-        threading.Thread(target=self._mail, args=(message,), daemon=True).start()
 
     def state(self) -> dict:
         return {name: dict(entry) for name, entry in sorted(self.counts.items())}
