@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-name: Performance check
+name: Benchmark
 
 on:
   workflow_dispatch:
@@ -34,18 +34,18 @@ on:
         default: 0
 
 concurrency:
-  group: perf-check
+  group: benchmark
   cancel-in-progress: false
 
 permissions:
   contents: write
 
 jobs:
-  perf:
+  benchmark:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
-      PERF_ENVIRONMENT: "GitHub Actions ubuntu-latest, image Docker de production"
+      BENCHMARK_ENVIRONMENT: "GitHub Actions ubuntu-latest, image Docker de production"
       LEVEL: ${{ inputs.level }}
       SAVE_REFERENCE: ${{ inputs.save_reference && github.ref == 'refs/heads/main' }}
       REPEAT: ${{ inputs.repeat }}
@@ -56,24 +56,24 @@ jobs:
           python-version: "3.12"
       - run: pip install "$(grep '^pypdf==' requirements.txt)"
       - name: Build the production image
-        run: docker build --build-arg GIT_COMMIT="$(git rev-parse HEAD)" -t wikipedia2book-perf .
+        run: docker build --build-arg GIT_COMMIT="$(git rev-parse HEAD)" -t wikipedia2book-benchmark .
       - name: Start the application
         run: |
-          docker run -d --name app -p 8000:8000 wikipedia2book-perf
+          docker run -d --name app -p 8000:8000 wikipedia2book-benchmark
           for _ in $(seq 1 60); do
             curl -fsS http://localhost:8000/health && exit 0
             sleep 2
           done
           docker logs app
           exit 1
-      - name: Run the performance workshop
+      - name: Run the benchmark
         run: |
-          args="--level $LEVEL --report perf-report.md"
+          args="--level $LEVEL --report benchmark-report.md"
           [ "$SAVE_REFERENCE" = true ] && args="$args --save-reference"
           [ "${REPEAT:-0}" -gt 0 ] && args="$args --repeat $REPEAT"
           status=0
-          python scripts/perf_check.py $args || status=$?
-          [ -f perf-report.md ] && cat perf-report.md >> "$GITHUB_STEP_SUMMARY"
+          python scripts/benchmark.py $args || status=$?
+          [ -f benchmark-report.md ] && cat benchmark-report.md >> "$GITHUB_STEP_SUMMARY"
           exit $status
       - name: Application logs
         if: failure()
@@ -81,17 +81,17 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: perf-report
-          path: perf-report.md
+          name: benchmark-report
+          path: benchmark-report.md
           if-no-files-found: ignore
       - name: Save the reference on main
         if: env.SAVE_REFERENCE == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add scripts/perf/reference.json
+          git add scripts/benchmark/reference.json
           git diff --cached --quiet && exit 0
-          git commit -m "perf: référence $LEVEL $(date -u +%F)${REPEAT:+ sur $REPEAT générations}"
+          git commit -m "benchmark: référence $LEVEL $(date -u +%F)${REPEAT:+ sur $REPEAT générations}"
           for attempt in 1 2 3; do
             git fetch -q origin main && git rebase -q origin/main && git push -q origin HEAD:main && exit 0
             sleep $((attempt * 5))

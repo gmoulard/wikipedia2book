@@ -29,8 +29,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-SCENARIOS = ROOT / "perf" / "scenarios.json"
-REFERENCE = ROOT / "perf" / "reference.json"
+SCENARIOS = ROOT / "benchmark" / "scenarios.json"
+REFERENCE = ROOT / "benchmark" / "reference.json"
 METRICS = ("total_s", "wikipedia_s", "app_s", "transfer_s")
 DOWNLOAD_CODES = {"fetch_image", "fetch_article", "prepare_document"}
 WATCH = 0.50
@@ -61,7 +61,7 @@ def project(name, scenario, language):
          "url": f"https://{language}.wikipedia.org/wiki/" + urllib.parse.quote(title.replace(" ", "_"))}
         for title in titles
     ]
-    body = {"name": f"perf {name}", "book_title": f"Atelier de performance : {name}", "main_articles": articles}
+    body = {"name": f"benchmark {name}", "book_title": f"Benchmark : {name}", "main_articles": articles}
     count = scenario.get("chapters", 0)
     if count:
         keys = [f"{language}:title:{title.lower()}" for title in titles]
@@ -78,7 +78,7 @@ def generate(base_url, body, language, timeout=900, save_to=None):
     request = urllib.request.Request(
         f"{base_url.rstrip('/')}/api/pdf/stream?language={language}",
         data=json.dumps(body).encode("utf-8"),
-        headers={"Content-Type": "application/json", "User-Agent": "Wikipedia2Book-perf/1.0"},
+        headers={"Content-Type": "application/json", "User-Agent": "Wikipedia2Book-benchmark/1.0"},
         method="POST",
     )
     start = time.perf_counter()
@@ -154,7 +154,7 @@ def percent(value):
 
 def report(level, base_url, measures, reference, failures):
     lines = [
-        f"# Atelier de performance ({level})",
+        f"# Benchmark ({level})",
         "",
         f"Cible : `{base_url}` — {datetime.now(timezone.utc):%Y-%m-%d %H:%M} UTC",
     ]
@@ -204,7 +204,7 @@ def main():
     parser.add_argument("--scenarios", type=Path, default=SCENARIOS)
     parser.add_argument("--reference", type=Path, default=REFERENCE)
     parser.add_argument("--save-reference", action="store_true")
-    parser.add_argument("--environment", default=os.environ.get("PERF_ENVIRONMENT", platform.node()))
+    parser.add_argument("--environment", default=os.environ.get("BENCHMARK_ENVIRONMENT", platform.node()))
     parser.add_argument("--report", type=Path)
     args = parser.parse_args()
 

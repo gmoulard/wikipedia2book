@@ -23,7 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 import limit_check
-from perf_check import GenerationError
+from benchmark import GenerationError
 
 
 class LimitCheckTest(unittest.TestCase):

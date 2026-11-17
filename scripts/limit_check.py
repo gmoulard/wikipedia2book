@@ -26,7 +26,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from perf_check import GenerationError, book_from_json, generate, project
+from benchmark import GenerationError, book_from_json, generate, project
 
 USER_AGENT = "Wikipedia2Book-limit/1.0 (https://github.com/gmoulard/wikipedia2book)"
 DEFAULT_STEPS = (25, 50, 100, 200, 400, 800)

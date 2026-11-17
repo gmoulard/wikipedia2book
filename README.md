@@ -71,7 +71,7 @@ wikipedia2book/
 │       ├── i18n.js              # Interface translations (12 languages)
 │       ├── styles.css
 │       ├── Wikipedia2bookLogo.png
-│       └── testPerformanceReference.json   (reference book of the performance workshop)
+│       └── testPerformanceReference.json   (reference book of the benchmark)
 ├── scripts/
 │   ├── docker-build.sh          # Docker build with git commit/date/author injected
 │   ├── toolforge-deploy.sh      # Deployment script run in the Toolforge tool account
@@ -79,10 +79,10 @@ wikipedia2book/
 │   ├── toolforge-hourly.sh, toolforge_hourly.py  # Hits per hour from the Toolforge webservice logs
 │   ├── update-stats.sh          # Statistics update run by GitHub Actions (daily and before each deployment)
 │   ├── toolviews_chart.py       # Usage charts page for GitHub Pages
-│   ├── perf_check.py, perf/     # Performance workshop run before each production release
+│   ├── benchmark.py, benchmark/     # Benchmark run before each production release
 │   └── limit_check.py           # Limit test: largest book a deployment can generate (section 13.12)
 ├── tests/                       # unittest suite (no network, WeasyPrint stubbed when missing)
-├── .github/workflows/           # Toolforge deployment, Toolviews stats, GitHub Pages, tag check, performance check
+├── .github/workflows/           # Toolforge deployment, Toolviews stats, GitHub Pages, tag check, benchmark
 ├── Dockerfile                   # Image used by Northflank
 ├── Procfile, Aptfile, .python-version, toolforge-fonts.conf  # Toolforge buildpacks
 ├── toolinfo.json                # Toolhub metadata
