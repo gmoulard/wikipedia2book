@@ -288,8 +288,10 @@ PROCESS_STATUS = Path("/proc/self/status")
 TEMPORARY_PREFIX = "wikipedia2book-"
 UNLIMITED_BYTES = 2**60
 generations_in_progress = 0
-GENERATION_LOG_KEEP = 50
-generation_log: deque[dict] = deque(maxlen=GENERATION_LOG_KEEP)
+GENERATION_LOG_KEEP = 1000
+# NE PAS relever ce plafond sans mesure : une étape du journal prend environ 760 octets en mémoire (mesuré le 2026-11-17), 40 000 étapes environ 30 Mo ; un livre de 300 articles en compte environ 330.
+GENERATION_LOG_STAGES = 40_000
+generation_log: deque[dict] = deque()
 generation_ids = itertools.count(1)
 ISOLATE_ASSEMBLY = True
 
@@ -1068,6 +1070,12 @@ def _memory_snapshot() -> dict[str, int | None]:
     }
 
 
+def _trim_generation_log() -> None:
+    stages = sum(len(entry["stages"]) for entry in generation_log)
+    while len(generation_log) > 1 and (len(generation_log) > GENERATION_LOG_KEEP or stages > GENERATION_LOG_STAGES):
+        stages -= len(generation_log.popleft()["stages"])
+
+
 class GenerationRecord:
     # NE PAS y mettre de titre, d'adresse IP ni rien qui identifie l'utilisateur, hors des adresses téléchargées (paramètre url de stage, jamais recopié sur la sortie standard) : le journal est lu par la supervision et la page d'admin (GET /api/health/generations) et recopié dans les journaux de la plateforme.
     def __init__(self, project: Project, selected: list[Article | UploadedDocument], language: str) -> None:
@@ -1088,6 +1096,7 @@ class GenerationRecord:
             "stages": [],
         }
         generation_log.append(self.data)
+        _trim_generation_log()
         self.stage("start", "server", _memory_snapshot())
 
     def _elapsed(self) -> float:
@@ -1101,6 +1110,7 @@ class GenerationRecord:
         print(json.dumps({"generation": self.data["id"], **event}), flush=True)
 
     def finish(self, status: str, **details) -> None:
+        _trim_generation_log()
         self.data.update(status=status, duration_s=self._elapsed(), **details)
         print(json.dumps({"generation": self.data["id"], "status": status, "duration_s": self.data["duration_s"], **details}), flush=True)
 

@@ -128,7 +128,17 @@ class GenerationLogTest(unittest.TestCase):
                 asyncio.run(run_book())
         ids = [entry["id"] for entry in self.journal()["generations"]]
         self.assertEqual(ids, sorted(ids, reverse=True))
-        self.assertEqual(main.generation_log.maxlen, main.GENERATION_LOG_KEEP)
+
+    def test_journal_is_bounded_by_count_and_by_stages(self):
+        with patch.object(main, "MediaWikiClient", FakeClient), patch.object(main, "GENERATION_LOG_KEEP", 2):
+            for _ in range(3):
+                asyncio.run(run_book())
+        self.assertEqual(len(main.generation_log), 2)
+        per_book = len(main.generation_log[-1]["stages"])
+        with patch.object(main, "MediaWikiClient", FakeClient), patch.object(main, "GENERATION_LOG_STAGES", per_book * 2 - 1):
+            asyncio.run(run_book())
+        self.assertEqual(len(main.generation_log), 1)
+        self.assertEqual(main.GENERATION_LOG_KEEP, 1000)
 
     def test_not_counted_in_hourly_hits(self):
         main.hourly_hits.clear()
