@@ -19,6 +19,11 @@ aux_links:
 aux_links_new_tab: true
 footer_content: Wikipedia2Book — GNU AGPL v3.0 — <a href="https://github.com/gmoulard/wikipedia2book">github.com/gmoulard/wikipedia2book</a>
 
+# NE PAS réactiver la compression du HTML de Just the Docs : elle met chaque page sur une ligne, et le premier commentaire // du script de _includes/head_custom.html avale alors tout le reste (Mermaid et graphique horaire non dessinés).
+compress_html:
+  ignore:
+    envs: all
+
 relative_links:
   enabled: true
   collections: false
