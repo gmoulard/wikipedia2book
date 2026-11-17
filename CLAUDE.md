@@ -69,7 +69,7 @@ Valeurs propres à ce dépôt, lues par les skills génériques de `.claude/skil
   - README cohérent avec la spec française ; `docs/index.md` généré, jamais committé.
 - **`debug-frontend`** :
   - production : `https://wikipedia2book.toolforge.org/` (suit `production-toolforge`) ; aussi `https://prod--wikipedia2book--wkvpbnfj6h4v.code.run/` (Northflank, suit `main`) ;
-  - statique : `app/static/` publié sous `/static`, `index.html` servi à `/` ; dossier temporaire = `index.html` à la racine + copie de `app/static/*` dans `static/` ;
+  - statique : `app/static/` publié sous `/static` (`main.ContentStaticFiles` : `ETag` sur le contenu, pas de `Last-Modified`, les fichiers de Toolforge étant tous datés de 1980), `index.html` servi à `/` ; dossier temporaire = `index.html` à la racine + copie de `app/static/*` dans `static/` ;
   - sélecteurs : langue `#languageSelect`, champ de sources `#articleQuery` (textarea), boutons PDF `#topExportButton`/`#exportButton`, conteneur racine `.app-shell` ;
   - Playwright : dans `.venv` sur le poste Windows (`playwright install chromium` déjà fait) ; préinstallé (`require("playwright")`) en session cloud ;
   - page de statistiques : `docs/stats.md` + `docs/_includes/head-custom.html`, l'endpoint `https://wikipedia2book.toolforge.org/api/stats/hourly` à simuler avec `page.route`.

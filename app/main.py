@@ -17,6 +17,7 @@
 import asyncio
 import base64
 import contextlib
+import hashlib
 import itertools
 import json
 import math
@@ -39,6 +40,8 @@ from typing import Any
 from fastapi import Body, FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.datastructures import Headers
+from starlette.staticfiles import NotModifiedResponse
 from pypdf import PdfReader
 
 from app.book_builder import (
@@ -250,7 +253,24 @@ SECURITY_HEADERS = {
 app = FastAPI(title="Wikipedia2Book", version=VERSION)
 static_directory = Path(__file__).parent / "static"
 PDF_LANGUAGE_PATTERN = "^(" + "|".join(PDF_LABELS) + ")$"
-app.mount("/static", StaticFiles(directory=static_directory), name="static")
+
+
+def _content_etag(path: str) -> str:
+    return '"' + hashlib.sha256(Path(path).read_bytes()).hexdigest()[:32] + '"'
+
+
+class ContentStaticFiles(StaticFiles):
+    # NE PAS revenir à l'empreinte de Starlette (date et taille) ni remettre Last-Modified : sur Toolforge, tous les fichiers sont datés de 1980, un navigateur qui revalide par la date reçoit 304 à chaque version et garde un ancien i18n.js.
+    def file_response(self, full_path, stat_result, scope, status_code: int = 200) -> Response:
+        etag = _content_etag(str(full_path))
+        response = FileResponse(full_path, status_code=status_code, stat_result=stat_result, headers={"etag": etag})
+        del response.headers["last-modified"]
+        if self.is_not_modified(response.headers, Headers(scope=scope)):
+            return NotModifiedResponse(response.headers)
+        return response
+
+
+app.mount("/static", ContentStaticFiles(directory=static_directory), name="static")
 HOURLY_STATS_PATH = "/api/stats/hourly"
 HEALTH_DETAILS_PATH = "/api/health/details"
 GENERATION_LOG_PATH = "/api/health/generations"
