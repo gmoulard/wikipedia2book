@@ -11,8 +11,8 @@ Une action réalisée est retirée de cette liste (pas cochée) : l'historique G
 
 ## 2. Nouvelle fonctionnalisées
 
-- Les langues de wikibooks : DE, IT, JA, ID, HI, HU, ZH, PL, DE, EN exemple d'erreur https://de.wikibooks.org/wiki/Tauchen_in_Hilfeleistungsunternehmen:_-Teil_D-_Tauchermedizin
-- Les lanngues de wikiversity, wikivoyage, Wikisource, Wikivoyage , Wikiversity , Wikiquote , Wiktionary,  Wikinews  
+- accepte les langues de wikibooks : DE, IT, JA, ID, HI, HU, ZH, PL, DE, EN exemple d'erreur https://de.wikibooks.org/wiki/Tauchen_in_Hilfeleistungsunternehmen:_-Teil_D-_Tauchermedizin
+- Acccepte les langues de wikipedia, wikiversity, wikivoyage, Wikisource, Wikivoyage , Wikiversity , Wikiquote , Wiktionary,  Wikinews  
 exemple d'erreur https://fr.wikiversity.org/wiki/D%C3%A9veloppement_durable
 - dresse par rechereche sur internet une liste des pages dans la planette wikipedia ou est sité mediawiki2latex dans todo-mediawiki2latex-visibility.md
 - pour chaque ligne dans todo-mediawiki2latex-visibility.md regarde comment ont peut ajouté une inforamtion sur wikipedia2book
