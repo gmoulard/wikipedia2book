@@ -431,7 +431,8 @@ def wikimedia_file_page(url: str) -> tuple[str, str] | None:
 
 
 PRINTABLE_SKIPPED_PAGES = {"couverture", "cover", "licence de documentation libre gnu", "gnu free documentation license", "licence", "license"}
-TRANSCLUSION = re.compile(r"\{\{\s*:\s*([^{}|]+?)\s*(?:\|[^{}]*)?\}\}")
+# NE PAS remettre de \s* autour du titre ni de quantificateur paresseux : « {{:a » suivi de 200 000 espaces prenait plusieurs minutes de calcul (temps quadratique) et bloquait tout le serveur ; le titre est nettoyé par strip().
+TRANSCLUSION = re.compile(r"\{\{\s*:([^{}|]*)(?:\|[^{}]*)?\}\}")
 
 
 def is_printable_wikitext(content: str) -> bool:

@@ -84,7 +84,7 @@ wikipedia2book/
 │   ├── benchmark.py, benchmark/     # Benchmark run before each production release
 │   └── limit_check.py           # Limit test: largest book a deployment can generate (section 13.12)
 ├── tests/                       # unittest suite (no network, WeasyPrint stubbed when missing)
-├── .github/workflows/           # Toolforge deployment, Toolviews stats, GitHub Pages, tag check, benchmark
+├── .github/workflows/           # Toolforge deployment, Toolviews stats, GitHub Pages, tag check, benchmark, security
 ├── Dockerfile                   # Image used by Northflank
 ├── Procfile, Aptfile, .python-version, toolforge-fonts.conf  # Toolforge buildpacks
 ├── toolinfo.json                # Toolhub metadata
@@ -150,6 +150,7 @@ The application is then reachable at `http://localhost:8000`.
 
    then restart the webservice. Elsewhere, set `WIKIPEDIA2BOOK_OAUTH_CLIENT_ID`, `WIKIPEDIA2BOOK_OAUTH_CLIENT_SECRET` and `WIKIPEDIA2BOOK_OAUTH_CALLBACK` in the container environment.
 3. Optionally list the administrators in `WIKIPEDIA2BOOK_ADMINS`: Wikimedia usernames written in UTF-8 hexadecimal, separated by commas (`python -c "print('Example'.encode().hex())"`).
+4. To read the monitoring endpoints `GET /api/health/details` and `GET /api/health/generations` from a script, set `WIKIPEDIA2BOOK_MONITOR_TOKEN` (at least 32 characters, `python -c "import secrets; print(secrets.token_urlsafe(32))"`) and send it as `Authorization: Bearer <token>`; without the variable, these endpoints always answer HTTP 401.
 
 ## Deploying your own container
 
@@ -187,7 +188,7 @@ Count about 250 MB for the server and the assembly process themselves, plus roug
 python scripts/limit_check.py --base-url https://your-server --search 50
 ```
 
-It doubles the number of articles until the first failure, then narrows down by bisection. Add `--save-pdf ./tmp` to keep each generated book (`./tmp` is ignored by git). `GET /api/health/details` shows the memory of the container and its limit, and `GET /api/health/generations` the memory reached at each stage of the last generations (details in section 13 of the [specifications](docs/SPECIFICATIONS.en.md)).
+It doubles the number of articles until the first failure, then narrows down by bisection. Add `--save-pdf ./tmp` to keep each generated book (`./tmp` is ignored by git). With the monitoring token (`Authorization: Bearer`, see "Administration page"), `GET /api/health/details` shows the memory of the container and its limit, and `GET /api/health/generations` the memory reached at each stage of the last generations (details in section 13 of the [specifications](docs/SPECIFICATIONS.en.md)).
 
 
 ## Technology stack

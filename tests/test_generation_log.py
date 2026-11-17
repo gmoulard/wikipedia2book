@@ -40,6 +40,9 @@ from tests.test_pdf_stream import FakeClient, _make_pdf, _project
 main.ISOLATE_ASSEMBLY = False
 
 
+MONITOR_TOKEN = "jeton-de-supervision-pour-les-tests-0123"
+
+
 class FailingClient(FakeClient):
     async def get_article_pdf(self, title, language, paper="a4", site="wikipedia"):
         raise main.MediaWikiError(f"PDF indisponible pour {title}")
@@ -71,9 +74,9 @@ class GenerationLogTest(unittest.TestCase):
             item.__exit__(None, None, None)
 
     def journal(self):
-        response = self.client.get(main.GENERATION_LOG_PATH)
+        with patch.object(main, "MONITOR_TOKEN", MONITOR_TOKEN):
+            response = self.client.get(main.GENERATION_LOG_PATH, headers={"Authorization": f"Bearer {MONITOR_TOKEN}"})
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers["access-control-allow-origin"], "*")
         self.assertEqual(response.headers["cache-control"], "no-store")
         return response.json()
 

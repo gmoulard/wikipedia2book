@@ -23,6 +23,7 @@ const ADMIN_ERRORS = {
   oauth: 'admin.errorOauth',
   forbidden: 'admin.errorForbidden',
   not_configured: 'admin.notConfigured',
+  too_many: 'admin.errorTooMany',
 };
 const ADMIN_STATUSES = ['done', 'error', 'aborted', 'running'];
 let adminTimer = null;
@@ -152,7 +153,7 @@ function renderSummary(data) {
 
   fillTable('adminRecent', [t('admin.colJournal'), t('admin.colStarted'), t('admin.colStatus'), t('admin.colDuration'), t('admin.colArticles'), t('admin.colSize'), t('admin.colWaited'), t('admin.colPeak'), t('admin.version')],
     data.recent.map((row) => [
-      { text: `#${row.id}`, href: `/api/health/generations/${row.id}` },
+      { text: `#${row.id}`, href: `/admin/api/generations/${row.id}` },
       formatTime(row.started),
       { text: statusLabel(row.status), className: `admin-status-${row.status}` },
       formatSeconds(row.duration_s),
@@ -190,7 +191,7 @@ function showLogin(configured) {
 async function loadSummary() {
   let response;
   try {
-    response = await fetch('/api/admin/summary', { cache: 'no-store', credentials: 'same-origin' });
+    response = await fetch('/admin/api/summary', { cache: 'no-store', credentials: 'same-origin' });
   } catch (error) {
     showMessage(t('admin.loadFailed', { error: error.message }));
     return;
@@ -217,7 +218,7 @@ async function startAdmin() {
   }
   let session;
   try {
-    session = await (await fetch('/api/admin/session', { cache: 'no-store', credentials: 'same-origin' })).json();
+    session = await (await fetch('/admin/api/session', { cache: 'no-store', credentials: 'same-origin' })).json();
   } catch (failure) {
     showMessage(t('admin.loadFailed', { error: failure.message }));
     return;

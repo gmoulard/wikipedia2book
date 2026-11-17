@@ -194,7 +194,7 @@ class Alerts:
         self.counts: dict[str, dict] = {}
 
     def raise_alert(self, kind: str, **details) -> None:
-        # NE PAS y mettre d'adresse IP, de jeton ni de titre : les alertes sont publiques (GET /api/health/details) et recopiées dans les journaux de la plateforme.
+        # NE PAS y mettre d'adresse IP, de jeton ni de titre : les alertes sont lues par la supervision et la page d'admin (GET /api/health/details) et recopiées dans les journaux de la plateforme.
         at = datetime.now(timezone.utc).isoformat(timespec="seconds")
         entry = self.counts.setdefault(kind, {"count": 0, "last": None})
         entry["count"] += 1

@@ -25,11 +25,18 @@ from pypdf.generic import RectangleObject
 from reportlab.lib.units import mm
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
+import weasyprint
+from PIL import Image
 from weasyprint import HTML
 
+from app.models import SAFE_IMAGE_FORMATS
 
+RENDER_PROTOCOLS = frozenset({"data"})
+
+
+# NE PAS laisser WeasyPrint charger autre chose que des URI data: : une image de fond SVG (envoyée par l'utilisateur ou téléchargée) peut référencer file:///etc/passwd ou une adresse interne, que le rendu irait lire et imprimerait dans le livre.
 def generate_pdf(html_document: str) -> bytes:
-    return HTML(string=html_document).write_pdf()
+    return HTML(string=html_document, url_fetcher=weasyprint.URLFetcher(allowed_protocols=RENDER_PROTOCOLS)).write_pdf()
 
 
 FORMAT_TOLERANCE_PT = 1.0
@@ -99,7 +106,7 @@ def internal_links(pdf_data: bytes, prefix: str, width_mm: float, height_mm: flo
 
 def image_to_pdf(image_bytes: bytes, page_width_mm: float, page_height_mm: float) -> bytes:
     width_pt, height_pt = page_width_mm * mm, page_height_mm * mm
-    image = ImageReader(BytesIO(image_bytes))
+    image = ImageReader(Image.open(BytesIO(image_bytes), formats=SAFE_IMAGE_FORMATS))
     image_width, image_height = image.getSize()
     scale = min(width_pt / image_width, height_pt / image_height)
     drawn_width, drawn_height = image_width * scale, image_height * scale

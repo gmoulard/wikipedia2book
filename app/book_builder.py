@@ -26,7 +26,7 @@ from urllib.parse import quote
 
 from PIL import Image, ImageOps
 
-from app.models import Article, BookImage, Project, Site, UploadedDocument
+from app.models import SAFE_IMAGE_FORMATS, Article, BookImage, Project, Site, UploadedDocument
 
 BookItem = Article | UploadedDocument
 
@@ -317,7 +317,7 @@ def fit_background(image: BookImage, width_mm: float, height_mm: float) -> BookI
         return image
     target = (round(width_mm / 25.4 * BACKGROUND_DPI), round(height_mm / 25.4 * BACKGROUND_DPI))
     try:
-        picture = Image.open(io.BytesIO(base64.b64decode(image.data_base64)))
+        picture = Image.open(io.BytesIO(base64.b64decode(image.data_base64)), formats=SAFE_IMAGE_FORMATS)
         width, height = picture.size
         rotated = picture.getexif().get(0x0112) in _ROTATED_ORIENTATIONS
         if rotated:
@@ -353,7 +353,7 @@ _LINEAR = [((v / 255) / 12.92) if v <= 10 else (((v / 255) + 0.055) / 1.055) ** 
 
 
 def _cover_luminances(image: BookImage, width: float, height: float, area: tuple[float, float, float, float]) -> list[float]:
-    picture = Image.open(io.BytesIO(base64.b64decode(image.data_base64)))
+    picture = Image.open(io.BytesIO(base64.b64decode(image.data_base64)), formats=SAFE_IMAGE_FORMATS)
     picture.draft("RGB", (512, 512))
     picture = ImageOps.exif_transpose(picture).convert("RGBA")
     flat = Image.new("RGBA", picture.size, "white")

@@ -59,6 +59,7 @@ from app.book_builder import (
     toc_slot_index,
 )
 from app.admin import (
+    ADMIN_PATH,
     SESSION_COOKIE,
     SESSION_S,
     STATE_COOKIE,
@@ -66,7 +67,9 @@ from app.admin import (
     OAuthError,
     admin_settings,
     authorize_url,
+    monitor_token_setting,
     require_admin,
+    require_monitor,
     session_cookie,
     session_user,
     state_cookie,
@@ -76,7 +79,7 @@ from app.admin import (
 from app.explorer import discover_related_articles
 from app.isolation import IsolatedProcessDied, preload, run_in_thread, run_in_worker, run_isolated
 from app.resource_gate import Reservation, ResourceGate, release_memory
-from app.request_limits import Alerts, ClosingStreamingResponse, GenerationLimits, RequestGuard, count_setting
+from app.request_limits import Alerts, ClosingStreamingResponse, GenerationLimits, LimitRefused, RequestGuard, client_keys, count_setting
 from app import wikipedia_api
 from app.json_source import JsonSourceError, download, fetch_project, project_from_payload
 from app.volumes import book_volumes, volume_project
@@ -237,6 +240,12 @@ async def fetch_remote_file(url: str, accepted: set[str], label: str) -> tuple[b
         raise RemoteFileError(f"{label[0].upper()}{label[1:]} n’est pas d’un type accepté ({content_type or 'type inconnu'}) : {url}")
     return data, content_type
 PDF_STREAM_CHUNK = 256 * 1024
+SECURITY_HEADERS = {
+    "Content-Security-Policy": "default-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
+    "X-Frame-Options": "DENY",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+}
 
 app = FastAPI(title="Wikipedia2Book", version=VERSION)
 static_directory = Path(__file__).parent / "static"
@@ -245,7 +254,7 @@ app.mount("/static", StaticFiles(directory=static_directory), name="static")
 HOURLY_STATS_PATH = "/api/stats/hourly"
 HEALTH_DETAILS_PATH = "/api/health/details"
 GENERATION_LOG_PATH = "/api/health/generations"
-UNCOUNTED_PATHS = {HOURLY_STATS_PATH, HEALTH_DETAILS_PATH, GENERATION_LOG_PATH, "/api/admin/session", "/api/admin/summary"}
+UNCOUNTED_PATHS = {HOURLY_STATS_PATH, HEALTH_DETAILS_PATH, GENERATION_LOG_PATH}
 HOURLY_KEEP = 48
 hourly_hits: dict[str, int] = {}
 started_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -266,7 +275,7 @@ def _current_hour() -> str:
 
 @app.middleware("http")
 async def count_hourly_hits(request: Request, call_next):
-    if request.url.path not in UNCOUNTED_PATHS and not request.url.path.startswith(GENERATION_LOG_PATH + "/"):
+    if request.url.path not in UNCOUNTED_PATHS and not request.url.path.startswith((GENERATION_LOG_PATH + "/", ADMIN_PATH + "/api/")):
         hour = _current_hour()
         hourly_hits[hour] = hourly_hits.get(hour, 0) + 1
         while len(hourly_hits) > HOURLY_KEEP:
@@ -277,8 +286,10 @@ async def count_hourly_hits(request: Request, call_next):
 @app.middleware("http")
 async def revalidate_web_app_files(request: Request, call_next):
     response = await call_next(request)
-    if request.url.path in ("/", "/admin") or request.url.path.startswith("/static/"):
+    if request.url.path in ("/", ADMIN_PATH) or request.url.path.startswith("/static/"):
         response.headers["Cache-Control"] = "no-cache"
+    if request.url.path == ADMIN_PATH or request.url.path.startswith((ADMIN_PATH + "/", "/api/health/")):
+        response.headers.update(SECURITY_HEADERS)
     return response
 
 
@@ -408,9 +419,9 @@ def _temporary_space() -> dict[str, int]:
     return {"free_bytes": usage.free, "total_bytes": usage.total, "generation_files_bytes": _generation_files_bytes(directory)}
 
 
-@app.get(HEALTH_DETAILS_PATH)
-def health_details(response: Response) -> dict:
-    response.headers["Access-Control-Allow-Origin"] = "*"
+@app.get(HEALTH_DETAILS_PATH, include_in_schema=False)
+def health_details(request: Request, response: Response) -> dict:
+    require_monitor(request, MONITOR_TOKEN)
     response.headers["Cache-Control"] = "no-store"
     return _health_payload()
 
@@ -431,9 +442,9 @@ def _health_payload() -> dict:
     }
 
 
-@app.get(GENERATION_LOG_PATH)
-def generation_journal(response: Response) -> dict:
-    response.headers["Access-Control-Allow-Origin"] = "*"
+@app.get(GENERATION_LOG_PATH, include_in_schema=False)
+def generation_journal(request: Request, response: Response) -> dict:
+    require_monitor(request, MONITOR_TOKEN)
     response.headers["Cache-Control"] = "no-store"
     return {
         "version": app.version,
@@ -443,10 +454,14 @@ def generation_journal(response: Response) -> dict:
     }
 
 
-@app.get(GENERATION_LOG_PATH + "/{generation_id}")
-def generation_journal_entry(generation_id: int, response: Response) -> dict:
-    response.headers["Access-Control-Allow-Origin"] = "*"
+@app.get(GENERATION_LOG_PATH + "/{generation_id}", include_in_schema=False)
+def generation_journal_entry(generation_id: int, request: Request, response: Response) -> dict:
+    require_monitor(request, MONITOR_TOKEN)
     response.headers["Cache-Control"] = "no-store"
+    return _generation_entry(generation_id)
+
+
+def _generation_entry(generation_id: int) -> dict:
     for generation in generation_log:
         if generation["id"] == generation_id:
             return {"version": app.version, "started": started_at, "generation": generation}
@@ -454,6 +469,9 @@ def generation_journal_entry(generation_id: int, response: Response) -> dict:
 
 
 ADMIN = admin_settings(os.environ)
+MONITOR_TOKEN = monitor_token_setting(os.environ)
+# NE PAS desserrer ces limites ni les retirer : /admin/login et /admin/callback ne demandent aucune identification, et chaque retour fait deux requêtes vers Meta-Wiki.
+ADMIN_LOGIN_LIMITS = GenerationLimits(0, 10, 0, 30)
 
 
 def _secure_cookies() -> bool:
@@ -465,18 +483,33 @@ def admin_page() -> FileResponse:
     return FileResponse(static_directory / "admin.html", media_type="text/html")
 
 
+def _login_refused(request: Request) -> Response | None:
+    try:
+        ADMIN_LOGIN_LIMITS.admit(client_keys((request.client or (None,))[0], {name.lower(): value for name, value in request.headers.items()}, CLIENT_IP_HEADER)).release()
+    except LimitRefused as refusal:
+        ALERTS.raise_alert(f"admin_{refusal.reason}", path=request.url.path, limit=refusal.limit)
+        return RedirectResponse("/admin?error=too_many", status_code=302)
+    return None
+
+
 @app.get("/admin/login", include_in_schema=False)
-def admin_login() -> Response:
+def admin_login(request: Request) -> Response:
+    refused = _login_refused(request)
+    if refused is not None:
+        return refused
     if not ADMIN.configured:
         return RedirectResponse("/admin?error=not_configured", status_code=302)
     state = secrets.token_urlsafe(24)
     response = RedirectResponse(authorize_url(ADMIN, state), status_code=302)
-    response.set_cookie(STATE_COOKIE, state_cookie(state), max_age=STATE_S, httponly=True, secure=_secure_cookies(), samesite="lax", path="/admin")
+    response.set_cookie(STATE_COOKIE, state_cookie(state), max_age=STATE_S, httponly=True, secure=_secure_cookies(), samesite="lax", path=ADMIN_PATH)
     return response
 
 
 @app.get("/admin/callback", include_in_schema=False)
 async def admin_callback(request: Request, code: str = Query(default="", max_length=2048), state: str = Query(default="", max_length=256), error: str = Query(default="", max_length=256)) -> Response:
+    refused = _login_refused(request)
+    if refused is not None:
+        return refused
     if error or not code:
         return RedirectResponse("/admin?error=denied", status_code=302)
     if not state_matches(request.cookies.get(STATE_COOKIE), state):
@@ -489,19 +522,20 @@ async def admin_callback(request: Request, code: str = Query(default="", max_len
     if user not in ADMIN.admins:
         return RedirectResponse("/admin?error=forbidden", status_code=302)
     response = RedirectResponse("/admin", status_code=302)
-    response.delete_cookie(STATE_COOKIE, path="/admin")
-    response.set_cookie(SESSION_COOKIE, session_cookie(user), max_age=SESSION_S, httponly=True, secure=_secure_cookies(), samesite="lax", path="/")
+    response.delete_cookie(STATE_COOKIE, path=ADMIN_PATH)
+    # NE PAS élargir le chemin du cookie : limité à /admin, il n'est jamais envoyé au reste de l'application.
+    response.set_cookie(SESSION_COOKIE, session_cookie(user), max_age=SESSION_S, httponly=True, secure=_secure_cookies(), samesite="lax", path=ADMIN_PATH)
     return response
 
 
 @app.get("/admin/logout", include_in_schema=False)
 def admin_logout() -> Response:
     response = RedirectResponse("/admin", status_code=302)
-    response.delete_cookie(SESSION_COOKIE, path="/")
+    response.delete_cookie(SESSION_COOKIE, path=ADMIN_PATH)
     return response
 
 
-@app.get("/api/admin/session")
+@app.get(ADMIN_PATH + "/api/session", include_in_schema=False)
 def admin_session(request: Request, response: Response) -> dict:
     response.headers["Cache-Control"] = "no-store"
     return {"configured": ADMIN.configured, "user": session_user(request, ADMIN)}
@@ -576,11 +610,18 @@ def admin_summary_payload(user: str) -> dict:
     }
 
 
-@app.get("/api/admin/summary")
+@app.get(ADMIN_PATH + "/api/summary", include_in_schema=False)
 def admin_summary(request: Request, response: Response) -> dict:
     user = require_admin(request, ADMIN)
     response.headers["Cache-Control"] = "no-store"
     return admin_summary_payload(user)
+
+
+@app.get(ADMIN_PATH + "/api/generations/{generation_id}", include_in_schema=False)
+def admin_generation(generation_id: int, request: Request, response: Response) -> dict:
+    require_admin(request, ADMIN)
+    response.headers["Cache-Control"] = "no-store"
+    return _generation_entry(generation_id)
 
 
 @app.get("/api/version")
@@ -918,7 +959,7 @@ def _memory_snapshot() -> dict[str, int | None]:
 
 
 class GenerationRecord:
-    # NE PAS y mettre de titre, d'adresse IP ni rien qui identifie l'utilisateur : le journal est public (GET /api/health/generations) et recopié dans les journaux de la plateforme.
+    # NE PAS y mettre de titre, d'adresse IP ni rien qui identifie l'utilisateur : le journal est lu par la supervision et la page d'admin (GET /api/health/generations) et recopié dans les journaux de la plateforme.
     def __init__(self, project: Project, selected: list[Article | UploadedDocument], language: str) -> None:
         self.started = time.monotonic()
         self.data: dict = {

@@ -299,6 +299,7 @@ const I18N = {
     "admin.loadFailed": "Indicateurs indisponibles : {error}",
     "admin.signedIn": "Connecté : {user}",
     "admin.colJournal": "Journal",
+    "admin.errorTooMany": "Trop de tentatives de connexion : réessayez dans une minute.",
   },
   en: {
     "progress.title": "GENERATING THE PDF",
@@ -582,6 +583,7 @@ const I18N = {
     "admin.loadFailed": "Indicators unavailable: {error}",
     "admin.signedIn": "Signed in: {user}",
     "admin.colJournal": "Log",
+    "admin.errorTooMany": "Too many sign-in attempts: try again in a minute.",
   },
   zh: {
     "progress.title": "正在生成 PDF",
@@ -865,6 +867,7 @@ const I18N = {
     "admin.loadFailed": "指标不可用：{error}",
     "admin.signedIn": "已登录：{user}",
     "admin.colJournal": "日志",
+    "admin.errorTooMany": "登录尝试次数过多：请一分钟后重试。",
   },
   it: {
     "progress.title": "GENERAZIONE DEL PDF",
@@ -1148,6 +1151,7 @@ const I18N = {
     "admin.loadFailed": "Indicatori non disponibili: {error}",
     "admin.signedIn": "Accesso effettuato: {user}",
     "admin.colJournal": "Registro",
+    "admin.errorTooMany": "Troppi tentativi di accesso: riprova tra un minuto.",
   },
   de: {
     "progress.title": "PDF WIRD ERSTELLT",
@@ -1431,6 +1435,7 @@ const I18N = {
     "admin.loadFailed": "Kennzahlen nicht verfügbar: {error}",
     "admin.signedIn": "Angemeldet: {user}",
     "admin.colJournal": "Protokoll",
+    "admin.errorTooMany": "Zu viele Anmeldeversuche: Versuchen Sie es in einer Minute erneut.",
   },
   es: {
     "progress.title": "GENERANDO EL PDF",
@@ -1714,6 +1719,7 @@ const I18N = {
     "admin.loadFailed": "Indicadores no disponibles: {error}",
     "admin.signedIn": "Sesión iniciada: {user}",
     "admin.colJournal": "Registro",
+    "admin.errorTooMany": "Demasiados intentos de inicio de sesión: inténtalo de nuevo dentro de un minuto.",
   },
   pt: {
     "progress.title": "GERANDO O PDF",
@@ -1997,6 +2003,7 @@ const I18N = {
     "admin.loadFailed": "Indicadores indisponíveis: {error}",
     "admin.signedIn": "Sessão iniciada: {user}",
     "admin.colJournal": "Registo",
+    "admin.errorTooMany": "Demasiadas tentativas de início de sessão: tente novamente dentro de um minuto.",
   },
   ja: {
     "progress.title": "PDF を生成中",
@@ -2280,6 +2287,7 @@ const I18N = {
     "admin.loadFailed": "指標を取得できません：{error}",
     "admin.signedIn": "ログイン中：{user}",
     "admin.colJournal": "ログ",
+    "admin.errorTooMany": "ログインの試行回数が多すぎます。1 分後にもう一度お試しください。",
   },
   tr: {
     "progress.title": "PDF OLUŞTURULUYOR",
@@ -2563,6 +2571,7 @@ const I18N = {
     "admin.loadFailed": "Göstergeler kullanılamıyor: {error}",
     "admin.signedIn": "Giriş yapıldı: {user}",
     "admin.colJournal": "Günlük",
+    "admin.errorTooMany": "Çok fazla giriş denemesi: bir dakika sonra yeniden deneyin.",
   },
   fa: {
     "progress.title": "در حال ساخت PDF",
@@ -2846,6 +2855,7 @@ const I18N = {
     "admin.loadFailed": "شاخص‌ها در دسترس نیستند: {error}",
     "admin.signedIn": "واردشده: {user}",
     "admin.colJournal": "گزارش",
+    "admin.errorTooMany": "تلاش‌های ورود بیش از حد است: یک دقیقهٔ دیگر دوباره تلاش کنید.",
   },
   nl: {
     "progress.title": "PDF WORDT GEMAAKT",
@@ -3129,6 +3139,7 @@ const I18N = {
     "admin.loadFailed": "Indicatoren niet beschikbaar: {error}",
     "admin.signedIn": "Aangemeld: {user}",
     "admin.colJournal": "Logboek",
+    "admin.errorTooMany": "Te veel aanmeldpogingen: probeer het over een minuut opnieuw.",
   },
   ar: {
     "progress.title": "جارٍ إنشاء ملف PDF",
@@ -3412,6 +3423,7 @@ const I18N = {
     "admin.loadFailed": "المؤشرات غير متاحة: {error}",
     "admin.signedIn": "مسجّل الدخول: {user}",
     "admin.colJournal": "السجل",
+    "admin.errorTooMany": "محاولات تسجيل دخول كثيرة جدًا: حاول مرة أخرى بعد دقيقة.",
   },
 };
 

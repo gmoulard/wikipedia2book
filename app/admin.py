@@ -32,7 +32,9 @@ from app.wikipedia_api import USER_AGENT
 OAUTH_BASE = "https://meta.wikimedia.org/w/rest.php/oauth2"
 SESSION_COOKIE = "w2b_admin"
 STATE_COOKIE = "w2b_oauth_state"
-SESSION_S = 8 * 3600
+SESSION_S = 2 * 3600
+ADMIN_PATH = "/admin"
+MONITOR_TOKEN_MIN = 32
 STATE_S = 600
 OAUTH_TIMEOUT_S = 20.0
 DEFAULT_ADMINS_HEX = ("474D6F756C617264", "436170697461696E6543616E65747465")
@@ -51,6 +53,20 @@ class AdminSettings:
     @property
     def configured(self) -> bool:
         return bool(self.client_id and self.client_secret and self.callback)
+
+
+def monitor_token_setting(environ: Mapping[str, str]) -> str:
+    token = environ.get("WIKIPEDIA2BOOK_MONITOR_TOKEN", "").strip()
+    if token and len(token) < MONITOR_TOKEN_MIN:
+        raise ValueError(f"WIKIPEDIA2BOOK_MONITOR_TOKEN doit compter au moins {MONITOR_TOKEN_MIN} caractères (par exemple : python -c \"import secrets; print(secrets.token_urlsafe(32))\").")
+    return token
+
+
+def require_monitor(request: Request, token: str) -> None:
+    scheme, _, given = request.headers.get("authorization", "").partition(" ")
+    # NE PAS ouvrir ces endpoints sans jeton : ils donnent les limites, les alertes et le journal des générations, de quoi régler une attaque juste sous les seuils.
+    if not token or scheme.lower() != "bearer" or not hmac.compare_digest(given.strip().encode(), token.encode()):
+        raise HTTPException(status_code=401, detail={"code": "monitor_token_required", "message": "Jeton de supervision requis (en-tête Authorization: Bearer)."}, headers={"WWW-Authenticate": "Bearer"})
 
 
 def normalize_username(name: str) -> str:

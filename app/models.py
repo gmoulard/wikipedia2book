@@ -51,6 +51,8 @@ class Article(BaseModel):
 
 
 REMOTE_URL = r"^https://[^\s]+$"
+# NE PAS laisser Pillow ouvrir tous les formats qu'il reconnaît : une image annoncée PNG mais contenant de l'EPS serait confiée à Ghostscript, qui peut exécuter du code ; seuls des formats décodés par Pillow lui-même.
+SAFE_IMAGE_FORMATS = ("PNG", "JPEG", "GIF", "WEBP", "BMP", "TIFF")
 
 
 def _one_source(data_base64: str | None, url: str | None, mime_type: str | None) -> None:

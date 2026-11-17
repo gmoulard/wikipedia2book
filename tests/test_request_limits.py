@@ -188,7 +188,8 @@ class EndpointLimitsTest(unittest.TestCase):
 
     def test_health_details_exposes_limits_and_alerts(self):
         self.alerts.raise_alert("queue_full")
-        details = self.client.get("/api/health/details").json()
+        with patch.object(main, "MONITOR_TOKEN", "t" * 32):
+            details = self.client.get("/api/health/details", headers={"Authorization": "Bearer " + "t" * 32}).json()
         self.assertEqual(details["request_limits"]["waiting_limit"], main.WAITING_GENERATIONS)
         self.assertEqual(details["alerts"]["queue_full"]["count"], 1)
 

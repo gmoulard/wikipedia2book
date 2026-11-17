@@ -37,6 +37,9 @@ import app.main as main
 main.ISOLATE_ASSEMBLY = False
 
 
+MONITOR_TOKEN = "jeton-de-supervision-pour-les-tests-0123"
+
+
 class HealthDetailsTest(unittest.TestCase):
     def setUp(self):
         self.folder = tempfile.TemporaryDirectory()
@@ -56,9 +59,11 @@ class HealthDetailsTest(unittest.TestCase):
         self.folder.cleanup()
 
     def details(self):
-        response = TestClient(main.app).get("/api/health/details")
+        with patch.object(main, "MONITOR_TOKEN", MONITOR_TOKEN):
+            response = TestClient(main.app).get("/api/health/details", headers={"Authorization": f"Bearer {MONITOR_TOKEN}"})
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers["access-control-allow-origin"], "*")
+        self.assertNotIn("access-control-allow-origin", response.headers)
+        self.assertEqual(response.headers["x-frame-options"], "DENY")
         self.assertEqual(response.headers["cache-control"], "no-store")
         return response.json()
 

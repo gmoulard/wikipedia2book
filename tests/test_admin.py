@@ -38,7 +38,8 @@ from fastapi.testclient import TestClient
 
 import app.main as main
 from app import admin
-from app.admin import AdminSettings, admin_settings, decode_admins, normalize_username
+from app.admin import AdminSettings, admin_settings, decode_admins, monitor_token_setting, normalize_username
+from app.request_limits import GenerationLimits
 
 CALLBACK = "http://testserver/admin/callback"
 
@@ -101,6 +102,7 @@ class AdminEndpointsTest(unittest.TestCase):
         self.output.__exit__(None, None, None)
         main.ADMIN = self.saved
         admin.oauth_transport = None
+        main.ADMIN_LOGIN_LIMITS = GenerationLimits(0, 10, 0, 30)
 
     def login(self, username):
         response = self.client.get("/admin/login")
@@ -110,8 +112,8 @@ class AdminEndpointsTest(unittest.TestCase):
 
     def test_page_and_session_without_login(self):
         self.assertIn("adminBoard", self.client.get("/admin").text)
-        self.assertEqual(self.client.get("/api/admin/session").json(), {"configured": True, "user": None})
-        response = self.client.get("/api/admin/summary")
+        self.assertEqual(self.client.get("/admin/api/session").json(), {"configured": True, "user": None})
+        response = self.client.get("/admin/api/summary")
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.json()["detail"]["code"], "admin_login_required")
 
@@ -130,24 +132,24 @@ class AdminEndpointsTest(unittest.TestCase):
         self.assertEqual(calls[0].url.path, "/w/rest.php/oauth2/access_token")
         self.assertIn(b"client_secret=secret", calls[0].content)
         self.assertEqual(calls[1].headers["authorization"], "Bearer jeton")
-        self.assertEqual(self.client.get("/api/admin/session").json()["user"], "GMoulard")
-        summary = self.client.get("/api/admin/summary")
+        self.assertEqual(self.client.get("/admin/api/session").json()["user"], "GMoulard")
+        summary = self.client.get("/admin/api/summary")
         self.assertEqual(summary.status_code, 200)
         self.assertEqual(summary.headers["cache-control"], "no-store")
         self.assertEqual(set(summary.json()), {"user", "version", "server", "settings", "usage", "performance", "recent"})
         self.client.get("/admin/logout")
-        self.assertIsNone(self.client.get("/api/admin/session").json()["user"])
+        self.assertIsNone(self.client.get("/admin/api/session").json()["user"])
 
     def test_other_accounts_are_refused(self):
         response, _ = self.login("Quelqu'un")
         self.assertEqual(response.headers["location"], "/admin?error=forbidden")
         self.assertNotIn(admin.SESSION_COOKIE, response.headers.get("set-cookie", ""))
-        self.assertEqual(self.client.get("/api/admin/summary").status_code, 401)
+        self.assertEqual(self.client.get("/admin/api/summary").status_code, 401)
 
     def test_admin_removed_from_the_list_loses_access(self):
         self.login("GMoulard")
         main.ADMIN = AdminSettings(frozenset({"CapitaineCanette"}), "client", "secret", CALLBACK)
-        self.assertEqual(self.client.get("/api/admin/summary").status_code, 401)
+        self.assertEqual(self.client.get("/admin/api/summary").status_code, 401)
 
     def test_wrong_state_and_refused_code(self):
         self.client.get("/admin/login")
@@ -158,24 +160,79 @@ class AdminEndpointsTest(unittest.TestCase):
         admin.oauth_transport, _ = wikimedia("GMoulard", token_status=400)
         self.assertEqual(self.client.get("/admin/callback", params={"code": "c", "state": state}).headers["location"], "/admin?error=oauth")
 
+    def test_session_cookie_is_limited_to_admin_paths(self):
+        response, _ = self.login("GMoulard")
+        cookie = [value for name, value in response.headers.multi_items() if name == "set-cookie" and value.startswith(admin.SESSION_COOKIE)][0]
+        self.assertIn("Path=/admin", cookie)
+        self.assertIn("HttpOnly", cookie)
+        self.assertIn(f"Max-Age={2 * 3600}", cookie)
+
+    def test_admin_generation_journal_and_security_headers(self):
+        self.login("GMoulard")
+        with patch.object(main, "generation_log", [{"id": 9, "status": "done", "stages": []}]):
+            found = self.client.get("/admin/api/generations/9")
+            missing = self.client.get("/admin/api/generations/8")
+        self.assertEqual(found.json()["generation"]["id"], 9)
+        self.assertEqual(missing.status_code, 404)
+        page = self.client.get("/admin")
+        self.assertIn("frame-ancestors 'none'", page.headers["content-security-policy"])
+        self.assertEqual((page.headers["x-frame-options"], page.headers["x-content-type-options"], page.headers["referrer-policy"]), ("DENY", "nosniff", "no-referrer"))
+        self.assertNotIn("content-security-policy", self.client.get("/api/version").headers)
+
+    def test_admin_generation_journal_needs_the_session(self):
+        self.assertEqual(self.client.get("/admin/api/generations/1").status_code, 401)
+
+    def test_sign_in_attempts_are_limited(self):
+        main.ADMIN_LOGIN_LIMITS = GenerationLimits(0, 0, 0, 2)
+        statuses = [self.client.get("/admin/login").headers["location"].startswith("https://meta.wikimedia.org") for _ in range(2)]
+        self.assertEqual(statuses, [True, True])
+        self.assertEqual(self.client.get("/admin/login").headers["location"], "/admin?error=too_many")
+        self.assertEqual(self.client.get("/admin/callback", params={"code": "c", "state": "s"}).headers["location"], "/admin?error=too_many")
+
     def test_not_configured(self):
         main.ADMIN = AdminSettings(frozenset({"GMoulard"}), "", "", "")
         self.assertEqual(self.client.get("/admin/login").headers["location"], "/admin?error=not_configured")
-        self.assertFalse(self.client.get("/api/admin/session").json()["configured"])
+        self.assertFalse(self.client.get("/admin/api/session").json()["configured"])
 
 
 class GenerationJournalEntryTest(unittest.TestCase):
-    def test_one_generation_of_the_journal(self):
+    def test_one_generation_with_the_monitor_token(self):
         client = TestClient(main.app)
         journal = [{"id": 41, "status": "done", "stages": []}, {"id": 42, "status": "error", "stages": [{"stage": "start"}]}]
         hits_before = sum(main.hourly_hits.values())
-        with patch.object(main, "generation_log", journal):
-            found = client.get("/api/health/generations/42")
-            missing = client.get("/api/health/generations/7")
+        headers = {"Authorization": "Bearer " + "j" * 32}
+        with patch.object(main, "generation_log", journal), patch.object(main, "MONITOR_TOKEN", "j" * 32):
+            found = client.get("/api/health/generations/42", headers=headers)
+            missing = client.get("/api/health/generations/7", headers=headers)
         self.assertEqual(found.json()["generation"], journal[1])
-        self.assertEqual(found.headers["access-control-allow-origin"], "*")
         self.assertEqual(missing.status_code, 404)
         self.assertEqual(sum(main.hourly_hits.values()), hits_before)
+
+
+class MonitorTokenTest(unittest.TestCase):
+    def test_health_endpoints_need_the_token(self):
+        client = TestClient(main.app)
+        for path in ("/api/health/details", "/api/health/generations", "/api/health/generations/1"):
+            with self.subTest(path=path):
+                with patch.object(main, "MONITOR_TOKEN", ""):
+                    self.assertEqual(client.get(path, headers={"Authorization": "Bearer "}).status_code, 401)
+                with patch.object(main, "MONITOR_TOKEN", "k" * 32):
+                    refused = client.get(path)
+                    wrong = client.get(path, headers={"Authorization": "Bearer " + "x" * 32})
+                    basic = client.get(path, headers={"Authorization": "Basic " + "k" * 32})
+                self.assertEqual((refused.status_code, wrong.status_code, basic.status_code), (401, 401, 401))
+                self.assertEqual(refused.headers["www-authenticate"], "Bearer")
+                self.assertEqual(refused.json()["detail"]["code"], "monitor_token_required")
+
+    def test_short_token_prevents_startup(self):
+        self.assertEqual(monitor_token_setting({}), "")
+        with self.assertRaises(ValueError):
+            monitor_token_setting({"WIKIPEDIA2BOOK_MONITOR_TOKEN": "court"})
+
+    def test_admin_and_health_are_hidden_from_the_api_description(self):
+        paths = TestClient(main.app).get("/openapi.json").json()["paths"]
+        self.assertFalse([path for path in paths if path.startswith(("/admin", "/api/health"))])
+        self.assertIn("/api/pdf/stream", paths)
 
 
 class SummaryPayloadTest(unittest.TestCase):

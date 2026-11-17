@@ -34,6 +34,11 @@ function escapeHtml(value = '') {
   return String(value).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 }
 
+// NE PAS mettre dans un lien une adresse venue d'un livre JSON sans passer par safeUrl : ?json= charge un fichier de n'importe qui, et une adresse javascript: s'exécuterait au clic sur le site.
+function safeUrl(value) {
+  return /^https:\/\//i.test(String(value || '')) ? String(value) : '#';
+}
+
 const SERVER_DOWN_STATUSES = new Set([502, 503, 504]);
 const PDF_AUTO_RETRIES = 2;
 const SERVER_WAIT_MS = 120000;
@@ -227,7 +232,7 @@ function articleCard(article, isMain, isSource = false) {
   return `<article class="article-card${article.selected ? ' selected' : ''}" data-article-key="${escapeHtml(key)}">
     <div class="article-card-top">
       ${isMain ? `<input class="article-check" type="checkbox" aria-label="${article.selected ? escapeHtml(t('meta.deselect')) : escapeHtml(t('meta.select'))} ${escapeHtml(article.title)}" ${article.selected ? 'checked' : ''}>` : ''}
-      <div class="article-title-wrap"><a class="article-title" href="${escapeHtml(article.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(article.title)}</a><div class="article-meta">${meta.map((m) => `<span>${escapeHtml(m)}</span>`).join('')}</div></div>
+      <div class="article-title-wrap"><a class="article-title" href="${escapeHtml(safeUrl(article.url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(article.title)}</a><div class="article-meta">${meta.map((m) => `<span>${escapeHtml(m)}</span>`).join('')}</div></div>
       ${isMain ? `<button class="text-button explore-from${isSource ? ' active' : ''}" type="button" title="${escapeHtml(t('explore.fromArticleTitle', { title: article.title }))}"><span aria-hidden="true">↗</span> ${escapeHtml(t('explore.fromArticle'))}</button><button class="remove-article" type="button" title="${escapeHtml(t('meta.removeArticle'))}" aria-label="${escapeHtml(t('meta.removeArticle'))}">\u00d7</button>` : `<button class="button button-outline add-suggestion" type="button"><span aria-hidden="true">+</span> ${escapeHtml(t('suggestion.add'))}</button><button class="remove-article dismiss-suggestion" type="button" title="${escapeHtml(t('suggestion.dismiss'))}" aria-label="${escapeHtml(t('suggestion.dismiss'))} : ${escapeHtml(article.title)}">\u00d7</button>`}
     </div>${summary}</article>`;
 }
@@ -363,7 +368,7 @@ function renderOrganization() {
     const origin = isDoc
       ? (a.kind === 'pdf' ? t('org.docPdf') : t('org.docImage'))
       : (a.origin_title ? t('org.discoveredFrom', { origin: a.origin_title }) : t('org.mainArticleOrigin', { lang: articleSiteLabel(a) }));
-    const openHref = isDoc ? '#' : a.url;
+    const openHref = isDoc ? '#' : safeUrl(a.url);
     const openTitle = isDoc ? t('org.openDocument') : t('org.openWikipedia');
     const removeTitle = isDoc ? t('org.docRemoveTitle') : t('meta.removeArticle');
     return `<div class="org-row org-article" draggable="true" data-slot-type="article" data-slot-index="${idx}" data-article-key="${escapeHtml(k)}">
@@ -840,7 +845,7 @@ async function importBook(book, bookName, contents = null) {
     if (wasFirst) await suggestIntroAndAuthor(newArticles[0]);
     setQuery('');
     const bookLink = contents
-      ? `<a href="${escapeHtml(contents.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(contents.title)}</a>`
+      ? `<a href="${escapeHtml(safeUrl(contents.url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(contents.title)}</a>`
       : `<a href="https://fr.wikipedia.org/wiki/Aide:Livres" target="_blank" rel="noopener noreferrer">${escapeHtml(t('sources.bookLinkText'))}</a>`;
     $('#entryHint').innerHTML = contents
       ? t('sources.subpagesAddedHint', { n: newArticles.length, link: bookLink, site: escapeHtml(t(`site.${contents.site}`)) })
@@ -1023,7 +1028,7 @@ async function handleDocumentUpload(files) {
 function openUploadedDocument(id) {
   const doc = (state.project.uploaded_documents || []).find((d) => d.id === id);
   if (!doc) return;
-  if (doc.url) { window.open(doc.url, '_blank', 'noopener'); return; }
+  if (doc.url) { window.open(safeUrl(doc.url), '_blank', 'noopener'); return; }
   const bytes = Uint8Array.from(atob(doc.data_base64), (c) => c.charCodeAt(0));
   const url = URL.createObjectURL(new Blob([bytes], { type: doc.mime_type }));
   window.open(url, '_blank', 'noopener');

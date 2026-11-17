@@ -37,6 +37,22 @@ class JsonSourceError(Exception):
         self.status_code = status_code
 
 
+NAT64_PREFIX = ipaddress.ip_network("64:ff9b::/96")
+
+
+# NE PAS se fier au seul is_global : une adresse IPv6 peut transporter une IPv4 interne (::ffff:…, NAT64 64:ff9b::…, 6to4, Teredo) et une adresse multicast passe pour publique.
+def is_public_address(address: str) -> bool:
+    ip = ipaddress.ip_address(address.split("%")[0])
+    if ip.is_multicast or not ip.is_global:
+        return False
+    if ip.version == 6:
+        embedded = [ip.ipv4_mapped, ip.sixtofour, *(ip.teredo or ())]
+        if ip in NAT64_PREFIX:
+            embedded.append(ipaddress.IPv4Address(int(ip) & 0xFFFFFFFF))
+        return all(is_public_address(str(inner)) for inner in embedded if inner is not None)
+    return True
+
+
 def _resolve(host: str) -> list[str]:
     return [info[4][0] for info in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM)]
 
@@ -50,7 +66,7 @@ async def _check_url(url: str, resolve, label: str) -> str:
         addresses = await asyncio.to_thread(resolve, parts.hostname)
     except OSError as error:
         raise JsonSourceError(422, f"Hôte introuvable pour {label} : {parts.hostname}.") from error
-    if not addresses or any(not ipaddress.ip_address(address.split("%")[0]).is_global for address in addresses):
+    if not addresses or not all(is_public_address(address) for address in addresses):
         raise JsonSourceError(422, f"Hôte refusé pour {label} : {parts.hostname} n’est pas une adresse publique.")
     return addresses[0].split("%")[0]
 
