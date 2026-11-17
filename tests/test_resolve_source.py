@@ -59,6 +59,10 @@ class FakeClient:
         FakeClient.calls.append(("subpages", title, language, site))
         return FakeClient.subpage_book
 
+    async def get_wikitext(self, title, language, site="wikipedia"):
+        FakeClient.calls.append(("wikitext", title, language, site))
+        return FakeClient.wikitext
+
     async def search(self, query, language, limit, site="wikipedia"):
         FakeClient.calls.append(("search", query, language, site))
         return [{"page_id": 1, "title": "Chat domestique", "snippet": "", "url": "https://fr.wikipedia.org/wiki/Chat_domestique"}]
@@ -70,6 +74,7 @@ class ResolveSourceTest(unittest.TestCase):
         FakeClient.calls = []
         FakeClient.fail = False
         FakeClient.subpage_book = WikipediaBook(subtitle="", chapters=[])
+        FakeClient.wikitext = ""
         self.patch = patch.object(main, "MediaWikiClient", FakeClient)
         self.patch.start()
         self.client = TestClient(main.app)
@@ -119,6 +124,29 @@ class ResolveSourceTest(unittest.TestCase):
         self.assertEqual(body["kind"], "search")
         self.assertEqual(body["results"][0]["title"], "Chat domestique")
         self.assertIn(("search", "chats du monde", "fr", "wikipedia"), FakeClient.calls)
+
+    def test_handwritten_printable_version_becomes_a_wikibooks_book(self):
+        title = "Hélices/Version imprimable"
+        FakeClient.pages = {title: (title, 0)}
+        FakeClient.wikitext = "{{Couverture de version imprimable|titre=Les hélices}}\n{{:Hélices/Couverture}}\n= <center>Rappels</center> =\n{{:Hélices/Rappels}}\n= Calculs =\n{{:Hélices/Calculs|x=1}}\n{{:Licence de documentation libre GNU}}"
+        body = self.resolve("https://fr.wikibooks.org/wiki/H%C3%A9lices/Version_imprimable").json()
+        self.assertEqual(body["kind"], "book")
+        self.assertEqual(body["book_title"], "Les hélices")
+        self.assertEqual(body["article"]["title"], title)
+        self.assertEqual([a["title"] for a in body["book"]["articles"]], ["Hélices/Rappels", "Hélices/Calculs"])
+        self.assertEqual({a["site"] for a in body["book"]["articles"]}, {"wikibooks"})
+        self.assertEqual([c["title"] for c in body["book"]["chapters"]], ["Rappels", "Calculs"])
+
+    def test_lua_printable_version_offers_the_summary_book(self):
+        title = "Programmation C/Version imprimable"
+        FakeClient.pages = {title: (title, 0)}
+        FakeClient.wikitext = "{{imprimable}}"
+        FakeClient.subpage_book = WikipediaBook(subtitle="", chapters=[("", ["Programmation C/Introduction", "Programmation C/Types"])])
+        body = self.resolve("https://fr.wikibooks.org/wiki/Programmation_C/Version_imprimable").json()
+        self.assertEqual(body["kind"], "subpages")
+        self.assertEqual(body["article"]["title"], "Programmation C")
+        self.assertEqual(body["book_title"], "Programmation C")
+        self.assertIn(("subpages", "Programmation C", "fr", "wikibooks"), FakeClient.calls)
 
     def test_unknown_url_is_404(self):
         self.assertEqual(self.resolve("https://fr.wikipedia.org/wiki/Inexistant").status_code, 404)
@@ -337,6 +365,36 @@ class PdfFromSourceTest(unittest.TestCase):
         self.assertIn("Inexistant", response.json()["detail"])
         self.assertEqual(self.client.get("/api/pdf/from-source").status_code, 422)
         self.created.assert_not_awaited()
+
+
+class BookWikitextEndpointTest(unittest.TestCase):
+    def setUp(self):
+        self.client = TestClient(main.app)
+
+    def test_pasted_book_page_becomes_a_book(self):
+        response = self.client.post("/api/books/from-wikitext", json={"wikitext": "== Ports ==\n=== Guide ===\n:[[Brest]]\n;Finistère\n:[[Concarneau]]", "language": "fr"})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["kind"], "book")
+        self.assertEqual(data["book_title"], "Ports")
+        self.assertEqual(data["book"]["subtitle"], "Guide")
+        self.assertEqual([article["title"] for article in data["book"]["articles"]], ["Brest", "Concarneau"])
+        self.assertEqual(data["book"]["articles"][0]["url"], "https://fr.wikipedia.org/wiki/Brest")
+        self.assertEqual([chapter["title"] for chapter in data["book"]["chapters"]], ["Finistère"])
+        self.assertTrue(data["book"]["unassigned_first"])
+
+    def test_pasted_printable_version_becomes_a_wikibooks_book(self):
+        response = self.client.post("/api/books/from-wikitext", json={"wikitext": "= Avant-propos =\n{{:Mon livre/Avant-propos}}\n= Chapitre 1 =\n{{:Mon livre/Chapitre 1}}\n{{:Licence de documentation libre GNU}}", "language": "fr"})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual([(article["title"], article["site"]) for article in data["book"]["articles"]], [("Mon livre/Avant-propos", "wikibooks"), ("Mon livre/Chapitre 1", "wikibooks")])
+        self.assertTrue(data["book"]["articles"][0]["url"].startswith("https://fr.wikibooks.org/wiki/"))
+        self.assertEqual([chapter["title"] for chapter in data["book"]["chapters"]], ["Avant-propos", "Chapitre 1"])
+        self.assertEqual(data["book_title"], "")
+
+    def test_text_without_article_or_bad_language_is_refused(self):
+        self.assertEqual(self.client.post("/api/books/from-wikitext", json={"wikitext": ";Chapitre seul"}).status_code, 422)
+        self.assertEqual(self.client.post("/api/books/from-wikitext", json={"wikitext": ":[[Brest]]", "language": "FR!"}).status_code, 422)
 
 
 if __name__ == "__main__":

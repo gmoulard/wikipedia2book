@@ -82,7 +82,7 @@ async def download(
     raise JsonSourceError(502, f"Trop de redirections pour télécharger {label} : {url}")
 
 
-def _project_from_payload(payload) -> Project:
+def project_from_payload(payload) -> Project:
     if isinstance(payload, dict) and payload.get("format") == "wikipedia2book-workspace":
         if payload.get("version") != 1 or not isinstance(payload.get("projects"), list) or not payload["projects"]:
             raise JsonSourceError(422, "Version ou structure du fichier JSON non prise en charge.")
@@ -103,4 +103,4 @@ async def fetch_project(url: str, transport: httpx.AsyncBaseTransport | None = N
         payload = json.loads(body)
     except (ValueError, UnicodeDecodeError) as error:
         raise JsonSourceError(422, "Le fichier téléchargé n’est pas un JSON valide.") from error
-    return _project_from_payload(payload)
+    return project_from_payload(payload)

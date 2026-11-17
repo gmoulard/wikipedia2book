@@ -74,14 +74,29 @@ As of 15 November 2026.
 |---|---|---|
 | Online service | `wikipedia2book.toolforge.org` (Toolforge), also Northflank | `mediawiki2latex.wmcloud.org` (Wikimedia Cloud VPS) |
 | Interface | 3-step application (Sources, Organisation, Editing), 12 languages including Arabic and Persian written right to left, light and dark theme, smartphone | Single form in English: URL, output format, template expansion, paper, tables, vector graphics |
-| Generation time | The time needed to download the Wikipedia PDFs and assemble them, with a step-by-step progress window | About one minute for one article (LaTeX compiled several times), several hours for a large book |
-| Service limits | At most 200 articles per book page; no time limit | 4 hours (about 2,000 pages) and 4 simultaneous conversions; a "large books" service at 12 hours (about 8,000 pages); "Not enough resources" when everything is busy |
+| Generation time | The time needed to download the Wikipedia PDFs and assemble them, with a step-by-step progress window (figures in section 8) | About one minute for one article (LaTeX compiled several times), several hours for a large book |
+| Service limits | At most 300 articles per book, split automatically into volumes beyond that; no time limit | 4 hours (about 2,000 pages) and 4 simultaneous conversions; a "large books" service at 12 hours (about 8,000 pages); "Not enough resources" when everything is busy |
 | Local installation | Docker | Debian/Ubuntu package, Linux and Windows binaries; no time limit |
 | Command line or API | HTTP API (`/api/pdf`, `/api/books/generate`, `/api/books/generate-from-wikipedia-book`…) | Full command line (`-u`, `-o`, `-p`, `-r`, `-g`, `-b`, `-d`, `-z`…) and server mode (`-s`) |
 | Advanced customisation | No | Template mapping files, custom LaTeX headers, copy of the LaTeX tree for editing |
 | Data kept by the server | None (the book stays in the browser) | Conversion files on the server, not documented |
 
-## 8. Summary
+## 8. Performance
+
+Wikipedia2Book figures are measured on Toolforge (sections 13.11 and 13.12 of `docs/SPECIFICATIONS.en.md`, versions 1.9.5 to 1.11.0, 16 November 2026). mediawiki2latex figures come from its manual and the limits of its web service: they have not been measured.
+
+| | Wikipedia2Book (measured on Toolforge) | mediawiki2latex (from its manual) |
+|---|---|---|
+| What is computed | Download of the official Wikimedia PDFs, then assembly, without re-typesetting their content | Conversion of the wikitext to LaTeX, then several LaTeX compilations |
+| 1 article | About 1.5 s (`1-article` scenario, 4 pages) | About one minute |
+| About 50 pages | 8.9 s (`50-pages` scenario) | Not published |
+| About 100 pages | 16.3 s (*Wrecks of Saint-Pierre harbor*, 101 pages, version 1.9.5) | Not published |
+| About 250 pages | 12.7 s (`20-articles` scenario, 253 pages) | Not published |
+| Very large book | 1,500 articles, 28,072 pages: 44 minutes in 6 volumes of 250 | About 2,000 pages within the 4-hour limit; about 8,000 pages within 12 hours on the "large books" service |
+| Simultaneous books | 10 books succeed (60 s each); at 20 the 2 GiB container saturates and Toolforge restarts it | 4 conversions at most, then "Not enough resources" |
+| Where the time goes | Mostly downloading the PDFs from Wikimedia; the application itself takes 0.3 to 2.6 s per book. A repeated generation is faster, as Wikimedia caches the article PDFs | LaTeX typesetting of the whole book, figure list and image processing |
+
+## 9. Summary
 
 - **Wikipedia2Book** is faster and more faithful to the Wikipedia rendering, and gives more control over how the book is put together: choice of articles, order, chapters, cover, personal documents, paper size and margins, translated interface. It only produces PDF, cannot read other wikis and does not carry over image credits.
 - **mediawiki2latex** produces a typographically uniform book, in several formats (PDF, LaTeX, EPUB, ODT), from any MediaWiki wiki, with the list of figures and their authors. On the other hand it is slow, depends on templates being converted correctly, and does not let you organise the book beyond the source page.

@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import asyncio
 import base64
 import json
 import sys
@@ -712,6 +713,110 @@ class PdfStreamTest(unittest.TestCase):
         response = self.client.post("/api/pdf", json=_project(page_numbers=False))
         self.assertIn('filename="Animaux.pdf"', response.headers["content-disposition"])
 
+
+
+class ResourceGateGenerationTest(unittest.TestCase):
+    def setUp(self):
+        self.patches = [
+            patch.object(main, "MediaWikiClient", FakeClient),
+            patch.object(main, "generate_pdf", lambda html: _make_pdf(1)),
+        ]
+        for p in self.patches:
+            p.start()
+        FakeClient.fail = False
+        FakeClient.wait = None
+
+    def tearDown(self):
+        for p in self.patches:
+            p.stop()
+
+    def test_a_generation_waits_for_memory_then_resumes(self):
+        from app.resource_gate import ResourceGate
+        from app.models import Project
+        ticks = iter(range(10_000))
+        gate = ResourceGate(lambda: (1_990_000_000, 2_000_000_000), 0.95, poll_s=0.01, clock=lambda: next(ticks) * 0.5)
+
+        async def scenario():
+            holder = await gate.acquire(1)
+            book = asyncio.ensure_future(_book_events(Project(**_project(page_numbers=False))))
+            await asyncio.sleep(0.2)
+            self.assertFalse(book.done())
+            holder.release()
+            return await asyncio.wait_for(book, 10)
+
+        with patch.object(main, "MEMORY_GATE", gate):
+            events = asyncio.run(scenario())
+        self.assertIn("busy", [event["type"] for event in events])
+        self.assertTrue(all(event["seconds"] >= 0 for event in events if event["type"] == "busy"))
+        progress = [event for event in events if event["type"] == "progress"]
+        self.assertEqual([event["step"] for event in progress], list(range(1, len(progress) + 1)))
+        self.assertEqual(events[-1]["type"], "done")
+        self.assertEqual(gate.state()["reserved_bytes"], 0)
+        waits = [stage for stage in main.generation_log[-1]["stages"] if stage["stage"] == "memory_wait"]
+        self.assertTrue(waits)
+        self.assertTrue(all(stage["reason"] in {"download", "fit", "assembly", "fetch_image"} for stage in waits))
+
+    def test_ratio_settings(self):
+        for name in ("WIKIPEDIA2BOOK_MEMORY_RATIO", "WIKIPEDIA2BOOK_DISK_RATIO"):
+            self.assertEqual(main.ratio_setting({}, name), 0.95)
+            self.assertEqual(main.ratio_setting({name: "0.8"}, name), 0.8)
+            self.assertEqual(main.ratio_setting({name: "0"}, name), 0)
+            for wrong in ("1.5", "-0.1", "beaucoup"):
+                with self.subTest(name=name, wrong=wrong), self.assertRaises(ValueError) as caught:
+                    main.ratio_setting({name: wrong}, name)
+                self.assertIn(name, str(caught.exception))
+
+    def test_downloads_wait_for_disk_space(self):
+        from app.models import Project
+        from app.resource_gate import ResourceGate
+        ticks = iter(range(10_000))
+        disk = ResourceGate(lambda: (99_000_000_000, 100_000_000_000), 0.95, poll_s=0.01, clock=lambda: next(ticks) * 0.5)
+        roomy = ResourceGate(lambda: (0, 2_000_000_000), 0.95, poll_s=0.01)
+
+        async def scenario():
+            holder = await disk.acquire(1)
+            book = asyncio.ensure_future(_book_events(Project(**_project(page_numbers=False))))
+            await asyncio.sleep(0.2)
+            self.assertFalse(book.done())
+            self.assertEqual(FakeClient.papers, [])
+            holder.release()
+            return await asyncio.wait_for(book, 10)
+
+        FakeClient.papers = []
+        with patch.object(main, "DISK_GATE", disk), patch.object(main, "MEMORY_GATE", roomy):
+            events = asyncio.run(scenario())
+        self.assertIn("busy", [event["type"] for event in events])
+        self.assertEqual(events[-1]["type"], "done")
+        self.assertEqual(disk.state()["reserved_bytes"], 0)
+        reasons = {stage.get("reason") for stage in main.generation_log[-1]["stages"] if stage["stage"] == "memory_wait"}
+        self.assertIn("disk", reasons)
+
+    def test_assembly_waits_for_disk_space_too(self):
+        from app.models import Project
+        from app.resource_gate import ResourceGate
+        disk = ResourceGate(lambda: (0, 100_000_000_000), 0.95, poll_s=0.01)
+        amounts = []
+        original = disk.acquire
+
+        async def recording(amount, on_wait=None):
+            amounts.append(amount)
+            return await original(amount, on_wait)
+
+        disk.acquire = recording
+        with patch.object(main, "DISK_GATE", disk):
+            events = asyncio.run(_book_events(Project(**_project(page_numbers=False))))
+        self.assertEqual(events[-1]["type"], "done")
+        self.assertEqual(amounts[:2], [main.DOWNLOAD_DISK_BYTES, main.DOWNLOAD_DISK_BYTES])
+        self.assertEqual(len(amounts), 3)
+        self.assertGreater(amounts[2], main.ASSEMBLY_DISK_BASE_BYTES)
+        self.assertEqual(disk.state()["reserved_bytes"], 0)
+
+    def test_disk_estimate_for_the_assembly(self):
+        self.assertEqual(main.assembly_disk_reserve(10_000_000), 50_000_000 + 20_000_000)
+
+    def test_estimates_follow_the_file_sizes(self):
+        self.assertEqual(main.fit_reserve(2_000_000), 5_000_000 + 25 * 2_000_000)
+        self.assertEqual(main.assembly_reserve(10_000_000, 1_000_000), 100_000_000 + 25_000_000 + 35_000_000)
 
 
 def _png():

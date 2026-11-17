@@ -64,6 +64,7 @@ wikipedia2book/
 │   ├── book_builder.py          # HTML for cover, table of contents, chapters, license and conclusion
 │   ├── pdf_generator.py         # WeasyPrint rendering, page fitting, page numbers, image import
 │   ├── isolation.py             # Runs the book assembly in a separate process (memory given back after each book)
+│   ├── resource_gate.py           # Makes each generation stage wait while the server lacks memory or disk space
 │   └── static/                  # Single-page web interface (no framework)
 │       ├── index.html
 │       ├── app.js               # Front-end logic
@@ -94,6 +95,8 @@ wikipedia2book/
 │   ├── SPECIFICATIONS.en.md     # English translation of the specifications
 │   ├── toolviews.csv, toolforge_hourly.csv, stats.md  # Usage statistics and their charts (generated)
 │   ├── comparison-mediawiki2latex.md  # Comparison with mediawiki2latex
+│   ├── comparison-ws-export.md  # Comparison with WS Export
+│   ├── tests-manuels.md  # Possible uses and manual tests (browser and API, in French)
 │   ├── testLimitetoolforge.md   # Limit test results on Toolforge, by version (French)
 │   └── _includes/head-custom.html  # Mermaid rendering on the site
 ├── CODE_OF_CONDUCT.md
@@ -136,6 +139,8 @@ Two settings control how heavy a generation can be. They are environment variabl
 |---|---|---|
 | `WIKIPEDIA2BOOK_ARTICLE_LIMIT` | `300` (also the default when the variable is not set, on every host) | Maximum number of articles per book. Beyond it, the API refuses the book at once (HTTP 413, code `too_many_articles`); the web interface reads the limit from `/api/version` and generates the book in several volumes instead, each under the limit. `0` lifts the limit. |
 | `WIKIPEDIA2BOOK_DOWNLOADS` | `2` | Number of article PDFs downloaded from Wikipedia at the same time for a book. |
+| `WIKIPEDIA2BOOK_MEMORY_RATIO` | `0.95` (default, not set in the `Dockerfile`) | Share of the container memory limit that the generations may use. Before each stage (download, refitting, assembly), a generation estimates the memory it needs from the file sizes and waits, showing "Server busy", while the used memory plus the running reserves plus its estimate would exceed this share. `0` disables the check. |
+| `WIKIPEDIA2BOOK_DISK_RATIO` | `0.95` (default, not set in the `Dockerfile`) | Share of the temporary disk that generations may fill. An article download (30 MB reserved) and the book assembly (50 MB + twice the size of the articles) wait, showing "Server busy", while the used disk space plus the running reserves plus their estimate would exceed this share. `0` disables the check. |
 
 Change them in the `Dockerfile` and rebuild the image, or override them when starting the container, without rebuilding:
 

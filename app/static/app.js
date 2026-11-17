@@ -743,9 +743,20 @@ function addSource(value) {
     const source = parseSourceLine(value, $('#articleLanguage').value);
     const resolved = await getJson('/api/sources/resolve', { method: 'POST', body: JSON.stringify({ input: source.input, language: source.language, site: source.site }) });
     if (resolved.kind === 'article') await addArticleToBook(resolved.article);
-    else if (resolved.kind === 'book') await importBook(resolved.book, resolved.book_title);
+    else if (resolved.kind === 'book') await importBook(resolved.book, resolved.book_title, resolved.article);
     else if (resolved.kind === 'subpages') await addSubpageBook(resolved);
     else showSearchResults(resolved.results, source, t('sources.noExactPage', { query: value }));
+  });
+}
+
+function isBookWikitext(lines) {
+  return lines.some((line) => /^\s*(?:;|:\s*\[\[|===?[^=].*===?\s*$)|\{\{\s*:/.test(line));
+}
+
+function addBookWikitext(wikitext) {
+  return withAddButton(t('export.addingLabel'), async () => {
+    const resolved = await getJson('/api/books/from-wikitext', { method: 'POST', body: JSON.stringify({ wikitext, language: $('#articleLanguage').value }) });
+    await importBook(resolved.book, resolved.book_title);
   });
 }
 
@@ -1073,6 +1084,17 @@ function showPdfWait(seconds) {
   pdfWaitTimer = setInterval(tick, 1000);
 }
 
+function showPdfBusy(seconds) {
+  clearInterval(pdfWaitTimer);
+  const start = Date.now() - seconds * 1000;
+  const tick = () => {
+    $('#pdfProgressWait').hidden = false;
+    $('#pdfProgressWait').textContent = t('progress.busy', { seconds: Math.floor((Date.now() - start) / 1000) });
+  };
+  tick();
+  pdfWaitTimer = setInterval(tick, 1000);
+}
+
 function hidePdfWait() {
   clearInterval(pdfWaitTimer);
   pdfWaitTimer = null;
@@ -1108,6 +1130,7 @@ function pdfStreamEvent(line) {
   const event = JSON.parse(line);
   if (event.type === 'progress') { showPdfProgress(event); return null; }
   if (event.type === 'wait') { showPdfWait(event.seconds); return null; }
+  if (event.type === 'busy') { showPdfBusy(event.seconds); return null; }
   if (event.type === 'error') throw new Error(event.detail);
   if (event.type === 'done') return event;
   return null;
@@ -1188,6 +1211,7 @@ function planVolumes(limit, slots) {
 }
 
 // NE PAS faire passer le découpage automatique avant les coupures de l'utilisateur : elles délimitent d'abord les volumes, puis chaque volume encore trop gros est découpé.
+// NE PAS modifier buildOrgSlots, volumeStarts, articleSegments, planVolumes ou volumeProject sans aligner app/volumes.py : le paramètre volume de l'API doit donner les mêmes volumes.
 function bookVolumes() {
   if (!state.project) return null;
   const limit = state.articleLimit;
@@ -1428,7 +1452,8 @@ $('#articleForm').addEventListener('submit', async (event) => {
   clearTimeout(state.searchTimer);
   $('#searchResults').hidden = true;
   const lines = value.split(/\r?\n/).filter((line) => line.trim());
-  if (lines.length > 1) await addSourceList(lines);
+  if (lines.length > 1 && isBookWikitext(lines)) await addBookWikitext(value);
+  else if (lines.length > 1) await addSourceList(lines);
   else await addSource(value);
 });
 $('#articleQuery').addEventListener('keydown', (event) => {

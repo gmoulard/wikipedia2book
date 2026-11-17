@@ -135,6 +135,7 @@ class Project(BaseModel):
     chapters: list[BookChapter] = Field(default_factory=list)
     toc_position: str = Field(default="start", max_length=320, pattern=r"^(start|end|before:.+)$")
     unassigned_first: bool = False
+    volume_breaks: list[str] = Field(default_factory=list, max_length=500)
     table_of_contents: bool = True
     page_numbers: bool = True
     created_at: datetime = Field(default_factory=utc_now)
@@ -165,6 +166,24 @@ class WikipediaBookImport(BaseModel):
     subtitle: str = ""
     chapters: list[BookChapter] = Field(default_factory=list)
     unassigned_first: bool = False
+
+
+class VolumeSummary(BaseModel):
+    volume: int
+    title: str
+    articles: int
+    documents: int
+    keys: list[str]
+
+
+class VolumePlan(BaseModel):
+    limit: int | None
+    volumes: list[VolumeSummary]
+
+
+class BookWikitextRequest(BaseModel):
+    wikitext: str = Field(min_length=1, max_length=200_000)
+    language: str = Field(default="fr", pattern=r"^[a-z0-9-]{2,12}$")
 
 
 class SourceRequest(BaseModel):

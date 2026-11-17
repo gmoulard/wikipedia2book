@@ -33,7 +33,9 @@ from io import BytesIO
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import FastAPI, HTTPException, Query, Request, Response
+from typing import Any
+
+from fastapi import Body, FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pypdf import PdfReader
@@ -57,7 +59,9 @@ from app.book_builder import (
 )
 from app.explorer import discover_related_articles
 from app.isolation import IsolatedProcessDied, preload, run_in_thread, run_isolated
-from app.json_source import JsonSourceError, download, fetch_project
+from app.resource_gate import Reservation, ResourceGate
+from app.json_source import JsonSourceError, download, fetch_project, project_from_payload
+from app.volumes import book_volumes, volume_project
 from app.models import (
     Article,
     ArticleRequest,
@@ -65,12 +69,15 @@ from app.models import (
     BookImage,
     BookImportRequest,
     BookGenerationRequest,
+    BookWikitextRequest,
     Project,
     ProjectExplorationRequest,
     SourceRequest,
     Site,
     SourceResolution,
     UploadedDocument,
+    VolumePlan,
+    VolumeSummary,
     WikipediaBookGenerationRequest,
     WikipediaBookImport,
     utc_now,
@@ -95,9 +102,16 @@ from app.wikipedia_api import (
     MediaWikiError,
     MediaWikiPageNotFound,
     WikipediaBook,
+    FULL_TEXT_PAGES,
     article_url,
+    book_wikitext_title,
+    is_printable_wikitext,
     parse_article_url,
+    parse_book_wikitext,
+    parse_printable_wikitext,
+    printable_wikitext_title,
     validate_language,
+    wikimedia_file_page,
 )
 
 
@@ -126,6 +140,48 @@ def deployment_settings(environ: Mapping[str, str], on_toolforge: bool) -> tuple
 
 
 ARTICLE_LIMIT, DOWNLOAD_CONCURRENCY = deployment_settings(os.environ, ON_TOOLFORGE)
+MEGABYTE = 1_000_000
+# NE PAS baisser ces estimations sans nouvelles mesures : recomposition d'un article environ 25 fois la taille de son PDF (6 Mo pour 0,2 Mo, 281 Mo pour 13,4 Mo), assemblage 92 Mo au départ puis environ 2,3 fois la taille des articles (+58 Mo pour 25,6 Mo, 253 pages), réduction d'une image de fond environ 35 fois sa taille (5,2 Mo de JPEG), mesurés le 2026-11-17 ; trop basses, elles laissent repasser la mémoire au-dessus de la limite.
+DOWNLOAD_RESERVE_BYTES = 10 * MEGABYTE
+# NE PAS descendre sous la taille d'un gros PDF recomposé (le fichier écrit dans le dossier temporaire fait environ 1,1 fois le PDF téléchargé, jusqu'à une vingtaine de Mo pour les plus gros articles) : sa taille n'est pas connue avant le téléchargement.
+DOWNLOAD_DISK_BYTES = 30 * MEGABYTE
+ASSEMBLY_DISK_BASE_BYTES = 50 * MEGABYTE
+# NE PAS descendre sous deux fois la taille des articles : merge_files écrit le fichier fusionné pendant que les parties existent encore, puis BookAssembly écrit le livre final à côté du fichier fusionné.
+ASSEMBLY_DISK_FACTOR = 2
+FIT_BASE_BYTES = 5 * MEGABYTE
+FIT_FACTOR = 25
+ASSEMBLY_BASE_BYTES = 100 * MEGABYTE
+ASSEMBLY_FACTOR = 2.5
+BACKGROUND_FACTOR = 35
+
+
+def ratio_setting(environ: Mapping[str, str], name: str) -> float:
+    text = environ.get(name, "").strip()
+    if not text:
+        return 0.95
+    try:
+        ratio = float(text)
+    except ValueError:
+        ratio = -1.0
+    if not 0 <= ratio <= 1:
+        raise ValueError(f"{name} doit être compris entre 0 (pas de contrôle) et 1 (reçu : {text!r}).")
+    return ratio
+
+
+def fit_reserve(size: int) -> int:
+    return FIT_BASE_BYTES + FIT_FACTOR * size
+
+
+def assembly_reserve(article_bytes: int, background_bytes: int) -> int:
+    return int(ASSEMBLY_BASE_BYTES + ASSEMBLY_FACTOR * article_bytes + BACKGROUND_FACTOR * background_bytes)
+
+
+def assembly_disk_reserve(article_bytes: int) -> int:
+    return ASSEMBLY_DISK_BASE_BYTES + ASSEMBLY_DISK_FACTOR * article_bytes
+
+
+def busy_event(waited_s: float) -> dict:
+    return {"type": "busy", "seconds": math.floor(waited_s)}
 REMOTE_FILE_BYTES = 15 * 1024 * 1024
 BACKGROUND_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml"}
 DOCUMENT_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp", "application/pdf"}
@@ -136,6 +192,13 @@ class RemoteFileError(ValueError):
 
 
 async def fetch_remote_file(url: str, accepted: set[str], label: str) -> tuple[bytes, str]:
+    file_page = wikimedia_file_page(url)
+    if file_page is not None:
+        try:
+            async with MediaWikiClient() as client:
+                url = await client.get_file_url(*file_page)
+        except MediaWikiError as error:
+            raise RemoteFileError(f"{label[0].upper()}{label[1:]} n’a pas pu être trouvé ({error}) : {url}") from error
     try:
         data, content_type = await download(url, REMOTE_FILE_BYTES, label)
     except JsonSourceError as error:
@@ -256,6 +319,20 @@ def _container_memory() -> dict[str, int | float | None]:
     }
 
 
+def _container_used_and_limit() -> tuple[int | None, int | None]:
+    memory = _container_memory()
+    return memory["used_bytes"], memory["limit_bytes"]
+
+
+def _disk_used_and_total() -> tuple[int | None, int | None]:
+    usage = shutil.disk_usage(tempfile.gettempdir())
+    return usage.used, usage.total
+
+
+MEMORY_GATE = ResourceGate(_container_used_and_limit, ratio_setting(os.environ, "WIKIPEDIA2BOOK_MEMORY_RATIO"))
+DISK_GATE = ResourceGate(_disk_used_and_total, ratio_setting(os.environ, "WIKIPEDIA2BOOK_DISK_RATIO"))
+
+
 def _generation_files_bytes(directory: str) -> int:
     total = 0
     with os.scandir(directory) as entries:
@@ -286,6 +363,8 @@ def health_details(response: Response) -> dict:
         "now": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "generations_in_progress": generations_in_progress,
         "memory": _container_memory(),
+        "memory_gate": MEMORY_GATE.state(),
+        "disk_gate": DISK_GATE.state(),
         "temporary": _temporary_space(),
     }
 
@@ -393,6 +472,23 @@ async def read_wikipedia_book(payload: BookImportRequest) -> WikipediaBookImport
         raise _mediawiki_error(error) from error
 
 
+@app.post("/api/books/from-wikitext", response_model=SourceResolution)
+async def read_book_wikitext(payload: BookWikitextRequest) -> SourceResolution:
+    try:
+        language = validate_language(payload.language)
+    except ValueError as error:
+        raise _mediawiki_error(error) from error
+    if is_printable_wikitext(payload.wikitext):
+        book = parse_printable_wikitext(payload.wikitext)
+        if not book.chapters:
+            raise HTTPException(status_code=422, detail="Ce texte ne contient aucune page incluse {{:…}} d’un livre de Wikilivres.")
+        return SourceResolution(kind="book", book=_book_import(book, language, "wikibooks"), book_title=printable_wikitext_title(payload.wikitext))
+    book = parse_book_wikitext(payload.wikitext, limit=200)
+    if not book.chapters:
+        raise HTTPException(status_code=422, detail="Ce texte ne contient aucun lien [[…]] vers un article Wikipédia.")
+    return SourceResolution(kind="book", book=_book_import(book, language, "wikipedia"), book_title=book_wikitext_title(payload.wikitext))
+
+
 @app.post("/api/sources/resolve", response_model=SourceResolution)
 async def resolve_source(payload: SourceRequest) -> SourceResolution:
     try:
@@ -417,6 +513,10 @@ async def _resolve_source(client: MediaWikiClient, text: str, default_language: 
     # NE PAS réduire à l'espace principal hors Wikipédia, ni se fier au marquage « contenu » de l'API : les pages d'auteur de Wikisource sont dans un espace propre au projet dont le numéro change selon la langue (102 en français, 106 en espagnol, non marqué « contenu »).
     if namespace == 0 or (site != "wikipedia" and namespace >= PROJECT_NAMESPACES_START and namespace % 2 == 0):
         article = Article(title=title, language=language, site=site, url=article_url(language, title, site), selected=True)
+        if site == "wikibooks" and namespace == 0 and "/" in title and title.rsplit("/", 1)[1].casefold() in FULL_TEXT_PAGES:
+            printable = await _printable_version(client, title, language)
+            if printable is not None:
+                return printable
         if site in SUBPAGE_BOOK_SITES and namespace == 0:
             subpage_book = await client.get_subpage_book(title, language, site)
             if sum(len(pages) for _, pages in subpage_book.chapters) >= SUBPAGE_BOOK_MIN:
@@ -427,6 +527,23 @@ async def _resolve_source(client: MediaWikiClient, text: str, default_language: 
     if site != "wikipedia":
         raise ValueError(f"Seules les pages de contenu de {language}.{site}.org (textes, pages d’auteur…) sont acceptées.")
     return SourceResolution(kind="book", book=await _wikipedia_book(client, language, title), book_title=_book_name(title))
+
+
+async def _printable_version(client: MediaWikiClient, title: str, language: str) -> SourceResolution | None:
+    summary_title = title.rsplit("/", 1)[0]
+    content = await client.get_wikitext(title, language, "wikibooks") or ""
+    if is_printable_wikitext(content):
+        book = parse_printable_wikitext(content)
+        if book.chapters:
+            printable = Article(title=title, language=language, site="wikibooks", url=article_url(language, title, "wikibooks"), selected=True)
+            return SourceResolution(
+                kind="book", article=printable, book=_book_import(book, language, "wikibooks"), book_title=printable_wikitext_title(content) or _book_name(summary_title)
+            )
+    summary = Article(title=summary_title, language=language, site="wikibooks", url=article_url(language, summary_title, "wikibooks"), selected=True)
+    subpage_book = await client.get_subpage_book(summary_title, language, "wikibooks")
+    if sum(len(pages) for _, pages in subpage_book.chapters) >= SUBPAGE_BOOK_MIN:
+        return SourceResolution(kind="subpages", article=summary, book=_book_import(subpage_book, language, "wikibooks"), book_title=_book_name(summary_title))
+    return None
 
 
 INTERWIKI_SITES = {"w": "wikipedia", "s": "wikisource", "b": "wikibooks", "voy": "wikivoyage", "v": "wikiversity", "q": "wikiquote", "wikt": "wiktionary", "n": "wikinews"}
@@ -566,6 +683,7 @@ def _selected_items(project: Project) -> list[Article | UploadedDocument]:
             "code": "too_many_articles",
             "count": articles,
             "limit": ARTICLE_LIMIT,
+            "volumes": len(book_volumes(project, ARTICLE_LIMIT)),
             "message": (
                 f"Ce livre compte {articles} articles : la génération est limitée à {ARTICLE_LIMIT} articles par livre, "
                 "une limite volontaire pour ménager les serveurs de Wikimédia."
@@ -657,6 +775,25 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
         record.finish(status, **details)
 
 
+async def _admitted(gate: ResourceGate, amount: int):
+    notices: asyncio.Queue[dict] = asyncio.Queue()
+    task = asyncio.ensure_future(gate.acquire(amount, lambda waited: notices.put_nowait(busy_event(waited))))
+    try:
+        while not task.done():
+            getter = asyncio.ensure_future(notices.get())
+            finished, _ = await asyncio.wait({task, getter}, return_when=asyncio.FIRST_COMPLETED)
+            if getter in finished:
+                yield getter.result()
+            else:
+                getter.cancel()
+    except BaseException:
+        task.cancel()
+        if task.done() and not task.cancelled() and task.exception() is None:
+            task.result().release()
+        raise
+    yield task.result()
+
+
 def _page_count(pdf_data: bytes) -> int:
     return len(PdfReader(BytesIO(pdf_data)).pages)
 
@@ -684,6 +821,10 @@ async def _build_book_pdf(
         step += 1
         return {"type": "progress", "step": step, "total": total, "code": code, **params}
 
+    def note_wait(reservation: Reservation, reason: str) -> None:
+        if reservation.waited_s >= 1:
+            record.stage("memory_wait", "server", _memory_snapshot(), reason=reason, waited_s=round(reservation.waited_s, 1), reserved_bytes=reservation.amount)
+
     def fit_to_file(pdf_data: bytes) -> tuple[Path, int]:
         return _fit_to_file(pdf_data, workdir / f"part-{next(part_numbers)}.pdf", page_width_mm, page_height_mm)
 
@@ -704,8 +845,17 @@ async def _build_book_pdf(
     for field in remote_images:
         image = getattr(project, field)
         yield progress("fetch_image", title=image.title or image.url)
+        async for admission in _admitted(MEMORY_GATE, DOWNLOAD_RESERVE_BYTES):
+            if isinstance(admission, Reservation):
+                reservation = admission
+            else:
+                yield admission
+        note_wait(reservation, "fetch_image")
         started_at = time.monotonic()
-        data, content_type = await fetch_remote_file(image.url, BACKGROUND_TYPES, f"l’image « {image.title or image.url} »")
+        try:
+            data, content_type = await fetch_remote_file(image.url, BACKGROUND_TYPES, f"l’image « {image.title or image.url} »")
+        finally:
+            reservation.release()
         project = project.model_copy(update={field: BookImage(title=image.title, mime_type=content_type, data_base64=base64.b64encode(data).decode("ascii"))})
         record.stage("fetch_image", "server", _memory_snapshot(), image=field, duration_s=round(time.monotonic() - started_at, 2), size_bytes=len(data))
 
@@ -715,19 +865,31 @@ async def _build_book_pdf(
     # NE PAS dépasser DOWNLOAD_CONCURRENCY : hors Toolforge, la politique robots de Wikimédia est respectée avec 2 téléchargements simultanés (MediaWikiClient l'impose aussi pour tout le serveur) ; sur Toolforge, exempté, 4 par livre.
     slots_free = asyncio.Semaphore(DOWNLOAD_CONCURRENCY)
 
+    def announce_busy(waited: float) -> None:
+        started.put_nowait(busy_event(waited))
+
     async def load(client: MediaWikiClient, item: Article | UploadedDocument) -> None:
-        async with slots_free:
-            if isinstance(item, Article):
-                await started.put(progress("fetch_article", title=item.title))
-                data = await client.get_article_pdf(item.title, item.language, paper, item.site)
-            else:
-                await started.put(progress("prepare_document", title=item.title))
-                data = await asyncio.to_thread(document_pdf, *await document_data(item))
-            # NE PAS appeler pypdf directement ici : un calcul bloquant gèle le serveur et retarde l'envoi des messages de progression.
-            fitted_items[item.key] = asyncio.ensure_future(asyncio.to_thread(fit_to_file, data))
-            # NE PAS libérer le créneau avant la fin de la recomposition : sur un serveur au processeur limité (Toolforge), les PDF bruts téléchargés s'accumuleraient en mémoire en attendant d'être recomposés.
-            # NE PAS attendre la recomposition sans shield : annuler ce téléchargement l'annulerait aussi, et la suppression du dossier temporaire n'attendrait plus son fil d'exécution.
-            await asyncio.shield(fitted_items[item.key])
+        # NE PAS rendre la réserve de disque avant l'écriture du fichier recomposé : tant qu'il n'est pas écrit, la place qu'il prendra n'apparaît pas dans l'espace utilisé du disque.
+        async with slots_free, DISK_GATE.reserve(DOWNLOAD_DISK_BYTES, announce_busy) as disk:
+            note_wait(disk, "disk")
+            async with MEMORY_GATE.reserve(DOWNLOAD_RESERVE_BYTES, announce_busy) as reservation:
+                note_wait(reservation, "download")
+                if isinstance(item, Article):
+                    await started.put(progress("fetch_article", title=item.title))
+                    data = await client.get_article_pdf(item.title, item.language, paper, item.site)
+                    is_pdf = True
+                else:
+                    await started.put(progress("prepare_document", title=item.title))
+                    data, is_pdf = await document_data(item)
+            async with MEMORY_GATE.reserve(fit_reserve(len(data)), announce_busy) as reservation:
+                note_wait(reservation, "fit")
+                if not is_pdf:
+                    data = await asyncio.to_thread(document_pdf, data, False)
+                # NE PAS appeler pypdf directement ici : un calcul bloquant gèle le serveur et retarde l'envoi des messages de progression.
+                fitted_items[item.key] = asyncio.ensure_future(asyncio.to_thread(fit_to_file, data))
+                # NE PAS libérer le créneau avant la fin de la recomposition : sur un serveur au processeur limité (Toolforge), les PDF bruts téléchargés s'accumuleraient en mémoire en attendant d'être recomposés.
+                # NE PAS attendre la recomposition sans shield : annuler ce téléchargement l'annulerait aussi, et la suppression du dossier temporaire n'attendrait plus son fil d'exécution.
+                await asyncio.shield(fitted_items[item.key])
 
     async with MediaWikiClient() as client:
         client.on_wait = lambda seconds: started.put_nowait({"type": "wait", "seconds": math.ceil(seconds)})
@@ -760,16 +922,38 @@ async def _build_book_pdf(
         preload(["app.main"])
     # NE PAS faire la suite dans le processus du serveur : les rendus WeasyPrint et l'assemblage y prennent plusieurs centaines de Mo que l'allocateur ne rend pas au système après la génération (relevé de /api/health/details sur Toolforge) ; un processus séparé rend tout en se terminant.
     runner = run_isolated if ISOLATE_ASSEMBLY else run_in_thread
-    # NE PAS enlever aclosing : sans lui, un client qui abandonne laisse tourner le processus d'assemblage jusqu'au ramasse-miettes, pendant que son dossier temporaire est supprimé.
-    async with contextlib.aclosing(runner(_finish_book, project, selected, language, workdir, fitted)) as messages:
-        async for kind, value in messages:
-            if kind == "result":
-                output, size = value
-                yield {"type": "done", "path": output, "size": size}
-            elif "progress" in value:
-                yield progress(value["progress"])
+    article_bytes = sum(path.stat().st_size for path, _ in fitted.values())
+    background_bytes = sum(len(image.data_base64 or "") * 3 // 4 for image in (project.cover_image, project.back_image) if image)
+    async for admission in _admitted(DISK_GATE, assembly_disk_reserve(article_bytes)):
+        if isinstance(admission, Reservation):
+            disk = admission
+        else:
+            yield admission
+    note_wait(disk, "assembly_disk")
+    try:
+        async for admission in _admitted(MEMORY_GATE, assembly_reserve(article_bytes, background_bytes)):
+            if isinstance(admission, Reservation):
+                reservation = admission
             else:
-                record.stage(value["stage"], "assembly", value["memory"], server_rss_bytes=_memory_snapshot()["rss_bytes"], **value["details"])
+                yield admission
+    except BaseException:
+        disk.release()
+        raise
+    note_wait(reservation, "assembly")
+    try:
+        # NE PAS enlever aclosing : sans lui, un client qui abandonne laisse tourner le processus d'assemblage jusqu'au ramasse-miettes, pendant que son dossier temporaire est supprimé.
+        async with contextlib.aclosing(runner(_finish_book, project, selected, language, workdir, fitted)) as messages:
+            async for kind, value in messages:
+                if kind == "result":
+                    output, size = value
+                    yield {"type": "done", "path": output, "size": size}
+                elif "progress" in value:
+                    yield progress(value["progress"])
+                else:
+                    record.stage(value["stage"], "assembly", value["memory"], server_rss_bytes=_memory_snapshot()["rss_bytes"], **value["details"])
+    finally:
+        reservation.release()
+        disk.release()
 
 
 def _finish_book(
@@ -940,11 +1124,45 @@ async def _pdf_chunks(path: Path):
             yield chunk
 
 
+VOLUME_QUERY = Query(default=None, ge=1, le=1000)
+
+
+def _volume_of(project: Project, volume: int | None, language: str) -> Project:
+    if volume is None:
+        return project
+    volumes = book_volumes(project, ARTICLE_LIMIT)
+    if not volumes:
+        raise HTTPException(status_code=400, detail="Sélectionnez au moins un article avant l’export.")
+    if volume > len(volumes):
+        raise HTTPException(status_code=422, detail=f"Ce livre compte {len(volumes)} volume(s) : le volume {volume} n’existe pas.")
+    if len(volumes) == 1:
+        return project
+    return volume_project(project, volumes[volume - 1], volume - 1, len(volumes), language)
+
+
+@app.post("/api/books/volumes", response_model=VolumePlan)
+async def plan_book_volumes(project: Project, language: str = Query(default="fr", pattern=PDF_LANGUAGE_PATTERN)) -> VolumePlan:
+    volumes = book_volumes(project, ARTICLE_LIMIT)
+    return VolumePlan(
+        limit=ARTICLE_LIMIT,
+        volumes=[
+            VolumeSummary(
+                volume=index + 1,
+                title=volume_project(project, items, index, len(volumes), language).book_title if len(volumes) > 1 else project.book_title,
+                articles=sum(isinstance(item, Article) for item in items),
+                documents=sum(isinstance(item, UploadedDocument) for item in items),
+                keys=[item.key for item in items],
+            )
+            for index, items in enumerate(volumes)
+        ],
+    )
+
+
 @app.post("/api/pdf")
 async def create_pdf(
-    project: Project, language: str = Query(default="fr", pattern=PDF_LANGUAGE_PATTERN)
+    project: Project, language: str = Query(default="fr", pattern=PDF_LANGUAGE_PATTERN), volume: int | None = VOLUME_QUERY
 ) -> Response:
-    return await _create_pdf_response(project, language)
+    return await _create_pdf_response(_volume_of(project, volume, language), language)
 
 
 @app.get("/api/pdf/from-source")
@@ -953,24 +1171,60 @@ async def create_pdf_from_source(
     language: str = Query(default="fr", pattern=PDF_LANGUAGE_PATTERN),
     wiki: str = Query(default="", max_length=12),
     summary: bool = False,
+    volume: int | None = VOLUME_QUERY,
 ) -> Response:
     try:
         project = await project_from_sources(source, wiki or language, summary)
     except (MediaWikiError, ValueError) as error:
         raise _mediawiki_error(error) from error
-    return await _create_pdf_response(project, language)
+    return await _create_pdf_response(_volume_of(project, volume, language), language)
 
 
 @app.get("/api/pdf/from-json")
 async def create_pdf_from_json(
     url: str = Query(min_length=1, max_length=2048),
     language: str = Query(default="fr", pattern=PDF_LANGUAGE_PATTERN),
+    volume: int | None = VOLUME_QUERY,
 ) -> Response:
     try:
         project = await fetch_project(url)
     except JsonSourceError as error:
         raise HTTPException(status_code=error.status_code, detail=str(error)) from error
-    return await _create_pdf_response(project, language)
+    return await _create_pdf_response(_volume_of(project, volume, language), language)
+
+
+@app.post("/api/pdf/from-json")
+async def create_pdf_from_json_body(
+    payload: Any = Body(...),
+    language: str = Query(default="fr", pattern=PDF_LANGUAGE_PATTERN),
+    volume: int | None = VOLUME_QUERY,
+) -> Response:
+    try:
+        project = project_from_payload(payload)
+    except JsonSourceError as error:
+        raise HTTPException(status_code=error.status_code, detail=str(error)) from error
+    return await _create_pdf_response(_volume_of(project, volume, language), language)
+
+
+@app.post("/api/pdf/from-wikitext")
+async def create_pdf_from_wikitext(
+    payload: BookWikitextRequest,
+    language: str = Query(default="fr", pattern=PDF_LANGUAGE_PATTERN),
+    volume: int | None = VOLUME_QUERY,
+) -> Response:
+    resolved = await read_book_wikitext(payload)
+    book = resolved.book
+    in_chapters = {key for chapter in book.chapters for key in chapter.article_keys}
+    name = resolved.book_title or book.articles[0].title
+    project = Project(
+        name=name[:120],
+        book_title=resolved.book_title[:200],
+        book_subtitle=book.subtitle[:300],
+        main_articles=book.articles,
+        chapters=book.chapters,
+        unassigned_first=bool(book.chapters) and book.articles[0].key not in in_chapters,
+    )
+    return await _create_pdf_response(_volume_of(project, volume, language), language)
 
 
 async def _create_pdf_response(project: Project, language: str) -> Response:
@@ -1120,8 +1374,9 @@ def _book_name(page_title: str) -> str:
 
 @app.post("/api/pdf/stream")
 async def create_pdf_stream(
-    project: Project, language: str = Query(default="fr", pattern=PDF_LANGUAGE_PATTERN)
+    project: Project, language: str = Query(default="fr", pattern=PDF_LANGUAGE_PATTERN), volume: int | None = VOLUME_QUERY
 ) -> StreamingResponse:
+    project = _volume_of(project, volume, language)
     selected = _selected_items(project)
     _apply_default_book_title(project, selected)
 

@@ -21,7 +21,7 @@ import httpx
 from unittest.mock import AsyncMock
 
 from app.models import Article
-from app.wikipedia_api import USER_AGENT, MediaWikiClient, MediaWikiPageNotFound, article_url, parse_article_url, subpage_chapters
+from app.wikipedia_api import USER_AGENT, MediaWikiClient, MediaWikiPageNotFound, article_url, book_wikitext_title, parse_article_url, parse_book_wikitext, subpage_chapters
 
 
 def _book_client(wikitext):
@@ -72,6 +72,21 @@ class GetBookTest(unittest.TestCase):
         client._get = AsyncMock(return_value={"query": {"pages": [{"missing": True}]}})
         with self.assertRaises(MediaWikiPageNotFound):
             asyncio.run(client.get_book("Titre", "fr"))
+
+
+class BookWikitextTest(unittest.TestCase):
+    WIKITEXT = "== Ports de ''Bretagne'' ==\n=== Guide des [[Port|ports]] ===\n:[[Brest]]\n;Finistère\n:[[Concarneau|Concarneau (port)]]\n:[[Catégorie:Port]]\n;Vide\n;[[Morbihan]]\n:[[Lorient#Port]]\n:[[Brest]]\n"
+
+    def test_pasted_book_page_keeps_order_chapters_subtitle_and_title(self):
+        book = parse_book_wikitext(self.WIKITEXT)
+        self.assertEqual(book.subtitle, "Guide des ports")
+        self.assertEqual(book.chapters, [("", ["Brest"]), ("Finistère", ["Concarneau"]), ("Morbihan", ["Lorient"])])
+        self.assertEqual(book_wikitext_title(self.WIKITEXT), "Ports de Bretagne")
+
+    def test_limit_and_missing_title(self):
+        book = parse_book_wikitext("\n".join(f":[[Article {n}]]" for n in range(10)), limit=3)
+        self.assertEqual(book.chapters, [("", ["Article 0", "Article 1", "Article 2"])])
+        self.assertEqual(book_wikitext_title("=== Sous-titre ===\n:[[Brest]]"), "")
 
 
 class GetArticlePdfTest(unittest.TestCase):

@@ -24,7 +24,7 @@ from dataclasses import dataclass
 from email.utils import parsedate_to_datetime
 from datetime import datetime, timezone
 from typing import get_args
-from urllib.parse import parse_qs, quote, unquote, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse, urlsplit
 
 import httpx
 from bs4 import BeautifulSoup
@@ -316,48 +316,130 @@ class MediaWikiClient:
         chapters = subpage_chapters(parsed.get("text", ""), parsed.get("title", title), min(max(limit, 1), 500), skip_parents=site == "wikisource")
         return WikipediaBook(subtitle="", chapters=chapters)
 
-    async def get_book(self, title: str, language: str = "fr", limit: int = 200) -> WikipediaBook:
-        language = validate_language(language)
-        limit = min(max(limit, 1), 500)
+    # NE PAS modifier sans aligner wikimediaFileUrl dans app.js : un PDF garde son original, une image sa vignette de 2 000 px.
+    async def get_file_url(self, host: str, name: str) -> str:
+        if self._client is None:
+            raise RuntimeError("MediaWikiClient doit être utilisé dans un bloc async with.")
+        query = {"action": "query", "format": "json", "formatversion": 2, "prop": "imageinfo", "iiprop": "url|mime", "iiurlwidth": 2000, "titles": f"File:{name}"}
+        try:
+            response = await self._send(f"https://{host}/w/api.php", params=query)
+            response.raise_for_status()
+            pages = response.json().get("query", {}).get("pages", [])
+        except (httpx.HTTPError, ValueError) as error:
+            raise MediaWikiError(f"Impossible de joindre l’API de {host}.") from error
+        info = (pages[0].get("imageinfo") or [{}])[0] if pages else {}
+        if not info.get("url"):
+            raise MediaWikiPageNotFound(f"Le fichier « {name} » est introuvable sur {host}.")
+        url = info["url"] if info.get("mime") == "application/pdf" else info.get("thumburl") or info["url"]
+        parts = urlsplit(url)
+        query = "&".join(pair for pair in parts.query.split("&") if pair and not pair.startswith("utm_"))
+        return parts._replace(query=query).geturl()
+
+    async def get_wikitext(self, title: str, language: str, site: str = "wikipedia") -> str | None:
         result = await self._get(
-            language,
+            validate_language(language),
             # NE PAS passer à prop=links ni parse&prop=links : tri alphabétique, l'ordre réel du livre serait perdu.
             {"prop": "revisions", "titles": title, "rvprop": "content", "rvslots": "main"},
+            site,
         )
         pages = result.get("query", {}).get("pages", [])
         if not pages or pages[0].get("missing"):
-            raise MediaWikiPageNotFound(f"La page de livre Wikipédia « {title} » est introuvable.")
+            return None
         revisions = pages[0].get("revisions", [])
-        content = revisions[0].get("slots", {}).get("main", {}).get("content", "") if revisions else ""
+        return revisions[0].get("slots", {}).get("main", {}).get("content", "") if revisions else ""
 
-        subtitle = ""
-        chapters: list[tuple[str, list[str]]] = [("", [])]
-        seen: set[str] = set()
-        count = 0
-        for line in content.splitlines():
-            stripped = line.strip()
-            if stripped.startswith("="):
-                heading = re.fullmatch(r"===(?!=)(.*?)(?<!=)===", stripped)
-                if heading and not subtitle:
-                    subtitle = _plain_wikitext(heading.group(1))
+    async def get_book(self, title: str, language: str = "fr", limit: int = 200) -> WikipediaBook:
+        content = await self.get_wikitext(title, language)
+        if content is None:
+            raise MediaWikiPageNotFound(f"La page de livre Wikipédia « {title} » est introuvable.")
+        return parse_book_wikitext(content, min(max(limit, 1), 500))
+
+
+def parse_book_wikitext(content: str, limit: int = 200) -> WikipediaBook:
+    subtitle = ""
+    chapters: list[tuple[str, list[str]]] = [("", [])]
+    seen: set[str] = set()
+    count = 0
+    for line in content.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("="):
+            heading = re.fullmatch(r"===(?!=)(.*?)(?<!=)===", stripped)
+            if heading and not subtitle:
+                subtitle = _plain_wikitext(heading.group(1))
+            continue
+        if stripped.startswith(";"):
+            chapter_title = _plain_wikitext(stripped[1:])
+            if chapter_title:
+                chapters.append((chapter_title, []))
+            continue
+        for match in re.finditer(r"\[\[([^\[\]|#]+)", line):
+            link_title = match.group(1).strip().replace("_", " ")
+            if not link_title or ":" in link_title or link_title.casefold() in seen:
                 continue
-            if stripped.startswith(";"):
-                chapter_title = _plain_wikitext(stripped[1:])
-                if chapter_title:
-                    chapters.append((chapter_title, []))
-                continue
-            for match in re.finditer(r"\[\[([^\[\]|#]+)", line):
-                link_title = match.group(1).strip().replace("_", " ")
-                if not link_title or ":" in link_title or link_title.casefold() in seen:
-                    continue
-                seen.add(link_title.casefold())
-                chapters[-1][1].append(link_title)
-                count += 1
-                if count >= limit:
-                    break
+            seen.add(link_title.casefold())
+            chapters[-1][1].append(link_title)
+            count += 1
             if count >= limit:
                 break
-        return WikipediaBook(subtitle=subtitle, chapters=[chapter for chapter in chapters if chapter[1]])
+        if count >= limit:
+            break
+    return WikipediaBook(subtitle=subtitle, chapters=[chapter for chapter in chapters if chapter[1]])
+
+
+WIKIMEDIA_HOST = re.compile(r"^(?:[a-z0-9-]+\.)*(?:wikimedia|wikipedia|wikisource|wikibooks|wikivoyage|wikiversity|wikiquote|wiktionary|wikinews)\.org$")
+
+
+def wikimedia_file_page(url: str) -> tuple[str, str] | None:
+    parts = urlsplit(url)
+    page = re.fullmatch(r"/wiki/[^:/]+:(.+)", unquote(parts.path))
+    if parts.scheme != "https" or not page or not WIKIMEDIA_HOST.match(parts.hostname or ""):
+        return None
+    return parts.hostname, page.group(1).replace("_", " ")
+
+
+PRINTABLE_SKIPPED_PAGES = {"couverture", "cover", "licence de documentation libre gnu", "gnu free documentation license", "licence", "license"}
+TRANSCLUSION = re.compile(r"\{\{\s*:\s*([^{}|]+?)\s*(?:\|[^{}]*)?\}\}")
+
+
+def is_printable_wikitext(content: str) -> bool:
+    return bool(TRANSCLUSION.search(content))
+
+
+def parse_printable_wikitext(content: str, limit: int = 500) -> WikipediaBook:
+    chapters: list[tuple[str, list[str]]] = [("", [])]
+    seen: set[str] = set()
+    count = 0
+    for line in content.splitlines():
+        heading = re.fullmatch(r"=(?!=)(.*?)(?<!=)=", line.strip())
+        if heading:
+            chapter_title = _plain_wikitext(re.sub(r"<[^>]*>", "", heading.group(1)))
+            if chapter_title:
+                chapters.append((chapter_title, []))
+        for match in TRANSCLUSION.finditer(line):
+            page_title = match.group(1).strip().replace("_", " ")
+            if not page_title or ":" in page_title or page_title.casefold() in seen:
+                continue
+            if page_title.rsplit("/", 1)[-1].casefold() in PRINTABLE_SKIPPED_PAGES:
+                continue
+            seen.add(page_title.casefold())
+            chapters[-1][1].append(page_title)
+            count += 1
+            if count >= limit:
+                return WikipediaBook(subtitle="", chapters=[chapter for chapter in chapters if chapter[1]])
+    return WikipediaBook(subtitle="", chapters=[chapter for chapter in chapters if chapter[1]])
+
+
+def printable_wikitext_title(content: str) -> str:
+    named = re.search(r"\|\s*(?:titre|title)\s*=\s*([^|{}\n]+)", content)
+    return _plain_wikitext(named.group(1)) if named else ""
+
+
+def book_wikitext_title(content: str) -> str:
+    for line in content.splitlines():
+        heading = re.fullmatch(r"==(?!=)(.*?)(?<!=)==", line.strip())
+        if heading:
+            return _plain_wikitext(heading.group(1))
+    return ""
 
 
 def subpage_chapters(html: str, title: str, limit: int = 500, skip_parents: bool = False) -> list[tuple[str, list[str]]]:
