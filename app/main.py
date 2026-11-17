@@ -1218,7 +1218,8 @@ async def _build_book_pdf(
     page_width_mm, page_height_mm = page_size_mm(project)
     unique_items = list({item.key: item for _, items in groups for item in items}.values())
     remote_images = [field for field in ("cover_image", "back_image") if getattr(project, field) and getattr(project, field).url]
-    total = len(unique_items) + len(remote_images) + 3 + (2 if project.page_numbers else 0)
+    # NE PAS retirer le + 1 : la dernière étape, le téléchargement du PDF, est affichée par le navigateur (showPdfDownload).
+    total = len(unique_items) + len(remote_images) + 4 + (2 if project.page_numbers else 0)
     step = 0
     part_numbers = itertools.count()
 

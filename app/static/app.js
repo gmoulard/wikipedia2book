@@ -1104,11 +1104,22 @@ function collectLayoutSettings() {
   };
 }
 
+let pdfProgressTotal = 0;
+
 function showPdfProgress(event) {
+  if (event) pdfProgressTotal = event.total;
   $('#pdfProgress').hidden = false;
   $('#pdfProgressStep').textContent = event ? t('progress.step', { step: event.step, total: event.total }) : '';
   $('#pdfProgressLabel').textContent = event ? t(`progress.${event.code}`, { title: event.title || '' }) : t('progress.starting');
   $('#pdfProgressFill').style.width = event ? `${Math.round((event.step / event.total) * 100)}%` : '0%';
+}
+
+function showPdfDownload(received, size) {
+  const total = Math.max(pdfProgressTotal, 1);
+  const share = size ? Math.min(received / size, 1) : 1;
+  $('#pdfProgressStep').textContent = t('progress.step', { step: total, total });
+  $('#pdfProgressLabel').textContent = t('progress.download', { percent: Math.floor(share * 100) });
+  $('#pdfProgressFill').style.width = `${Math.round(((total - 1 + share) / total) * 100)}%`;
 }
 
 let pdfWaitTimer = null;
@@ -1222,6 +1233,7 @@ async function streamPdf(project) {
         }
         if (done && pending.length) { parts.push(pending); received += pending.length; pending = new Uint8Array(0); }
       }
+      if (done) showPdfDownload(received, done.size);
     }
     if (done && received >= done.size) return new Blob(parts, { type: 'application/pdf' });
     if (finished) throw new ServerCrashError(t('progress.interrupted'));

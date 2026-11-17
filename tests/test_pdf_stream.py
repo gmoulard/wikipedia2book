@@ -143,7 +143,7 @@ class PdfStreamTest(unittest.TestCase):
         events = self._events(_project(conclusion="Fin"))
         progress = [e for e in events if e["type"] == "progress"]
         total = progress[0]["total"]
-        self.assertEqual([e["step"] for e in progress], list(range(1, total + 1)))
+        self.assertEqual([e["step"] for e in progress], list(range(1, total)))
         self.assertTrue(all(e["total"] == total for e in progress))
         self.assertEqual(
             [e["code"] for e in progress],
@@ -160,7 +160,7 @@ class PdfStreamTest(unittest.TestCase):
         events = self._events(_project(page_numbers=False))
         codes = [e["code"] for e in events if e["type"] == "progress"]
         self.assertEqual(codes, ["fetch_article", "fetch_article", "cover_and_toc", "assemble", "finalize"])
-        self.assertEqual(events[0]["total"], 5)
+        self.assertEqual(events[0]["total"], 6)
 
     def test_wikipedia_pause_is_announced_without_counting_as_a_step(self):
         FakeClient.wait = 4.2
