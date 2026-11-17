@@ -28,7 +28,9 @@ ENV WIKIPEDIA2BOOK_ARTICLE_LIMIT=300 \
 
 WORKDIR /app
 
+# NE PAS retirer apt-get upgrade : l'image python:3.12-slim est publiée avec des paquets Debian parfois en retard sur leurs correctifs de sécurité (zlib1g, CVE-2026-85091, relevée par Trivy dans le workflow Security).
 RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
     && apt-get install -y --no-install-recommends \
         libcairo2 \
         libgdk-pixbuf-2.0-0 \
