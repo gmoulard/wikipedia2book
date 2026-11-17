@@ -1,15 +1,9 @@
 {
   "format": "wikipedia2book-workspace",
   "version": 1,
+  "saved_at": "2026-11-17T14:59:13.395Z",
   "projects": [
     {
-      "id": "a94b220c-8f18-4384-9ce0-6741d9625bac",
-      "name": "Cosmologie",
-      "book_title": "Cosmologie",
-      "book_subtitle": "",
-      "book_author": "",
-      "introduction": "",
-      "conclusion": "",
       "main_articles": [
         {
           "page_id": null,
@@ -307,10 +301,83 @@
           "origin_title": null,
           "depth": 0,
           "selected": true
+        },
+        {
+          "page_id": null,
+          "title": "Cosmologie",
+          "language": "fr",
+          "site": "wikipedia",
+          "url": "https://fr.wikipedia.org/wiki/Cosmologie",
+          "summary": "",
+          "origin_title": null,
+          "depth": 0,
+          "selected": true
+        },
+        {
+          "page_id": null,
+          "title": "Cosmology",
+          "language": "en",
+          "site": "wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Cosmology",
+          "summary": "",
+          "origin_title": null,
+          "depth": 0,
+          "selected": true
         }
       ],
       "discovered_articles": [],
       "uploaded_documents": [],
+      "book_title": "Cosmologie",
+      "book_subtitle": "",
+      "book_author": "",
+      "introduction": "Cosmology (from Ancient Greek κόσμος (cosmos) 'the universe, the world' and -λογία (logia) 'study of') is the study of the nature of the universe, the cosmos. The term cosmology was first used in English in 1656 in Thomas Blount's Glossographia, with the meaning of \"a speaking of the world\".[2] In 1731, German philosopher Christian Wolff used the term cosmology in Latin (cosmologia) to denote a branch of metaphysics that deals with the general nature of the physical world.[3] Cosmology is investigated by scientists, including astronomers and physicists, as well as philosophers, such as metaphysicians, philosophers of physics, and philosophers of space and time. Because of this shared scope with philosophy, theories in cosmology may include both scientific and non-scientific propositions and may depend upon assumptions that cannot be tested. Religious or mythological cosmology is a body of beliefs based on mythological, religious, and esoteric literature and traditions of creation myths and eschatology.\n\nIn the science of astronomy, physical cosmology is concerned with the study of the chronology of the universe, the observable universe's origin, its large-scale structures and dynamics, and the ultimate fate of the universe, including the physical laws that govern these areas.[4] Physical cosmology is a sub-branch of astronomy that is concerned with the universe as a whole. Modern physical cosmology is dominated by the Big Bang Theory which attempts to bring together observational astronomy and particle physics;[5] more specifically, a standard parameterization of the Big Bang with dark matter and dark energy, known as the Lambda-CDM model.",
+      "conclusion": "",
+      "cover_image": {
+        "title": "Omega_Nebula.jpg",
+        "url": "https://upload.wikimedia.org/wikipedia/commons/7/72/Omega_Nebula.jpg?utm_source=fr.wikipedia.org&utm_campaign=imageinfo&utm_content=original"
+      },
+      "back_image": {
+        "title": "End_of_universe.jpg",
+        "url": "https://upload.wikimedia.org/wikipedia/commons/9/98/End_of_universe.jpg?utm_source=fr.wikibooks.org&utm_campaign=imageinfo&utm_content=original"
+      },
+      "page_format": "A4",
+      "custom_width_mm": 148,
+      "custom_height_mm": 210,
+      "orientation": "portrait",
+      "margin_top_mm": 18,
+      "margin_bottom_mm": 18,
+      "margin_inside_mm": 18,
+      "margin_outside_mm": 16,
+      "margin_binding_mm": 0,
+      "article_order": [
+        "wikibooks:fr:title:cosmologie/le paradoxe d'olbers",
+        "wikibooks:fr:title:cosmologie/le décalage vers le rouge (redshift)",
+        "wikibooks:fr:title:cosmologie/l'expansion de l'univers",
+        "wikibooks:fr:title:cosmologie/le facteur de hubble",
+        "wikibooks:fr:title:cosmologie/l'univers observable",
+        "wikibooks:fr:title:cosmologie/une introduction aux modèles cosmologiques",
+        "wikibooks:fr:title:cosmologie/les équations de friedmann newtoniennes",
+        "wikibooks:fr:title:cosmologie/résoudre les équations de friedmann newtoniennes",
+        "wikibooks:fr:title:cosmologie/la masse et la relativité générale",
+        "wikibooks:fr:title:cosmologie/les équations de friedmann relativistes",
+        "wikibooks:fr:title:cosmologie/les équations de friedmann pour un univers plat",
+        "wikibooks:fr:title:cosmologie/l'énergie noire et la constante cosmologique",
+        "wikibooks:fr:title:cosmologie/le destin de l'univers",
+        "wikibooks:fr:title:cosmologie/le fluide cosmologique",
+        "wikibooks:fr:title:cosmologie/les perturbations cosmologiques",
+        "wikibooks:fr:title:cosmologie/l'évolution adiabatique et isotherme des perturbations",
+        "wikibooks:fr:title:cosmologie/l'évolution des perturbations avant le découplage",
+        "wikibooks:fr:title:cosmologie/l'évolution des perturbations après le découplage",
+        "wikibooks:fr:title:cosmologie/l'évolution de la matière",
+        "wikibooks:fr:title:cosmologie/l'évolution du rayonnement",
+        "wikibooks:fr:title:cosmologie/les processus de baryogenèse et nucléosynthèse",
+        "wikibooks:fr:title:cosmologie/le découplage des photons",
+        "wikibooks:fr:title:cosmologie/le spectre de puissance des perturbations",
+        "wikibooks:fr:title:cosmologie/les anisotropies du fond diffus",
+        "wikibooks:fr:title:cosmologie/preuves de la théorie du big-bang",
+        "wikibooks:fr:title:cosmologie/l'hypothèse de l'inflation",
+        "wikibooks:fr:title:cosmologie/les solutions statiques des équations de friedmann"
+      ],
       "chapters": [
         {
           "id": "66e02de7-b8df-475d-8b3f-21f3f8b763c4",
@@ -388,44 +455,15 @@
           ]
         }
       ],
-      "article_order": [
-        "wikibooks:fr:title:cosmologie/le paradoxe d'olbers",
-        "wikibooks:fr:title:cosmologie/le décalage vers le rouge (redshift)",
-        "wikibooks:fr:title:cosmologie/l'expansion de l'univers",
-        "wikibooks:fr:title:cosmologie/le facteur de hubble",
-        "wikibooks:fr:title:cosmologie/l'univers observable",
-        "wikibooks:fr:title:cosmologie/une introduction aux modèles cosmologiques",
-        "wikibooks:fr:title:cosmologie/les équations de friedmann newtoniennes",
-        "wikibooks:fr:title:cosmologie/résoudre les équations de friedmann newtoniennes",
-        "wikibooks:fr:title:cosmologie/la masse et la relativité générale",
-        "wikibooks:fr:title:cosmologie/les équations de friedmann relativistes",
-        "wikibooks:fr:title:cosmologie/les équations de friedmann pour un univers plat",
-        "wikibooks:fr:title:cosmologie/l'énergie noire et la constante cosmologique",
-        "wikibooks:fr:title:cosmologie/le destin de l'univers",
-        "wikibooks:fr:title:cosmologie/le fluide cosmologique",
-        "wikibooks:fr:title:cosmologie/les perturbations cosmologiques",
-        "wikibooks:fr:title:cosmologie/l'évolution adiabatique et isotherme des perturbations",
-        "wikibooks:fr:title:cosmologie/l'évolution des perturbations avant le découplage",
-        "wikibooks:fr:title:cosmologie/l'évolution des perturbations après le découplage",
-        "wikibooks:fr:title:cosmologie/l'évolution de la matière",
-        "wikibooks:fr:title:cosmologie/l'évolution du rayonnement",
-        "wikibooks:fr:title:cosmologie/les processus de baryogenèse et nucléosynthèse",
-        "wikibooks:fr:title:cosmologie/le découplage des photons",
-        "wikibooks:fr:title:cosmologie/le spectre de puissance des perturbations",
-        "wikibooks:fr:title:cosmologie/les anisotropies du fond diffus",
-        "wikibooks:fr:title:cosmologie/preuves de la théorie du big-bang",
-        "wikibooks:fr:title:cosmologie/l'hypothèse de l'inflation",
-        "wikibooks:fr:title:cosmologie/les solutions statiques des équations de friedmann"
-      ],
-      "unassigned_first": false,
       "toc_position": "start",
+      "volume_breaks": [],
+      "unassigned_first": false,
       "table_of_contents": true,
       "page_numbers": true,
-      "volume_breaks": [],
-      "page_format": "A4",
-      "orientation": "portrait",
+      "id": "a94b220c-8f18-4384-9ce0-6741d9625bac",
+      "name": "Cosmologie",
       "created_at": "2026-11-16T21:34:00.000Z",
-      "updated_at": "2026-11-16T21:34:00.000Z"
+      "updated_at": "2026-11-17T14:59:10.490Z"
     }
   ]
 }
