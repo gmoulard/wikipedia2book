@@ -196,6 +196,8 @@ class ColorAndLogoTest(unittest.TestCase):
         self.assertIn(f'<img class="cover-logo" src="data:image/png;base64,{logo}"', book_builder.build_cover_html(Project(name="Livre", cover_logo=True)))
         back = book_builder.build_back_cover_html(Project(name="Livre", back_logo=True, back_color="#336699"))
         self.assertIn('<img class="back-logo"', back)
+        self.assertIn(".back-logo { position: absolute; right: 15mm; bottom: 15mm; width: 25mm; }", back)
+        self.assertIn(".cover-logo { position: absolute; right: 0; bottom: 0; width: 25mm; }", book_builder.build_cover_html(Project(name="Livre", cover_logo=True)))
         self.assertIn("@page  { background-color: #336699; }", back)
 
     def test_a_last_page_needs_an_image_a_color_or_the_logo(self):

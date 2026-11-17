@@ -71,6 +71,26 @@ class BookAssemblyTest(unittest.TestCase):
         self.assertEqual(size, len(data))
         return PdfReader(BytesIO(data))
 
+    def test_last_page_can_be_left_without_number(self):
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as workdir:
+            parts = [Path(workdir) / f"part-{index}.pdf" for index in range(3)]
+            for part in parts:
+                part.write_bytes(_make_pdf(1, size=(300, 400)))
+            merge_files(parts, Path(workdir) / "merged.pdf")
+            assembly = BookAssembly(Path(workdir) / "merged.pdf")
+            try:
+                assembly.stamp_page_numbers(skip_last=True)
+                output = Path(workdir) / "book.pdf"
+                assembly.save(output)
+            finally:
+                assembly.close()
+            reader = PdfReader(str(output))
+            self.assertIn("2", reader.pages[1].extract_text())
+            self.assertNotIn("3", reader.pages[2].extract_text())
+
     def test_page_numbers_skip_first_page_and_respect_each_page_size(self):
         reader = self._assemble(_make_pdf(1, size=(400, 600)), _make_pdf(2, size=(300, 500)))
         self.assertEqual(len(reader.pages), 3)

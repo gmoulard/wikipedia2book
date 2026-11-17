@@ -201,8 +201,8 @@ class BookAssembly:
 
     # NE PAS appeler avant d'avoir ajouté toutes les pages, toutes déjà passées par fit_pdf_to_format : chaque page doit avoir une origine (0,0) propre.
     # NE PAS revenir à une superposition de page (add_overlay, show_pdf_page) : elle réécrit le contenu de chaque page sans le compresser, ce qui faisait presque doubler la taille du livre (173 Mo au lieu de 96 pour 100 articles).
-    def stamp_page_numbers(self) -> None:
-        for index in range(1, self.book.page_count):
+    def stamp_page_numbers(self, skip_last: bool = False) -> None:
+        for index in range(1, self.book.page_count - (1 if skip_last else 0)):
             page = self.book[index]
             label = str(index + 1)
             width = pymupdf.get_text_length(label, fontname="helv", fontsize=PAGE_NUMBER_SIZE)

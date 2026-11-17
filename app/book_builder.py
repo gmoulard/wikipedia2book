@@ -178,7 +178,7 @@ h2 {{ font-size: 18pt; }}
 .author {{ margin-top: 32pt; color: #555; }}
 .cover-note {{ margin-top: 20pt; color: #555; font-size: 9pt; }}
 .opening {{ page-break-after: always; }}
-.cover-logo {{ display: block; width: 30mm; margin-top: 28pt; }}
+.cover-logo {{ position: absolute; right: 0; bottom: 0; width: 25mm; }}
 {text_css}
     </style>
     </head>
@@ -430,7 +430,8 @@ def has_back_cover(project: Project) -> bool:
 
 def build_back_cover_html(project: Project) -> str:
     page_width, page_height, *_ = _page_layout(project)
-    logo_width = min(40.0, page_width / 3)
+    logo_width = min(25.0, page_width / 4)
+    logo_margin = min(15.0, page_width / 10)
     logo = _logo_img("back-logo") if project.back_logo else ""
     return f"""<!doctype html>
 <html><head><meta charset="utf-8"><style>
@@ -438,7 +439,7 @@ def build_back_cover_html(project: Project) -> str:
 {_color_css(project.back_color, "")}
 {_background_css(project.back_image, "")}
 body {{ margin: 0; }}
-.back-logo {{ display: block; width: {logo_width:g}mm; margin: {page_height / 2 - logo_width * 0.46:g}mm auto 0; }}
+.back-logo {{ position: absolute; right: {logo_margin:g}mm; bottom: {logo_margin:g}mm; width: {logo_width:g}mm; }}
 </style></head><body><div>{logo}</div></body></html>"""
 
 

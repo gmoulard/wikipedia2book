@@ -1616,7 +1616,7 @@ def _finish_book(
         stage("outline_and_links")
         if project.page_numbers:
             step("stamp_page_numbers")
-            assembly.stamp_page_numbers()
+            assembly.stamp_page_numbers(skip_last=has_back_cover(project))
             stage("stamp_page_numbers")
         step("finalize")
         output = workdir / "book.pdf"
