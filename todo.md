@@ -21,6 +21,7 @@ Une action réalisée est cochée (`[x]`) avec la version ou la date qui l'a fai
 - [x] Garder un tableau des adresses refusées par Wikipedia2Book — 1.12.5 (page d'admin).
 - [x] Proposer dans l'interface des couleurs pour la première et la dernière page, et le logo Wikipédia sur ces deux pages — 1.12.5.
 - ajoute la possibilité d'intégrer  n'importe quelle page HTML que l'on traduit sur le serveur en PDF et que l'on intègre comme PDF
+- ajoute la possiblité de remoner une photo ou un documents, pour ne pas voir le nom du fichier a l'impressions.
 
 ## 3. Améliorations possibles
 
