@@ -22,13 +22,14 @@ import json
 import math
 import os
 import re
+import secrets
 import shutil
 import subprocess
 import tempfile
 import time
 from collections import deque
 from collections.abc import Mapping
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from io import BytesIO
 from pathlib import Path
 from urllib.parse import quote
@@ -36,7 +37,7 @@ from urllib.parse import quote
 from typing import Any
 
 from fastapi import Body, FastAPI, HTTPException, Query, Request, Response
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pypdf import PdfReader
 
@@ -56,6 +57,21 @@ from app.book_builder import (
     pdf_label,
     toc_block_count,
     toc_slot_index,
+)
+from app.admin import (
+    SESSION_COOKIE,
+    SESSION_S,
+    STATE_COOKIE,
+    STATE_S,
+    OAuthError,
+    admin_settings,
+    authorize_url,
+    require_admin,
+    session_cookie,
+    session_user,
+    state_cookie,
+    state_matches,
+    wikimedia_username,
 )
 from app.explorer import discover_related_articles
 from app.isolation import IsolatedProcessDied, preload, run_in_thread, run_in_worker, run_isolated
@@ -229,7 +245,7 @@ app.mount("/static", StaticFiles(directory=static_directory), name="static")
 HOURLY_STATS_PATH = "/api/stats/hourly"
 HEALTH_DETAILS_PATH = "/api/health/details"
 GENERATION_LOG_PATH = "/api/health/generations"
-UNCOUNTED_PATHS = {HOURLY_STATS_PATH, HEALTH_DETAILS_PATH, GENERATION_LOG_PATH}
+UNCOUNTED_PATHS = {HOURLY_STATS_PATH, HEALTH_DETAILS_PATH, GENERATION_LOG_PATH, "/api/admin/session", "/api/admin/summary"}
 HOURLY_KEEP = 48
 hourly_hits: dict[str, int] = {}
 started_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -250,7 +266,7 @@ def _current_hour() -> str:
 
 @app.middleware("http")
 async def count_hourly_hits(request: Request, call_next):
-    if request.url.path not in UNCOUNTED_PATHS:
+    if request.url.path not in UNCOUNTED_PATHS and not request.url.path.startswith(GENERATION_LOG_PATH + "/"):
         hour = _current_hour()
         hourly_hits[hour] = hourly_hits.get(hour, 0) + 1
         while len(hourly_hits) > HOURLY_KEEP:
@@ -261,7 +277,7 @@ async def count_hourly_hits(request: Request, call_next):
 @app.middleware("http")
 async def revalidate_web_app_files(request: Request, call_next):
     response = await call_next(request)
-    if request.url.path == "/" or request.url.path.startswith("/static/"):
+    if request.url.path in ("/", "/admin") or request.url.path.startswith("/static/"):
         response.headers["Cache-Control"] = "no-cache"
     return response
 
@@ -396,6 +412,10 @@ def _temporary_space() -> dict[str, int]:
 def health_details(response: Response) -> dict:
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Cache-Control"] = "no-store"
+    return _health_payload()
+
+
+def _health_payload() -> dict:
     return {
         "version": app.version,
         "started": started_at,
@@ -421,6 +441,146 @@ def generation_journal(response: Response) -> dict:
         "now": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "generations": list(reversed(generation_log)),
     }
+
+
+@app.get(GENERATION_LOG_PATH + "/{generation_id}")
+def generation_journal_entry(generation_id: int, response: Response) -> dict:
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Cache-Control"] = "no-store"
+    for generation in generation_log:
+        if generation["id"] == generation_id:
+            return {"version": app.version, "started": started_at, "generation": generation}
+    raise HTTPException(status_code=404, detail=f"La génération {generation_id} n’est plus dans le journal (50 dernières générations, effacé au redémarrage).")
+
+
+ADMIN = admin_settings(os.environ)
+
+
+def _secure_cookies() -> bool:
+    return ADMIN.callback.startswith("https://")
+
+
+@app.get("/admin", include_in_schema=False)
+def admin_page() -> FileResponse:
+    return FileResponse(static_directory / "admin.html", media_type="text/html")
+
+
+@app.get("/admin/login", include_in_schema=False)
+def admin_login() -> Response:
+    if not ADMIN.configured:
+        return RedirectResponse("/admin?error=not_configured", status_code=302)
+    state = secrets.token_urlsafe(24)
+    response = RedirectResponse(authorize_url(ADMIN, state), status_code=302)
+    response.set_cookie(STATE_COOKIE, state_cookie(state), max_age=STATE_S, httponly=True, secure=_secure_cookies(), samesite="lax", path="/admin")
+    return response
+
+
+@app.get("/admin/callback", include_in_schema=False)
+async def admin_callback(request: Request, code: str = Query(default="", max_length=2048), state: str = Query(default="", max_length=256), error: str = Query(default="", max_length=256)) -> Response:
+    if error or not code:
+        return RedirectResponse("/admin?error=denied", status_code=302)
+    if not state_matches(request.cookies.get(STATE_COOKIE), state):
+        return RedirectResponse("/admin?error=state", status_code=302)
+    try:
+        user = await wikimedia_username(ADMIN, code)
+    except OAuthError as failure:
+        print(json.dumps({"admin_login_failed": str(failure)}, ensure_ascii=False), flush=True)
+        return RedirectResponse("/admin?error=oauth", status_code=302)
+    if user not in ADMIN.admins:
+        return RedirectResponse("/admin?error=forbidden", status_code=302)
+    response = RedirectResponse("/admin", status_code=302)
+    response.delete_cookie(STATE_COOKIE, path="/admin")
+    response.set_cookie(SESSION_COOKIE, session_cookie(user), max_age=SESSION_S, httponly=True, secure=_secure_cookies(), samesite="lax", path="/")
+    return response
+
+
+@app.get("/admin/logout", include_in_schema=False)
+def admin_logout() -> Response:
+    response = RedirectResponse("/admin", status_code=302)
+    response.delete_cookie(SESSION_COOKIE, path="/")
+    return response
+
+
+@app.get("/api/admin/session")
+def admin_session(request: Request, response: Response) -> dict:
+    response.headers["Cache-Control"] = "no-store"
+    return {"configured": ADMIN.configured, "user": session_user(request, ADMIN)}
+
+
+def _percentile(values: list[float], share: float) -> float | None:
+    if not values:
+        return None
+    ordered = sorted(values)
+    return ordered[max(0, math.ceil(share * len(ordered)) - 1)]
+
+
+def _generation_row(generation: dict) -> dict:
+    stages = generation.get("stages", [])
+    return {
+        "id": generation["id"],
+        "started": generation["started"],
+        "version": generation.get("version"),
+        "status": generation["status"],
+        "duration_s": generation.get("duration_s"),
+        "articles": generation.get("articles", 0),
+        "documents": generation.get("documents", 0),
+        "page_format": generation.get("page_format"),
+        "size_bytes": generation.get("size_bytes"),
+        "waited_s": round(sum(stage.get("waited_s", 0) for stage in stages if stage.get("stage") == "memory_wait"), 1),
+        "peak_rss_bytes": max((stage.get("peak_rss_bytes") or 0 for stage in stages), default=0) or None,
+        "error": generation.get("error"),
+    }
+
+
+def admin_summary_payload(user: str) -> dict:
+    rows = [_generation_row(generation) for generation in reversed(generation_log)]
+    done = [row for row in rows if row["status"] == "done" and row["duration_s"] is not None]
+    durations = [row["duration_s"] for row in done]
+    statuses: dict[str, int] = {}
+    for row in rows:
+        statuses[row["status"]] = statuses.get(row["status"], 0) + 1
+    since = (datetime.now(timezone.utc) - timedelta(hours=24)).strftime("%Y-%m-%dT%H")
+    hours = dict(sorted(hourly_hits.items()))
+    median = _percentile(durations, 0.5)
+    return {
+        "user": user,
+        "version": _version_details(),
+        "server": _health_payload(),
+        "settings": {
+            "on_toolforge": ON_TOOLFORGE,
+            "article_limit": ARTICLE_LIMIT,
+            "downloads": DOWNLOAD_CONCURRENCY,
+            "memory_ratio": MEMORY_GATE.ratio,
+            "disk_ratio": DISK_GATE.ratio,
+            "generations_ratio": GENERATION_GATE.ratio,
+        },
+        "usage": {
+            "hours": hours,
+            "hits_24h": sum(count for hour, count in hours.items() if hour > since),
+            "hits_48h": sum(hours.values()),
+            "generations": statuses,
+            "articles": sum(row["articles"] for row in rows),
+            "documents": sum(row["documents"] for row in rows),
+        },
+        "performance": {
+            "generations": len(done),
+            "median_s": median,
+            "p90_s": _percentile(durations, 0.9),
+            "max_s": max(durations, default=None),
+            "median_s_per_article": _percentile([row["duration_s"] / row["articles"] for row in done if row["articles"]], 0.5),
+            "median_size_bytes": _percentile([row["size_bytes"] for row in done if row["size_bytes"]], 0.5),
+            "max_peak_rss_bytes": max((row["peak_rss_bytes"] or 0 for row in rows), default=0) or None,
+            "waited_s": round(sum(row["waited_s"] for row in rows), 1),
+        },
+        "recent": rows,
+    }
+
+
+@app.get("/api/admin/summary")
+def admin_summary(request: Request, response: Response) -> dict:
+    user = require_admin(request, ADMIN)
+    response.headers["Cache-Control"] = "no-store"
+    return admin_summary_payload(user)
 
 
 @app.get("/api/version")

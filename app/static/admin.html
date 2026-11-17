@@ -1,0 +1,94 @@
+<!doctype html>
+<!--
+  This file is part of Wikipedia2Book
+  <https://github.com/gmoulard/wikipedia2book>.
+  Copyright (c) 2026 Guillaume Moulard.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License as published
+  by the Free Software Foundation, version 3.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-->
+
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Wikipedia2Book · Administration</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/admin.css">
+  <script src="/static/i18n.js" defer></script>
+  <script src="/static/admin.js" defer></script>
+</head>
+<body>
+  <div class="admin-shell">
+    <header class="admin-header">
+      <a class="brand" href="/">
+        <img class="brand-logo" src="/static/Wikipedia2bookLogo.png" width="28" height="28" alt="" aria-hidden="true">
+        <span>Wikipedia<span class="brand-light">2Book</span></span>
+      </a>
+      <h1 data-i18n="admin.title">Administration</h1>
+      <div class="admin-account">
+        <span id="adminUser"></span>
+        <a class="button" id="adminLogout" href="/admin/logout" hidden data-i18n="admin.logout">Se déconnecter</a>
+      </div>
+    </header>
+
+    <p class="admin-message" id="adminMessage" role="status" hidden></p>
+
+    <section class="admin-login" id="adminLogin" hidden>
+      <p data-i18n="admin.intro">Page réservée aux administrateurs de Wikipedia2Book : connectez-vous avec votre compte Wikimédia.</p>
+      <a class="button button-teal button-large" id="adminLoginButton" href="/admin/login" data-i18n="admin.login">Se connecter avec Wikimédia</a>
+    </section>
+
+    <main id="adminBoard" hidden>
+      <div class="admin-toolbar">
+        <span id="adminUpdated"></span>
+        <button class="button" type="button" id="adminRefresh" data-i18n="admin.refresh">Actualiser</button>
+      </div>
+      <p class="admin-note" data-i18n="admin.retention">Données gardées en mémoire seulement et effacées à chaque redémarrage : 48 h de requêtes, 50 dernières générations.</p>
+
+      <section class="admin-section">
+        <h2 data-i18n="admin.server">Serveur</h2>
+        <dl class="admin-tiles" id="adminServer"></dl>
+      </section>
+
+      <section class="admin-section">
+        <h2 data-i18n="admin.usage">Utilisation</h2>
+        <dl class="admin-tiles" id="adminUsage"></dl>
+      </section>
+
+      <section class="admin-section">
+        <h2 data-i18n="admin.performance">Performance</h2>
+        <dl class="admin-tiles" id="adminPerformance"></dl>
+      </section>
+
+      <section class="admin-section">
+        <h2 data-i18n="admin.limits">Limites et alertes</h2>
+        <div class="admin-columns">
+          <table class="admin-table" id="adminLimits"></table>
+          <table class="admin-table" id="adminAlerts"></table>
+        </div>
+      </section>
+
+      <section class="admin-section">
+        <h2 data-i18n="admin.recent">Dernières générations</h2>
+        <div class="admin-scroll"><table class="admin-table" id="adminRecent"></table></div>
+      </section>
+
+      <section class="admin-section">
+        <h2 data-i18n="admin.hours">Requêtes par heure (UTC)</h2>
+        <div class="admin-scroll"><table class="admin-table" id="adminHours"></table></div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

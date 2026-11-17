@@ -43,6 +43,7 @@ This is the English translation of [SPECIFICATIONS.fr.md](https://gmoulard.githu
 	- [11.3 Error handling](#113-error-handling)
 - [12. User interface](#12-user-interface)
 	- [12.1 Interface languages](#121-interface-languages)
+	- [12.2 Administration page](#122-administration-page)
 - [13. Technical architecture](#13-technical-architecture)
 	- [13.1 Technologies](#131-technologies)
 	- [13.2 Wikipedia API](#132-wikipedia-api)
@@ -567,6 +568,31 @@ The interface (labels, buttons, messages) is available in French, English, Spani
 
 This interface language is independent of the language of the Wikipedia articles (section 3), which remains a separate per-article setting. It does not apply to error messages returned by the server. It is, however, sent to the server when the PDF is generated (`language` parameter of `/api/pdf` and `/api/pdf/stream`, French by default, any value other than the 12 interface languages is refused): the titles and labels added by the application to the PDF are then written in that language — "Introduction", "Table of contents", the "Chapter" mention on chapter pages, "No chapter", "Conclusion", "License", the "Edition of …" mention under the logo at the end of the book, as well as the corresponding bookmarks. The generated pages carry the chosen language (`lang` attribute) and switch to right-to-left writing for Arabic and Persian. The license page is written entirely in that language: translated official name of the CC BY-SA 4.0 license, link to the version of the license deed in that language on creativecommons.org, reuse conditions, notices about media, imported documents and the unofficial nature of the book. Text entered by the user (title, introduction, conclusion, chapter titles) and the content of Wikipedia articles are never translated.
 
+### 12.2 Administration page
+
+Service monitoring page reserved for administrators, at `/admin` (for example https://wikipedia2book.toolforge.org/admin). No page of the interface links to it, and it is not indexed by search engines (`noindex`).
+
+* **Sign-in with the Wikimedia account** (Meta-Wiki OAuth 2.0, "identification only" application: it can neither read nor change anything on the user's behalf):
+  1. the "Sign in with Wikimedia" button leads to `/admin/login`, which redirects to `https://meta.wikimedia.org/w/rest.php/oauth2/authorize` with a random state, kept 10 minutes in a signed cookie (`w2b_oauth_state`);
+  2. Wikimedia redirects to `/admin/callback`, which checks the state, exchanges the code for a token (`oauth2/access_token`), then reads the username (`oauth2/resource/profile`);
+  3. if that name is in the list of administrators, a signed session cookie is set (`w2b_admin`: HttpOnly, Secure over HTTPS, SameSite=Lax, 8 hours). Otherwise the page shows "This Wikimedia account is not a Wikipedia2Book administrator.", with no session.
+  * The Wikimedia token is not kept. The server stays stateless: the session lives entirely in the cookie, signed by a key drawn when the server starts. A restart therefore invalidates sessions, and you have to sign in again.
+  * Each call checks that the name is still in the list. `/admin/logout` erases the cookie.
+* **Administrators**: `WIKIPEDIA2BOOK_ADMINS` variable, Wikimedia usernames written in UTF-8 hexadecimal and separated by commas. To get the value for a name: `python -c "print('Example'.encode().hex())"`. Without the variable, two default accounts; an invalid value prevents startup. Names are compared as on MediaWiki (first letter in upper case, `_` read as a space).
+* **Configuration**:
+  * `WIKIPEDIA2BOOK_OAUTH_CLIENT_ID` and `WIKIPEDIA2BOOK_OAUTH_CLIENT_SECRET`: OAuth 2.0 application registered on [Special:OAuthConsumerRegistration](https://meta.wikimedia.org/wiki/Special:OAuthConsumerRegistration/propose/oauth2), as "User identity verification only", approved automatically;
+  * `WIKIPEDIA2BOOK_OAUTH_CALLBACK`: the callback address registered in the application, `https://wikipedia2book.toolforge.org/admin/callback` for Toolforge (set in the `Procfile`).
+  * One application is needed per host, since the callback address differs. Without these three values, the page says that sign-in is not configured.
+* **Indicators**, refreshed every 30 s:
+  * **Server**: version and commit, start time, generations in progress, container memory and its limit, process memory, free temporary space, stages waiting (memory, disk, entry). This is the data of `/api/health/details`.
+  * **Usage**: requests over 24 and 48 hours, generations per status, articles and documents of the latest generations.
+  * **Performance**, over successful generations: median, 90th percentile and longest duration, median per article, median PDF size, memory peak of a generation, total "Server busy" wait.
+  * **Limits and alerts**: server settings and limit crossings.
+  * **Latest generations** (log, start, status, duration, articles, size, wait, memory peak, version) and **requests per hour**. The number of each generation opens its full journal (`/api/health/generations/{id}`, section 13.3) in a new tab.
+  * All this data is in memory only, with no title or IP address: 48 hours of requests and the last 50 generations, lost at restart.
+* **API**: `GET /api/admin/session` gives `configured` (sign-in configured) and `user` (signed-in administrator, or `null`); `GET /api/admin/summary` gives every indicator (`user`, `version`, `server`, `settings`, `usage`, `performance`, `recent`), never cached, with the administrator session only (otherwise HTTP 401, `detail.code` = `admin_login_required`). Neither is counted in the requests per hour. `/api/health/details` and `/api/health/generations` stay public.
+* Texts in the 12 interface languages (`admin.*` keys). Tests: `tests/test_admin.py`.
+
 ## 13\. Technical architecture
 
 ### 13.1 Technologies
@@ -630,7 +656,7 @@ GET endpoints can be opened directly in the address bar:
 
 * Container state, to follow live during a limit test (section 13.12): `http://localhost:8000/api/health/details`, for example in production `https://wikipedia2book.toolforge.org/api/health/details`. JSON response, with no personal data at all, open CORS, never cached, not counted in the hits per hour: `version`, `started` (server start: if it changes, the server has restarted), `now`, `generations_in_progress` (PDF generations in progress), `memory_gate`, `disk_gate` and `generation_gate` (memory and disk space checks and admission of generations: `ratio`, `reserved_bytes`, `active_stages`, `waiting_stages`), `memory` (the container's `used_bytes`, `limit_bytes`, `peak_bytes` and `used_percent`, read from the cgroup files `memory.current`, `memory.max`, `memory.peak` — or `memory.usage_in_bytes`, `memory.limit_in_bytes`, `memory.max_usage_in_bytes` with cgroup v1 —, then the process's `process_rss_bytes` and `process_peak_rss_bytes`, read from `/proc/self/status`; `null` when the information does not exist, for example outside Linux or without a limit) and `temporary` (`free_bytes` and `total_bytes` of the temporary folder's disk, `generation_files_bytes` used by the folders of the generations in progress). Just before a crash, it shows whether memory or temporary space is reaching its limit. Tests: `tests/test_health_details.py`.
 
-* Generation journal, to diagnose a slow or failed generation afterwards: `http://localhost:8000/api/health/generations`, for example `https://wikipedia2book.toolforge.org/api/health/generations`. JSON response, open CORS, never cached, not counted in the hits per hour: `version`, `started`, `now` and `generations`, the last 50 generations since the server started, newest first. Each generation gives `id`, `started`, `version`, `language`, the number of `articles`, `documents` and `chapters`, `page_format`, `orientation`, `page_numbers`, `table_of_contents`, `status` (`running`, `done`, `error`, or `aborted` if the client gives up), `duration_s`, `size_bytes` (success) or `error` (error type only, or the stop message of the assembly process), and `stages`, the list of stages reached: `at_s` (seconds since the start), `stage`, `process` (`server` or `assembly`), `container_bytes` (container memory), `rss_bytes` and `peak_rss_bytes` (memory of the process that reached the stage) and, for the assembly process, `server_rss_bytes`. Stages: `start`, `fetch_image` (background image given by its address: `image` = `cover_image` or `back_image`, download `duration_s`, `size_bytes`), `fetch_document` (imported document given by its address: `duration_s`, `size_bytes`, `pdf`), `downloads_done` (with `article_pages`), `memory_wait` (a stage waited for memory: `reason` = `generation`, `disk`, `download`, `fit`, `fetch_image`, `assembly_disk` or `assembly`, `waited_s`, `reserved_bytes`), then in the assembly process `assembly_start`, `fit_backgrounds` (shrinking of background images: `duration_s`, `bytes_before`, `bytes_after`), `cover_html` (cover HTML, including the analysis of the background image for the text color: `duration_s`, `background`), `render_cover`, `render_toc_count` (numbering), `render_toc`, `render_chapters`, `render_conclusion`, `render_license`, `render_back_cover` (last page background image), `merge_parts` (merging the parts), `merge_reopen` (reopening the merged book), `outline_and_links`, `stamp_page_numbers` (numbering) and `save`. No title, address or anything identifying the user is recorded. The journal lives in memory and is lost when the server restarts: each stage is therefore also written to standard output as one JSON line, and stays readable in the platform logs (`toolforge webservice logs` on Toolforge), even when the platform stops the whole container for lack of memory. Tests: `tests/test_generation_log.py`.
+* Generation journal, to diagnose a slow or failed generation afterwards: `http://localhost:8000/api/health/generations`, for example `https://wikipedia2book.toolforge.org/api/health/generations`. JSON response, open CORS, never cached, not counted in the hits per hour: `version`, `started`, `now` and `generations`, the last 50 generations since the server started, newest first. Each generation gives `id`, `started`, `version`, `language`, the number of `articles`, `documents` and `chapters`, `page_format`, `orientation`, `page_numbers`, `table_of_contents`, `status` (`running`, `done`, `error`, or `aborted` if the client gives up), `duration_s`, `size_bytes` (success) or `error` (error type only, or the stop message of the assembly process), and `stages`, the list of stages reached: `at_s` (seconds since the start), `stage`, `process` (`server` or `assembly`), `container_bytes` (container memory), `rss_bytes` and `peak_rss_bytes` (memory of the process that reached the stage) and, for the assembly process, `server_rss_bytes`. Stages: `start`, `fetch_image` (background image given by its address: `image` = `cover_image` or `back_image`, download `duration_s`, `size_bytes`), `fetch_document` (imported document given by its address: `duration_s`, `size_bytes`, `pdf`), `downloads_done` (with `article_pages`), `memory_wait` (a stage waited for memory: `reason` = `generation`, `disk`, `download`, `fit`, `fetch_image`, `assembly_disk` or `assembly`, `waited_s`, `reserved_bytes`), then in the assembly process `assembly_start`, `fit_backgrounds` (shrinking of background images: `duration_s`, `bytes_before`, `bytes_after`), `cover_html` (cover HTML, including the analysis of the background image for the text color: `duration_s`, `background`), `render_cover`, `render_toc_count` (numbering), `render_toc`, `render_chapters`, `render_conclusion`, `render_license`, `render_back_cover` (last page background image), `merge_parts` (merging the parts), `merge_reopen` (reopening the merged book), `outline_and_links`, `stamp_page_numbers` (numbering) and `save`. No title, address or anything identifying the user is recorded. The journal lives in memory and is lost when the server restarts: each stage is therefore also written to standard output as one JSON line, and stays readable in the platform logs (`toolforge webservice logs` on Toolforge), even when the platform stops the whole container for lack of memory. A single generation: `GET /api/health/generations/{id}` (`id` from the journal), response `{"version", "started", "generation"}`, or HTTP 404 when it is no longer in the journal; not counted in the hits per hour, like the whole journal. Tests: `tests/test_generation_log.py`, `tests/test_admin.py`.
 
 * Generate the PDF of a Wikipedia book page: `http://localhost:8000/api/books/generate-from-wikipedia-book?url=https%3A%2F%2Ffr.wikipedia.org%2Fwiki%2FLivre%3AAnimaux`. The `url` parameter is required; `language` is optional and defaults to `fr`. Also accepted, all optional: `book_title`, `book_subtitle`, `book_author`, `book_conclusion`, `page_format`, `orientation`, `page_numbers`, `table_of_contents`. The PDF is returned as a download.
 
@@ -989,6 +1015,8 @@ flowchart TB
         MAIN --> EXPL
         MAIN --> BB
         ISO["isolation.py<br/>assembly in a separate process"]
+        ADM["admin.py<br/>Wikimedia sign-in of administrators"]
+        MAIN --> ADM
         MAIN --> ISO
         MAIN --> PDFG
         MAIN --> WAPI
@@ -1011,7 +1039,7 @@ flowchart TB
     classDef app fill:#eaf3ff,stroke:#3366cc,color:#202122
     classDef wiki fill:#fef6e7,stroke:#ac6600,color:#202122
     classDef shared fill:#f8f9fa,stroke:#a2a9b1,color:#202122
-    class I18N,APP,FILE,MAIN,EXPL,BB,PDFG,WAPI,ISO,JSRC app
+    class I18N,APP,FILE,MAIN,EXPL,BB,PDFG,WAPI,ISO,JSRC,ADM app
     class MW,REST wiki
     class MODELS shared
 ```
@@ -1421,6 +1449,7 @@ Wikipedia2Book/
 │   ├── main.py
 │   ├── models.py
 │   ├── wikipedia_api.py
+│   ├── admin.py
 │   ├── explorer.py
 │   ├── json_source.py
 │   ├── book_builder.py
@@ -1433,6 +1462,7 @@ Wikipedia2Book/
 │       ├── styles.css
 │       ├── app.js
 │       ├── i18n.js
+│       ├── admin.html, admin.js, admin.css
 │       ├── Wikipedia2bookLogo.png
 │       └── testPerformanceReference.json   (reference book of the benchmark)
 │
@@ -1463,6 +1493,7 @@ Wikipedia2Book/
 │   ├── test_health_details.py
 │   ├── test_generation_log.py
 │   ├── test_isolation.py
+│   ├── test_admin.py
 │   ├── test_resource_gate.py
 │   ├── test_rate_limit.py
 │   ├── test_media_policy.py
@@ -1608,5 +1639,6 @@ Application version number (`app/version.py`, used by `app/main.py` and by the U
 | 1.10.0  | 2026-11-16 | GMoulard  | Wikibooks book imported from its contents page: a window offers the whole book (subpages in order, sections as chapters, print version ignored), the book and its contents page, or the page alone. Background images and imported documents given by their address: only the address is saved in the JSON file, the server downloads the file at each generation (also for `GET /api/pdf/from-json`) and stops with the address at fault if it is unreachable; address field in the Organization step. Background images shrunk to the page size at 300 dpi before rendering (cover rendered in 0.7 s instead of 2 s), recommended size shown only when the image is not suitable (sections 3.1, 6.1, 11.1). |
 | 1.11.0  | 2026-11-16 | GMoulard  | Wikisource work imported from its contents page, like a Wikibooks book: same choice window, sections as chapters, whole-text pages ("Texte entier", "全覽"…) and intermediate contents pages left out. Rare Chinese characters of the CJK extensions B and later (僻字) shown in the pages generated by the application (Hanazono font); those in the official Wikisource PDF depend on Wikimedia (sections 3.1, 13.4, 13.7, 18). |
 | 1.12.0  | 2026-11-17 | GMoulard  | Memory and disk space checked before each generation stage (download, refitting, assembly) from the file sizes: the stage waits, with no time limit and in order of arrival, showing "Server busy", instead of making the server restart (`WIKIPEDIA2BOOK_MEMORY_RATIO`, `WIKIPEDIA2BOOK_DISK_RATIO`, 0.95 by default). Content of a book page or of a Wikibooks print version pasted as is into the Sources field (`POST /api/books/from-wikitext`, `POST /api/pdf/from-wikitext`), split into volumes computed by the server (`POST /api/books/volumes`), `POST /api/pdf/from-json` (sections 3.1, 11.1, 13.3). |
+| 1.12.1  | 2026-11-17 | GMoulard  | Administration page `/admin`, reserved for administrators signed in with their Wikimedia account (OAuth 2.0, identification only): server state, usage, performance, limits and alerts, link to the journal of each generation (`GET /api/health/generations/{id}`). Server memory given back to the system and generations admitted at the entry, with no restart up to 100 simultaneous books on Toolforge; protection against abusive use, the interface retrying by itself when the server asks to wait (sections 11.1, 12.2, 13.3, 13.12). |
 
 End of document

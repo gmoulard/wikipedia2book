@@ -1,0 +1,43 @@
+/*
+  This file is part of Wikipedia2Book
+  <https://github.com/gmoulard/wikipedia2book>.
+  Copyright (c) 2026 Guillaume Moulard.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License as published
+  by the Free Software Foundation, version 3.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+.admin-shell { max-width: 1120px; margin: 0 auto; padding: 16px; font-family: var(--sans); }
+.admin-header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.admin-header h1 { flex: 1 1 auto; margin: 0; font-family: var(--serif); font-size: 24px; font-weight: 400; }
+.admin-header .brand-logo:hover { transform: none; }
+.admin-account { display: flex; align-items: center; gap: 10px; color: var(--ink-soft); font-size: 14px; }
+.admin-message { margin: 16px 0 0; padding: 10px 12px; border: 1px solid var(--danger); border-radius: var(--radius); background: var(--danger-pale); color: var(--ink); }
+.admin-login { margin-top: 32px; }
+.admin-login p { color: var(--ink-soft); }
+.admin-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 16px; color: var(--ink-soft); font-size: 14px; }
+.admin-note { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
+.admin-section { margin-top: 28px; }
+.admin-section h2 { margin: 0 0 10px; font-family: var(--serif); font-size: 20px; font-weight: 400; }
+.admin-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; margin: 0; }
+.admin-tiles div { padding: 10px 12px; border: 1px solid var(--line-muted); border-radius: var(--radius); background: var(--subtle); }
+.admin-tiles dt { color: var(--ink-soft); font-size: 13px; }
+.admin-tiles dd { margin: 4px 0 0; font-size: 20px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.admin-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; align-items: start; }
+.admin-scroll { max-height: 420px; overflow: auto; border: 1px solid var(--line-muted); border-radius: var(--radius); }
+.admin-table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.admin-table th, .admin-table td { padding: 6px 10px; border-bottom: 1px solid var(--line-muted); text-align: start; white-space: nowrap; }
+.admin-table th { position: sticky; top: 0; background: var(--subtle); color: var(--ink-soft); font-weight: 700; }
+.admin-table td.number { text-align: end; }
+.admin-status-done { color: var(--success); }
+.admin-status-error { color: var(--danger); }
+.admin-status-aborted, .admin-status-running { color: var(--ink-soft); }

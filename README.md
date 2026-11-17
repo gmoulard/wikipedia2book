@@ -59,6 +59,7 @@ wikipedia2book/
 │   ├── main.py                  # API endpoints and PDF assembly (progress streamed as NDJSON)
 │   ├── models.py                # Pydantic models: the whole book state (Project, Article, UploadedDocument)
 │   ├── wikipedia_api.py         # Single MediaWiki client: search, links, book pages, official PDFs
+│   ├── admin.py                 # Administration page: Wikimedia sign-in of administrators
 │   ├── explorer.py              # Breadth-first exploration of internal links
 │   ├── json_source.py           # Downloads a JSON book from a URL for /api/pdf/from-json
 │   ├── book_builder.py          # HTML for cover, table of contents, chapters, license and conclusion
@@ -69,6 +70,7 @@ wikipedia2book/
 │       ├── index.html
 │       ├── app.js               # Front-end logic
 │       ├── i18n.js              # Interface translations (12 languages)
+│       ├── admin.html, admin.js, admin.css   # Administration page (/admin)
 │       ├── styles.css
 │       ├── Wikipedia2bookLogo.png
 │       └── testPerformanceReference.json   (reference book of the benchmark)
@@ -130,6 +132,24 @@ docker run --rm -p 8000:8000 wikipedia2book
 The `scripts/docker-build.sh` script automatically injects the git commit, date and author into the image via `--build-arg`, so the footer displays the correct version.
 
 The application is then reachable at `http://localhost:8000`.
+
+## Administration page
+
+`/admin` shows the state, usage and performance of the service (memory, generations in progress, requests per hour, durations, limits and alerts) to administrators, who sign in with their Wikimedia account (OAuth 2.0, identification only). Details in section 12.2 of the [specifications](docs/SPECIFICATIONS.en.md). To enable it on a deployment:
+
+1. Register an OAuth 2.0 application on [Special:OAuthConsumerRegistration](https://meta.wikimedia.org/wiki/Special:OAuthConsumerRegistration/propose/oauth2): "User identity verification only", callback URL `https://<your-host>/admin/callback`. It is approved automatically.
+2. Give the server the client ID, the client secret and the callback URL. On Toolforge, the callback is set in the `Procfile`; the two secrets go in the tool's environment:
+
+   ```bash
+   toolforge envvars create WIKIPEDIA2BOOK_OAUTH_CLIENT_ID
+   ```
+
+   ```bash
+   toolforge envvars create WIKIPEDIA2BOOK_OAUTH_CLIENT_SECRET
+   ```
+
+   then restart the webservice. Elsewhere, set `WIKIPEDIA2BOOK_OAUTH_CLIENT_ID`, `WIKIPEDIA2BOOK_OAUTH_CLIENT_SECRET` and `WIKIPEDIA2BOOK_OAUTH_CALLBACK` in the container environment.
+3. Optionally list the administrators in `WIKIPEDIA2BOOK_ADMINS`: Wikimedia usernames written in UTF-8 hexadecimal, separated by commas (`python -c "print('Example'.encode().hex())"`).
 
 ## Deploying your own container
 
