@@ -14,4 +14,4 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-VERSION = "1.12.3"
+VERSION = "1.12.4"

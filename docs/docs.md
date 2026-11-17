@@ -9,7 +9,7 @@ Every document in the `docs/` folder. French is the reference; section numbers a
 | Spécification fonctionnelle / Functional specification | [FunctionalSpec.fr.md](FunctionalSpec.fr.md) | [FunctionalSpec.en.md](FunctionalSpec.en.md) | Sections 1 à 12, 15, 16, 18 : livre, sources, organisation, format, mise en page, génération du PDF, interface, administration, licences, critères d'acceptation, évolutions. |
 | Spécification technique / Technical specification | [TechnicalSpec.fr.md](TechnicalSpec.fr.md) | [TechnicalSpec.en.md](TechnicalSpec.en.md) | Sections 13, 14, 17 : architecture, API, déploiement, statistiques, schémas, benchmark, test aux limites, optimisation du conteneur, sécurité, structure du dépôt. |
 | Historique des versions / Version history | [CHANGELOG.fr.md](CHANGELOG.fr.md) | [CHANGELOG.en.md](CHANGELOG.en.md) | Section 19 : une ligne par version publiée. |
-| Tests manuels | [tests-manuels.md](tests-manuels.md) | | Usages possibles de Wikipedia2Book et tests à faire à la main, dans le navigateur et par l'API. |
+| Aide du champ « Construire le livre » | [helpSearch.md](helpSearch.md) | | Tout ce que le champ accepte, avec un exemple à essayer dans le navigateur et par l'API ; sert aussi de liste de tests manuels. Ouverte par le lien « Aide » sous le champ. |
 | Test aux limites sur Toolforge | [testLimitetoolforge.md](testLimitetoolforge.md) | | Taille maximale d'un livre, version par version (section 13.12). |
 | Comparaison avec mediawiki2latex | | [comparison-mediawiki2latex.md](comparison-mediawiki2latex.md) | Fonctionnalités et performances comparées. |
 | Comparaison avec WS Export | | [comparison-ws-export.md](comparison-ws-export.md) | Fonctionnalités et performances comparées. |

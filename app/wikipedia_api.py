@@ -283,6 +283,7 @@ class MediaWikiClient:
                 "title": item["title"],
                 "snippet": BeautifulSoup(item.get("snippet", ""), "html.parser").get_text(" ", strip=True),
                 "url": article_url(language, item["title"], site),
+                "language": language,
             }
             for item in items
         ]

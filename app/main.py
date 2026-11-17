@@ -761,15 +761,43 @@ def _version_details() -> dict[str, str]:
         }
 
 
+ALL_LANGUAGES = "all"
+# NE PAS élargir à toutes les Wikipédias : plus de 300 langues, autant de requêtes vers Wikimédia pour une seule recherche ; même liste que le sélecteur #articleLanguage de l'interface.
+SEARCH_LANGUAGES = ("fr", "en", "de", "es", "it", "pt", "nl")
+MAX_SEARCH_LANGUAGES = 12
+RESOLVE_SEARCH_LIMIT = 5
+
+
+def search_languages(languages: list[str]) -> list[str]:
+    chosen = list(dict.fromkeys(validate_language(language) for language in languages if language and language != ALL_LANGUAGES))
+    if len(chosen) > MAX_SEARCH_LANGUAGES:
+        raise ValueError(f"La recherche dans toutes les langues accepte {MAX_SEARCH_LANGUAGES} langues au plus.")
+    return chosen or list(SEARCH_LANGUAGES)
+
+
+async def search_all_languages(client: MediaWikiClient, query: str, languages: list[str], limit: int, site: Site) -> list[dict]:
+    answers = await asyncio.gather(*(client.search(query, language, limit, site) for language in languages), return_exceptions=True)
+    failures = [answer for answer in answers if isinstance(answer, Exception)]
+    if len(failures) == len(answers):
+        raise failures[0]
+    for failure in failures:
+        if not isinstance(failure, (MediaWikiError, ValueError)):
+            raise failure
+    return [item for answer in answers if not isinstance(answer, Exception) for item in answer]
+
+
 @app.get("/api/search")
 async def search_articles(
     query: str = Query(min_length=2, max_length=200),
     language: str = Query(default="fr", pattern=r"^[a-z0-9-]{2,12}$"),
     limit: int = Query(default=10, ge=1, le=20),
     site: Site = "wikipedia",
+    languages: str = Query(default="", max_length=200),
 ) -> list[dict]:
     try:
         async with MediaWikiClient() as client:
+            if language == ALL_LANGUAGES:
+                return await search_all_languages(client, query, search_languages(languages.split(",")), limit, site)
             return await client.search(query, language, limit, site)
     except (MediaWikiError, ValueError) as error:
         raise _mediawiki_error(error) from error
@@ -848,16 +876,18 @@ async def read_book_wikitext(payload: BookWikitextRequest) -> SourceResolution:
 async def resolve_source(payload: SourceRequest) -> SourceResolution:
     try:
         async with MediaWikiClient() as client:
-            return await _resolve_source(client, payload.input, payload.language, payload.site)
+            return await _resolve_source(client, payload.input, payload.language, payload.site, payload.languages)
     except (MediaWikiError, ValueError) as error:
         raise _mediawiki_error(error) from error
 
 
-async def _resolve_source(client: MediaWikiClient, text: str, default_language: str, default_site: Site) -> SourceResolution:
+async def _resolve_source(client: MediaWikiClient, text: str, default_language: str, default_site: Site, languages: list[str] = ()) -> SourceResolution:
     text = text.strip()
     if not text:
         raise ValueError("Saisissez une URL, une page de livre ou un titre Wikipédia.")
     is_url = bool(re.match(r"^[a-z]+://", text, re.IGNORECASE))
+    if not is_url and default_language == ALL_LANGUAGES:
+        return SourceResolution(kind="search", results=await search_all_languages(client, text, search_languages(list(languages)), RESOLVE_SEARCH_LIMIT, default_site))
     language, title, site = parse_article_url(text) if is_url else (validate_language(default_language), text, default_site)
     page = await client.get_page(title, language, site)
     if page is None:

@@ -68,6 +68,61 @@ class FakeClient:
         return [{"page_id": 1, "title": "Chat domestique", "snippet": "", "url": "https://fr.wikipedia.org/wiki/Chat_domestique"}]
 
 
+class AllLanguagesClient(FakeClient):
+    failing = set()
+
+    async def search(self, query, language, limit, site="wikipedia"):
+        FakeClient.calls.append(("search", query, language, limit))
+        if language in AllLanguagesClient.failing:
+            raise MediaWikiError(f"{language} indisponible")
+        return [{"page_id": len(language), "title": f"{query} ({language})", "snippet": "", "url": f"https://{language}.wikipedia.org/wiki/x", "language": language}]
+
+
+class AllLanguagesTest(unittest.TestCase):
+    def setUp(self):
+        FakeClient.calls = []
+        FakeClient.pages = {}
+        AllLanguagesClient.failing = set()
+        self.patch = patch.object(main, "MediaWikiClient", AllLanguagesClient)
+        self.patch.start()
+        self.client = TestClient(main.app)
+
+    def tearDown(self):
+        self.patch.stop()
+
+    def test_search_all_uses_the_default_languages(self):
+        results = self.client.get("/api/search", params={"query": "Paris", "language": "all", "limit": 3}).json()
+        self.assertEqual([item["language"] for item in results], list(main.SEARCH_LANGUAGES))
+        self.assertEqual({call[3] for call in FakeClient.calls}, {3})
+
+    def test_search_all_with_a_chosen_list(self):
+        results = self.client.get("/api/search", params={"query": "Paris", "language": "all", "languages": "de,ja,de,all"}).json()
+        self.assertEqual([item["language"] for item in results], ["de", "ja"])
+
+    def test_one_language_failing_does_not_stop_the_others(self):
+        AllLanguagesClient.failing = {"fr"}
+        results = self.client.get("/api/search", params={"query": "Paris", "language": "all", "languages": "fr,en"}).json()
+        self.assertEqual([item["language"] for item in results], ["en"])
+        AllLanguagesClient.failing = {"fr", "en"}
+        self.assertEqual(self.client.get("/api/search", params={"query": "Paris", "language": "all", "languages": "fr,en"}).status_code, 502)
+
+    def test_invalid_or_too_many_languages_are_refused(self):
+        self.assertEqual(self.client.get("/api/search", params={"query": "Paris", "language": "all", "languages": "fr,x!"}).status_code, 422)
+        many = ",".join(f"l{index:02d}" for index in range(13))
+        self.assertEqual(self.client.get("/api/search", params={"query": "Paris", "language": "all", "languages": many}).status_code, 422)
+
+    def test_resolve_with_all_returns_search_results_from_each_language(self):
+        body = self.client.post("/api/sources/resolve", json={"input": "Paris", "language": "all", "languages": ["fr", "nl"]}).json()
+        self.assertEqual(body["kind"], "search")
+        self.assertEqual([item["language"] for item in body["results"]], ["fr", "nl"])
+        self.assertNotIn("page", [call[0] for call in FakeClient.calls])
+
+    def test_resolve_with_all_still_follows_an_url(self):
+        FakeClient.pages = {"Paris": ("Paris", 0)}
+        body = self.client.post("/api/sources/resolve", json={"input": "https://de.wikipedia.org/wiki/Paris", "language": "all"}).json()
+        self.assertEqual((body["kind"], body["article"]["language"]), ("article", "de"))
+
+
 class ResolveSourceTest(unittest.TestCase):
     def setUp(self):
         FakeClient.pages = {}

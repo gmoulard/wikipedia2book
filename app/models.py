@@ -192,6 +192,7 @@ class SourceRequest(BaseModel):
     input: str = Field(min_length=1, max_length=2048)
     language: str = Field(default="fr", pattern=r"^[a-z0-9-]{2,12}$")
     site: Site = "wikipedia"
+    languages: list[str] = Field(default=[], max_length=12)
 
 
 class SourceResolution(BaseModel):

@@ -67,11 +67,11 @@
                 <textarea id="articleQuery" rows="1" placeholder="URL, page de livre ou titre d'article Wikipédia…" data-i18n-placeholder="sources.placeholder" autocomplete="off" spellcheck="false"></textarea>
                 <label class="visually-hidden" for="articleLanguage" data-i18n="sources.wikiLangAria">Langue de Wikipédia</label>
                 <select id="articleLanguage" aria-label="Langue de Wikipédia" data-i18n-aria-label="sources.wikiLangAria">
-                  <option value="fr">FR</option><option value="en">EN</option><option value="de">DE</option><option value="es">ES</option><option value="it">IT</option><option value="pt">PT</option><option value="nl">NL</option>
+                  <option value="fr">FR</option><option value="en">EN</option><option value="de">DE</option><option value="es">ES</option><option value="it">IT</option><option value="pt">PT</option><option value="nl">NL</option><option value="all" data-i18n="sources.allLanguages">Toutes</option>
                 </select>
                 <button class="button button-teal" id="addArticleButton" type="submit"><span data-i18n="sources.addButton">Ajouter</span> <span aria-hidden="true">+</span></button>
               </form>
-              <p class="field-label-help" data-i18n="sources.hint">Saisissez au choix l'URL d'un article Wikipédia, une page de livre Wikipédia (URL ou nom) ou le nom d'une page Wikipédia.</p>
+              <p class="field-label-help"><span data-i18n="sources.hint">Saisissez au choix l'URL d'un article Wikipédia, une page de livre Wikipédia (URL ou nom) ou le nom d'une page Wikipédia.</span> <a class="help-link" href="https://gmoulard.github.io/wikipedia2book/helpSearch.html" target="_blank" rel="noopener" data-i18n="sources.helpLink">Aide : tout ce que ce champ accepte</a></p>
               <div id="searchResults" class="search-results" hidden></div>
               <p class="field-hint" id="entryHint" aria-live="polite"></p>
             </div>

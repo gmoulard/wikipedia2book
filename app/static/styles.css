@@ -153,8 +153,9 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .article-form { align-items: flex-start; }
 .article-form textarea { width: 100%; min-width: 80px; min-height: 32px; max-height: 200px; padding: 5px 8px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--paper); color: var(--ink); font-size: 14px; line-height: 20px; resize: vertical; overflow-y: auto; }
 .article-form textarea::placeholder { color: var(--placeholder); }
-.article-form select { width: 64px; flex: 0 0 auto; height: 32px; padding: 0 6px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--paper); color: var(--ink); font-size: 14px; }
+.article-form select { width: auto; min-width: 64px; flex: 0 0 auto; height: 32px; padding: 0 6px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--paper); color: var(--ink); font-size: 14px; }
 .article-form .button { flex: 0 0 auto; }
+.help-link { white-space: nowrap; }
 .field-label-help { margin: 6px 0 0; color: var(--ink); font-size: 13px; }
 .field-hint { margin: 8px 0 0; color: var(--ink-soft); font-size: 13px; }
 .field-hint:empty { display: none; }
@@ -338,7 +339,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
   .workflow-tab { gap: 4px; font-size: 12px; }
   .tab-number { display: none; }
   .tab-count { min-width: 18px; height: 18px; }
-  .article-form select { width: 52px; }
+  .article-form select { min-width: 52px; }
   .article-form .button { gap: 4px; padding: 0 8px; font-size: 13px; }
   .list-heading { align-items: flex-start; padding: 10px 0; }
   .list-note { padding-top: 5px; }

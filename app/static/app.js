@@ -714,7 +714,7 @@ async function addSourcesFromAddress(params) {
   const wiki = (params.get('wiki') || '').toLowerCase();
   if (/^[a-z]{2,3}(?:-[a-z]{2,8})?$/.test(wiki)) {
     const select = $('#articleLanguage');
-    if (![...select.options].some((option) => option.value === wiki)) select.add(new Option(wiki.toUpperCase(), wiki));
+    if (![...select.options].some((option) => option.value === wiki)) select.add(new Option(wiki.toUpperCase(), wiki), select.querySelector(`option[value="${ALL_LANGUAGES}"]`));
     select.value = wiki;
   }
   if (sources.length === 1) {
@@ -765,7 +765,7 @@ function addArticle(source) {
 function addSource(value) {
   return withAddButton(t('export.addingLabel'), async () => {
     const source = parseSourceLine(value, $('#articleLanguage').value);
-    const resolved = await getJson('/api/sources/resolve', { method: 'POST', body: JSON.stringify({ input: source.input, language: source.language, site: source.site }) });
+    const resolved = await getJson('/api/sources/resolve', { method: 'POST', body: resolveBody(source) });
     if (resolved.kind === 'article') await addArticleToBook(resolved.article);
     else if (resolved.kind === 'book') await importBook(resolved.book, resolved.book_title, resolved.article);
     else if (resolved.kind === 'subpages') await addSubpageBook(resolved);
@@ -779,7 +779,7 @@ function isBookWikitext(lines) {
 
 function addBookWikitext(wikitext) {
   return withAddButton(t('export.addingLabel'), async () => {
-    const resolved = await getJson('/api/books/from-wikitext', { method: 'POST', body: JSON.stringify({ wikitext, language: $('#articleLanguage').value }) });
+    const resolved = await getJson('/api/books/from-wikitext', { method: 'POST', body: JSON.stringify({ wikitext, language: concreteWikiLanguage() }) });
     await importBook(resolved.book, resolved.book_title);
   });
 }
@@ -873,6 +873,23 @@ function markdownLinkUrl(text) {
   return null;
 }
 
+const ALL_LANGUAGES = 'all';
+
+function searchLanguages() {
+  return [...$('#articleLanguage').options].map((option) => option.value).filter((value) => value !== ALL_LANGUAGES);
+}
+
+// NE PAS envoyer « all » aux endpoints qui ne cherchent pas : pour lire une page de livre collée, il faut une seule langue, celle de l'interface si elle est dans la liste, sinon l'anglais.
+function concreteWikiLanguage() {
+  const value = $('#articleLanguage').value;
+  if (value !== ALL_LANGUAGES) return value;
+  return searchLanguages().includes(lang()) ? lang() : 'en';
+}
+
+function resolveBody(source) {
+  return JSON.stringify({ input: source.input, language: source.language, site: source.site, ...(source.language === ALL_LANGUAGES ? { languages: searchLanguages() } : {}) });
+}
+
 const INTERWIKI_SITES = { w: 'wikipedia', s: 'wikisource', b: 'wikibooks', voy: 'wikivoyage', v: 'wikiversity', q: 'wikiquote', wikt: 'wiktionary', n: 'wikinews' };
 
 function parseSourceLine(line, defaultLanguage) {
@@ -905,7 +922,7 @@ async function addSourceList(lines) {
     for (const [index, { line, source }] of sources.entries()) {
       $('#entryHint').textContent = t('sources.listProgress', { n: index + 1, total: sources.length, title: source.label });
       try {
-        const resolved = await getJson('/api/sources/resolve', { method: 'POST', body: JSON.stringify({ input: source.input, language: source.language, site: source.site }) });
+        const resolved = await getJson('/api/sources/resolve', { method: 'POST', body: resolveBody(source) });
         if (resolved.kind === 'article') {
           if (await pushArticle(resolved.article)) added += 1; else already += 1;
         } else if (resolved.kind === 'book' || resolved.kind === 'subpages') {
@@ -928,7 +945,7 @@ function showSearchResults(items, source, hint) {
   results.hidden = false;
   const kind = source.site === 'wikipedia' ? t('sources.wikipediaArticleLabel') : t(`site.${source.site}`);
   results.innerHTML = items.length
-    ? items.map((item) => `<button class="search-result" type="button" data-add-title="${escapeHtml(item.title)}" data-page-id="${item.page_id}" data-language="${escapeHtml(source.language)}" data-site="${escapeHtml(source.site)}"><span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(kind)} \u00b7 ${escapeHtml(source.language.toUpperCase())}</small></span><span class="search-add" aria-hidden="true">+</span></button>`).join('')
+    ? items.map((item) => { const language = item.language || source.language; return `<button class="search-result" type="button" data-add-title="${escapeHtml(item.title)}" data-page-id="${item.page_id}" data-language="${escapeHtml(language)}" data-site="${escapeHtml(source.site)}"><span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(kind)} \u00b7 ${escapeHtml(language.toUpperCase())}</small></span><span class="search-add" aria-hidden="true">+</span></button>`; }).join('')
     : `<div class="search-result"><span><strong>${escapeHtml(t('sources.noResultsTitle'))}</strong><small>${escapeHtml(t('sources.noResultsDesc'))}</small></span></div>`;
   if (hint) $('#entryHint').textContent = hint;
 }
@@ -943,7 +960,8 @@ async function searchArticles(query) {
     try {
       const source = parseSourceLine(query, $('#articleLanguage').value);
       if (source.input.length < 2) { results.hidden = true; return; }
-      const params = new URLSearchParams({ query: source.input, language: source.language, site: source.site, limit: '8' });
+      const all = source.language === ALL_LANGUAGES;
+      const params = new URLSearchParams({ query: source.input, language: source.language, site: source.site, limit: all ? '3' : '8', ...(all ? { languages: searchLanguages().join(',') } : {}) });
       const items = await getJson(`/api/search?${params}`);
       if ($('#articleQuery').value.trim() !== query.trim()) return;
       showSearchResults(items, source);
@@ -1539,7 +1557,7 @@ function selectBrowserWikiLanguage() {
   const base = (navigator.language || '').toLowerCase().split('-')[0];
   const code = base === 'nb' ? 'no' : base;
   if (!/^[a-z]{2,3}$/.test(code)) { select.value = 'en'; return; }
-  if (![...select.options].some((option) => option.value === code)) select.add(new Option(code.toUpperCase(), code));
+  if (![...select.options].some((option) => option.value === code)) select.add(new Option(code.toUpperCase(), code), select.querySelector(`option[value="${ALL_LANGUAGES}"]`));
   select.value = code;
 }
 

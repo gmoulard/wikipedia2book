@@ -80,7 +80,8 @@ The examples below assume that the server runs on `http://localhost:8000`. Repla
 
 GET endpoints can be opened directly in the address bar:
 
-* Search for articles: `http://localhost:8000/api/search?query=Albert%20Einstein&language=fr&limit=5`.
+* Search for articles: `http://localhost:8000/api/search?query=Albert%20Einstein&language=fr&limit=5`. Each result carries its language (`language`).
+* Search in every language: `http://localhost:8000/api/search?query=Paris&language=all&limit=3`, by default in `SEARCH_LANGUAGES` (fr, en, de, es, it, pt, nl), or in a chosen list: `&languages=fr,ja,nl` (12 languages at most, codes validated, otherwise HTTP 422). `limit` then applies per language; the requests leave at the same time, and a language in error is ignored as long as another one answers (HTTP 502 if all fail). `POST /api/sources/resolve` likewise accepts `"language": "all"` and `"languages": [...]`: a title always gives `kind` = `search` (five results per language), a URL is still read normally. Tests: `AllLanguagesTest` in `tests/test_resolve_source.py`.
 
 * Search another Wikimedia project: `http://localhost:8000/api/search?query=Lyon&language=fr&site=wikivoyage`.
 
@@ -885,7 +886,7 @@ Wikipedia2Book/
     ├── stats.md                  (generated daily and before each deployment)
     ├── comparison-mediawiki2latex.md  (comparison with mediawiki2latex)
     ├── comparison-ws-export.md  (comparison with WS Export)
-    ├── tests-manuels.md  (possible uses and manual tests, browser and API, in French)
+    ├── helpSearch.md  (help for the "Build the book" field, opened by the "Help" link; also the list of manual tests, browser and API, in French)
     ├── testLimitetoolforge.md  (limit test results on Toolforge, by version, in French)
     └── _includes/head_custom.html  (Mermaid, hourly statistics chart)
 ```

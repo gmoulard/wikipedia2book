@@ -1,4 +1,4 @@
-# Tests manuels : les usages possibles de Wikipedia2Book
+# Aide du champ « Construire le livre » : tout ce que Wikipedia2Book accepte
 
 Ce document liste tout ce que Wikipedia2Book accepte, avec pour chaque cas un exemple à essayer **dans le navigateur** et le même cas **par l'API**. Il sert à deux choses : montrer les usages possibles, et dérouler une recette à la main avant une mise en production.
 

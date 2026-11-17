@@ -163,7 +163,7 @@ class SearchTest(unittest.TestCase):
         client._get = AsyncMock(return_value={"query": {"search": [{"pageid": 3, "title": "Lyon", "snippet": "<b>Lyon</b>"}]}})
         results = asyncio.run(client.search("Lyon", "fr", 5, "wikivoyage"))
         self.assertEqual(client._get.call_args.args[2], "wikivoyage")
-        self.assertEqual(results, [{"page_id": 3, "title": "Lyon", "snippet": "Lyon", "url": "https://fr.wikivoyage.org/wiki/Lyon"}])
+        self.assertEqual(results, [{"page_id": 3, "title": "Lyon", "snippet": "Lyon", "url": "https://fr.wikivoyage.org/wiki/Lyon", "language": "fr"}])
 
 
 class GetIntroAndCreatorTest(unittest.TestCase):

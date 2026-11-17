@@ -345,6 +345,8 @@ const I18N = {
     "admin.kind_article": "article",
     "admin.kind_document": "document",
     "admin.kind_image": "image de fond",
+    "sources.allLanguages": "Toutes",
+    "sources.helpLink": "Aide : tout ce que ce champ accepte",
   },
   en: {
     "progress.title": "GENERATING THE PDF",
@@ -674,6 +676,8 @@ const I18N = {
     "admin.kind_article": "article",
     "admin.kind_document": "document",
     "admin.kind_image": "background image",
+    "sources.allLanguages": "All",
+    "sources.helpLink": "Help: everything this field accepts",
   },
   zh: {
     "progress.title": "正在生成 PDF",
@@ -1003,6 +1007,8 @@ const I18N = {
     "admin.kind_article": "条目",
     "admin.kind_document": "文档",
     "admin.kind_image": "背景图片",
+    "sources.allLanguages": "全部",
+    "sources.helpLink": "帮助：此字段接受的所有内容",
   },
   it: {
     "progress.title": "GENERAZIONE DEL PDF",
@@ -1332,6 +1338,8 @@ const I18N = {
     "admin.kind_article": "voce",
     "admin.kind_document": "documento",
     "admin.kind_image": "immagine di sfondo",
+    "sources.allLanguages": "Tutte",
+    "sources.helpLink": "Aiuto: tutto ciò che questo campo accetta",
   },
   de: {
     "progress.title": "PDF WIRD ERSTELLT",
@@ -1661,6 +1669,8 @@ const I18N = {
     "admin.kind_article": "Artikel",
     "admin.kind_document": "Dokument",
     "admin.kind_image": "Hintergrundbild",
+    "sources.allLanguages": "Alle",
+    "sources.helpLink": "Hilfe: alles, was dieses Feld annimmt",
   },
   es: {
     "progress.title": "GENERANDO EL PDF",
@@ -1990,6 +2000,8 @@ const I18N = {
     "admin.kind_article": "artículo",
     "admin.kind_document": "documento",
     "admin.kind_image": "imagen de fondo",
+    "sources.allLanguages": "Todas",
+    "sources.helpLink": "Ayuda: todo lo que acepta este campo",
   },
   pt: {
     "progress.title": "GERANDO O PDF",
@@ -2319,6 +2331,8 @@ const I18N = {
     "admin.kind_article": "artigo",
     "admin.kind_document": "documento",
     "admin.kind_image": "imagem de fundo",
+    "sources.allLanguages": "Todas",
+    "sources.helpLink": "Ajuda: tudo o que este campo aceita",
   },
   ja: {
     "progress.title": "PDF を生成中",
@@ -2648,6 +2662,8 @@ const I18N = {
     "admin.kind_article": "記事",
     "admin.kind_document": "文書",
     "admin.kind_image": "背景画像",
+    "sources.allLanguages": "すべて",
+    "sources.helpLink": "ヘルプ：この欄に入力できるもの",
   },
   tr: {
     "progress.title": "PDF OLUŞTURULUYOR",
@@ -2977,6 +2993,8 @@ const I18N = {
     "admin.kind_article": "madde",
     "admin.kind_document": "belge",
     "admin.kind_image": "arka plan görseli",
+    "sources.allLanguages": "Tümü",
+    "sources.helpLink": "Yardım: bu alanın kabul ettiği her şey",
   },
   fa: {
     "progress.title": "در حال ساخت PDF",
@@ -3306,6 +3324,8 @@ const I18N = {
     "admin.kind_article": "مقاله",
     "admin.kind_document": "سند",
     "admin.kind_image": "تصویر پس‌زمینه",
+    "sources.allLanguages": "همه",
+    "sources.helpLink": "راهنما: هر آنچه این کادر می‌پذیرد",
   },
   nl: {
     "progress.title": "PDF WORDT GEMAAKT",
@@ -3635,6 +3655,8 @@ const I18N = {
     "admin.kind_article": "artikel",
     "admin.kind_document": "document",
     "admin.kind_image": "achtergrondafbeelding",
+    "sources.allLanguages": "Alle",
+    "sources.helpLink": "Hulp: alles wat dit veld accepteert",
   },
   ar: {
     "progress.title": "جارٍ إنشاء ملف PDF",
@@ -3964,6 +3986,8 @@ const I18N = {
     "admin.kind_article": "مقالة",
     "admin.kind_document": "مستند",
     "admin.kind_image": "صورة خلفية",
+    "sources.allLanguages": "الكل",
+    "sources.helpLink": "مساعدة: كل ما يقبله هذا الحقل",
   },
 };
 

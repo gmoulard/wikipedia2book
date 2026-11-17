@@ -80,7 +80,8 @@ Les exemples ci-dessous supposent que le serveur fonctionne sur `http://localhos
 
 Les endpoints GET peuvent être ouverts directement dans la barre d'adresse :
 
-* Rechercher des articles : `http://localhost:8000/api/search?query=Albert%20Einstein&language=fr&limit=5`.
+* Rechercher des articles : `http://localhost:8000/api/search?query=Albert%20Einstein&language=fr&limit=5`. Chaque résultat porte sa langue (`language`).
+* Rechercher dans toutes les langues : `http://localhost:8000/api/search?query=Paris&language=all&limit=3`, par défaut dans `SEARCH_LANGUAGES` (fr, en, de, es, it, pt, nl), ou dans une liste choisie : `&languages=fr,ja,nl` (12 langues au plus, codes validés, sinon HTTP 422). `limit` vaut alors par langue ; les requêtes partent en même temps, et une langue en erreur est ignorée tant qu'une autre répond (HTTP 502 si toutes échouent). `POST /api/sources/resolve` accepte de même `"language": "all"` et `"languages": [...]` : un titre donne toujours `kind` = `search` (cinq résultats par langue), une URL reste lue normalement. Tests : `AllLanguagesTest` dans `tests/test_resolve_source.py`.
 
 * Rechercher sur un autre projet Wikimédia : `http://localhost:8000/api/search?query=Lyon&language=fr&site=wikivoyage`.
 
@@ -885,7 +886,7 @@ Wikipedia2Book/
     ├── stats.md                  (généré chaque jour et avant chaque déploiement)
     ├── comparison-mediawiki2latex.md  (comparaison avec mediawiki2latex, en anglais)
     ├── comparison-ws-export.md  (comparaison avec WS Export, en anglais)
-    ├── tests-manuels.md  (usages possibles et tests à faire à la main, navigateur et API)
+    ├── helpSearch.md  (aide du champ « Construire le livre », ouverte par le lien « Aide » ; sert aussi de liste de tests manuels, navigateur et API)
     ├── testLimitetoolforge.md  (résultats du test aux limites sur Toolforge, version par version)
     └── _includes/head_custom.html  (Mermaid, graphique horaire des statistiques)
 ```
