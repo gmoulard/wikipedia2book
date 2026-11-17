@@ -16,9 +16,11 @@
 
 FROM python:3.12-slim
 
+# NE PAS retirer MALLOC_ARENA_MAX : sans lui, la glibc ouvre une réserve de mémoire par fil d'exécution (téléchargements, recompositions) et le serveur garde des centaines de Mo inutilisés.
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_NO_CACHE_DIR=1 \
+    MALLOC_ARENA_MAX=2
 
 # NE PAS monter WIKIPEDIA2BOOK_DOWNLOADS au-delà de 2 : la politique robots de Wikimédia l'interdit hors Toolforge, et le serveur refuse de démarrer. WIKIPEDIA2BOOK_ARTICLE_LIMIT = 300 (0 : pas de limite) ; à régler d'après la mémoire du conteneur (README, « Deploying your own container »).
 ENV WIKIPEDIA2BOOK_ARTICLE_LIMIT=300 \

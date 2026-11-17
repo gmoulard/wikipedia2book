@@ -58,8 +58,8 @@ from app.book_builder import (
     toc_slot_index,
 )
 from app.explorer import discover_related_articles
-from app.isolation import IsolatedProcessDied, preload, run_in_thread, run_isolated
-from app.resource_gate import Reservation, ResourceGate
+from app.isolation import IsolatedProcessDied, preload, run_in_thread, run_in_worker, run_isolated
+from app.resource_gate import Reservation, ResourceGate, release_memory
 from app.json_source import JsonSourceError, download, fetch_project, project_from_payload
 from app.volumes import book_volumes, volume_project
 from app.models import (
@@ -146,6 +146,8 @@ DOWNLOAD_RESERVE_BYTES = 10 * MEGABYTE
 # NE PAS descendre sous la taille d'un gros PDF recomposé (le fichier écrit dans le dossier temporaire fait environ 1,1 fois le PDF téléchargé, jusqu'à une vingtaine de Mo pour les plus gros articles) : sa taille n'est pas connue avant le téléchargement.
 DOWNLOAD_DISK_BYTES = 30 * MEGABYTE
 ASSEMBLY_DISK_BASE_BYTES = 50 * MEGABYTE
+GENERATION_BASE_BYTES = 25 * MEGABYTE
+INLINE_FACTOR = 3
 # NE PAS descendre sous deux fois la taille des articles : merge_files écrit le fichier fusionné pendant que les parties existent encore, puis BookAssembly écrit le livre final à côté du fichier fusionné.
 ASSEMBLY_DISK_FACTOR = 2
 FIT_BASE_BYTES = 5 * MEGABYTE
@@ -155,10 +157,10 @@ ASSEMBLY_FACTOR = 2.5
 BACKGROUND_FACTOR = 35
 
 
-def ratio_setting(environ: Mapping[str, str], name: str) -> float:
+def ratio_setting(environ: Mapping[str, str], name: str, default: float = 0.95) -> float:
     text = environ.get(name, "").strip()
     if not text:
-        return 0.95
+        return default
     try:
         ratio = float(text)
     except ValueError:
@@ -174,6 +176,16 @@ def fit_reserve(size: int) -> int:
 
 def assembly_reserve(article_bytes: int, background_bytes: int) -> int:
     return int(ASSEMBLY_BASE_BYTES + ASSEMBLY_FACTOR * article_bytes + BACKGROUND_FACTOR * background_bytes)
+
+
+def generation_reserve(project: Project, selected: list) -> int:
+    inline = sum(len(item.data_base64 or "") for item in selected if isinstance(item, UploadedDocument))
+    remote_images = 0
+    for image in (project.cover_image, project.back_image):
+        if image is not None:
+            inline += len(image.data_base64 or "")
+            remote_images += image.url is not None
+    return GENERATION_BASE_BYTES + INLINE_FACTOR * inline + remote_images * REMOTE_FILE_BYTES
 
 
 def assembly_disk_reserve(article_bytes: int) -> int:
@@ -324,6 +336,10 @@ def _container_used_and_limit() -> tuple[int | None, int | None]:
     return memory["used_bytes"], memory["limit_bytes"]
 
 
+def _container_limit_only() -> tuple[int | None, int | None]:
+    return 0, _container_memory()["limit_bytes"]
+
+
 def _disk_used_and_total() -> tuple[int | None, int | None]:
     usage = shutil.disk_usage(tempfile.gettempdir())
     return usage.used, usage.total
@@ -331,6 +347,8 @@ def _disk_used_and_total() -> tuple[int | None, int | None]:
 
 MEMORY_GATE = ResourceGate(_container_used_and_limit, ratio_setting(os.environ, "WIKIPEDIA2BOOK_MEMORY_RATIO"))
 DISK_GATE = ResourceGate(_disk_used_and_total, ratio_setting(os.environ, "WIKIPEDIA2BOOK_DISK_RATIO"))
+# NE PAS faire passer les générations par MEMORY_GATE : une génération admise garde sa réserve jusqu'à la fin ; dans le même contrôle que ses étapes, elle les bloquerait toutes, sans fin. Ce budget à part ne compte que les réserves des générations admises.
+GENERATION_GATE = ResourceGate(_container_limit_only, ratio_setting(os.environ, "WIKIPEDIA2BOOK_GENERATIONS_RATIO", 0.5))
 
 
 def _generation_files_bytes(directory: str) -> int:
@@ -365,6 +383,7 @@ def health_details(response: Response) -> dict:
         "memory": _container_memory(),
         "memory_gate": MEMORY_GATE.state(),
         "disk_gate": DISK_GATE.state(),
+        "generation_gate": GENERATION_GATE.state(),
         "temporary": _temporary_space(),
     }
 
@@ -757,7 +776,16 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
     generations_in_progress += 1
     record = GenerationRecord(project, selected, language)
     status, details = "aborted", {}
+    admitted: Reservation | None = None
     try:
+        # NE PAS charger les images ni télécharger quoi que ce soit avant cette admission : à 100 générations simultanées, les données gardées par chacune hors des étapes contrôlées faisaient déborder le serveur (section 13.12).
+        async for admission in _admitted(GENERATION_GATE, generation_reserve(project, selected)):
+            if isinstance(admission, Reservation):
+                admitted = admission
+            else:
+                yield admission
+        if admitted.waited_s >= 1:
+            record.stage("memory_wait", "server", _memory_snapshot(), reason="generation", waited_s=round(admitted.waited_s, 1), reserved_bytes=admitted.amount)
         with tempfile.TemporaryDirectory(prefix=TEMPORARY_PREFIX) as workdir:
             events = _build_book_pdf(project, selected, language, Path(workdir), record)
             try:
@@ -771,8 +799,11 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
         status, details = "error", {"error": str(error) if isinstance(error, IsolatedProcessDied) else type(error).__name__}
         raise
     finally:
+        if admitted is not None:
+            admitted.release()
         generations_in_progress -= 1
         record.finish(status, **details)
+        release_memory()
 
 
 async def _admitted(gate: ResourceGate, amount: int):
@@ -825,8 +856,13 @@ async def _build_book_pdf(
         if reservation.waited_s >= 1:
             record.stage("memory_wait", "server", _memory_snapshot(), reason=reason, waited_s=round(reservation.waited_s, 1), reserved_bytes=reservation.amount)
 
-    def fit_to_file(pdf_data: bytes) -> tuple[Path, int]:
-        return _fit_to_file(pdf_data, workdir / f"part-{next(part_numbers)}.pdf", page_width_mm, page_height_mm)
+    async def fit_part(pdf_data: bytes) -> tuple[Path, int]:
+        path = workdir / f"part-{next(part_numbers)}.pdf"
+        if not ISOLATE_ASSEMBLY:
+            return await asyncio.to_thread(_fit_to_file, pdf_data, path, page_width_mm, page_height_mm)
+        preload(["app.main"])
+        # NE PAS recomposer dans le processus du serveur : pypdf y prend environ 25 fois la taille du PDF, que l'allocateur ne rend pas ; un processus de travail recyclé après chaque article rend tout en se terminant.
+        return await run_in_worker(_fit_to_file, pdf_data, path, page_width_mm, page_height_mm)
 
     def document_pdf(data: bytes, is_pdf: bool) -> bytes:
         if is_pdf:
@@ -841,23 +877,33 @@ async def _build_book_pdf(
         record.stage("fetch_document", "server", _memory_snapshot(), duration_s=round(time.monotonic() - started_at, 2), size_bytes=len(data), pdf=content_type == "application/pdf")
         return data, content_type == "application/pdf"
 
-    # NE PAS garder l'image dans le livre reçu ni l'écrire sur disque : seule l'adresse est enregistrée dans le JSON, l'image est retéléchargée à chaque génération et ne vit que le temps de celle-ci.
-    for field in remote_images:
+    # NE PAS garder les images de fond en mémoire ni dans le livre transmis à l'assemblage : chaque génération en garderait deux copies (octets et base64) pendant toute sa durée. Elles vont dans le dossier temporaire, supprimé à la fin de la génération ; une image donnée par son adresse est retéléchargée à chaque génération, seule l'adresse est enregistrée dans le JSON.
+    background_files: dict[str, tuple[Path, str, str]] = {}
+    for field in ("cover_image", "back_image"):
         image = getattr(project, field)
-        yield progress("fetch_image", title=image.title or image.url)
-        async for admission in _admitted(MEMORY_GATE, DOWNLOAD_RESERVE_BYTES):
-            if isinstance(admission, Reservation):
-                reservation = admission
-            else:
-                yield admission
-        note_wait(reservation, "fetch_image")
-        started_at = time.monotonic()
-        try:
-            data, content_type = await fetch_remote_file(image.url, BACKGROUND_TYPES, f"l’image « {image.title or image.url} »")
-        finally:
-            reservation.release()
-        project = project.model_copy(update={field: BookImage(title=image.title, mime_type=content_type, data_base64=base64.b64encode(data).decode("ascii"))})
-        record.stage("fetch_image", "server", _memory_snapshot(), image=field, duration_s=round(time.monotonic() - started_at, 2), size_bytes=len(data))
+        if image is None:
+            continue
+        if image.url is None:
+            data, content_type = base64.b64decode(image.data_base64), image.mime_type
+        else:
+            yield progress("fetch_image", title=image.title or image.url)
+            async for admission in _admitted(MEMORY_GATE, DOWNLOAD_RESERVE_BYTES):
+                if isinstance(admission, Reservation):
+                    reservation = admission
+                else:
+                    yield admission
+            note_wait(reservation, "fetch_image")
+            started_at = time.monotonic()
+            try:
+                data, content_type = await fetch_remote_file(image.url, BACKGROUND_TYPES, f"l’image « {image.title or image.url} »")
+            finally:
+                reservation.release()
+            record.stage("fetch_image", "server", _memory_snapshot(), image=field, duration_s=round(time.monotonic() - started_at, 2), size_bytes=len(data))
+        path = workdir / f"{field}.image"
+        path.write_bytes(data)
+        background_files[field] = (path, content_type, image.title)
+        del data
+    project = project.model_copy(update={field: None for field in background_files})
 
     fitted_items: dict[str, asyncio.Future[tuple[Path, int]]] = {}
     paper = WIKIPEDIA_PDF_PAPERS.get(project.page_format, "a4")
@@ -886,10 +932,12 @@ async def _build_book_pdf(
                 if not is_pdf:
                     data = await asyncio.to_thread(document_pdf, data, False)
                 # NE PAS appeler pypdf directement ici : un calcul bloquant gèle le serveur et retarde l'envoi des messages de progression.
-                fitted_items[item.key] = asyncio.ensure_future(asyncio.to_thread(fit_to_file, data))
+                fitted_items[item.key] = asyncio.ensure_future(fit_part(data))
                 # NE PAS libérer le créneau avant la fin de la recomposition : sur un serveur au processeur limité (Toolforge), les PDF bruts téléchargés s'accumuleraient en mémoire en attendant d'être recomposés.
                 # NE PAS attendre la recomposition sans shield : annuler ce téléchargement l'annulerait aussi, et la suppression du dossier temporaire n'attendrait plus son fil d'exécution.
                 await asyncio.shield(fitted_items[item.key])
+            data = None
+            release_memory()
 
     async with MediaWikiClient() as client:
         client.on_wait = lambda seconds: started.put_nowait({"type": "wait", "seconds": math.ceil(seconds)})
@@ -923,7 +971,7 @@ async def _build_book_pdf(
     # NE PAS faire la suite dans le processus du serveur : les rendus WeasyPrint et l'assemblage y prennent plusieurs centaines de Mo que l'allocateur ne rend pas au système après la génération (relevé de /api/health/details sur Toolforge) ; un processus séparé rend tout en se terminant.
     runner = run_isolated if ISOLATE_ASSEMBLY else run_in_thread
     article_bytes = sum(path.stat().st_size for path, _ in fitted.values())
-    background_bytes = sum(len(image.data_base64 or "") * 3 // 4 for image in (project.cover_image, project.back_image) if image)
+    background_bytes = sum(path.stat().st_size for path, _, _ in background_files.values())
     async for admission in _admitted(DISK_GATE, assembly_disk_reserve(article_bytes)):
         if isinstance(admission, Reservation):
             disk = admission
@@ -942,7 +990,7 @@ async def _build_book_pdf(
     note_wait(reservation, "assembly")
     try:
         # NE PAS enlever aclosing : sans lui, un client qui abandonne laisse tourner le processus d'assemblage jusqu'au ramasse-miettes, pendant que son dossier temporaire est supprimé.
-        async with contextlib.aclosing(runner(_finish_book, project, selected, language, workdir, fitted)) as messages:
+        async with contextlib.aclosing(runner(_finish_book, project, selected, language, workdir, fitted, background_files)) as messages:
             async for kind, value in messages:
                 if kind == "result":
                     output, size = value
@@ -962,6 +1010,7 @@ def _finish_book(
     language: str,
     workdir: Path,
     fitted: dict[str, tuple[Path, int]],
+    background_files: dict[str, tuple[Path, str, str]],
     report,
 ) -> tuple[Path, int]:
     groups = ordered_article_groups(project, selected, language)
@@ -987,7 +1036,11 @@ def _finish_book(
         return _fit_to_file(pdf_data, workdir / f"page-{next(page_numbers)}.pdf", page_width_mm, page_height_mm)
 
     stage("assembly_start")
-    backgrounds = {field: image for field in ("cover_image", "back_image") if (image := getattr(project, field))}
+    backgrounds = {
+        field: BookImage(title=title, mime_type=mime_type, data_base64=base64.b64encode(path.read_bytes()).decode("ascii"))
+        for field, (path, mime_type, title) in background_files.items()
+    }
+    project = project.model_copy(update=backgrounds)
     if backgrounds:
         started_at = time.monotonic()
         fitted_backgrounds = {field: fit_background(image, page_width_mm, page_height_mm) for field, image in backgrounds.items()}

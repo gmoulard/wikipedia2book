@@ -16,11 +16,29 @@
 
 import asyncio
 import contextlib
+import ctypes
+import ctypes.util
 import time
 from collections import deque
 from collections.abc import Callable
 
 ANNOUNCE_EVERY_S = 10
+
+
+def _malloc_trim():
+    try:
+        return ctypes.CDLL(ctypes.util.find_library("c") or "libc.so.6").malloc_trim
+    except (OSError, AttributeError, TypeError):
+        return None
+
+
+_MALLOC_TRIM = _malloc_trim()
+
+
+# NE PAS retirer cet appel après les grosses étapes : sans lui, la glibc garde la mémoire libérée par Python, le conteneur reste plein (2 Go relevés sur Toolforge à 50 générations simultanées) et le contrôle de la mémoire ne laisse plus passer qu'une étape à la fois.
+def release_memory() -> None:
+    if _MALLOC_TRIM is not None:
+        _MALLOC_TRIM(0)
 
 
 class Reservation:

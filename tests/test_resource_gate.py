@@ -21,7 +21,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.resource_gate import ResourceGate
+from app.resource_gate import ResourceGate, release_memory
 
 MB = 1_000_000
 
@@ -117,6 +117,12 @@ class ResourceGateTest(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(gate.reserved, 50 * MB)
                 raise RuntimeError("boom")
         self.assertEqual((gate.reserved, gate.active), (0, 0))
+
+
+class ReleaseMemoryTest(unittest.TestCase):
+    def test_release_memory_never_fails(self):
+        self.assertIsNone(release_memory())
+        self.assertIsNone(release_memory())
 
 
 if __name__ == "__main__":

@@ -21,7 +21,7 @@ import time
 import unittest
 from pathlib import Path
 
-from app.isolation import IsolatedProcessDied, run_in_thread, run_isolated
+from app.isolation import IsolatedProcessDied, run_in_thread, run_in_worker, run_isolated
 
 
 def reports_then_returns(value, report):
@@ -44,6 +44,18 @@ def writes_pid_then_waits(path, report):
     Path(path).write_text(str(os.getpid()))
     report("waiting")
     time.sleep(60)
+
+
+def doubles_with_pid(value):
+    return value * 2, os.getpid()
+
+
+def raises_in_worker():
+    raise ValueError("PDF illisible")
+
+
+def dies_in_worker():
+    os._exit(137)
 
 
 async def collect(runner, function, *args):
@@ -106,6 +118,26 @@ class RunInThreadTest(unittest.TestCase):
     def test_exception_is_raised(self):
         with self.assertRaisesRegex(ValueError, "titre introuvable"):
             asyncio.run(collect(run_in_thread, raises_value_error))
+
+
+class RunInWorkerTest(unittest.TestCase):
+    def test_each_task_runs_in_a_fresh_process(self):
+        async def two():
+            return [await run_in_worker(doubles_with_pid, 21), await run_in_worker(doubles_with_pid, 4)]
+
+        (first, first_pid), (second, second_pid) = asyncio.run(two())
+        self.assertEqual((first, second), (42, 8))
+        self.assertNotIn(os.getpid(), (first_pid, second_pid))
+        self.assertNotEqual(first_pid, second_pid)
+
+    def test_worker_exception_is_raised_in_parent(self):
+        with self.assertRaisesRegex(ValueError, "PDF illisible"):
+            asyncio.run(run_in_worker(raises_in_worker))
+
+    def test_killed_worker_raises_explicit_error_and_the_next_task_works(self):
+        with self.assertRaisesRegex(IsolatedProcessDied, "recomposition"):
+            asyncio.run(run_in_worker(dies_in_worker))
+        self.assertEqual(asyncio.run(run_in_worker(doubles_with_pid, 1))[0], 2)
 
 
 if __name__ == "__main__":

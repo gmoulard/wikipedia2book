@@ -18,6 +18,8 @@ import asyncio
 import contextlib
 import multiprocessing
 from collections.abc import AsyncIterator, Callable, Iterable
+from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures.process import BrokenProcessPool
 from typing import Any
 
 # NE PAS passer à « fork » : le serveur a des fils d'exécution (asyncio.to_thread) qui peuvent tenir un verrou de WeasyPrint, Pango ou MuPDF au moment du fork, et le processus enfant resterait bloqué. Le forkserver démarre ses enfants depuis un processus sans fil d'exécution.
@@ -26,8 +28,34 @@ CONTEXT = multiprocessing.get_context(
 )
 
 
+WORKER_PROCESSES = 2
+
+
 class IsolatedProcessDied(RuntimeError):
     pass
+
+
+_worker_pool: ProcessPoolExecutor | None = None
+
+
+def _workers() -> ProcessPoolExecutor:
+    global _worker_pool
+    if _worker_pool is None:
+        # NE PAS augmenter max_tasks_per_child : chaque processus de travail rend toute sa mémoire en se terminant après une seule tâche, c'est le but ; un processus réutilisé garderait la mémoire de la recomposition précédente.
+        _worker_pool = ProcessPoolExecutor(max_workers=WORKER_PROCESSES, mp_context=CONTEXT, max_tasks_per_child=1)
+    return _worker_pool
+
+
+async def run_in_worker(function: Callable, *args: Any) -> Any:
+    global _worker_pool
+    try:
+        return await asyncio.get_running_loop().run_in_executor(_workers(), function, *args)
+    except BrokenProcessPool as error:
+        _worker_pool = None
+        raise IsolatedProcessDied(
+            "Le processus de recomposition des pages s'est arrêté avant la fin, probablement faute de mémoire : "
+            "réessayez dans un moment."
+        ) from error
 
 
 def preload(modules: Iterable[str]) -> None:

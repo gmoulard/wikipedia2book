@@ -814,6 +814,37 @@ class ResourceGateGenerationTest(unittest.TestCase):
     def test_disk_estimate_for_the_assembly(self):
         self.assertEqual(main.assembly_disk_reserve(10_000_000), 50_000_000 + 20_000_000)
 
+    def test_a_generation_waits_at_the_entry_before_downloading(self):
+        from app.models import Project
+        from app.resource_gate import ResourceGate
+        ticks = iter(range(10_000))
+        entry = ResourceGate(lambda: (0, 1_000_000_000), 0.5, poll_s=0.01, clock=lambda: next(ticks) * 0.5)
+
+        async def scenario():
+            holder = await entry.acquire(490_000_000)
+            book = asyncio.ensure_future(_book_events(Project(**_project(page_numbers=False))))
+            await asyncio.sleep(0.2)
+            self.assertFalse(book.done())
+            self.assertEqual(FakeClient.papers, [])
+            holder.release()
+            return await asyncio.wait_for(book, 10)
+
+        FakeClient.papers = []
+        with patch.object(main, "GENERATION_GATE", entry):
+            events = asyncio.run(scenario())
+        self.assertEqual(events[0]["type"], "busy")
+        self.assertEqual(events[-1]["type"], "done")
+        self.assertEqual(entry.state()["reserved_bytes"], 0)
+        waits = [stage for stage in main.generation_log[-1]["stages"] if stage["stage"] == "memory_wait"]
+        self.assertEqual(waits[0]["reason"], "generation")
+
+    def test_generation_reserve_counts_the_data_kept_by_the_book(self):
+        from app.models import BookImage, Project, UploadedDocument
+        document = UploadedDocument(title="Plan", kind="image", mime_type="image/png", data_base64="A" * 1000)
+        project = Project(name="Livre", cover_image=BookImage(title="Couverture", url="https://example.org/c.jpg"), back_image=BookImage(mime_type="image/png", data_base64="QUFB" * 250))
+        self.assertEqual(main.generation_reserve(project, [document]), main.GENERATION_BASE_BYTES + main.INLINE_FACTOR * (1000 + 1000) + main.REMOTE_FILE_BYTES)
+        self.assertEqual(main.ratio_setting({}, "WIKIPEDIA2BOOK_GENERATIONS_RATIO", 0.5), 0.5)
+
     def test_estimates_follow_the_file_sizes(self):
         self.assertEqual(main.fit_reserve(2_000_000), 5_000_000 + 25 * 2_000_000)
         self.assertEqual(main.assembly_reserve(10_000_000, 1_000_000), 100_000_000 + 25_000_000 + 35_000_000)
@@ -916,6 +947,24 @@ class RemoteFilesTest(unittest.TestCase):
         journal = json.dumps(main.generation_log[-1])
         for text in ("example.org", "wikimedia", "Couverture", "Notice", "Photo"):
             self.assertNotIn(text, journal)
+
+    def test_background_images_go_to_disk_not_to_the_assembly_project(self):
+        seen = {}
+        original = main._finish_book
+
+        def spy(project, selected, language, workdir, fitted, background_files, report):
+            seen["project"] = project
+            seen["files"] = {field: (path.name, mime, title, path.read_bytes()) for field, (path, mime, title) in background_files.items()}
+            return original(project, selected, language, workdir, fitted, background_files, report)
+
+        with patch.object(main, "_finish_book", spy):
+            events = _parse_stream(self.client.post("/api/pdf/stream", json=self._project()).content)
+        self.assertEqual(events[-1]["type"], "done")
+        self.assertIsNone(seen["project"].cover_image)
+        self.assertIsNone(seen["project"].back_image)
+        self.assertEqual(sorted(seen["files"]), ["back_image", "cover_image"])
+        self.assertEqual(seen["files"]["cover_image"][:3], ("cover_image.image", "image/png", "Couverture"))
+        self.assertEqual(seen["files"]["cover_image"][3], _png())
 
     def test_unreachable_image_stops_the_generation_with_its_address(self):
         del self.files[self.BACK]
