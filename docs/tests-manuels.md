@@ -9,7 +9,7 @@ Le comportement de référence est décrit dans [SPECIFICATIONS.fr.md](SPECIFICA
 - **Navigateur** : ouvrir https://wikipedia2book.toolforge.org/, coller l'exemple dans le champ de l'étape « Construire le livre », puis cliquer sur « Ajouter ». Une adresse commençant par `https://wikipedia2book.toolforge.org/?` s'ouvre telle quelle.
 - **API** : ouvrir l'adresse dans le navigateur (le PDF se télécharge) ou la passer à `curl -OJ`. Les appels `POST` sont donnés en `curl`.
 - **Version** : version de l'application à partir de laquelle le cas fonctionne. Vérifier la version en service avec https://wikipedia2book.toolforge.org/api/version. « À venir » : écrit sur `main`, pas encore publié.
-- La colonne « Version » vaut pour le navigateur. Côté API, `GET /api/pdf/from-source` (sections 1 à 4) et le paramètre `?source=` de la page sont « à venir » : avec une version qui ne les a pas, envoyer le livre en JSON à `POST /api/pdf` (9.3), après avoir reconnu chaque saisie avec `POST /api/sources/resolve` (9.1).
+- La colonne « Version » vaut pour le navigateur. Côté API, `GET /api/pdf/from-source` (sections 1 à 4) et le paramètre `?source=` de la page existent depuis la 1.12.0 (en production dès le 16 novembre 2026 au soir, avant de recevoir ce numéro) : avec une version plus ancienne, envoyer le livre en JSON à `POST /api/pdf` (9.3), après avoir reconnu chaque saisie avec `POST /api/sources/resolve` (9.1).
 - Les exemples ont été vérifiés le 17 novembre 2026 contre les wikis réels, par le code de reconnaissance des sources ; une page renommée ou supprimée depuis peut changer le résultat.
 
 Abréviations : **T** = https://wikipedia2book.toolforge.org. Dans les adresses d'API, `language` est la langue des titres générés dans le PDF (couverture, table des matières, licence) et `wiki` la langue des titres sans préfixe.
@@ -48,8 +48,8 @@ Abréviations : **T** = https://wikipedia2book.toolforge.org. Dans les adresses 
 | 3.4 | Livre entier et son sommaire | Comme 3.3, choisir « Le livre entier et son sommaire » | `T/api/pdf/from-source?source=b:Cosmologie&wiki=fr&summary=1` | Le sommaire en premier, avant le premier chapitre | 1.10.0 |
 | 3.5 | Seulement la page de sommaire | Comme 3.3, choisir « Seulement cette page » | `POST /api/pdf` avec la seule page de sommaire (voir 9.3) | La page de sommaire seule | 1.10.0 |
 | 3.6 | Œuvre de Wikisource | `s:Les Misérables` (langue FR) | `T/api/pdf/from-source?source=s:Les%20Mis%C3%A9rables&wiki=fr` | Fenêtre de choix ; « Le livre entier » donne 365 chapitres en 5 parties, sans « Texte entier » | 1.11.0 |
-| 3.7 | Version imprimable écrite à la main (adresse) | `https://fr.wikibooks.org/wiki/Hélices_de_navires_à_déplacement/Version_imprimable` | `T/api/pdf/from-source?source=https://fr.wikibooks.org/wiki/H%C3%A9lices_de_navires_%C3%A0_d%C3%A9placement/Version_imprimable` | 13 pages, un chapitre par titre `= … =`, couverture écartée, titre « Hélices de navires à déplacement » | À venir |
-| 3.8 | Version imprimable par `{{imprimable}}` (adresse) | `https://fr.wikibooks.org/wiki/Programmation_C/Version_imprimable` | `T/api/pdf/from-source?source=https://fr.wikibooks.org/wiki/Programmation_C/Version_imprimable` | La fenêtre de choix du sommaire « Programmation C » (21 pages) | À venir |
+| 3.7 | Version imprimable écrite à la main (adresse) | `https://fr.wikibooks.org/wiki/Hélices_de_navires_à_déplacement/Version_imprimable` | `T/api/pdf/from-source?source=https://fr.wikibooks.org/wiki/H%C3%A9lices_de_navires_%C3%A0_d%C3%A9placement/Version_imprimable` | 13 pages, un chapitre par titre `= … =`, couverture écartée, titre « Hélices de navires à déplacement » | 1.12.0 |
+| 3.8 | Version imprimable par `{{imprimable}}` (adresse) | `https://fr.wikibooks.org/wiki/Programmation_C/Version_imprimable` | `T/api/pdf/from-source?source=https://fr.wikibooks.org/wiki/Programmation_C/Version_imprimable` | La fenêtre de choix du sommaire « Programmation C » (21 pages) | 1.12.0 |
 
 ## 4. Listes de pages (plusieurs lignes)
 
@@ -86,8 +86,8 @@ API, même liste : `T/api/pdf/from-source?source=[[Brest]]&source=[[nl:Amsterdam
 
 | N° | Cas | Texte à coller | API | Résultat attendu | Version |
 |---|---|---|---|---|---|
-| 5.1 | Syntaxe « Livre: » de Wikipédia | Bloc 5.1 ci-dessous | `curl` 5.1 ci-dessous | Titre « Ports bretons », sous-titre « Guide des ports », chapitres « Finistère » et « Morbihan », « Brest » en tête sans chapitre | À venir |
-| 5.2 | Version imprimable de Wikilivres | Bloc 5.2 ci-dessous | `curl` 5.2 ci-dessous | 3 pages de Wikilivres en 3 chapitres, licence écartée | À venir |
+| 5.1 | Syntaxe « Livre: » de Wikipédia | Bloc 5.1 ci-dessous | `curl` 5.1 ci-dessous | Titre « Ports bretons », sous-titre « Guide des ports », chapitres « Finistère » et « Morbihan », « Brest » en tête sans chapitre | 1.12.0 |
+| 5.2 | Version imprimable de Wikilivres | Bloc 5.2 ci-dessous | `curl` 5.2 ci-dessous | 3 pages de Wikilivres en 3 chapitres, licence écartée | 1.12.0 |
 
 Bloc 5.1 :
 
@@ -134,9 +134,9 @@ Pour lire seulement la structure, sans PDF : même corps sur `POST /api/books/fr
 |---|---|---|---|---|---|
 | 6.1 | Livre JSON par adresse | `T/?json=https://gmoulard.github.io/wikipedia2book/static/Wrecks-of-Saint-Pierre-harbor.json` | `T/api/pdf/from-json?url=https://gmoulard.github.io/wikipedia2book/static/Wrecks-of-Saint-Pierre-harbor.json&language=en` | Le livre s'ouvre (« Livre importé. ») avec ses images de fond et son document | 1.9.6 |
 | 6.2 | Livre Wikilivres en JSON | `T/?json=https://gmoulard.github.io/wikipedia2book/static/Cosmologie.json` | `T/api/pdf/from-json?url=https://gmoulard.github.io/wikipedia2book/static/Cosmologie.json` | 27 pages en 8 chapitres | 1.9.6 |
-| 6.3 | Fichier JSON local | Bouton « Ouvrir », choisir un fichier exporté par « Enregistrer » | `curl -OJ -X POST 'T/api/pdf/from-json' -H 'Content-Type: application/json' --data @livre.json` | Le livre s'ouvre / le PDF est produit | ≤ 1.9.7 (navigateur), à venir (API) |
-| 6.4 | JSON puis sources en plus | `T/?json=https://gmoulard.github.io/wikipedia2book/static/Cosmologie.json&source=b:Programmation%20Python` | — | Le livre JSON s'ouvre, puis la fenêtre de choix du sommaire ajouté | À venir |
-| 6.5 | Sources dans l'adresse de la page | `T/?source=https://fr.wikibooks.org/wiki/Cosmologie&source=Montagne%20Pel%C3%A9e&wiki=fr` | Voir 3.3 et 1.2 | Chaque source est ajoutée comme si elle avait été saisie, question comprise | À venir |
+| 6.3 | Fichier JSON local | Bouton « Ouvrir », choisir un fichier exporté par « Enregistrer » | `curl -OJ -X POST 'T/api/pdf/from-json' -H 'Content-Type: application/json' --data @livre.json` | Le livre s'ouvre / le PDF est produit | ≤ 1.9.7 (navigateur), 1.12.0 (API) |
+| 6.4 | JSON puis sources en plus | `T/?json=https://gmoulard.github.io/wikipedia2book/static/Cosmologie.json&source=b:Programmation%20Python` | — | Le livre JSON s'ouvre, puis la fenêtre de choix du sommaire ajouté | 1.12.0 |
+| 6.5 | Sources dans l'adresse de la page | `T/?source=https://fr.wikibooks.org/wiki/Cosmologie&source=Montagne%20Pel%C3%A9e&wiki=fr` | Voir 3.3 et 1.2 | Chaque source est ajoutée comme si elle avait été saisie, question comprise | 1.12.0 |
 | 6.6 | Adresse refusée | `T/?json=http://example.com/livre.json` | `T/api/pdf/from-json?url=http://example.com/livre.json` | Message d'erreur, rien n'est importé ; l'API répond 422 « doit commencer par https:// » | 1.9.6 |
 
 ## 7. Documents et images de fond
@@ -145,8 +145,8 @@ Pour lire seulement la structure, sans PDF : même corps sur `POST /api/books/fr
 |---|---|---|---|---|---|
 | 7.1 | Image ou PDF depuis l'ordinateur | Étape Organisation, « Choisir un fichier + » | `uploaded_documents[]` avec `data_base64` | Document placé dans le livre comme un article, 15 Mo au plus | ≤ 1.9.7 |
 | 7.2 | Document par adresse | Étape Organisation, champ d'adresse : `https://upload.wikimedia.org/wikipedia/commons/1/16/La_Pel%C3%A9e_vue_du_Carbet.jpg` | `uploaded_documents[]` avec `"url": "https://upload.wikimedia.org/…"` | Seule l'adresse est enregistrée ; le serveur télécharge l'image à chaque génération | 1.10.0 |
-| 7.3 | Document par page de fichier Commons | `https://commons.wikimedia.org/wiki/File:La_Pelée_vue_du_Carbet.jpg` | `"url": "https://commons.wikimedia.org/wiki/File:La_Pel%C3%A9e_vue_du_Carbet.jpg"` | L'image (vignette de 2 000 px) est utilisée ; pour un PDF, l'original | 1.10.0 (navigateur), à venir (API) |
-| 7.4 | PDF par page de fichier | `https://commons.wikimedia.org/wiki/File:Interpersonal_communication_and_coordination_in_Wikipedia_Working_Paper_30_June_2020.pdf` | Même adresse dans `uploaded_documents[].url` | Le PDF original est intégré, pages recomposées au format du livre | 1.10.0 (navigateur), à venir (API) |
+| 7.3 | Document par page de fichier Commons | `https://commons.wikimedia.org/wiki/File:La_Pelée_vue_du_Carbet.jpg` | `"url": "https://commons.wikimedia.org/wiki/File:La_Pel%C3%A9e_vue_du_Carbet.jpg"` | L'image (vignette de 2 000 px) est utilisée ; pour un PDF, l'original | 1.10.0 (navigateur), 1.12.0 (API) |
+| 7.4 | PDF par page de fichier | `https://commons.wikimedia.org/wiki/File:Interpersonal_communication_and_coordination_in_Wikipedia_Working_Paper_30_June_2020.pdf` | Même adresse dans `uploaded_documents[].url` | Le PDF original est intégré, pages recomposées au format du livre | 1.10.0 (navigateur), 1.12.0 (API) |
 | 7.5 | Image de fond de couverture | Étape Édition, « Image de fond de la couverture », fichier ou adresse (7.2 ou 7.3) | `cover_image` : `{"title": "…", "url": "…"}` ou `data_base64` | Fond de la couverture, sans déformation | 1.9.6 |
 | 7.6 | Image de dernière page | Étape Édition, « Image de la dernière page » | `back_image` | Page à part après la licence | 1.9.6 |
 | 7.7 | Adresse inaccessible | Document `https://example.org/inexistant.png` | Même adresse | Génération arrêtée, l'adresse en cause est nommée ; 502 par l'API | 1.10.0 |
@@ -161,8 +161,8 @@ Pour lire seulement la structure, sans PDF : même corps sur `POST /api/books/fr
 | 8.4 | Format, orientation, marges | Étape Édition | `page_format`, `orientation`, `margin_*_mm`, `custom_width_mm` | Toutes les pages au format choisi | ≤ 1.9.7 |
 | 8.5 | Numérotation | « Numéroter les pages » | `page_numbers` | Numéros en bas de page, sauf la couverture | ≤ 1.9.7 |
 | 8.6 | Langue des titres du PDF | Sélecteur de langue en haut | Paramètre `language` (12 langues) | Couverture, table, licence dans la langue choisie | ≤ 1.9.7 |
-| 8.7 | Coupure de volume manuelle | Étape Organisation, « Nouveau volume » | `volume_breaks` : `["before:<clé>"]`, puis `?volume=N` | Un PDF par volume, numérotation repartant de 1 | 1.9.2 (navigateur), à venir (API) |
-| 8.8 | Plus de 300 articles | Livre 3.1 + d'autres pages jusqu'à plus de 300 | `POST /api/books/volumes` pour le plan, puis `POST /api/pdf?volume=1`, `?volume=2`… | Découpage automatique entre chapitres, « Tome 1/2 »… ; sans `volume`, refus 413 avec le nombre de volumes | 1.9.0 (navigateur), à venir (API) |
+| 8.7 | Coupure de volume manuelle | Étape Organisation, « Nouveau volume » | `volume_breaks` : `["before:<clé>"]`, puis `?volume=N` | Un PDF par volume, numérotation repartant de 1 | 1.9.2 (navigateur), 1.12.0 (API) |
+| 8.8 | Plus de 300 articles | Livre 3.1 + d'autres pages jusqu'à plus de 300 | `POST /api/books/volumes` pour le plan, puis `POST /api/pdf?volume=1`, `?volume=2`… | Découpage automatique entre chapitres, « Tome 1/2 »… ; sans `volume`, refus 413 avec le nombre de volumes | 1.9.0 (navigateur), 1.12.0 (API) |
 
 ## 9. Appels d'API sans PDF
 
