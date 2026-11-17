@@ -49,13 +49,17 @@ for name in WIKIPEDIA2BOOK_MONITOR_TOKEN WIKIPEDIA2BOOK_OAUTH_CLIENT_ID WIKIPEDI
   fi
 done
 wait_idle() {
-  if [ -z "${WIKIPEDIA2BOOK_MONITOR_TOKEN:-}" ]; then
+  local token="${WIKIPEDIA2BOOK_MONITOR_TOKEN:-}"
+  if [ -z "$token" ]; then
+    token=$(toolforge envvars show WIKIPEDIA2BOOK_MONITOR_TOKEN --json 2>/dev/null | json_field '["envvar"]["value"]' || true)
+  fi
+  if [ -z "$token" ]; then
     echo "pas de jeton de supervision : redémarrage sans attendre la fin des générations"
     return
   fi
   for _ in $(seq 1 180); do
     count=$(printf 'Authorization: Bearer %s
-' "$WIKIPEDIA2BOOK_MONITOR_TOKEN" | curl -fsS -H @- https://wikipedia2book.toolforge.org/api/health/details | json_field '.get("generations_in_progress")' || echo inconnu)
+' "$token" | curl -fsS -H @- https://wikipedia2book.toolforge.org/api/health/details | json_field '.get("generations_in_progress")' || echo inconnu)
     if [ "$count" = 0 ]; then
       echo "aucune génération en cours"
       return
