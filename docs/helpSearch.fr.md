@@ -24,6 +24,7 @@ Abréviations : **T** = https://wikipedia2book.toolforge.org. Dans les adresses 
 | 1.4 | Titre sans page exacte | `volcan martinique` | `T/api/sources/resolve` en `POST` (voir 9.1) : `kind` = `search` | Des résultats de recherche s'affichent sous le champ, à ajouter d'un clic ; l'API de génération répond 404 avec le texte en cause | ≤ 1.9.7 |
 | 1.5 | Recherche au fil de la frappe | Taper `Saint-Pie` sans valider | `T/api/search?query=Saint-Pie&language=fr` | Suggestions sous le champ | ≤ 1.9.7 |
 | 1.6 | Titre dans une autre langue | `nl:Rotterdam` | `T/api/pdf/from-source?source=nl:Rotterdam` | L'article néerlandais est ajouté, marqué « NL » | 1.7.0 |
+| 1.7 | Toutes les langues | `Paris`, avec « Toutes » choisi à côté du champ | `T/api/search?query=Paris&language=all&limit=3` | Des résultats dans chaque langue de la liste, chacun marqué de sa langue ; l'article choisi garde la sienne | 1.12.4 |
 
 ## 2. Autres projets Wikimédia
 
@@ -148,7 +149,7 @@ Pour lire seulement la structure, sans PDF : même corps sur `POST /api/books/fr
 | 7.3 | Document par page de fichier Commons | `https://commons.wikimedia.org/wiki/File:La_Pelée_vue_du_Carbet.jpg` | `"url": "https://commons.wikimedia.org/wiki/File:La_Pel%C3%A9e_vue_du_Carbet.jpg"` | L'image (vignette de 2 000 px) est utilisée ; pour un PDF, l'original | 1.10.0 (navigateur), 1.12.0 (API) |
 | 7.4 | PDF par page de fichier | `https://commons.wikimedia.org/wiki/File:Interpersonal_communication_and_coordination_in_Wikipedia_Working_Paper_30_June_2020.pdf` | Même adresse dans `uploaded_documents[].url` | Le PDF original est intégré, pages recomposées au format du livre | 1.10.0 (navigateur), 1.12.0 (API) |
 | 7.5 | Image de fond de couverture | Étape Édition, « Image de fond de la couverture », fichier ou adresse (7.2 ou 7.3) | `cover_image` : `{"title": "…", "url": "…"}` ou `data_base64` | Fond de la couverture, sans déformation | 1.9.6 |
-| 7.6 | Image de dernière page | Étape Édition, « Image de la dernière page » | `back_image` | Page à part après la licence | 1.9.6 |
+| 7.6 | Image de dernière page | Étape Édition, « Image de fond de la dernière page » | `back_image` | Page à part après la licence | 1.9.6 |
 | 7.7 | Adresse inaccessible | Document `https://example.org/inexistant.png` | Même adresse | Génération arrêtée, l'adresse en cause est nommée ; 502 par l'API | 1.10.0 |
 
 ## 8. Organisation et mise en page
@@ -156,7 +157,7 @@ Pour lire seulement la structure, sans PDF : même corps sur `POST /api/books/fr
 | N° | Cas | Navigateur | API (livre JSON envoyé à `POST /api/pdf`) | Résultat attendu | Version |
 |---|---|---|---|---|---|
 | 8.1 | Articles liés | Bouton « Articles liés » d'un article | `POST /api/explore` | Liens de l'article proposés, dans l'ordre de la page | ≤ 1.9.7 |
-| 8.2 | Chapitres et ordre | Étape Organisation, « Nouveau chapitre », glisser-déposer | `chapters`, `article_order`, `unassigned_first` | Le PDF suit l'ordre affiché | ≤ 1.9.7 |
+| 8.2 | Chapitres et ordre | Étape Organisation, « Créer un chapitre », glisser-déposer | `chapters`, `article_order`, `unassigned_first` | Le PDF suit l'ordre affiché | ≤ 1.9.7 |
 | 8.3 | Table des matières | Étape Édition : aucune, début, fin | `table_of_contents`, `toc_position` (`start`, `end`, `before:<clé>`) | Table placée au bon endroit, liens cliquables | 1.9.6 |
 | 8.4 | Format, orientation, marges | Étape Édition | `page_format`, `orientation`, `margin_*_mm`, `custom_width_mm` | Toutes les pages au format choisi | ≤ 1.9.7 |
 | 8.5 | Numérotation | « Numéroter les pages » | `page_numbers` | Numéros en bas de page, sauf la couverture | ≤ 1.9.7 |
@@ -176,6 +177,8 @@ Pour lire seulement la structure, sans PDF : même corps sur `POST /api/books/fr
 | 9.6 | Version en service | `T/api/version` | Version, commit, limite d'articles |
 
 ## 10. Saisies refusées
+
+Les messages d'erreur viennent du serveur et restent en français, quelle que soit la langue de l'interface.
 
 | N° | Saisie | Résultat attendu |
 |---|---|---|

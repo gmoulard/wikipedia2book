@@ -886,7 +886,7 @@ Wikipedia2Book/
     ├── stats.md                  (generated daily and before each deployment)
     ├── comparison-mediawiki2latex.md  (comparison with mediawiki2latex)
     ├── comparison-ws-export.md  (comparison with WS Export)
-    ├── helpSearch.md  (help for the "Build the book" field, opened by the "Help" link; also the list of manual tests, browser and API, in French)
+    ├── helpSearch.<lang>.md  (help for the "Build the book" field in the 12 interface languages, opened by the "Help" link in the chosen language; also the list of manual tests, browser and API; French is the reference)
     ├── testLimitetoolforge.md  (limit test results on Toolforge, by version, in French)
     └── _includes/head_custom.html  (Mermaid, hourly statistics chart)
 ```

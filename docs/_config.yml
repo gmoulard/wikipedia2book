@@ -45,8 +45,30 @@ defaults:
     values: { title: Historique des versions, nav_order: 7 }
   - scope: { path: "CHANGELOG.en.md" }
     values: { title: Version history, nav_order: 8 }
-  - scope: { path: "helpSearch.md" }
-    values: { title: Aide à la recherche, nav_order: 9 }
+  - scope: { path: "helpSearch.fr.md" }
+    values: { title: "Aide à la recherche / Search help", nav_order: 9, has_children: true }
+  - scope: { path: "helpSearch.en.md" }
+    values: { title: "English", parent: "Aide à la recherche / Search help", nav_order: 1 }
+  - scope: { path: "helpSearch.de.md" }
+    values: { title: "Deutsch", parent: "Aide à la recherche / Search help", nav_order: 2 }
+  - scope: { path: "helpSearch.es.md" }
+    values: { title: "Español", parent: "Aide à la recherche / Search help", nav_order: 3 }
+  - scope: { path: "helpSearch.it.md" }
+    values: { title: "Italiano", parent: "Aide à la recherche / Search help", nav_order: 4 }
+  - scope: { path: "helpSearch.pt.md" }
+    values: { title: "Português", parent: "Aide à la recherche / Search help", nav_order: 5 }
+  - scope: { path: "helpSearch.nl.md" }
+    values: { title: "Nederlands", parent: "Aide à la recherche / Search help", nav_order: 6 }
+  - scope: { path: "helpSearch.tr.md" }
+    values: { title: "Türkçe", parent: "Aide à la recherche / Search help", nav_order: 7 }
+  - scope: { path: "helpSearch.zh.md" }
+    values: { title: "中文", parent: "Aide à la recherche / Search help", nav_order: 8 }
+  - scope: { path: "helpSearch.ja.md" }
+    values: { title: "日本語", parent: "Aide à la recherche / Search help", nav_order: 9 }
+  - scope: { path: "helpSearch.fa.md" }
+    values: { title: "فارسی", parent: "Aide à la recherche / Search help", nav_order: 10 }
+  - scope: { path: "helpSearch.ar.md" }
+    values: { title: "العربية", parent: "Aide à la recherche / Search help", nav_order: 11 }
   - scope: { path: "testLimitetoolforge.md" }
     values: { title: Test aux limites, nav_order: 10 }
   - scope: { path: "comparison-mediawiki2latex.md" }

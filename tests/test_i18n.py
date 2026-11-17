@@ -72,5 +72,23 @@ class PdfLabelsTest(unittest.TestCase):
                     self.assertEqual(re.findall(r"\{(\w+)\}", text), re.findall(r"\{(\w+)\}", reference[key]))
 
 
+class HelpPagesTest(unittest.TestCase):
+    def cases(self, lang):
+        text = (I18N_PATH.parents[2] / "docs" / f"helpSearch.{lang}.md").read_text(encoding="utf-8")
+        return re.findall(r"^\| (\d+\.\d+) \|", text, re.MULTILINE), len(re.findall(r"^## ", text, re.MULTILINE))
+
+    def test_every_language_has_the_same_cases(self):
+        reference = self.cases("fr")
+        self.assertGreater(len(reference[0]), 50)
+        for lang in LANGUAGES:
+            with self.subTest(lang=lang):
+                self.assertEqual(self.cases(lang), reference)
+
+    def test_link_follows_the_interface_language(self):
+        html = (I18N_PATH.parent / "index.html").read_text(encoding="utf-8")
+        self.assertIn('data-i18n-href="https://gmoulard.github.io/wikipedia2book/helpSearch.{lang}.html"', html)
+        self.assertIn('el.dataset.i18nHref.replace("{lang}", state_i18n.lang)', I18N_PATH.read_text(encoding="utf-8"))
+
+
 if __name__ == "__main__":
     unittest.main()
