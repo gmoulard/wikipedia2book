@@ -56,6 +56,7 @@ This is the English translation of [SPECIFICATIONS.fr.md](https://gmoulard.githu
 	- [13.10 Architecture diagrams](#1310-architecture-diagrams)
 	- [13.11 Benchmark](#1311-benchmark)
 	- [13.12 Limit test](#1312-limit-test)
+	- [13.13 Container optimisation strategy](#1313-container-optimisation-strategy)
 - [14. Security and robustness](#14-security-and-robustness)
 - [15. Compliance with Wikipedia licenses](#15-compliance-with-wikipedia-licenses)
 - [16. Acceptance criteria](#16-acceptance-criteria)
@@ -1208,6 +1209,124 @@ Test to run by hand to find the largest book a deployment can generate. Unlike t
   * **1.11.0, 15 simultaneous generations** (2026-11-17, 00:15 UTC, `--parallel 15`, same book, same readings): **15 passed**, with no restart (110.7 s in all, 99.4 s per generation as a median); container peak 1,650 MB out of 2,048, server process up to 743 MB and still 667 MB afterwards; `/api/health/details` twice without an answer within 8 s. The Toolforge limit for this book is therefore between 15 (passed) and 20 (restart) simultaneous generations, with about 400 MB of headroom at 15.
   * **1.12.0, memory checked before each stage** (2026-11-17, 01:16 UTC, `--parallel 20,50,100`, same book and same readings): **20 books passed** (119.8 s, 85.5 s per generation; 11 out of 20 with a restart without the check) and **50 books passed** (575.7 s, 465.8 s per generation), with no restart, with up to 197 stages waiting "Server busy"; **at 100, 2 passed and 98 were cut off**: the container reaches its limit (peak 2,147 MB) and Toolforge restarts it at 01:28:33, 56 s after the start. The readings show why: the container memory stays around 1.9 to 2.1 GB during the whole 50 step while the reserves are often zero, because the server process keeps the memory it already used (up to 2,046 MB RSS, the allocator does not give it back to the system); the check then lets one stage through at a time (a lone stage always passes), hence the duration. At 100, it is the data each generation keeps in memory outside the checked stages (received book, downloaded background images and their base64 copy) that overflows the server before any check. The check does not cover the memory kept by the server process.
   * **Memory given back and contained** (2026-11-17, 01:52 UTC, commit `0a27d22`: `MALLOC_ARENA_MAX`, `malloc_trim`, admission at the entry, background images on disk, refitting in worker processes; `--parallel 50,100,500`, same book and same readings): **no restart**, even at 500 (the server keeps its start time from beginning to end). **50 books passed** in 314.6 s (575.7 s before these changes) and **100 passed** in 620.3 s (2 out of 100 before, with a restart); **at 500, 250 passed and 250 were refused** with an HTTP 503 "Service Unavailable" answer that does not come from the application (it never returns 503 for a generation): with up to 240 generations at the same time on the server, the following requests are refused before reaching it, by the Toolforge platform. During the whole test, at most 17 generations admitted at once (the others wait at the entry, up to 223), at most 36 stages running, container at 1,450 MB at most (peak 1,639 MB out of 2,048) and server process at 1,084 MB at most, back to about 480 MB between steps. A single book right after going to production: 8.2 s, of which 3.6 s of downloads and refitting, server process around 200 MB.
+
+### 13.13 Container optimisation strategy
+
+The approach taken to get the most out of a limited container without ever making it restart. Target: Toolforge, 2 GiB of memory (cgroup limit), 1 CPU, no persistent disk. Five steps, each one measured before moving on to the next. Software common to all steps: Python 3.12, FastAPI 0.162.6, Uvicorn 0.54.0, httpx 0.28.1, WeasyPrint 69.0, pypdf 6.21.4 and reportlab 4.5.1 (versions pinned in `requirements.txt` since 1.6.7); libraries specific to a step are named in that step.
+
+| Step | Versions | Libraries | Result on Toolforge |
+|---|---|---|---|
+| 1. Unit tests and optimisation of the generation tools | 1.6.9 to 1.8.6 | pikepdf 10.18.1 (qpdf) from 1.7.7 to 1.8.5, then PyMuPDF 2.1 | 100, then 800 articles per book |
+| 2. Maximum limits identified | 1.7.5 to 1.8.9 | same | 1,000 articles succeeded, 1,500 failed |
+| 3. Soft limits, below the maximums | 1.8.7 to 1.9.5 | same | 300 articles per book, volumes beyond that: 1,500 articles in 6 volumes |
+| 4. Load tests | 1.11.0 | plus Pillow 13.0.0 | 15 simultaneous books succeeded, restart at 20 |
+| 5. Limiting system demands | 1.12.0, then commit `0a27d22` (same version) | glibc (`malloc_trim`) | 100 simultaneous books succeeded, 500 without a restart |
+
+#### Step 1: unit tests and optimisation of the generation tools (1.6.9 to 1.8.6)
+
+Each tool in the generation chain was first measured on its own, locally, on a test book, under automated tests (`tests/test_pdf_generation.py`, `tests/test_pdf_stream.py`, `tests/test_isolation.py`, no network), then optimised:
+
+* **Non-blocking asyncio loop (1.6.9)**: WeasyPrint rendering, page refitting (pypdf), numbering and writing go through `asyncio.to_thread`. The Uvicorn server has a single event loop: a blocking computation in it freezes every request and delays the progress messages.
+* **No needless refitting (1.6.10)**: in pypdf, `transfer_rotation_to_content()` rewrites the page's whole content stream. A page already at the book's format (within 1 point, `FORMAT_TOLERANCE_PT`) and without rotation only gets its size adjusted, with the check made before that rewrite: about 8 times faster for A4, Letter and Legal books.
+* **Parallel downloads (1.7.1)**: several article PDFs downloaded at once, each one refitted in the background while the next ones download. The Wikimedia robot policy later brings this down to 2 for the whole server outside Toolforge (1.7.4; Toolforge is exempt, 1.7.5).
+* **Disk rather than memory (1.7.7)**: each refitted PDF is written to a temporary folder of its own for the generation (`tempfile.TemporaryDirectory`) instead of staying in memory, and the book is assembled by qpdf (pikepdf 10.18.1). Peak memory for 100 articles: from 1,100 to 360 MB.
+* **Merging without an in-memory copy (1.7.9, 1.7.10)**: merging with `qpdf --pages` rather than by copying the pages in pikepdf, which loaded their content: 158 MB for 100 articles, 262 MB for 300. The part files are deleted as soon as they are merged, which brings the disk space down from three to two times the size of the book.
+* **Separate assembly process (1.8.3)**: the glibc allocator does not give back to the system the memory freed by a long-lived process. The assembly therefore runs in a short-lived process (`isolation.run_isolated`, `forkserver` method), which gives all its memory back when it ends. `fork` is ruled out, because a server thread may hold a WeasyPrint, Pango or MuPDF lock at the moment of the copy, and the child would hang.
+* **Lighter WeasyPrint rendering and a stage journal (1.8.5)**:
+  * the table of contents and the license page are rendered in blocks of 100 entries, without a flex box;
+  * the DejaVu fonts are enforced;
+  * the generation journal (`GET /api/health/generations`) gives the memory at each stage, which shows which stage costs the most.
+* **PyMuPDF 2.1 instead of qpdf (1.8.6)**:
+  * qpdf keeps in memory every object of every page, about 10 times the size of the book (938 MB for 100 articles, against 130 MB, measured locally). PyMuPDF merges in batches of 20 (`insert_pdf`), writes each batch as an incremental update of the merged file, then closes the document.
+  * Page numbers are added with `insert_text` (Helvetica font built into MuPDF), without reading or rewriting the content. A page overlay (`add_overlay`) almost doubled the size of the PDF.
+  * The assembly peak goes from 957 to 236 MB for 100 articles.
+
+#### Step 2: maximum limits identified (1.7.5 to 1.8.9)
+
+The limit test (`scripts/limit_check.py`, section 13.12) generates ever larger books on Toolforge, in steps and then by bisection (`--search`), until the first failure. During the test, the container memory is read from `GET /api/health/details`, which reads `memory.current` and `memory.max` from cgroup v2 (or `memory.usage_in_bytes` in cgroup v1), and the memory of each stage from the generation journal.
+
+Failure mechanism: when the container exceeds its cgroup limit, the kernel kills the process (OOM), then Toolforge restarts the container, which cuts off every generation in progress.
+
+Limits found (details: [testLimitetoolforge.md](testLimitetoolforge.md)):
+
+| Version | Limit | Most expensive stage |
+|---|---|---|
+| 1.7.5 | 100 articles | — |
+| 1.8.3 | 150 articles | qpdf merge |
+| 1.8.6 | 800 articles | page numbering (1,295 MB at 800 articles) |
+| 1.8.9 | between 1,000 (succeeded) and 1,500 (failed) | numbering, about 0.086 MB per page (28,178 pages) |
+
+#### Step 3: soft limits so the maximums are never reached (1.8.7 to 1.9.5)
+
+Once the maximum is known, deliberate limits well below it keep a single book from reaching it:
+
+* **Articles per book limit**: 300, refused with HTTP 413 `too_many_articles` before any download. It first applied to Toolforge only (1.8.7), then everywhere (1.9.1). It can be set with `WIKIPEDIA2BOOK_ARTICLE_LIMIT` (1.8.8), chosen from the container memory (README).
+* **Volumes**: beyond the limit, the interface splits the book into volumes, automatically (1.9.0) or by hand (1.9.2). Each volume is a separate generation, so memory is bounded by the size of one volume, not by the size of the book. Checked in 1.9.5: 1,500 articles in 6 volumes of 250, container at 58% at most.
+* **Safety net (1.8.4)**: after a server crash, the browser waits until it answers again, then restarts the generation.
+
+#### Step 4: load tests with multiple requests (1.11.0)
+
+The `--parallel` mode of `scripts/limit_check.py` requests N generations of the reference book at the same time (*Épaves de la rade de Saint-Pierre*, 10 articles, 107 pages, background images given by address), with the memory read every 5 s:
+
+| Simultaneous books | Result | Container peak | Server process |
+|---|---|---|---|
+| 10 | succeeded | 1,724 MB | 610 MB kept afterwards |
+| 15 | succeeded | 1,650 MB | 743 MB, 667 MB kept afterwards |
+| 20 | 11 succeeded, restart | 2,147 MB | 1,303 MB |
+
+What the test showed:
+
+* **The per-book limit does not protect against a sum of books.** Nothing limited the number of simultaneous generations.
+* **Memory grows mostly in the server process**, which downloads and refits the articles of all generations at once, and not only in the assembly processes.
+* **That memory does not come back down.** By default, glibc opens one memory pool (arena) per thread, up to 8 per core, and keeps freed pages in those pools instead of giving them back to the system.
+* **The single CPU saturates**: `/api/health/details` sometimes goes 8 s without answering.
+
+#### Step 5: limiting system demands so the container is never overwhelmed (1.12.0, then commit `0a27d22`)
+
+**Memory and disk check before each stage (1.12.0).** `ResourceGate` (`app/resource_gate.py`) makes each heavy stage wait, with no time limit and in arrival order, as long as used memory + current reservations + the stage's estimate would exceed 95% of the limit (`WIKIPEDIA2BOOK_MEMORY_RATIO`, `WIKIPEDIA2BOOK_DISK_RATIO`). A stage on its own always passes, and the wait is shown as "Server busy". The estimates come from the measurements of steps 1 and 2:
+
+| Stage | Memory reserved | Disk reserved |
+|---|---|---|
+| Downloading an article | 10 MB | 30 MB |
+| Refitting an article | 5 MB + 25 times the size of the PDF | — |
+| Assembly | 100 MB + 2.5 times the size of the articles + 35 times that of the background images | 50 MB + 2 times the size of the articles |
+
+Result:
+
+* 20 and 50 simultaneous books succeeded.
+* At 100, the server restarts. The check does count the memory already kept by the server, but that memory does not come back down, and the data kept outside the checked stages (received book, background images in base64) overflows before any check.
+
+**Memory given back and contained (commit `0a27d22`, version 1.12.0 unchanged)**:
+
+1. **`MALLOC_ARENA_MAX=2`** (`Dockerfile`, `Procfile`) limits glibc arenas. `malloc_trim(0)` (glibc, called through `ctypes`, `resource_gate.release_memory`), after each article and at the end of each generation, gives freed memory back to the system.
+2. **Admission at the entry** (`GENERATION_GATE`, `WIKIPEDIA2BOOK_GENERATIONS_RATIO`, 0.5 by default): before loading anything, each generation reserves 25 MB + 3 times its base64 data + 15 MB per image given by address, kept until it ends. The budget is separate from the stage budget: a reservation kept until the end in the same budget would make the generation's own stages wait forever (deadlock).
+3. **Background images on disk**: written to the temporary folder and read back by the assembly, instead of travelling in base64 inside the book.
+4. **Refitting in worker processes** (`isolation.run_in_worker`, `ProcessPoolExecutor` of 2 processes, `max_tasks_per_child=1`, `forkserver`): a new process for each article, which gives all its memory back when it ends. Downloads stay in the server, where the Wikimedia limit of 2 downloads is shared by all books.
+
+Result on Toolforge, without a single restart:
+
+| Simultaneous books | Result | Total time |
+|---|---|---|
+| 50 | succeeded | 314.6 s, instead of 575.7 s |
+| 100 | succeeded | 620.3 s |
+| 500 | 250 succeeded, 250 refused | — |
+
+Measurements during the whole test:
+
+* at most 17 generations admitted at once, the others waiting at the entry;
+* container at 1,639 MB at its highest, out of 2,048;
+* server process at 1,084 MB at most, back down to about 480 MB between steps;
+* a single book is generated in 8.2 s, and the benchmark shows no difference when memory is sufficient (section 13.11, 1.12.0).
+
+The 250 refusals at 500 are HTTP 503 responses from the Toolforge platform, sent before the request reaches the application, beyond about 240 simultaneous connections. The remaining limit is therefore no longer the container memory.
+
+#### Principles adopted
+
+* Measure before optimising: tool by tool locally, then on the target, with the memory of each stage in the journal.
+* Prefer temporary disk to memory, and short-lived processes that give their memory back when they end rather than a long-lived process that keeps it.
+* Set soft limits below the measured maximums, and split rather than refuse (volumes).
+* Make work wait rather than fail: admit at the entry, then check each stage from the real size of the files, never blocking a stage on its own.
+* Rerun the benchmark (section 13.11) and the load tests (section 13.12) after every change to these mechanisms.
 
 ## 14\. Security and robustness
 
