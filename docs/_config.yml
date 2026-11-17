@@ -69,6 +69,8 @@ defaults:
     values: { title: "فارسی", parent: "Aide à la recherche / Search help", nav_order: 10 }
   - scope: { path: "helpSearch.ar.md" }
     values: { title: "العربية", parent: "Aide à la recherche / Search help", nav_order: 11 }
+  - scope: { path: "tests-manuels.md" }
+    values: { title: Tests manuels, nav_order: 9.5 }
   - scope: { path: "testLimitetoolforge.md" }
     values: { title: Test aux limites, nav_order: 10 }
   - scope: { path: "comparison-mediawiki2latex.md" }

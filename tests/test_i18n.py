@@ -73,16 +73,16 @@ class PdfLabelsTest(unittest.TestCase):
 
 
 class HelpPagesTest(unittest.TestCase):
-    def cases(self, lang):
+    def outline(self, lang):
         text = (I18N_PATH.parents[2] / "docs" / f"helpSearch.{lang}.md").read_text(encoding="utf-8")
-        return re.findall(r"^\| (\d+\.\d+) \|", text, re.MULTILINE), len(re.findall(r"^## ", text, re.MULTILINE))
+        return sorted(re.findall(r"`([^`\n]+)`", text)), len(re.findall(r"^## ", text, re.MULTILINE)), text.count("```")
 
-    def test_every_language_has_the_same_cases(self):
-        reference = self.cases("fr")
-        self.assertGreater(len(reference[0]), 50)
+    def test_every_language_has_the_same_examples_and_sections(self):
+        reference = self.outline("fr")
+        self.assertGreater(len(reference[0]), 30)
         for lang in LANGUAGES:
             with self.subTest(lang=lang):
-                self.assertEqual(self.cases(lang), reference)
+                self.assertEqual(self.outline(lang), reference)
 
     def test_link_follows_the_interface_language(self):
         html = (I18N_PATH.parent / "index.html").read_text(encoding="utf-8")

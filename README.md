@@ -104,7 +104,8 @@ wikipedia2book/
 │   ├── toolviews.csv, toolforge_hourly.csv, stats.md  # Usage statistics and their charts (generated)
 │   ├── comparison-mediawiki2latex.md  # Comparison with mediawiki2latex
 │   ├── comparison-ws-export.md  # Comparison with WS Export
-│   ├── helpSearch.<lang>.md  # Help for the source field in the 12 interface languages: everything it accepts, also used as manual tests (French is the reference)
+│   ├── helpSearch.<lang>.md  # User guide for the source field in the 12 interface languages (French is the reference)
+│   ├── tests-manuels.md  # Manual tests of the source field, browser and API (in French)
 │   ├── testLimitetoolforge.md   # Limit test results on Toolforge, by version (French)
 │   └── _includes/head_custom.html  # Mermaid rendering and statistics chart on the site
 ├── CODE_OF_CONDUCT.md

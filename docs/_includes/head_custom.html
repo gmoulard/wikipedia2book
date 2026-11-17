@@ -1,8 +1,30 @@
 <style>
   .bench-new { display: inline-block; padding: 0 0.45em; border-radius: 0.6em; background: #1a7f37; color: #fff; font-size: 0.85em; white-space: nowrap; }
 </style>
+<style>
+  .doc-language { margin: 0 1rem; align-self: center; font: inherit; font-size: 0.875rem; padding: 0.2rem 0.4rem; border: 1px solid #d7d7d7; border-radius: 4px; background: transparent; color: inherit; }
+</style>
 <script>
-  if (/\/helpSearch\.(fa|ar)\.html$/.test(location.pathname)) document.addEventListener("DOMContentLoaded", () => { const main = document.querySelector("#main-content"); if (main) { main.dir = "rtl"; main.querySelectorAll("pre, code").forEach((el) => { el.dir = "ltr"; }); } });
+  document.addEventListener("DOMContentLoaded", () => {
+    const names = { fr: "Français", en: "English", de: "Deutsch", es: "Español", it: "Italiano", pt: "Português", nl: "Nederlands", tr: "Türkçe", zh: "中文", ja: "日本語", fa: "فارسی", ar: "العربية" };
+    const translations = { helpSearch: Object.keys(names), FunctionalSpec: ["fr", "en"], TechnicalSpec: ["fr", "en"], CHANGELOG: ["fr", "en"] };
+    const match = location.pathname.match(/\/([A-Za-z]+)\.([a-z]{2})\.html$/);
+    if (!match || !translations[match[1]]?.includes(match[2])) return;
+    const [, page, current] = match;
+    const main = document.querySelector("#main-content");
+    if (main && ["fa", "ar"].includes(current)) {
+      main.dir = "rtl";
+      main.querySelectorAll("pre, code").forEach((el) => { el.dir = "ltr"; });
+    }
+    const select = document.createElement("select");
+    select.className = "doc-language";
+    select.setAttribute("aria-label", "Langue / Language");
+    translations[page].forEach((code) => select.add(new Option(names[code], code, false, code === current)));
+    select.addEventListener("change", () => { location.href = `${page}.${select.value}.html`; });
+    const header = document.querySelector("#main-header");
+    if (header) header.insertBefore(select, header.querySelector(".aux-nav"));
+    else main?.prepend(select);
+  });
 </script>
 <script type="module">
   import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.esm.min.mjs";
