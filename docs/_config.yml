@@ -29,9 +29,9 @@ defaults:
   - scope: { path: "docs.md" }
     values: { title: Documents, nav_order: 2 }
   - scope: { path: "FunctionalSpec.fr.md" }
-    values: { title: Spécification fonctionnelle, nav_order: 3, redirect_from: [/SPECIFICATIONS.fr.html] }
+    values: { title: Spécification fonctionnelle, nav_order: 3 }
   - scope: { path: "FunctionalSpec.en.md" }
-    values: { title: Functional specification, nav_order: 4, redirect_from: [/SPECIFICATIONS.en.html] }
+    values: { title: Functional specification, nav_order: 4 }
   - scope: { path: "TechnicalSpec.fr.md" }
     values: { title: Spécification technique, nav_order: 5 }
   - scope: { path: "TechnicalSpec.en.md" }
