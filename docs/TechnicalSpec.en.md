@@ -588,6 +588,7 @@ Two series of measurements, in tables whose common columns are aligned (date, ve
   | 1.12.2 | 2026-11-17 | workflow | max | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |  | ✅ |
   | 1.12.3 | 2026-11-17 | workflow | min | ✅ | ✅ |  |  |  |  |  |  | ✅ |
   | 1.12.3+ | 2026-11-17 | workflow | min | ✅ | ✅ |  |  |  |  |  |  | ✅ |
+  | 1.12.4+ | 2026-11-17 | workflow | min | ✅ | ✅ |  |  |  |  |  |  | ✅ |
 
   One row per run, one column per scenario. ✅ ok; <span class="bench-new">new</span>: first run of the scenario, no reference yet; ⚠️ to watch and ❌ regression, with in brackets the gap of the *application per page* time to the reference; ❌ failed: the generation did not complete; empty cell: scenario not run. Every measurement (pages, *Wikipedia*, *Application*, *Transfer*, *Total* phases, gap) is in [benchmark-results.csv](benchmark-results.csv), one row per scenario and per run.
   <!-- benchmark-table:end -->
@@ -608,6 +609,7 @@ Two series of measurements, in tables whose common columns are aligned (date, ve
   * Run of 2026-11-17 in the workflow, version 1.12.2 (commit `e8b91fa`: WeasyPrint 70.0 instead of 69.0, rendering limited to `data:` addresses, safe image formats, hardened administration), maximal level before going into production: `ok` on all eight scenarios, *application per page* time equal to the reference of 2026-11-16 within 2%; the PDFs were rendered by the real WeasyPrint 70.0 of the Docker image, without error, with the same number of pages as in 1.12.0. After going into production on Toolforge (commit `90f593e`), one generation of the reference book, the first after the restart: 21.8 s.
   * Run of 2026-11-17 in the workflow, version 1.12.3 (commit `59aff45`: fingerprint of static files computed from their content), minimal level before going into production: `ok` on all three scenarios, *application per page* time 45 to 47% below the reference; the change does not touch book generation.
   * Run of 2026-11-17 in the workflow, commit `a4a7336` (1.12.3 and later changes without a version: time and address of each download in the journal, generation detail page, system information), minimal level before going into production: `ok` on all three scenarios, *application per page* time 3% below the reference, on a GitHub runner slower than in the previous run (0.88 s instead of 0.5 s for `50-pages`). After going into production, the reference book generated on Toolforge in 31.5 s on the server side: the journal gives for each article 2.2 to 5.8 s of download and 0.05 to 2.9 s of refitting.
+  * Run of 2026-11-17 in the workflow, commit `af62490` (1.12.4 and later changes without a version: Sources field help in 12 languages, "Downloading the PDF" step shown by the browser), minimal level before going to production on Toolforge: `ok` on all three scenarios, *application per page* time 1 to 3% below the reference, as in the previous run (0.89 s, 2.0 s and 1.93 s of application); no measurable effect, the new step only changes the display in the browser.
 
 ### 13.12 Limit test
 
