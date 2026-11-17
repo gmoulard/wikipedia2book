@@ -17,6 +17,7 @@ exemple d'erreur https://fr.wikiversity.org/wiki/D%C3%A9veloppement_durable
 - dresse par rechereche sur internet une liste des pages dans la planette wikipedia ou est sité mediawiki2latex dans todo-mediawiki2latex-visibility.md
 - pour chaque ligne dans todo-mediawiki2latex-visibility.md regarde comment ont peut ajouté une inforamtion sur wikipedia2book
 - sauvegarde en plus de la logs sur le serveur le json de la demande de génération pour la mettre a disposition a coté du téléchargement de la log.
+- garde un tableaux des url qui ont été refusé par wikipedia2book
 
 ## 3. Améliorations possibles
 
