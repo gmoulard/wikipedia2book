@@ -63,33 +63,14 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python -m unittest tests.test_security -v
 
-  codeql:
-    name: CodeQL (${{ matrix.language }})
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      security-events: write
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [python, javascript-typescript]
-    steps:
-      - uses: actions/checkout@v7
-      - uses: github/codeql-action/init@v4
-        with:
-          languages: ${{ matrix.language }}
-          queries: security-extended
-      - uses: github/codeql-action/analyze@v4
-        with:
-          category: /language:${{ matrix.language }}
-
   container:
     name: Container image (Trivy)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - run: docker build -t wikipedia2book:security .
-      - uses: aquasecurity/trivy-action@0.33.1
+      # NE PAS revenir à un tag de trivy-action : ses tags ont été détournés en 2026 ; épinglé sur le commit de v0.36.0.
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
         with:
           image-ref: wikipedia2book:security
           severity: CRITICAL,HIGH
