@@ -1133,90 +1133,30 @@ Deux séries de mesures, dans des tableaux aux colonnes communes alignées (date
 
   ¹ Mesurée quatre heures après la mise en ligne (12:24 UTC), pas à la première génération : d'autres livres avaient déjà été générés, une partie des PDF d'articles pouvait être en cache chez Wikimédia.
 
-* **Résultats du benchmark** : chaque passage du benchmark est reporté ici, médiane des générations de chaque scénario, regroupé par passage (date, version, cible) ; le bilan de chaque passage suit le tableau.
+* **Résultats du benchmark** : chaque passage du benchmark est reporté ici (médiane des générations de chaque scénario) ; le bilan de chaque passage suit le tableau. Le tableau est produit par `scripts/benchmark_table.py` à partir de [benchmark-results.csv](benchmark-results.csv) : ajouter au CSV une ligne par scénario du passage (verdict `ok`, `watch`, `regression`, `failure` ou `new`), puis lancer `python scripts/benchmark_table.py`, qui réécrit le tableau des deux spécifications entre ses marqueurs.
 
-  | Date | Version | Cible | Niveau | Scénario | Pages | Wikipédia | Application | Transfert | Total | Écart application / page | Verdict |
-  |---|---|---|---|---|---|---|---|---|---|---|---|
-  | 2026-11-15 | 1.8.2 | Toolforge | max | `50-pages` | 51 | 6,88 s | 0,4 s | 1,96 s | 9,24 s | −47 % | ok |
-  | 2026-11-15 | 1.8.2 | Toolforge | max | `200-pages` | 200 | 10,41 s | 0,94 s | 6,04 s | 17,38 s | −57 % | ok |
-  | 2026-11-15 | 1.8.2 | Toolforge | max | `1-article` | 5 | 0,37 s | 0,22 s | 0,31 s | 0,9 s | +57 % | à surveiller |
-  | 2026-11-15 | 1.8.2 | Toolforge | max | `50-pages-sans-numerotation` | 50 | 2,7 s | 0,05 s | 0,94 s | 3,69 s | −91 % | ok |
-  | 2026-11-15 | 1.8.2 | Toolforge | max | `200-pages-chapitres` | 205 | 4,76 s | 1,18 s | 6,24 s | 12,18 s | −50 % | ok |
-  | 2026-11-15 | 1.8.2 | Toolforge | max | `200-pages-a5-paysage` | 201 | 47,03 s | 0,9 s | 5,63 s | 53,57 s | −93 % | ok |
-  | 2026-11-15 | 1.8.2 | Toolforge | max | `20-articles` | 253 | 9,61 s | 1,53 s | 6,75 s | 17,89 s | −47 % | ok |
-  | 2026-11-16 | 1.8.6 | Toolforge | max | `50-pages` | 51 | 6,89 s | 0,78 s | 8,03 s | 15,7 s | +3 % | ok |
-  | 2026-11-16 | 1.8.6 | Toolforge | max | `200-pages` | 200 | 8,49 s | 2,13 s | 6,12 s | 16,74 s | −4 % | ok |
-  | 2026-11-16 | 1.8.6 | Toolforge | max | `1-article` | 5 | 0,5 s | 0,27 s | 0,98 s | 1,76 s | +93 % | à surveiller |
-  | 2026-11-16 | 1.8.6 | Toolforge | max | `50-pages-sans-numerotation` | 50 | 1,78 s | 0,4 s | 1,9 s | 4,07 s | −25 % | ok |
-  | 2026-11-16 | 1.8.6 | Toolforge | max | `200-pages-chapitres` | 205 | 5,08 s | 2,41 s | 16,2 s | 23,69 s | +2 % | ok |
-  | 2026-11-16 | 1.8.6 | Toolforge | max | `200-pages-a5-paysage` | 201 | 48,84 s | 2,17 s | 34,05 s | 85,05 s | −83 % | ok |
-  | 2026-11-16 | 1.8.6 | Toolforge | max | `20-articles` | 253 | 8,38 s | 3,24 s | 11,64 s | 23,26 s | +12 % | ok |
-  | 2026-11-16 | 1.9.5 | Toolforge | max | `50-pages` | 50 | 7,05 s | 0,62 s | 1,22 s | 8,89 s | −17 % | ok |
-  | 2026-11-16 | 1.9.5 | Toolforge | max | `200-pages` | 200 | 8,84 s | 2,02 s | 2,96 s | 13,81 s | −9 % | ok |
-  | 2026-11-16 | 1.9.5 | Toolforge | max | `1-article` | 4 | 0,56 s | 0,37 s | 0,59 s | 1,51 s | +230 % | régression |
-  | 2026-11-16 | 1.9.5 | Toolforge | max | `50-pages-sans-numerotation` | 49 | 3,55 s | 0,29 s | 1,61 s | 5,45 s | −44 % | ok |
-  | 2026-11-16 | 1.9.5 | Toolforge | max | `200-pages-chapitres` | 205 | 6,11 s | 2,25 s | 2,84 s | 11,2 s | −5 % | ok |
-  | 2026-11-16 | 1.9.5 | Toolforge | max | `200-pages-a5-paysage` | 201 | 49,36 s | 1,95 s | 5,97 s | 57,29 s | −84 % | ok |
-  | 2026-11-16 | 1.9.5 | Toolforge | max | `20-articles` | 253 | 6,98 s | 2,59 s | 3,14 s | 12,71 s | −11 % | ok |
-  | 2026-11-16 | 1.9.5 | workflow | max | `50-pages` | 50 | 11,61 s | 0,57 s | 0 s | 12,19 s | −24 % | ok |
-  | 2026-11-16 | 1.9.5 | workflow | max | `200-pages` | 200 | 12,63 s | 1,29 s | 0,02 s | 13,94 s | −42 % | ok |
-  | 2026-11-16 | 1.9.5 | workflow | max | `1-article` | 4 | 0,19 s | 0,27 s | 0 s | 0,46 s | +141 % | régression |
-  | 2026-11-16 | 1.9.5 | workflow | max | `50-pages-sans-numerotation` | 49 | 1,63 s | 0,39 s | 0 s | 2,02 s | −25 % | ok |
-  | 2026-11-16 | 1.9.5 | workflow | max | `200-pages-chapitres` | 205 | 5,45 s | 1,41 s | 0,01 s | 6,88 s | −41 % | ok |
-  | 2026-11-16 | 1.9.5 | workflow | max | `200-pages-a5-paysage` | 201 | 28,64 s | 1,27 s | 0,03 s | 29,95 s | −90 % | ok |
-  | 2026-11-16 | 1.9.5 | workflow | max | `20-articles` | 253 | 6,85 s | 1,62 s | 0,02 s | 8,49 s | −44 % | ok |
-  | 2026-11-16 | 1.9.6 | workflow | min | `50-pages` | 50 | 0,77 s | 0,58 s | 0,01 s | 1,36 s | −22 % | ok |
-  | 2026-11-16 | 1.9.6 | workflow | min | `200-pages` | 200 | 16,22 s | 1,3 s | 0,02 s | 17,53 s | −41 % | ok |
-  | 2026-11-16 | 1.9.7+ | workflow | min | `50-pages` | 50 | 3,34 s | 0,58 s | 0,01 s | 3,93 s | −22 % | ok |
-  | 2026-11-16 | 1.9.7+ | workflow | min | `200-pages` | 200 | 7,63 s | 1,32 s | 0,02 s | 8,99 s | −40 % | ok |
-  | 2026-11-16 | 1.9.7+ | Toolforge | essai, 1 génération | `livre-exemple-images` | 107 | 3,83 s | 3,17 s | 3,47 s | 10,47 s | — | nouveau |
-  | 2026-11-16 | 1.9.7+ | workflow | min | `50-pages` | 50 | 0,8 s | 0,52 s | 0 s | 1,34 s | −30 % | ok |
-  | 2026-11-16 | 1.9.7+ | workflow | min | `200-pages` | 200 | 7,7 s | 1,15 s | 0,01 s | 8,87 s | −48 % | ok |
-  | 2026-11-16 | 1.9.7+ | workflow | min | `livre-reference-images` | 107 | 2,65 s | 1,14 s | 0,01 s | 3,81 s | — | nouveau |
-  | 2026-11-16 | 1.9.7+ | workflow | min | `50-pages` | 50 | 0,75 s | 0,57 s | 0 s | 1,32 s | −24 % | ok |
-  | 2026-11-16 | 1.9.7+ | workflow | min | `200-pages` | 200 | 12,63 s | 1,29 s | 0,02 s | 13,94 s | −42 % | ok |
-  | 2026-11-16 | 1.9.7+ | workflow | min | `livre-reference-images` | 107 | 15,6 s | 1,19 s | 0,01 s | 16,79 s | — | nouveau |
-  | 2026-11-16 | 1.11.0 | workflow | max | `50-pages` | 50 | 7,76 s | 0,58 s | 0,01 s | 8,35 s | −22 % | ok |
-  | 2026-11-16 | 1.11.0 | workflow | max | `200-pages` | 200 | 11,89 s | 1,3 s | 0,02 s | 13,21 s | −41 % | ok |
-  | 2026-11-16 | 1.11.0 | workflow | max | `1-article` | 4 | 0,19 s | 0,26 s | 0 s | 0,45 s | +132 % | régression |
-  | 2026-11-16 | 1.11.0 | workflow | max | `50-pages-sans-numerotation` | 49 | 0,77 s | 0,38 s | 0 s | 1,16 s | −27 % | ok |
-  | 2026-11-16 | 1.11.0 | workflow | max | `200-pages-chapitres` | 205 | 5,23 s | 1,41 s | 0,01 s | 6,65 s | −41 % | ok |
-  | 2026-11-16 | 1.11.0 | workflow | max | `200-pages-a5-paysage` | 201 | 24,97 s | 1,26 s | 0,03 s | 26,26 s | −90 % | ok |
-  | 2026-11-16 | 1.11.0 | workflow | max | `20-articles` | 253 | 5,56 s | 1,62 s | 0,02 s | 7,2 s | −44 % | ok |
-  | 2026-11-16 | 1.11.0 | workflow | max | `livre-reference-images` | 107 | 15,01 s | 1,19 s | 0,01 s | 16,22 s | — | nouveau |
-  | 2026-11-16 | 1.11.0+ | workflow | max ×9 | `50-pages` | 50 | 2,35 s | 0,91 s | 0,01 s | 3,27 s | +22 % | ok |
-  | 2026-11-16 | 1.11.0+ | workflow | max ×9 | `200-pages` | 200 | 5,64 s | 2,02 s | 0,02 s | 7,67 s | −9 % | ok |
-  | 2026-11-16 | 1.11.0+ | workflow | max ×9 | `1-article` | 4 | 0,11 s | 0,43 s | 0 s | 0,53 s | +284 % | régression |
-  | 2026-11-16 | 1.11.0+ | workflow | max ×9 | `50-pages-sans-numerotation` | 49 | 0,94 s | 0,61 s | 0,01 s | 1,56 s | +17 % | ok |
-  | 2026-11-16 | 1.11.0+ | workflow | max ×9 | `200-pages-chapitres` | 205 | 5,78 s | 2,2 s | 0,03 s | 8,0 s | −7 % | ok |
-  | 2026-11-16 | 1.11.0+ | workflow | max ×9 | `200-pages-a5-paysage` | 201 | 42,1 s | 2,02 s | 0,04 s | 44,17 s | −84 % | ok |
-  | 2026-11-16 | 1.11.0+ | workflow | max ×9 | `20-articles` | 253 | 6,66 s | 2,53 s | 0,03 s | 9,22 s | −13 % | ok |
-  | 2026-11-16 | 1.11.0+ | workflow | max ×9 | `livre-reference-images` | 107 | 2,68 s | 1,99 s | 0,02 s | 4,69 s | — | nouveau |
-  | 2026-11-17 | 1.12.0 | workflow | max | `50-pages` | 50 | 9,5 s | 0,59 s | 0 s | 10,09 s | −35 % | ok |
-  | 2026-11-17 | 1.12.0 | workflow | max | `200-pages` | 200 | 9,65 s | 1,31 s | 0,02 s | 10,97 s | −35 % | ok |
-  | 2026-11-17 | 1.12.0 | workflow | max | `1-article` | 4 | 0,1 s | 0,27 s | 0 s | 0,37 s | −37 % | ok |
-  | 2026-11-17 | 1.12.0 | workflow | max | `50-pages-sans-numerotation` | 49 | 1,78 s | 0,39 s | 0 s | 2,17 s | −36 % | ok |
-  | 2026-11-17 | 1.12.0 | workflow | max | `200-pages-chapitres` | 205 | 2,98 s | 1,43 s | 0,01 s | 4,42 s | −35 % | ok |
-  | 2026-11-17 | 1.12.0 | workflow | max | `200-pages-a5-paysage` | 201 | 25,84 s | 1,28 s | 0,03 s | 27,15 s | −37 % | ok |
-  | 2026-11-17 | 1.12.0 | workflow | max | `20-articles` | 253 | 5,59 s | 1,64 s | 0,02 s | 7,25 s | −35 % | ok |
-  | 2026-11-17 | 1.12.0 | workflow | max | `livre-reference-images` | — | — | — | — | — | — | échec |
-  | 2026-11-17 | 1.12.0+ | workflow | min | `50-pages` | 50 | 0,61 s | 0,56 s | 0,01 s | 1,16 s | −38 % | ok |
-  | 2026-11-17 | 1.12.0+ | workflow | min | `200-pages` | 200 | 17,34 s | 1,25 s | 0,01 s | 18,63 s | −38 % | ok |
-  | 2026-11-17 | 1.12.0+ | workflow | min | `livre-reference-images` | 107 | 1,97 s | 1,17 s | 0,01 s | 3,15 s | −41 % | ok |
-  | 2026-11-17 | 1.12.2 | workflow | max | `50-pages` | 50 | 8,92 s | 0,9 s | 0,01 s | 9,83 s | −1 % | ok |
-  | 2026-11-17 | 1.12.2 | workflow | max | `200-pages` | 200 | 13,12 s | 2,01 s | 0,03 s | 15,16 s | 0 % | ok |
-  | 2026-11-17 | 1.12.2 | workflow | max | `1-article` | 4 | 0,32 s | 0,42 s | 0 s | 0,75 s | −2 % | ok |
-  | 2026-11-17 | 1.12.2 | workflow | max | `50-pages-sans-numerotation` | 49 | 2,75 s | 0,61 s | 0,01 s | 3,37 s | 0 % | ok |
-  | 2026-11-17 | 1.12.2 | workflow | max | `200-pages-chapitres` | 205 | 4,51 s | 2,18 s | 0,02 s | 6,71 s | −1 % | ok |
-  | 2026-11-17 | 1.12.2 | workflow | max | `200-pages-a5-paysage` | 201 | 20,06 s | 2,02 s | 0,05 s | 22,13 s | 0 % | ok |
-  | 2026-11-17 | 1.12.2 | workflow | max | `20-articles` | 253 | 5,11 s | 2,51 s | 0,03 s | 7,65 s | −1 % | ok |
-  | 2026-11-17 | 1.12.2 | workflow | max | `livre-reference-images` | 107 | 12,11 s | 1,96 s | 0,03 s | 14,1 s | −2 % | ok |
-  | 2026-11-17 | 1.12.3 | workflow | min | `50-pages` | 50 | 2,59 s | 0,5 s | 0 s | 3,09 s | −45 % | ok |
-  | 2026-11-17 | 1.12.3 | workflow | min | `200-pages` | 200 | 5,52 s | 1,11 s | 0,01 s | 6,65 s | −45 % | ok |
-  | 2026-11-17 | 1.12.3 | workflow | min | `livre-reference-images` | 107 | 3,65 s | 1,06 s | 0,02 s | 4,75 s | −47 % | ok |
-  | 2026-11-17 | 1.12.3+ | workflow | min | `50-pages` | 50 | 0,86 s | 0,88 s | 0,01 s | 1,74 s | −3 % | ok |
-  | 2026-11-17 | 1.12.3+ | workflow | min | `200-pages` | 200 | 6,01 s | 1,96 s | 0,03 s | 8 s | −3 % | ok |
-  | 2026-11-17 | 1.12.3+ | workflow | min | `livre-reference-images` | 107 | 4,59 s | 1,94 s | 0,04 s | 6,55 s | −3 % | ok |
+  <!-- benchmark-table:start -->
+  | Version | Date | Cible | Niveau | 50 p. | 200 p. | 1 art. | 50 p. sans n° | 200 p. chapitres | 200 p. A5 paysage | 20 art. | Livre exemple | Livre de référence |
+  |---|---|---|---|---|---|---|---|---|---|---|---|---|
+  | 1.8.2 | 2026-11-15 | Toolforge | max | ✅ | ✅ | ⚠️ (+57 %) | ✅ | ✅ | ✅ | ✅ |  |  |
+  | 1.8.6 | 2026-11-16 | Toolforge | max | ✅ | ✅ | ⚠️ (+93 %) | ✅ | ✅ | ✅ | ✅ |  |  |
+  | 1.9.5 | 2026-11-16 | Toolforge | max | ✅ | ✅ | ❌ (+230 %) | ✅ | ✅ | ✅ | ✅ |  |  |
+  | 1.9.5 | 2026-11-16 | workflow | max | ✅ | ✅ | ❌ (+141 %) | ✅ | ✅ | ✅ | ✅ |  |  |
+  | 1.9.6 | 2026-11-16 | workflow | min | ✅ | ✅ |  |  |  |  |  |  |  |
+  | 1.9.7+ | 2026-11-16 | workflow | min | ✅ | ✅ |  |  |  |  |  |  |  |
+  | 1.9.7+ | 2026-11-16 | Toolforge | essai (1 génération) |  |  |  |  |  |  |  | <span class="bench-new">nouveau</span> |  |
+  | 1.9.7+ | 2026-11-16 | workflow | min | ✅ | ✅ |  |  |  |  |  |  | <span class="bench-new">nouveau</span> |
+  | 1.9.7+ | 2026-11-16 | workflow | min | ✅ | ✅ |  |  |  |  |  |  | <span class="bench-new">nouveau</span> |
+  | 1.11.0 | 2026-11-16 | workflow | max | ✅ | ✅ | ❌ (+132 %) | ✅ | ✅ | ✅ | ✅ |  | <span class="bench-new">nouveau</span> |
+  | 1.11.0+ | 2026-11-16 | workflow | max ×9 | ✅ | ✅ | ❌ (+284 %) | ✅ | ✅ | ✅ | ✅ |  | <span class="bench-new">nouveau</span> |
+  | 1.12.0 | 2026-11-17 | workflow | max | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |  | ❌ échec |
+  | 1.12.0+ | 2026-11-17 | workflow | min | ✅ | ✅ |  |  |  |  |  |  | ✅ |
+  | 1.12.2 | 2026-11-17 | workflow | max | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |  | ✅ |
+  | 1.12.3 | 2026-11-17 | workflow | min | ✅ | ✅ |  |  |  |  |  |  | ✅ |
+  | 1.12.3+ | 2026-11-17 | workflow | min | ✅ | ✅ |  |  |  |  |  |  | ✅ |
+
+  Une ligne par passage, une colonne par scénario. ✅ ok ; <span class="bench-new">nouveau</span> : premier passage du scénario, pas encore de référence ; ⚠️ à surveiller et ❌ régression, avec entre parenthèses l'écart du temps *application par page* à la référence ; ❌ échec : la génération n'a pas abouti ; case vide : scénario non joué. Toutes les mesures (pages, phases *Wikipédia*, *Application*, *Transfert*, *Total*, écart) sont dans [benchmark-results.csv](benchmark-results.csv), une ligne par scénario et par passage.
+  <!-- benchmark-table:end -->
 
   * Passage du 2026-11-15 sur Toolforge (4 téléchargements simultanés) : aucun échec ni régression. Le seul « à surveiller » (`1-article`) porte sur 0,22 s pour 5 pages, un écart de quelques centièmes de seconde, dans le bruit de la mesure. La phase Wikipédia de `200-pages-a5-paysage` (47 s) comprend la recomposition de chaque page au format A5 paysage, faite pendant les téléchargements.
   * Passage du 2026-11-16 sur Toolforge, version 1.8.6 (assemblage par PyMuPDF dans un processus séparé) : aucun échec ni régression par rapport à la référence. Le seul « à surveiller » (`1-article`) porte encore sur quelques centièmes de seconde. Par rapport à la 1.8.2 sur la même cible, la phase *Application* est environ deux fois plus longue (0,78 s au lieu de 0,4 s pour `50-pages`, 2,13 s au lieu de 0,94 s pour `200-pages`) : démarrage du processus d'assemblage, journal des étapes et numérotation par MuPDF ; c'est le prix d'un assemblage qui tient jusqu'à 800 articles au lieu de 150 (docs/testLimitetoolforge.md). Les transferts, plus longs, dépendent du réseau jusqu'au poste client.
@@ -1505,6 +1445,7 @@ Wikipedia2Book/
 │   ├── toolviews_stats.py
 │   ├── toolviews_chart.py
 │   ├── benchmark.py
+│   ├── benchmark_table.py      (tableau des résultats du benchmark, section 13.11)
 │   ├── limit_check.py
 │   └── perf/                  (scenarios.json, reference.json)
 │
@@ -1529,6 +1470,7 @@ Wikipedia2Book/
 │   ├── test_media_policy.py
 │   ├── test_toolviews_chart.py
 │   ├── test_benchmark.py
+│   ├── test_benchmark_table.py
 │   ├── test_limit_check.py
 │   ├── test_security.py
 │   └── test_i18n.py
@@ -1557,6 +1499,7 @@ Wikipedia2Book/
 └── docs/                         (source du site GitHub Pages)
     ├── SPECIFICATIONS.fr.md
     ├── SPECIFICATIONS.en.md
+    ├── benchmark-results.csv     (résultats du benchmark, section 13.11)
     ├── toolviews.csv             (généré chaque jour)
     ├── toolforge_hourly.csv      (généré chaque jour et avant chaque déploiement)
     ├── stats.md                  (généré chaque jour et avant chaque déploiement)

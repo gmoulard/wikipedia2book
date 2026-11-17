@@ -82,6 +82,7 @@ wikipedia2book/
 │   ├── update-stats.sh          # Statistics update run by GitHub Actions (daily and before each deployment)
 │   ├── toolviews_chart.py       # Usage charts page for GitHub Pages
 │   ├── benchmark.py, benchmark/     # Benchmark run before each production release
+│   ├── benchmark_table.py       # Builds the benchmark results table of the specifications from docs/benchmark-results.csv
 │   └── limit_check.py           # Limit test: largest book a deployment can generate (section 13.12)
 ├── tests/                       # unittest suite (no network, WeasyPrint stubbed when missing)
 ├── .github/workflows/           # Toolforge deployment, Toolviews stats, GitHub Pages, tag check, benchmark, security
@@ -95,6 +96,7 @@ wikipedia2book/
 ├── docs/                        # Documentation site (GitHub Pages source)
 │   ├── SPECIFICATIONS.fr.md     # Reference behaviour (French original)
 │   ├── SPECIFICATIONS.en.md     # English translation of the specifications
+│   ├── benchmark-results.csv    # Every benchmark measurement, for analysis
 │   ├── toolviews.csv, toolforge_hourly.csv, stats.md  # Usage statistics and their charts (generated)
 │   ├── comparison-mediawiki2latex.md  # Comparison with mediawiki2latex
 │   ├── comparison-ws-export.md  # Comparison with WS Export
