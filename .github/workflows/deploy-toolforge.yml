@@ -41,7 +41,7 @@ jobs:
     needs: test
     if: github.ref == 'refs/heads/production-toolforge' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 60
     permissions:
       contents: write
     steps:

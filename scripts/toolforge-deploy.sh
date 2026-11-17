@@ -48,6 +48,24 @@ for name in WIKIPEDIA2BOOK_MONITOR_TOKEN WIKIPEDIA2BOOK_OAUTH_CLIENT_ID WIKIPEDI
     echo "variable posée : $name"
   fi
 done
+wait_idle() {
+  if [ -z "${WIKIPEDIA2BOOK_MONITOR_TOKEN:-}" ]; then
+    echo "pas de jeton de supervision : redémarrage sans attendre la fin des générations"
+    return
+  fi
+  for _ in $(seq 1 180); do
+    count=$(printf 'Authorization: Bearer %s
+' "$WIKIPEDIA2BOOK_MONITOR_TOKEN" | curl -fsS -H @- https://wikipedia2book.toolforge.org/api/health/details | json_field '.get("generations_in_progress")' || echo inconnu)
+    if [ "$count" = 0 ]; then
+      echo "aucune génération en cours"
+      return
+    fi
+    echo "générations en cours : $count, attente"
+    sleep 10
+  done
+  echo "toujours des générations en cours après 30 min : redémarrage quand même"
+}
+wait_idle
 toolforge webservice buildservice restart
 
 for _ in $(seq 1 20); do
