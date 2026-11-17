@@ -168,6 +168,43 @@ class FitBackgroundTest(unittest.TestCase):
                 self.assertIs(book_builder.fit_background(image, 210, 297), image)
 
 
+class ColorAndLogoTest(unittest.TestCase):
+    def test_colors_are_checked(self):
+        self.assertEqual(Project(name="Livre", cover_color="#1D2927").cover_color, "#1D2927")
+        for color in ("red", "#12345", "#1234567", "#gggggg", "url(x)"):
+            with self.subTest(color=color), self.assertRaises(ValidationError):
+                Project(name="Livre", back_color=color)
+        project = Project(name="Livre")
+        self.assertEqual((project.cover_color, project.back_color, project.cover_logo, project.back_logo), (None, None, False, False))
+
+    def test_cover_color_sets_the_background_and_the_text(self):
+        dark = book_builder.build_cover_html(Project(name="Livre", cover_color="#1d2927"))
+        self.assertIn("@page :first { background-color: #1d2927; }", dark)
+        self.assertIn(book_builder.COVER_TEXT_CSS["light"], dark)
+        light = book_builder.build_cover_html(Project(name="Livre", cover_color="#f4e9c8"))
+        self.assertNotIn(book_builder.COVER_TEXT_CSS["light"], light)
+        self.assertEqual(book_builder.color_text_style("#000000"), "light")
+        self.assertEqual(book_builder.color_text_style("#ffffff"), "dark")
+
+    def test_image_keeps_its_text_style_over_a_color(self):
+        html = book_builder.build_cover_html(Project(name="Livre", cover_color="#000000", cover_image=COVER))
+        self.assertLess(html.index("background-color: #000000"), html.index("background: url("))
+
+    def test_logo_on_the_cover_and_the_last_page(self):
+        self.assertNotIn('class="cover-logo"', book_builder.build_cover_html(Project(name="Livre")))
+        logo = base64.b64encode(book_builder.WIKIPEDIA_LOGO.read_bytes()).decode("ascii")
+        self.assertIn(f'<img class="cover-logo" src="data:image/png;base64,{logo}"', book_builder.build_cover_html(Project(name="Livre", cover_logo=True)))
+        back = book_builder.build_back_cover_html(Project(name="Livre", back_logo=True, back_color="#336699"))
+        self.assertIn('<img class="back-logo"', back)
+        self.assertIn("@page  { background-color: #336699; }", back)
+
+    def test_a_last_page_needs_an_image_a_color_or_the_logo(self):
+        self.assertFalse(book_builder.has_back_cover(Project(name="Livre")))
+        for fields in ({"back_image": BACK}, {"back_color": "#336699"}, {"back_logo": True}):
+            with self.subTest(fields=fields):
+                self.assertTrue(book_builder.has_back_cover(Project(name="Livre", **fields)))
+
+
 class BackBackgroundTest(unittest.TestCase):
     def test_back_cover_page_is_the_image_alone(self):
         html = book_builder.build_back_cover_html(Project(name="Livre", back_image=BACK, page_format="A5"))

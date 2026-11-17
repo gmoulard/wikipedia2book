@@ -152,7 +152,11 @@ def build_cover_html(project: Project, language: str = "fr") -> str:
     )
     description = escape(project.description)
     text_area = (outer, margin_top, page_width - inner, margin_top + (page_height - margin_top - margin_bottom) * 0.65)
-    text_css = COVER_TEXT_CSS[cover_text_style(project.cover_image, page_width, page_height, text_area)] if project.cover_image else ""
+    if project.cover_image:
+        text_css = COVER_TEXT_CSS[cover_text_style(project.cover_image, page_width, page_height, text_area)]
+    else:
+        text_css = COVER_TEXT_CSS[color_text_style(project.cover_color)] if project.cover_color else ""
+    cover_logo = _logo_img("cover-logo") if project.cover_logo else ""
     return f"""<!doctype html>
     <html {_html_attrs(language)}>
     <head>
@@ -162,6 +166,7 @@ def build_cover_html(project: Project, language: str = "fr") -> str:
 @page {{ size: {page_width:g}mm {page_height:g}mm; margin: {margin_top:g}mm {outer:g}mm {margin_bottom:g}mm {inner:g}mm; }}
 @page :left {{ margin-left: {inner:g}mm; margin-right: {outer:g}mm; }}
 @page :right {{ margin-left: {outer:g}mm; margin-right: {inner:g}mm; }}
+{_color_css(project.cover_color, ':first')}
 {_background_css(project.cover_image, ':first')}
     body {{ color: #202020; font: 10pt {SERIF_FONTS}; line-height: 1.5; }}
     h1, h2 {{ line-height: 1.2; }}
@@ -173,11 +178,12 @@ h2 {{ font-size: 18pt; }}
 .author {{ margin-top: 32pt; color: #555; }}
 .cover-note {{ margin-top: 20pt; color: #555; font-size: 9pt; }}
 .opening {{ page-break-after: always; }}
+.cover-logo {{ display: block; width: 30mm; margin-top: 28pt; }}
 {text_css}
     </style>
     </head>
     <body>
-<header class="cover"><div class="cover-text"><h1>{book_title}</h1>{subtitle}{author}<p class="cover-note">{description}</p></div></header>
+<header class="cover"><div class="cover-text"><h1>{book_title}</h1>{subtitle}{author}<p class="cover-note">{description}</p>{cover_logo}</div></header>
 {introduction}
     </body>
     </html>"""
@@ -298,6 +304,23 @@ COLOPHON_CSS = (
 )
 
 
+WIKIPEDIA_LOGO = Path(__file__).parent / "static" / "WikipediaLogo.png"
+
+
+def _color_css(color: str | None, page: str) -> str:
+    return f"@page {page} {{ background-color: {color}; }}" if color else ""
+
+
+def color_text_style(color: str) -> str:
+    red, green, blue = (int(color[index:index + 2], 16) / 255 for index in (1, 3, 5))
+    return "light" if 0.2126 * red + 0.7152 * green + 0.0722 * blue < 0.5 else "dark"
+
+
+def _logo_img(css_class: str) -> str:
+    logo = base64.b64encode(WIKIPEDIA_LOGO.read_bytes()).decode("ascii")
+    return f'<img class="{css_class}" src="data:image/png;base64,{logo}" alt="Wikipedia">'
+
+
 def _background_css(image: BookImage | None, page: str) -> str:
     if image is None:
         return ""
@@ -401,13 +424,22 @@ def _colophon_html(language: str) -> str:
     )
 
 
+def has_back_cover(project: Project) -> bool:
+    return bool(project.back_image or project.back_color or project.back_logo)
+
+
 def build_back_cover_html(project: Project) -> str:
     page_width, page_height, *_ = _page_layout(project)
+    logo_width = min(40.0, page_width / 3)
+    logo = _logo_img("back-logo") if project.back_logo else ""
     return f"""<!doctype html>
 <html><head><meta charset="utf-8"><style>
 @page {{ size: {page_width:g}mm {page_height:g}mm; margin: 0; }}
+{_color_css(project.back_color, "")}
 {_background_css(project.back_image, "")}
-</style></head><body><div></div></body></html>"""
+body {{ margin: 0; }}
+.back-logo {{ display: block; width: {logo_width:g}mm; margin: {page_height / 2 - logo_width * 0.46:g}mm auto 0; }}
+</style></head><body><div>{logo}</div></body></html>"""
 
 
 def build_conclusion_page_html(project: Project, language: str = "fr") -> str:

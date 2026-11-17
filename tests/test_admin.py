@@ -136,7 +136,7 @@ class AdminEndpointsTest(unittest.TestCase):
         summary = self.client.get("/admin/api/summary")
         self.assertEqual(summary.status_code, 200)
         self.assertEqual(summary.headers["cache-control"], "no-store")
-        self.assertEqual(set(summary.json()), {"user", "version", "server", "system", "settings", "usage", "performance", "recent"})
+        self.assertEqual(set(summary.json()), {"user", "version", "server", "system", "settings", "usage", "performance", "recent", "refused_urls"})
         self.client.get("/admin/logout")
         self.assertIsNone(self.client.get("/admin/api/session").json()["user"])
 

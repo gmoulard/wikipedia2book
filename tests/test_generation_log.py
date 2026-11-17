@@ -98,6 +98,37 @@ class GenerationLogTest(unittest.TestCase):
             self.assertIn("rss_bytes", stage)
             self.assertIsInstance(stage["at_s"], float)
 
+    def test_request_is_kept_apart_and_downloadable_as_a_book(self):
+        with patch.object(main, "MediaWikiClient", FakeClient):
+            asyncio.run(run_book())
+        entry = self.journal()["generations"][0]
+        self.assertGreater(entry["request_bytes"], 0)
+        self.assertNotIn("main_articles", json.dumps(entry))
+        url = f"{main.GENERATION_LOG_PATH}/{entry['id']}/request"
+        with patch.object(main, "MONITOR_TOKEN", MONITOR_TOKEN):
+            self.assertEqual(self.client.get(url).status_code, 401)
+            response = self.client.get(url, headers={"Authorization": f"Bearer {MONITOR_TOKEN}"})
+            missing = self.client.get(f"{main.GENERATION_LOG_PATH}/999999/request", headers={"Authorization": f"Bearer {MONITOR_TOKEN}"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("attachment", response.headers["content-disposition"])
+        workspace = response.json()
+        self.assertEqual(workspace["format"], "wikipedia2book-workspace")
+        self.assertEqual([article["title"] for article in workspace["projects"][0]["main_articles"]], ["Chat", "Chien"])
+        self.assertEqual(missing.status_code, 404)
+
+    def test_request_drops_file_contents_and_is_bounded(self):
+        copy = main._without_file_contents({"cover_image": {"title": "C", "data_base64": "QUJD" * 10}, "uploaded_documents": [{"title": "D", "url": "https://example.org/d.png"}]})
+        self.assertEqual(copy["cover_image"], {"title": "C", "data_base64": None, "removed_base64_chars": 40})
+        self.assertEqual(copy["uploaded_documents"][0]["url"], "https://example.org/d.png")
+        with patch.object(main, "MediaWikiClient", FakeClient), patch.object(main, "GENERATION_REQUESTS_BYTES", 1):
+            asyncio.run(run_book())
+            asyncio.run(run_book())
+        self.assertEqual(len(main.generation_requests), 1)
+        with patch.object(main, "GENERATION_REQUEST_MAX_BYTES", 10), patch.object(main, "MediaWikiClient", FakeClient):
+            main.generation_requests.clear()
+            asyncio.run(run_book())
+        self.assertEqual(main.generation_requests, {})
+
     def test_journal_holds_no_article_title_even_on_error(self):
         with patch.object(main, "MediaWikiClient", FailingClient):
             with self.assertRaises(main.MediaWikiError):

@@ -124,10 +124,16 @@
                     <button class="chapter-remove background-remove" type="button" data-i18n="edition.backgroundRemove" hidden>Retirer</button>
                     <input class="background-file" type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" hidden>
                   </div>
+                  <div class="background-extras">
+                    <label class="checkbox-field"><input class="background-color-on" type="checkbox"> <span data-i18n="edition.backgroundColor">Couleur de fond</span></label>
+                    <input class="background-color" type="color" value="#1d2927" disabled data-i18n-aria-label="edition.backgroundColor" aria-label="Couleur de fond">
+                    <label class="checkbox-field"><input class="background-logo" type="checkbox"> <span data-i18n="edition.wikipediaLogo">Logo Wikipédia</span></label>
+                  </div>
                   <p class="field-hint background-size"></p>
                   <p class="background-warning" hidden></p>
                 </div>
                 <p class="field-hint field-wide" data-i18n="edition.backgroundHint">Importez une image ou collez son adresse (une page de fichier Wikimedia Commons convient). Elle couvre toute la page.</p>
+                <p class="field-hint field-wide" data-i18n="edition.colorLogoHint">Une couleur de fond s'affiche sous l'image ou seule ; le texte de la couverture passe en blanc sur une couleur sombre. Une couleur ou le logo en dernière page ajoutent une page à la fin du livre. Le logo Wikipédia est une marque de la Wikimedia Foundation.</p>
                 <label class="field field-wide"><span data-i18n="heading.nameLabel">Titre du livre</span><input id="bookTitle" type="text" maxlength="200" autocomplete="off"></label>
                 <label class="field field-wide"><span data-i18n="edition.subtitleLabel">Sous-titre</span><input id="bookSubtitle" type="text" placeholder="Facultatif" data-i18n-placeholder="common.optional"></label>
                 <label class="field field-wide"><span data-i18n="edition.authorLabel">Auteur ou éditeur</span><input id="bookAuthor" type="text" placeholder="Facultatif" data-i18n-placeholder="common.optional"></label>
@@ -143,6 +149,11 @@
                     <button class="button button-outline background-use-url" type="button" data-i18n="edition.backgroundUseUrl">Utiliser l'adresse</button>
                     <button class="chapter-remove background-remove" type="button" data-i18n="edition.backgroundRemove" hidden>Retirer</button>
                     <input class="background-file" type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" hidden>
+                  </div>
+                  <div class="background-extras">
+                    <label class="checkbox-field"><input class="background-color-on" type="checkbox"> <span data-i18n="edition.backgroundColor">Couleur de fond</span></label>
+                    <input class="background-color" type="color" value="#1d2927" disabled data-i18n-aria-label="edition.backgroundColor" aria-label="Couleur de fond">
+                    <label class="checkbox-field"><input class="background-logo" type="checkbox"> <span data-i18n="edition.wikipediaLogo">Logo Wikipédia</span></label>
                   </div>
                   <p class="field-hint background-size"></p>
                   <p class="background-warning" hidden></p>

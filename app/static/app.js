@@ -139,7 +139,7 @@ function sameArticle(a, b) {
 function normalizeProject(input) {
   const project = {
     main_articles: [], discovered_articles: [], uploaded_documents: [],
-    book_title: '', book_subtitle: '', book_author: '', introduction: '', conclusion: '', cover_image: null, back_image: null,
+    book_title: '', book_subtitle: '', book_author: '', introduction: '', conclusion: '', cover_image: null, back_image: null, cover_color: null, back_color: null, cover_logo: false, back_logo: false,
     page_format: 'A4', custom_width_mm: 148, custom_height_mm: 210, orientation: 'portrait',
     margin_top_mm: 18, margin_bottom_mm: 18, margin_inside_mm: 18, margin_outside_mm: 16,
     margin_binding_mm: 0, article_order: [], chapters: [], toc_position: 'start', volume_breaks: [], unassigned_first: false, table_of_contents: true, page_numbers: true, ...input,
@@ -536,7 +536,27 @@ function renderBackgrounds() {
     else if (!image) preview.removeAttribute('src');
     showWarning();
     field.querySelector('.background-remove').hidden = !image;
+    const { color, logo } = BACKGROUND_EXTRAS[field.dataset.background];
+    const picker = field.querySelector('.background-color');
+    field.querySelector('.background-color-on').checked = Boolean(state.project?.[color]);
+    picker.disabled = !state.project?.[color];
+    if (state.project?.[color]) picker.value = state.project[color];
+    field.querySelector('.background-logo').checked = Boolean(state.project?.[logo]);
   });
+}
+
+const BACKGROUND_EXTRAS = { cover_image: { color: 'cover_color', logo: 'cover_logo' }, back_image: { color: 'back_color', logo: 'back_logo' } };
+
+function saveBackgroundExtras(field) {
+  const { color, logo } = BACKGROUND_EXTRAS[field.dataset.background];
+  const picker = field.querySelector('.background-color');
+  const patch = {
+    [color]: field.querySelector('.background-color-on').checked ? picker.value : null,
+    [logo]: field.querySelector('.background-logo').checked,
+  };
+  Object.assign(state.project, patch);
+  queueSave(patch);
+  renderBackgrounds();
 }
 
 function readAsBase64(blob) {
@@ -1487,6 +1507,7 @@ document.addEventListener('change', async (event) => {
   if (event.target.matches('#articleLanguage')) { if ($('#articleQuery').value.trim().length >= 2) searchArticles($('#articleQuery').value); return; }
   if (event.target.matches('input[name="orientation"]')) { const layout = collectLayoutSettings(); Object.assign(state.project, layout); queueSave(layout); renderBackgrounds(); return; }
   if (event.target.matches('#pageNumbers')) { queueSave({ page_numbers: event.target.checked }); return; }
+  if (event.target.matches('.background-color-on, .background-color, .background-logo')) { saveBackgroundExtras(event.target.closest('.background-field')); return; }
   if (event.target.matches('input[name="tocChoice"]')) { queueSave({ table_of_contents: event.target.value !== 'none', toc_position: event.target.value === 'end' ? 'end' : 'start' }); return; }
   const textSettings = { bookTitle: 'book_title', bookDescription: 'description', bookSubtitle: 'book_subtitle', bookAuthor: 'book_author', bookIntroduction: 'introduction', bookConclusion: 'conclusion' };
   if (textSettings[event.target.id]) patchSetting(event.target.id, textSettings[event.target.id]);

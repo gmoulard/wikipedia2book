@@ -185,6 +185,11 @@ function renderSummary(data) {
     ]),
     [3, 4, 5, 6, 7]);
 
+  const refused = data.refused_urls || [];
+  fillTable('adminRefused', [t('admin.alertLast'), t('admin.colUrl'), t('admin.colTimes'), t('admin.colCode'), t('admin.colReason')],
+    refused.length ? refused.map((entry) => [formatTime(entry.last), entry.url, formatNumber(entry.count), String(entry.status), entry.reason]) : [[t('admin.noRefused'), '', '', '', '']],
+    [2]);
+
   fillTable('adminHours', [t('admin.colHour'), t('admin.colCount')],
     Object.entries(usage.hours).reverse().map(([hour, count]) => [hour.replace('T', ' ') + ':00', formatNumber(count)]),
     [1]);
@@ -327,6 +332,21 @@ function renderGeneration(entry) {
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `wikipedia2book-generation-${generation.id}.json`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 60000);
+  };
+
+  adminById('generationRequest').onclick = async () => {
+    const response = await fetch(`/admin/api/generations/${generation.id}/request`, { cache: 'no-store', credentials: 'same-origin' });
+    if (!response.ok) {
+      showMessage(t('admin.requestMissing'));
+      return;
+    }
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(await response.blob());
+    link.download = `wikipedia2book-request-${generation.id}.json`;
     document.body.append(link);
     link.click();
     link.remove();

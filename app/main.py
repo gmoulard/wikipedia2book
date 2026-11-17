@@ -50,6 +50,7 @@ from pypdf import PdfReader
 from app.book_builder import (
     build_chapter_page_html,
     build_back_cover_html,
+    has_back_cover,
     build_conclusion_page_html,
     build_cover_html,
     fit_background,
@@ -293,6 +294,12 @@ GENERATION_LOG_KEEP = 1000
 GENERATION_LOG_STAGES = 40_000
 generation_log: deque[dict] = deque()
 generation_ids = itertools.count(1)
+GENERATION_REQUEST_MAX_BYTES = 1_000_000
+# NE PAS relever ce plafond sans mesure : les demandes sont gardées en mémoire, à côté du journal, jusqu'à ce total.
+GENERATION_REQUESTS_BYTES = 30_000_000
+generation_requests: dict[int, bytes] = {}
+REFUSED_URLS_KEEP = 500
+refused_urls: dict[str, dict] = {}
 ISOLATE_ASSEMBLY = True
 
 
@@ -486,6 +493,19 @@ def generation_journal_entry(generation_id: int, request: Request, response: Res
     require_monitor(request, MONITOR_TOKEN)
     response.headers["Cache-Control"] = "no-store"
     return _generation_entry(generation_id)
+
+
+def _generation_request(generation_id: int) -> Response:
+    data = generation_requests.get(generation_id)
+    if data is None:
+        raise HTTPException(status_code=404, detail=f"La demande de la génération {generation_id} n’est plus en mémoire (trop grosse, trop ancienne ou effacée au redémarrage).")
+    return Response(content=data, media_type="application/json", headers={"Cache-Control": "no-store", "Content-Disposition": f'attachment; filename="wikipedia2book-request-{generation_id}.json"'})
+
+
+@app.get(GENERATION_LOG_PATH + "/{generation_id}/request", include_in_schema=False)
+def generation_journal_request(generation_id: int, request: Request) -> Response:
+    require_monitor(request, MONITOR_TOKEN)
+    return _generation_request(generation_id)
 
 
 def _generation_entry(generation_id: int) -> dict:
@@ -719,6 +739,7 @@ def admin_summary_payload(user: str) -> dict:
             "waited_s": round(sum(row["waited_s"] for row in rows), 1),
         },
         "recent": rows,
+        "refused_urls": list(reversed(refused_urls.values())),
     }
 
 
@@ -734,6 +755,12 @@ def admin_generation(generation_id: int, request: Request, response: Response) -
     require_admin(request, ADMIN)
     response.headers["Cache-Control"] = "no-store"
     return _generation_entry(generation_id)
+
+
+@app.get(ADMIN_PATH + "/api/generations/{generation_id}/request", include_in_schema=False)
+def admin_generation_request(generation_id: int, request: Request) -> Response:
+    require_admin(request, ADMIN)
+    return _generation_request(generation_id)
 
 
 @app.get("/api/version")
@@ -828,7 +855,9 @@ def add_article_reference(payload: ArticleRequest) -> Article:
         if not title:
             raise ValueError("Le titre de l’article ne peut pas être vide.")
     except ValueError as error:
-        raise _mediawiki_error(error) from error
+        refusal = _mediawiki_error(error)
+        note_refused_url(payload.url or "", refusal)
+        raise refusal from error
     return Article(
         page_id=payload.page_id,
         title=title,
@@ -852,7 +881,9 @@ async def read_wikipedia_book(payload: BookImportRequest) -> WikipediaBookImport
         async with MediaWikiClient() as client:
             return await _wikipedia_book(client, language, title)
     except (MediaWikiError, ValueError) as error:
-        raise _mediawiki_error(error) from error
+        refusal = _mediawiki_error(error)
+        note_refused_url(payload.url, refusal)
+        raise refusal from error
 
 
 @app.post("/api/books/from-wikitext", response_model=SourceResolution)
@@ -878,7 +909,9 @@ async def resolve_source(payload: SourceRequest) -> SourceResolution:
         async with MediaWikiClient() as client:
             return await _resolve_source(client, payload.input, payload.language, payload.site, payload.languages)
     except (MediaWikiError, ValueError) as error:
-        raise _mediawiki_error(error) from error
+        refusal = _mediawiki_error(error)
+        note_refused_url(payload.input, refusal)
+        raise refusal from error
 
 
 async def _resolve_source(client: MediaWikiClient, text: str, default_language: str, default_site: Site, languages: list[str] = ()) -> SourceResolution:
@@ -1103,7 +1136,47 @@ def _memory_snapshot() -> dict[str, int | None]:
 def _trim_generation_log() -> None:
     stages = sum(len(entry["stages"]) for entry in generation_log)
     while len(generation_log) > 1 and (len(generation_log) > GENERATION_LOG_KEEP or stages > GENERATION_LOG_STAGES):
-        stages -= len(generation_log.popleft()["stages"])
+        removed = generation_log.popleft()
+        stages -= len(removed["stages"])
+        generation_requests.pop(removed["id"], None)
+    kept = sum(len(data) for data in generation_requests.values())
+    for generation_id in list(generation_requests)[:-1]:
+        if kept <= GENERATION_REQUESTS_BYTES:
+            break
+        kept -= len(generation_requests.pop(generation_id))
+
+
+def _without_file_contents(value):
+    if isinstance(value, dict):
+        copy = {key: _without_file_contents(item) for key, item in value.items()}
+        if isinstance(value.get("data_base64"), str):
+            copy["data_base64"] = None
+            copy["removed_base64_chars"] = len(value["data_base64"])
+        return copy
+    if isinstance(value, list):
+        return [_without_file_contents(item) for item in value]
+    return value
+
+
+def _store_request(generation_id: int, project: Project) -> int:
+    workspace = {"format": "wikipedia2book-workspace", "version": 1, "projects": [_without_file_contents(project.model_dump(mode="json"))]}
+    data = json.dumps(workspace, ensure_ascii=False).encode("utf-8")
+    if len(data) <= GENERATION_REQUEST_MAX_BYTES:
+        generation_requests[generation_id] = data
+    return len(data)
+
+
+def note_refused_url(url: str, error: HTTPException) -> None:
+    # NE PAS y ajouter l'adresse IP, le jeton du navigateur ni rien d'autre que l'adresse refusée : tableau en mémoire seulement, lu par la page d'admin (choix de l'utilisateur).
+    url = url.strip()[:500]
+    if error.status_code >= 500 or not re.match(r"^[a-z]+://", url, re.IGNORECASE):
+        return
+    detail = error.detail.get("message", "") if isinstance(error.detail, dict) else str(error.detail)
+    entry = refused_urls.pop(url, {"url": url, "count": 0})
+    entry.update(count=entry["count"] + 1, last=datetime.now(timezone.utc).isoformat(timespec="seconds"), status=error.status_code, reason=detail[:300])
+    refused_urls[url] = entry
+    while len(refused_urls) > REFUSED_URLS_KEEP:
+        refused_urls.pop(next(iter(refused_urls)))
 
 
 class GenerationRecord:
@@ -1125,6 +1198,7 @@ class GenerationRecord:
             "status": "running",
             "stages": [],
         }
+        self.data["request_bytes"] = _store_request(self.data["id"], project)
         generation_log.append(self.data)
         _trim_generation_log()
         self.stage("start", "server", _memory_snapshot())
@@ -1521,7 +1595,7 @@ def _finish_book(
     license_start = place_pdf(render(build_license_page_html(project, selected, language)))
     root.children.append(OutlineEntry(pdf_label(language, "license"), license_start))
     stage("render_license")
-    if project.back_image:
+    if has_back_cover(project):
         place_pdf(render(build_back_cover_html(project)))
         stage("render_back_cover")
 
@@ -1611,7 +1685,10 @@ async def create_pdf_from_source(
     try:
         project = await project_from_sources(source, wiki or language, summary)
     except (MediaWikiError, ValueError) as error:
-        raise _mediawiki_error(error) from error
+        refusal = _mediawiki_error(error)
+        for item in source:
+            note_refused_url(item, refusal)
+        raise refusal from error
     return await _create_pdf_response(_volume_of(project, volume, language), language)
 
 
@@ -1624,7 +1701,9 @@ async def create_pdf_from_json(
     try:
         project = await fetch_project(url)
     except JsonSourceError as error:
-        raise HTTPException(status_code=error.status_code, detail=str(error)) from error
+        refusal = HTTPException(status_code=error.status_code, detail=str(error))
+        note_refused_url(url, refusal)
+        raise refusal from error
     return await _create_pdf_response(_volume_of(project, volume, language), language)
 
 

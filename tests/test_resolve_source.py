@@ -203,6 +203,20 @@ class ResolveSourceTest(unittest.TestCase):
         self.assertEqual(body["book_title"], "Programmation C")
         self.assertIn(("subpages", "Programmation C", "fr", "wikibooks"), FakeClient.calls)
 
+    def test_refused_addresses_are_counted_for_the_admin_page(self):
+        main.refused_urls.clear()
+        self.assertEqual(self.resolve("https://example.com/wiki/Chat").status_code, 422)
+        self.assertEqual(self.resolve("https://example.com/wiki/Chat").status_code, 422)
+        self.assertEqual(self.resolve("https://fr.wikipedia.org/wiki/Inexistant").status_code, 404)
+        self.resolve("")
+        entries = list(main.refused_urls.values())
+        self.assertEqual([(entry["url"], entry["count"], entry["status"]) for entry in entries],
+                         [("https://example.com/wiki/Chat", 2, 422), ("https://fr.wikipedia.org/wiki/Inexistant", 1, 404)])
+        self.assertTrue(entries[0]["reason"])
+        with patch.object(main, "REFUSED_URLS_KEEP", 1):
+            self.resolve("https://example.com/autre")
+        self.assertEqual(list(main.refused_urls), ["https://example.com/autre"])
+
     def test_unknown_url_is_404(self):
         self.assertEqual(self.resolve("https://fr.wikipedia.org/wiki/Inexistant").status_code, 404)
 

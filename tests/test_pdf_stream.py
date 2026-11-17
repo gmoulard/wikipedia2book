@@ -287,6 +287,15 @@ class PdfStreamTest(unittest.TestCase):
         self.assertIn("margin: 0;", pages[-1])
         self.assertNotIn("colophon", pages[-1])
 
+    def test_back_color_or_logo_alone_adds_the_last_page(self):
+        for fields in ({}, {"back_color": "#336699"}, {"back_logo": True}):
+            pages = []
+            with patch.object(main, "generate_pdf", lambda html: pages.append(html) or _make_pdf(1)):
+                response = self.client.post("/api/pdf", json=_project(**fields))
+            self.assertEqual(response.status_code, 200)
+            with self.subTest(fields=fields):
+                self.assertEqual("colophon" in pages[-1], not fields)
+
     def test_wikipedia_book_conclusion_can_be_replaced_or_removed(self):
         for payload, expected in (({"book_conclusion": "Fin du livre"}, "Fin du livre"), ({"book_conclusion": ""}, None)):
             pages = []

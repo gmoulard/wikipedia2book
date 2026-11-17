@@ -124,6 +124,10 @@ class Project(BaseModel):
     conclusion: str = Field(default="", max_length=20000)
     cover_image: BookImage | None = None
     back_image: BookImage | None = None
+    cover_color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
+    back_color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
+    cover_logo: bool = False
+    back_logo: bool = False
     page_format: Literal["A0", "A1", "A2", "A3", "A4", "A5", "A6", "Letter", "Legal", "custom"] = "A4"
     custom_width_mm: float = Field(default=148, ge=50, le=1000)
     custom_height_mm: float = Field(default=210, ge=50, le=1000)

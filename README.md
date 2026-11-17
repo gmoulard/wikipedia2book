@@ -74,6 +74,7 @@ wikipedia2book/
 │       ├── admin.html, admin.js, admin.css   # Administration page (/admin)
 │       ├── styles.css
 │       ├── Wikipedia2bookLogo.png
+│       ├── WikipediaLogo.png  # Wikipedia logo from Commons (CC BY-SA 3.0, Wikimedia trademark), optional on the cover and last page
 │       └── testPerformanceReference.json   (reference book of the benchmark)
 ├── scripts/
 │   ├── docker-build.sh          # Docker build with git commit/date/author injected

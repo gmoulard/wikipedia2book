@@ -348,3 +348,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
   .custom-dimensions { grid-column: auto; }
 }
 .add-suggestion { flex: 0 0 auto; min-height: 28px; gap: 5px; padding: 0 10px; font-size: 13px; }
+
+.background-extras { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 8px; }
+.background-extras .background-color { width: 44px; height: 28px; padding: 0; border: 1px solid var(--line, #c9d3d1); border-radius: 4px; background: none; }
+.background-extras .background-color:disabled { opacity: 0.4; }
