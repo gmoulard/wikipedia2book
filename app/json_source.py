@@ -18,7 +18,7 @@ import asyncio
 import ipaddress
 import json
 import socket
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import urljoin, urlsplit, urlunsplit
 
 import httpx
 from pydantic import ValidationError
@@ -42,7 +42,7 @@ def _resolve(host: str) -> list[str]:
 
 
 # NE PAS télécharger une adresse qui mène au réseau interne (127.0.0.1, 10.x, métadonnées du cloud…) : le serveur deviendrait un relais vers ses voisins ; chaque redirection est revérifiée.
-async def _check_url(url: str, resolve, label: str) -> None:
+async def _check_url(url: str, resolve, label: str) -> str:
     parts = urlsplit(url)
     if parts.scheme != "https" or not parts.hostname:
         raise JsonSourceError(422, f"L’adresse {label} doit commencer par https:// : {url}")
@@ -52,6 +52,16 @@ async def _check_url(url: str, resolve, label: str) -> None:
         raise JsonSourceError(422, f"Hôte introuvable pour {label} : {parts.hostname}.") from error
     if not addresses or any(not ipaddress.ip_address(address.split("%")[0]).is_global for address in addresses):
         raise JsonSourceError(422, f"Hôte refusé pour {label} : {parts.hostname} n’est pas une adresse publique.")
+    return addresses[0].split("%")[0]
+
+
+# NE PAS laisser httpx résoudre le nom une seconde fois : un nom qui change d'adresse entre la vérification et la connexion (DNS rebinding) mènerait au réseau interne ; la connexion se fait à l'adresse vérifiée, le nom ne sert qu'à l'en-tête Host et au certificat (SNI).
+def _pinned(url: str, address: str) -> tuple[str, dict, dict]:
+    parts = urlsplit(url)
+    port = f":{parts.port}" if parts.port else ""
+    host = f"[{address}]" if ":" in address else address
+    target = urlunsplit(parts._replace(netloc=host + port))
+    return target, {"Host": parts.hostname + port}, {"sni_hostname": parts.hostname}
 
 
 async def download(
@@ -60,9 +70,9 @@ async def download(
     too_large = f"{label[0].upper()}{label[1:]} est trop volumineux ({max_bytes // 1_000_000} Mo au plus) : {url}"
     async with httpx.AsyncClient(transport=transport, timeout=TIMEOUT_S, follow_redirects=False, headers={"User-Agent": USER_AGENT}) as client:
         for _ in range(MAX_REDIRECTS + 1):
-            await _check_url(url, resolve, label)
+            target, headers, extensions = _pinned(url, await _check_url(url, resolve, label))
             try:
-                async with client.stream("GET", url) as response:
+                async with client.stream("GET", target, headers=headers, extensions=extensions) as response:
                     if response.is_redirect:
                         url = urljoin(url, response.headers.get("location", ""))
                         continue

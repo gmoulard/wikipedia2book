@@ -167,8 +167,27 @@ class ParallelTest(unittest.TestCase):
             {"books": 10, "passed": 10, "failed": 0, "wall_s": 30.0, "median_s": 25.0, "slowest_s": 29.0, "errors": []},
             {"books": 50, "passed": 0, "failed": 50, "wall_s": 90.0, "median_s": None, "slowest_s": None, "errors": ["OSError: boom"]},
         ])
-        self.assertIn("| 10 | 10 | 0 | 30.0 s | 25.0 s | 29.0 s | — |", table)
-        self.assertIn("| 50 | 0 | 50 | 90.0 s | — | — | OSError: boom |", table)
+        self.assertIn("| 10 | 10 | 0 | 0 | 30.0 s | 25.0 s | 29.0 s | — |", table)
+        self.assertIn("| 50 | 0 | 50 | 0 | 90.0 s | — | — | OSError: boom |", table)
+
+    def test_refusals_429_are_requested_again_after_the_delay(self):
+        import email.message
+        import urllib.error
+        answers = iter([429, 429, None])
+        sleeps = []
+
+        def generator(base_url, body, language, timeout):
+            code = next(answers)
+            if code is None:
+                return {"total_s": 1.0}
+            headers = email.message.Message()
+            headers["Retry-After"] = "7"
+            raise urllib.error.HTTPError(base_url, code, "Too Many Requests", headers, None)
+
+        results = limit_check.run_parallel("http://x", [1], {"main_articles": []}, "fr", generator=generator, wait=self.waited.append, sleep=sleeps.append)
+        self.assertEqual((results[0]["passed"], results[0]["failed"], results[0]["refused"]), (1, 0, 2))
+        self.assertEqual(sleeps, [7, 7])
+        self.assertEqual(self.waited, [])
 
     def test_reference_book_is_the_frozen_sample(self):
         book = limit_check.book_from_json(limit_check.REFERENCE_BOOK)

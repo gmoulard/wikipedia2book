@@ -77,7 +77,7 @@ class FetchProjectTest(unittest.TestCase):
 
     def test_redirects_are_followed_and_checked_again(self):
         def handler(request):
-            if request.url.host == "books.example.org":
+            if request.headers["host"] == "books.example.org":
                 return httpx.Response(302, headers={"location": "https://cdn.example.org/livre.json"})
             return httpx.Response(200, json=WORKSPACE)
         self.assertEqual(fetch("https://books.example.org/livre.json", handler).name, "Épaves")
@@ -87,6 +87,20 @@ class FetchProjectTest(unittest.TestCase):
         with self.assertRaises(JsonSourceError) as caught:
             fetch("https://books.example.org/a.json", lambda request: httpx.Response(302, headers={"location": "/b.json"}))
         self.assertEqual(caught.exception.status_code, 502)
+
+    def test_connection_goes_to_the_checked_address(self):
+        answers = iter([["93.184.216.34"], ["10.0.0.5"]])
+        seen = []
+
+        def handler(request):
+            seen.append((request.url.host, request.headers["host"], request.extensions.get("sni_hostname")))
+            return httpx.Response(200, json=WORKSPACE)
+
+        project = asyncio.run(fetch_project("https://books.example.org/livre.json", transport=httpx.MockTransport(handler), resolve=lambda host: next(answers)))
+        self.assertEqual(project.name, "Épaves")
+        self.assertEqual(seen, [("93.184.216.34", "books.example.org", "books.example.org")])
+        fetch("https://cdn.example.org/livre.json", lambda request: seen.append(request.url.host) or httpx.Response(200, json=WORKSPACE))
+        self.assertEqual(seen[-1], "2606:2800:220:1::1")
 
     def test_errors_are_explicit(self):
         cases = [

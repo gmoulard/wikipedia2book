@@ -20,6 +20,7 @@ import statistics
 from concurrent.futures import ThreadPoolExecutor
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -109,13 +110,21 @@ def search(base_url, titles, language, start, precision, maximum, generator=gene
     return results, passed, failed
 
 
-def measure_parallel(base_url, count, body, language, generator=generate):
+def measure_parallel(base_url, count, body, language, generator=generate, sleep=time.sleep):
     def one(index):
         start = time.perf_counter()
-        try:
-            return {"total_s": generator(base_url, body, language, timeout=None)["total_s"]}
-        except (GenerationError, OSError, ValueError) as error:
-            return {"error": f"{type(error).__name__}: {error}", "after_s": time.perf_counter() - start}
+        refused = 0
+        while True:
+            try:
+                return {"total_s": generator(base_url, body, language, timeout=None)["total_s"], "refused": refused}
+            except urllib.error.HTTPError as error:
+                # NE PAS compter un refus HTTP 429 comme un échec : le serveur demande d'attendre (limites de générations), la génération est redemandée après le délai indiqué.
+                if error.code != 429:
+                    return {"error": f"{type(error).__name__}: {error}", "after_s": time.perf_counter() - start, "refused": refused}
+                refused += 1
+                sleep(int(error.headers.get("Retry-After") or 10))
+            except (GenerationError, OSError, ValueError) as error:
+                return {"error": f"{type(error).__name__}: {error}", "after_s": time.perf_counter() - start, "refused": refused}
 
     start = time.perf_counter()
     # NE PAS limiter le nombre de fils sous count : les générations doivent être demandées toutes en même temps, c'est ce que le palier mesure.
@@ -127,6 +136,7 @@ def measure_parallel(base_url, count, body, language, generator=generate):
         "books": count,
         "passed": len(done),
         "failed": len(errors),
+        "refused": sum(run["refused"] for run in runs),
         "wall_s": round(time.perf_counter() - start, 1),
         "median_s": round(statistics.median(done), 1) if done else None,
         "slowest_s": round(max(done), 1) if done else None,
@@ -134,10 +144,10 @@ def measure_parallel(base_url, count, body, language, generator=generate):
     }
 
 
-def run_parallel(base_url, steps, body, language, generator=generate, wait=wait_for_server):
+def run_parallel(base_url, steps, body, language, generator=generate, wait=wait_for_server, sleep=time.sleep):
     results = []
     for count in steps:
-        results.append(measure_parallel(base_url, count, body, language, generator))
+        results.append(measure_parallel(base_url, count, body, language, generator, sleep))
         if results[-1]["failed"]:
             wait(base_url)
             break
@@ -145,12 +155,12 @@ def run_parallel(base_url, steps, body, language, generator=generate, wait=wait_
 
 
 def parallel_report(results):
-    lines = ["| Livres en parallèle | Réussis | Échecs | Durée totale | Génération médiane | Plus lente | Erreurs |",
-             "|---|---|---|---|---|---|---|"]
+    lines = ["| Livres en parallèle | Réussis | Échecs | Refus 429 redemandés | Durée totale | Génération médiane | Plus lente | Erreurs |",
+             "|---|---|---|---|---|---|---|---|"]
     for result in results:
         median = "—" if result["median_s"] is None else f"{result['median_s']} s"
         slowest = "—" if result["slowest_s"] is None else f"{result['slowest_s']} s"
-        lines.append(f"| {result['books']} | {result['passed']} | {result['failed']} | {result['wall_s']} s | {median} | {slowest} | {'; '.join(result['errors']) or '—'} |")
+        lines.append(f"| {result['books']} | {result['passed']} | {result['failed']} | {result.get('refused', 0)} | {result['wall_s']} s | {median} | {slowest} | {'; '.join(result['errors']) or '—'} |")
     return "\n".join(lines)
 
 

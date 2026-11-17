@@ -40,6 +40,20 @@ const SERVER_WAIT_MS = 120000;
 const SERVER_POLL_MS = 3000;
 
 class ServerCrashError extends Error {}
+class RateLimitedError extends Error {}
+
+const CLIENT_TOKEN_KEY = 'w2b-client';
+let clientTokenValue = null;
+
+function clientToken() {
+  if (clientTokenValue) return clientTokenValue;
+  try { clientTokenValue = localStorage.getItem(CLIENT_TOKEN_KEY); } catch { /* localStorage indisponible */ }
+  if (!clientTokenValue || !/^[A-Za-z0-9-]{8,64}$/.test(clientTokenValue)) {
+    clientTokenValue = window.crypto?.randomUUID ? window.crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+    try { localStorage.setItem(CLIENT_TOKEN_KEY, clientTokenValue); } catch { /* localStorage indisponible */ }
+  }
+  return clientTokenValue;
+}
 
 async function request(path, options = {}) {
   let response;
@@ -57,8 +71,13 @@ async function request(path, options = {}) {
     try { const p = await response.json(); detail = p.detail; } catch { /* not json */ }
     if (typeof detail === 'string') message = detail;
     else if (detail?.code === 'too_many_articles') message = t('export.tooManyArticles', { count: detail.count, limit: detail.limit });
+    else if (detail?.code === 'request_too_large') message = t('export.requestTooLarge', { limit: Math.floor(detail.limit / 1000000) });
     else if (detail?.message) message = detail.message;
-    const error = SERVER_DOWN_STATUSES.has(response.status) ? new ServerCrashError(message) : new Error(message);
+    let error;
+    if (response.status === 429) {
+      error = new RateLimitedError(message);
+      error.retryAfter = Math.max(1, Number(response.headers.get('Retry-After')) || detail?.retry_after || 30);
+    } else error = SERVER_DOWN_STATUSES.has(response.status) ? new ServerCrashError(message) : new Error(message);
     if (detail?.code) error.detail = detail;
     throw error;
   }
@@ -1084,6 +1103,18 @@ function showPdfWait(seconds) {
   pdfWaitTimer = setInterval(tick, 1000);
 }
 
+function showPdfLimited(seconds) {
+  clearInterval(pdfWaitTimer);
+  const end = Date.now() + seconds * 1000;
+  const tick = () => {
+    $('#pdfProgressWait').hidden = false;
+    $('#pdfProgressWait').textContent = t('progress.limited', { seconds: Math.max(0, Math.ceil((end - Date.now()) / 1000)) });
+  };
+  tick();
+  pdfWaitTimer = setInterval(tick, 1000);
+  return new Promise((resolve) => setTimeout(() => { hidePdfWait(); resolve(); }, seconds * 1000));
+}
+
 function showPdfBusy(seconds) {
   clearInterval(pdfWaitTimer);
   const start = Date.now() - seconds * 1000;
@@ -1138,7 +1169,7 @@ function pdfStreamEvent(line) {
 
 // NE PAS décoder le flux entier en texte : après le message « done », la suite est le PDF en binaire (event.size octets).
 async function streamPdf(project) {
-  const response = await request(`/api/pdf/stream?language=${encodeURIComponent(lang())}`, { method: 'POST', body: JSON.stringify(project) });
+  const response = await request(`/api/pdf/stream?language=${encodeURIComponent(lang())}`, { method: 'POST', body: JSON.stringify(project), headers: { 'X-Wikipedia2Book-Client': clientToken() } });
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let pending = new Uint8Array(0);
@@ -1237,6 +1268,11 @@ async function generatePdf(project) {
     try {
       return await streamPdf(project);
     } catch (error) {
+      // NE PAS compter un refus HTTP 429 comme un plantage : le serveur demande seulement d'attendre (limite par client, file pleine), on réessaie sans fin et sans rien demander.
+      if (error instanceof RateLimitedError) {
+        await showPdfLimited(error.retryAfter);
+        continue;
+      }
       // NE PAS relancer sur une erreur renvoyée par le serveur (article introuvable, requête invalide…) : seul un plantage (connexion coupée, serveur en redémarrage) justifie de repartir de zéro.
       if (!(error instanceof ServerCrashError)) throw error;
       crashes += 1;

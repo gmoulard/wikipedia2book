@@ -46,6 +46,10 @@ ON_TOOLFORGE = os.environ.get("WIKIPEDIA2BOOK_PLATFORM") == "toolforge"
 MEDIA_CONCURRENCY = 2
 MEDIA_WINDOW_S = 10
 MEDIA_WINDOW_BYTES = 25_000_000 // 8 * MEDIA_WINDOW_S
+# NE PAS dépasser 10 requêtes par seconde vers l'API MediaWiki pour tout le serveur : un utilisateur malveillant (explorations, recherches en rafale) ferait bloquer l'outil par Wikimédia, sous notre User-Agent.
+API_INTERVAL_S = 0.1
+API_ALERT_WAIT_S = 10
+on_api_throttle: Callable[[float], None] | None = None
 RETRY_STATUSES = {429, 503}
 RETRY_DELAYS_S = (2, 4, 8, 16)
 MAX_RETRY_WAIT_S = 20
@@ -162,6 +166,33 @@ def media_limiter() -> MediaLimiter:
     return _media_limiters[loop]
 
 
+class ApiLimiter:
+    def __init__(self) -> None:
+        self.next_at = 0.0
+
+    async def wait(self) -> None:
+        if API_INTERVAL_S <= 0:
+            return
+        now = _clock()
+        start = max(now, self.next_at)
+        self.next_at = start + API_INTERVAL_S
+        delay = start - now
+        if delay >= API_ALERT_WAIT_S and on_api_throttle is not None:
+            on_api_throttle(delay)
+        if delay > 0:
+            await asyncio.sleep(delay)
+
+
+_api_limiters: "weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, ApiLimiter]" = weakref.WeakKeyDictionary()
+
+
+def api_limiter() -> ApiLimiter:
+    loop = asyncio.get_running_loop()
+    if loop not in _api_limiters:
+        _api_limiters[loop] = ApiLimiter()
+    return _api_limiters[loop]
+
+
 class MediaWikiClient:
     def __init__(self, timeout: float = 20.0) -> None:
         self.timeout = timeout
@@ -186,6 +217,8 @@ class MediaWikiClient:
             pause = self._resume_at - _clock()
             if pause > 0:
                 await asyncio.sleep(pause)
+            if not media:
+                await api_limiter().wait()
             response = await (self._media_get(url, **kwargs) if media and not ON_TOOLFORGE else self._client.get(url, **kwargs))
             if response.status_code not in RETRY_STATUSES:
                 return response

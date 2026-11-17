@@ -60,6 +60,8 @@ from app.book_builder import (
 from app.explorer import discover_related_articles
 from app.isolation import IsolatedProcessDied, preload, run_in_thread, run_in_worker, run_isolated
 from app.resource_gate import Reservation, ResourceGate, release_memory
+from app.request_limits import Alerts, ClosingStreamingResponse, GenerationLimits, RequestGuard, count_setting
+from app import wikipedia_api
 from app.json_source import JsonSourceError, download, fetch_project, project_from_payload
 from app.volumes import book_volumes, volume_project
 from app.models import (
@@ -349,6 +351,29 @@ MEMORY_GATE = ResourceGate(_container_used_and_limit, ratio_setting(os.environ, 
 DISK_GATE = ResourceGate(_disk_used_and_total, ratio_setting(os.environ, "WIKIPEDIA2BOOK_DISK_RATIO"))
 # NE PAS faire passer les générations par MEMORY_GATE : une génération admise garde sa réserve jusqu'à la fin ; dans le même contrôle que ses étapes, elle les bloquerait toutes, sans fin. Ce budget à part ne compte que les réserves des générations admises.
 GENERATION_GATE = ResourceGate(_container_limit_only, ratio_setting(os.environ, "WIKIPEDIA2BOOK_GENERATIONS_RATIO", 0.5))
+# NE PAS limiter par adresse IP sur Toolforge : son proxy masque les visiteurs, tous arrivent avec la même adresse privée ; d'où la limite globale (50 générations simultanées, 200 par minute), en plus du jeton du navigateur.
+GENERATION_LIMITS = GenerationLimits(
+    count_setting(os.environ, "WIKIPEDIA2BOOK_CLIENT_GENERATIONS", 5),
+    count_setting(os.environ, "WIKIPEDIA2BOOK_CLIENT_PER_MINUTE", 20),
+    count_setting(os.environ, "WIKIPEDIA2BOOK_TOTAL_GENERATIONS", 50 if ON_TOOLFORGE else 0),
+    count_setting(os.environ, "WIKIPEDIA2BOOK_TOTAL_PER_MINUTE", 200 if ON_TOOLFORGE else 0),
+)
+WAITING_GENERATIONS = count_setting(os.environ, "WIKIPEDIA2BOOK_WAITING_GENERATIONS", 100)
+CLIENT_IP_HEADER = os.environ.get("WIKIPEDIA2BOOK_CLIENT_IP_HEADER", "").strip().lower()
+ALERTS = Alerts(
+    os.environ.get("WIKIPEDIA2BOOK_ALERT_EMAIL", "").strip(),
+    os.environ.get("WIKIPEDIA2BOOK_SMTP_HOST", "").strip(),
+    os.environ.get("WIKIPEDIA2BOOK_ALERT_FROM", "").strip(),
+)
+app.add_middleware(
+    RequestGuard,
+    limits=lambda: GENERATION_LIMITS,
+    waiting=lambda: len(GENERATION_GATE.queue),
+    max_waiting=lambda: WAITING_GENERATIONS,
+    alerts=lambda: ALERTS,
+    ip_header=lambda: CLIENT_IP_HEADER,
+)
+wikipedia_api.on_api_throttle = lambda waited: ALERTS.raise_alert("wikimedia_api_throttle", waited_s=round(waited, 1))
 
 
 def _generation_files_bytes(directory: str) -> int:
@@ -384,6 +409,8 @@ def health_details(response: Response) -> dict:
         "memory_gate": MEMORY_GATE.state(),
         "disk_gate": DISK_GATE.state(),
         "generation_gate": GENERATION_GATE.state(),
+        "request_limits": {**GENERATION_LIMITS.state(), "waiting_limit": WAITING_GENERATIONS},
+        "alerts": ALERTS.state(),
         "temporary": _temporary_space(),
     }
 
@@ -1304,7 +1331,7 @@ async def _create_pdf_response(project: Project, language: str) -> Response:
         finally:
             await events.aclose()
 
-    return StreamingResponse(
+    return ClosingStreamingResponse(
         body(),
         media_type="application/pdf",
         headers={
@@ -1448,7 +1475,7 @@ async def create_pdf_stream(
         finally:
             await book.aclose()
 
-    return StreamingResponse(
+    return ClosingStreamingResponse(
         events(),
         media_type="application/x-ndjson",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
