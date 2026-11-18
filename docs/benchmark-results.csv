@@ -96,3 +96,6 @@ date,version,target,level,scenario,pages,wikipedia_s,application_s,transfer_s,to
 2026-11-18,1.13.0,workflow,max,200-pages-a5-paysage,201,17.84,1.77,0.04,19.65,-12,ok
 2026-11-18,1.13.0,workflow,max,20-articles,253,5.05,2.22,0.02,7.29,-12,ok
 2026-11-18,1.13.0,workflow,max,livre-reference-images,107,15.57,1.69,0.03,17.29,-15,ok
+2026-11-18,1.13.1+,workflow,min,50-pages,50,0.61,0.55,0.0,1.17,-40,ok
+2026-11-18,1.13.1+,workflow,min,200-pages,200,5.51,1.2,0.01,6.71,-41,ok
+2026-11-18,1.13.1+,workflow,min,livre-reference-images,107,13.88,1.14,0.02,15.03,-43,ok
