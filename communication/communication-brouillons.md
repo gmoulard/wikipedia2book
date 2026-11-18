@@ -29,7 +29,8 @@ Pour toutes les publications :
 | Action 13a (Wikidata) | non publiée | Création refusée par l'AbuseFilter n° 11 (avertissement « badwords ») ; renvoyer la même modification confirme l'avertissement : à décider. |
 | Action 15 (Phabricator) | moi depuis ton compte, 18/11 11:32 | Commentaire publié sur [T224922](https://phabricator.wikimedia.org/T224922#12575282), texte du brouillon inchangé (en:Template:Saved book ne renvoie pas vers Wikipedia2Book : seul le modèle français est cité), avec mention de l'auteur. | Réponse à suivre. |
 | Actions 14, 16 (Phabricator, Toolhub) | non publiées | Phabricator connecté (action 15 publiée) ; connexion OAuth Wikimédia à faire par toi sur toolhub.wikimedia.org. |
-| Actions 12c, 17b, 18–21 | non publiées | Conditionnelles (réponse attendue), à faire au fil de l'eau, ou hors wiki ; [m:Talk:Offline](https://meta.wikimedia.org/wiki/Talk:Offline) n'existe pas (page non suivie), 21b abandonnée. |
+| Action 20a (WikiConvention francophone) | toi, 18/11 | Présentation proposée. | Réponse à suivre. |
+| Actions 12c, 17b, 18, 19, 20b, 21 | non publiées | Conditionnelles (réponse attendue), à faire au fil de l'eau, ou hors wiki ; [m:Talk:Offline](https://meta.wikimedia.org/wiki/Talk:Offline) n'existe pas (page non suivie), 21b abandonnée. |
 | fr.wikibooks [Wikilivres/Créer la version imprimable d'un livre](https://fr.wikibooks.org/wiki/Wikilivres/Cr%C3%A9er_la_version_imprimable_d%27un_livre) | 16/11 | Remplace l'action prévue sur « Aide:Version imprimable », page qui n'existe pas. |
 
 ## 0. Correction de Help:Print versions (en.wikibooks) — modification directe
@@ -481,7 +482,7 @@ Vous pouvez aider en l'essayant avec vos propres livres enregistrés, en signala
 
 ## 20. Présentations orales
 
-20a. **WikiConvention francophone** : proposer une présentation courte (5 à 10 min) avec démo en direct (page de livre → PDF) dès l'appel à propositions sur Meta.
+20a. **WikiConvention francophone** : proposer une présentation courte (5 à 10 min) avec démo en direct (page de livre → PDF) dès l'appel à propositions sur Meta. [x] 18/11/2026 : fait par toi.
 
 20b. **[Wikimania 2027](https://meta.wikimedia.org/wiki/Wikimania_2027)** (Santiago du Chili, 3e trimestre 2027, appel à propositions pas encore publié) : thème « Offline and print: PDF books from Wikimedia projects », en ligne si pas de déplacement.
 
