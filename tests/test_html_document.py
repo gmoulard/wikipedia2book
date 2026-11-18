@@ -150,6 +150,18 @@ class HtmlDocumentGenerationTest(unittest.TestCase):
         self.assertIn("champ Sources", events[-1]["detail"])
         self.assertIn(url, events[-1]["detail"])
 
+    def test_a_site_that_refuses_the_server_gets_an_explained_message(self):
+        async def refusing_download(url, max_bytes, label):
+            raise JsonSourceError(502, f"{label[0].upper()}{label[1:]} a été refusé par le site (HTTP 418), qui bloque sans doute les téléchargements faits depuis un serveur : {url}", refused=True)
+
+        project = _project(uploaded_documents=[{"title": "Épaves", "kind": "html", "url": self.PAGE_URL, "selected": True}])
+        with patch.object(main, "download", refusing_download):
+            events = _parse_stream(self.client.post("/api/pdf/stream", json=project).content)
+        detail = events[-1]["detail"]
+        self.assertIn("HTTP 418", detail)
+        self.assertIn("Enregistrer au format PDF", detail)
+        self.assertIn(self.PAGE_URL, detail)
+
     def test_a_file_that_is_not_html_is_refused(self):
         project = _project(uploaded_documents=[{"title": "Image", "kind": "html", "url": "https://example.org/dossier/images/photo.png", "selected": True}])
         events = _parse_stream(self.client.post("/api/pdf/stream", json=project).content)

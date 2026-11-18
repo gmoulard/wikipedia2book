@@ -115,6 +115,16 @@ class FetchProjectTest(unittest.TestCase):
                 fetch("https://books.example.org/livre.json", handler)
             self.assertEqual(caught.exception.status_code, status)
 
+    def test_site_refusal_is_explained(self):
+        for status in (403, 418, 429):
+            with self.subTest(status=status), self.assertRaises(JsonSourceError) as caught:
+                fetch("https://books.example.org/livre.json", serve(WORKSPACE, status=status))
+            self.assertTrue(caught.exception.refused)
+            self.assertIn(f"refusé par le site (HTTP {status})", str(caught.exception))
+        with self.assertRaises(JsonSourceError) as caught:
+            fetch("https://books.example.org/livre.json", serve(WORKSPACE, status=404))
+        self.assertFalse(caught.exception.refused)
+
     def test_body_larger_than_the_limit_is_refused(self):
         with patch.object(json_source, "MAX_JSON_BYTES", 100), self.assertRaises(JsonSourceError) as caught:
             fetch("https://books.example.org/livre.json", serve(WORKSPACE))

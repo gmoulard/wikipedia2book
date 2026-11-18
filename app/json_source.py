@@ -32,9 +32,13 @@ TIMEOUT_S = 30.0
 
 
 class JsonSourceError(Exception):
-    def __init__(self, status_code: int, message: str) -> None:
+    def __init__(self, status_code: int, message: str, refused: bool = False) -> None:
         super().__init__(message)
         self.status_code = status_code
+        self.refused = refused
+
+
+REFUSED_STATUSES = {401, 403, 418, 429, 451}
 
 
 NAT64_PREFIX = ipaddress.ip_network("64:ff9b::/96")
@@ -92,6 +96,8 @@ async def download(
                     if response.is_redirect:
                         url = urljoin(url, response.headers.get("location", ""))
                         continue
+                    if response.status_code in REFUSED_STATUSES:
+                        raise JsonSourceError(502, f"{label[0].upper()}{label[1:]} a été refusé par le site (HTTP {response.status_code}), qui bloque sans doute les téléchargements faits depuis un serveur : {url}", refused=True)
                     if response.status_code != 200:
                         raise JsonSourceError(502, f"{label[0].upper()}{label[1:]} n’a pas pu être téléchargé (HTTP {response.status_code}) : {url}")
                     if int(response.headers.get("content-length") or 0) > max_bytes:

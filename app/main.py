@@ -246,7 +246,8 @@ async def fetch_remote_file(url: str, accepted: set[str], label: str) -> tuple[b
     try:
         data, content_type = await download(url, REMOTE_FILE_BYTES, label)
     except JsonSourceError as error:
-        raise RemoteFileError(str(error)) from error
+        advice = " Téléchargez le fichier depuis votre navigateur, puis importez-le." if error.refused else ""
+        raise RemoteFileError(f"{error}{advice}") from error
     if content_type not in accepted:
         raise RemoteFileError(f"{label[0].upper()}{label[1:]} n’est pas d’un type accepté ({content_type or 'type inconnu'}) : {url}")
     return data, content_type
@@ -1341,7 +1342,8 @@ async def _build_book_pdf(
         try:
             page, content_type = await download(document.url, HTML_PAGE_BYTES, label)
         except JsonSourceError as error:
-            raise RemoteFileError(str(error)) from error
+            advice = " Ouvrez la page dans votre navigateur, enregistrez-la en PDF (Imprimer, puis Enregistrer au format PDF) et importez ce fichier à l’étape Organisation." if error.refused else ""
+            raise RemoteFileError(f"{error}{advice}") from error
         if content_type not in HTML_TYPES:
             raise RemoteFileError(f"{label[0].upper()}{label[1:]} n’est pas une page HTML ({content_type or 'type inconnu'}) : {document.url}")
         html = await html_for_print(page, document.url, lambda address, size, what: download(address, size, what), page_width_mm, page_height_mm)
