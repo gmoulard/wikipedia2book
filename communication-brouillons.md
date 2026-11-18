@@ -198,7 +198,18 @@ Ich bin der Autor des Werkzeugs (Interessenkonflikt); die Änderung müsste ein 
 13a. **Wikidata** — créer l'élément « Wikipedia2Book » :
 - libellés : fr « Wikipedia2Book », en « Wikipedia2Book » ;
 - description : en « web tool that builds printable PDF books from Wikimedia pages », fr « outil web qui crée des livres PDF imprimables à partir de pages Wikimédia » ;
-- déclarations : nature de l'élément (P31) logiciel libre (Q341) et application web ; site officiel (P856) https://wikipedia2book.toolforge.org/ ; dépôt de code (P1324) https://github.com/gmoulard/wikipedia2book ; licence (P275) GNU AGPL v3 (Q27017232) ; langage de programmation (P277) Python ; Software Heritage ID (P6138) d'après `CITATION.cff`.
+- avant de créer : chercher « Wikipedia2Book » sur Wikidata pour éviter un doublon ;
+- déclarations (identifiants trouvés le 18/11 par recherche web, sans accès à wikidata.org : **à vérifier sur Wikidata avant de créer**) :
+
+  | Propriété | Valeur | État |
+  |---|---|---|
+  | nature de l'élément (P31) | logiciel libre (Q341) | de mémoire, à vérifier |
+  | nature de l'élément (P31) | application web (Q189210) | non confirmé, à vérifier |
+  | site officiel (P856) | https://wikipedia2book.toolforge.org/ | dépôt |
+  | dépôt de code (P1324) | https://github.com/gmoulard/wikipedia2book | dépôt |
+  | licence (P275) | GNU AGPL version 3.0 (Q27017232), pas « v3 ou ultérieure » (Q27020062) : le dépôt est en AGPL-3.0-only | probable, à vérifier |
+  | langage de programmation (P277) | Python (Q28865) | confirmé |
+  | Software Heritage identifier (SWHID) (P6138) | `swh:1:rev:d0cd2a14a00fb848f2555a9ee62c4147230e6080`, qualificatif version (P348) = 1.6.4 | propriété confirmée ; valeur de `CITATION.cff` (forme longue : `swh:1:dir:9c7c016d9603a4b0201ad64535767a353031bd91;origin=https://github.com/gmoulard/wikipedia2book;visit=swh:1:snp:3b1fa78021c1ad7819b82a6f38f200a9f3bfa85e;anchor=swh:1:rev:d0cd2a14a00fb848f2555a9ee62c4147230e6080`), vérifier le format accepté par la propriété |
 - Résumé : `Create item (COI: I am the author)`.
 
 13b. **Tech/News** — brève proposée sur [m:Tech/News/Next](https://meta.wikimedia.org/wiki/Tech/News/Next) ou sa page de discussion :
