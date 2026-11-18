@@ -484,7 +484,7 @@ Vous pouvez aider en l'essayant avec vos propres livres enregistrés, en signala
 
 20a. **WikiConvention francophone** : proposer une présentation courte (5 à 10 min) avec démo en direct (page de livre → PDF) dès l'appel à propositions sur Meta. [x] 18/11/2026 : fait par toi.
 
-20b. **[Wikimania 2027](https://meta.wikimedia.org/wiki/Wikimania_2027)** (Santiago du Chili, 3e trimestre 2027, appel à propositions pas encore publié) : thème « Offline and print: PDF books from Wikimedia projects », en ligne si pas de déplacement.
+20b. **[Wikimania 2027](https://meta.wikimedia.org/wiki/Wikimania_2027)** (Santiago du Chili, 3e trimestre 2027, appel à propositions pas encore publié) : thème « Offline and print: PDF books from Wikimedia projects », en ligne si pas de déplacement. [x] 18/11/2026 : fait par toi.
 
 ## 21. Éducation et usage hors ligne — messages
 
