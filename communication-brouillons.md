@@ -13,7 +13,9 @@ Pour toutes les publications :
 |---|---|---|
 | en.wikipedia [Wikipedia:Books](https://en.wikipedia.org/wiki/Wikipedia:Books) | toi, 18/11 03:13–03:16 | Puce Wikipedia2Book dans la liste des alternatives. |
 | mediawiki.org [PDF export](https://www.mediawiki.org/wiki/PDF_export) | toi, 18/11 03:32–03:39 | Ligne Wikipedia2Book dans les deux tableaux. |
+| mediawiki.org [Reading/Web/PDF Functionality](https://www.mediawiki.org/wiki/Reading/Web/PDF_Functionality) | toi, 18/11 02:22 | Tableau Wikipedia2Book (logo + description) dans la section « Alternative », après mediawiki2latex. **Conflit d'intérêts non signalé** : résumé « introduce wikipedia2book » sans mention d'auteur, modification directe d'une page de la WMF. Tableau placé dans un bloc `<translate>` sans marqueur `<!--T:nnn-->` : il faut qu'un administrateur des traductions marque la page. Les deux sont rattrapés par l'action 6, publiée le 18/11 à 08:21 UTC ([diff](https://www.mediawiki.org/w/index.php?diff=8734535)) ; en attente d'un administrateur des traductions. |
 | en.wikibooks [Help:Print versions](https://en.wikibooks.org/wiki/Help:Print_versions) | toi, 18/11 03:42 | Section `=== Wikipedia2Book ===`. **À vérifier** : elle est insérée *au milieu* de la section « MediaWiki to LaTeX », juste avant la phrase « More than 80 % of books… created with MediaWiki2LaTeX ». Cette phrase semble maintenant parler de Wikipedia2Book. Je propose de déplacer la section Wikipedia2Book après la fin de la section MediaWiki to LaTeX (voir action 0). |
+| fr.wikipedia [Demande d'intervention sur un message système](https://fr.wikipedia.org/w/index.php?diff=241449346) | moi depuis ton compte, 18/11 09:00 | Action 1 publiée (encadré PDF de Spécial:Livre + « Sous-page inconnue »), corrigée à 09:04 ([diff](https://fr.wikipedia.org/w/index.php?diff=241449387)) : « cadre de droite » et nom du livre. Complétée à 09:11 ([diff](https://fr.wikipedia.org/w/index.php?diff=241449461)) : script pour `MediaWiki:Common.js` (voir action 1 bis). | En attente d'un administrateur d'interface. |
 | fr.wikibooks [Wikilivres/Créer la version imprimable d'un livre](https://fr.wikibooks.org/wiki/Wikilivres/Cr%C3%A9er_la_version_imprimable_d%27un_livre) | 16/11 | Remplace l'action prévue sur « Aide:Version imprimable », page qui n'existe pas. |
 
 ## 0. Correction de Help:Print versions (en.wikibooks) — modification directe
@@ -26,21 +28,36 @@ Résumé : `Move the Wikipedia2Book subsection after the MediaWiki to LaTeX text
 
 Page : [Wikipédia:Demande d'intervention sur un message système](https://fr.wikipedia.org/wiki/Wikip%C3%A9dia:Demande_d%27intervention_sur_un_message_syst%C3%A8me), nouvelle section en bas de page, au format `{{DIMS début}}` / `{{DIMS fin}}` des autres requêtes.
 
-Titre : `[[MediaWiki:Coll-notice-download-pdf-text]] et [[MediaWiki:Coll-unknown subpage text]] – PDF des livres`
+Titre : `[[MediaWiki:Coll-notice-download-pdf-title]], [[MediaWiki:Coll-notice-download-pdf-text]] et [[MediaWiki:Coll-unknown subpage text]] – PDF des livres`
+
+Les trois messages ont aujourd'hui leur texte par défaut (pas de page locale, vérifié le 18/11/2026) : il faut les créer, ce que seuls les administrateurs d'interface peuvent faire.
 
 ```
 {{DIMS début|statut=|date=<!--~~~~~-->}}
 '''Pages où apparaissent ces messages''' : [[Spécial:Livre]] (encadré « Télécharger des pages individuelles ») et l'ancien lien de rendu PDF des livres (<code>Spécial:Livre?bookcmd=render_collection…</code>), qui affiche « Sous-page inconnue ».
 
-'''Changement proposé''' :
-* [[MediaWiki:Coll-notice-download-pdf-text]] (texte par défaut aujourd'hui), ajouter à la fin : « Pour obtenir le PDF d'un livre entier, enregistrez-le (« Enregistrer le livre ») puis utilisez « Télécharger en PDF avec Wikipedia2Book » sur sa page, ou collez son adresse dans [[toolforge:wikipedia2book/|Wikipedia2Book]]. »
-* [[MediaWiki:Coll-unknown subpage text]] : remplacer « Cette sous-page de livre n'existe pas. » par « Wikipédia ne produit plus de PDF de livres depuis cette page. Ouvrez la page du livre enregistré et utilisez « Télécharger en PDF avec Wikipedia2Book », ou collez son adresse dans [[toolforge:wikipedia2book/|Wikipedia2Book]] ; voir aussi [[Aide:Livres]]. »
+'''Changement proposé''' : remplacer l'encadré de [[Spécial:Livre]], qui dit seulement que le créateur de livre ne fait plus de PDF, par les liens vers Wikipedia2Book.
+* [[MediaWiki:Coll-notice-download-pdf-title]] : remplacer « Télécharger des pages individuelles » par « Télécharger le livre en PDF ».
+* [[MediaWiki:Coll-notice-download-pdf-text]] : remplacer le texte actuel par :
+<pre>
+Le créateur de livre ne produit plus de PDF ([[mw:Reading/Web/PDF_Functionality|en savoir plus]]). Pour obtenir le PDF du livre entier, avec couverture, table des matières et numéros de page :
+* donner un nom au livre et '''''Sauvegarder le livre''''' (cadre de droite), puis, sur la page du livre sauvegardé, '''''Télécharger en PDF''''' (lien [[toolforge:wikipedia2book/|Wikipedia2Book]] du cadre en tête de page) ;
+* ou coller l'adresse du livre sauvegardé, ou la liste des articles, dans [[toolforge:wikipedia2book/|Wikipedia2Book]].
+Pour un article seul : '''''Télécharger en tant que PDF''''' dans les outils de la barre latérale.
+</pre>
+* [[MediaWiki:Coll-unknown subpage text]] : remplacer « Cette sous-page de livre n'existe pas. » par « Wikipédia ne produit plus de PDF de livres depuis cette page. Ouvrez la page du livre sauvegardé et utilisez « Télécharger en PDF » (lien Wikipedia2Book du cadre en tête de page), ou collez son adresse dans [[toolforge:wikipedia2book/|Wikipedia2Book]] ; voir aussi [[Aide:Livres]]. »
 
 Contexte : [[Modèle:Livre sauvegardé]] propose déjà ce lien sur chaque livre enregistré. [[toolforge:wikipedia2book/|Wikipedia2Book]] est un outil libre (AGPL) hébergé sur Toolforge, qui assemble les PDF officiels des articles avec couverture, table des matières et numéros de page. Je précise que j'en suis l'auteur (conflit d'intérêts) : n'hésitez pas à adapter ou refuser.
 
 ~~~~
 {{DIMS fin}}
 ```
+
+## 1 bis. fr.wikipedia — script de Spécial:Livre (publié avec l'action 1)
+
+Le livre en cours de Spécial:Livre vit dans la session : un message système ne peut pas le transmettre. Script proposé pour `MediaWiki:Common.js`, exécuté seulement sur Spécial:Livre : il ajoute à l'encadré « Avec le livre en cours : **Générer le PDF du livre** · Ouvrir le livre dans Wikipedia2Book ». Au clic, il lit les articles par `action=collection&submodule=getcollection` (adresses `item.url`) et ouvre `https://wikipedia2book.toolforge.org/api/pdf/from-source?source=…&language=fr` (50 articles au plus, `MAX_URL_SOURCES`) ou `https://wikipedia2book.toolforge.org/?source=…` (200 au plus). Testé le 18/11/2026 avec Saint-Pierre (Martinique) et Montagne Pelée : l'outil s'ouvre avec les 2 articles, le PDF direct répond 200 (3,5 Mo, 6 s). Le texte complet du script est dans la demande publiée.
+
+Limites : ni les chapitres ni le titre du livre ne passent par `?source=`. Les transmettre demanderait un paramètre de plus dans `GET /api/pdf/from-source` et dans `addSourcesFromAddress` (par exemple le wikitexte du livre, déjà lu par `POST /api/books/from-wikitext`).
 
 ## 2. de.wikipedia — Wikipedia:Technik/Text/Konverter — modification directe
 
@@ -100,7 +117,9 @@ Nota: sono l'autore dello strumento (conflitto di interessi), per questo lo prop
 Titre : `PDF of books: a community tool on Toolforge`
 
 ```
-For people who land here looking for a way to get a PDF of a whole book since the Collection rendering was turned off: [[toolforge:wikipedia2book/|Wikipedia2Book]] is a free (AGPL) Toolforge tool that builds a printable PDF from a saved book (Book: / User:…/Books/…), a Wikibooks printable version or compilation, or a list of pages from Wikipedia, Wikisource, Wikibooks, Wikivoyage, Wikiversity, Wikiquote, Wiktionary and Wikinews. It assembles the official PDF of each page (Special:DownloadAsPdf) with a cover, a table of contents and page numbers. It is listed on [[PDF export]] next to MediaWiki2LaTeX. Disclosure: I am its author. ~~~~
+For people who land here looking for a way to get a PDF of a whole book since the Collection rendering was turned off: [[toolforge:wikipedia2book/|Wikipedia2Book]] is a free (AGPL) Toolforge tool that builds a printable PDF from a saved book (Book: / User:…/Books/…), a Wikibooks printable version or compilation, or a list of pages from Wikipedia, Wikisource, Wikibooks, Wikivoyage, Wikiversity, Wikiquote, Wiktionary and Wikinews. It assembles the official PDF of each page (Special:DownloadAsPdf) with a cover, a table of contents and page numbers. It is listed on [[PDF export]] next to MediaWiki2LaTeX.
+
+Disclosure: I am its author, and I should have said so in my edit summary: on 18 November 2026 I added a short entry for it under "Alternative" on [[Reading/Web/PDF Functionality]]. Feel free to adjust or revert it. The new paragraph has no translation unit yet; could a translation administrator mark the page for translation? Thanks. ~~~~
 ```
 
 ## 7. en.wikipedia — User talk:Steelpillow — message personnel
@@ -199,4 +218,128 @@ Ich bin der Autor des Werkzeugs (Interessenkonflikt); die Änderung müsste ein 
 
 ```
 * [[toolforge:wikipedia2book/|Wikipedia2Book]], a community tool on Toolforge, can now build a printable PDF from a saved book, a Wikibooks compilation or printable version, or a list of pages from eight Wikimedia projects, with a cover, a table of contents and page numbers.
+```
+
+## 14. Phabricator — caractères CJK rares dans le PDF officiel de Wikisource (`todo.md`, section 3)
+
+Créer une tâche sur https://phabricator.wikimedia.org/maniphest/task/edit/form/1/, étiquettes `Proton` (service PDF) et `Wikisource`. Pas de conflit d'intérêts à signaler (signalement d'un bug du service de Wikimédia), mais préciser d'où vient le constat.
+
+Titre : `Proton PDF: CJK Extension B+ characters render as blanks (missing font coverage)`
+
+```
+**Steps to reproduce**
+# Open https://zh.wikisource.org/api/rest_v1/page/pdf/大南寔錄%2F大南寔錄前編%2F卷10/a4
+# Look for 𡼢 (U+21F22), present in the wikitext of 大南寔錄/大南寔錄前編/卷10.
+
+**Actual result**
+The character leaves a blank space: the PDF uses LiberationSerif, which has no glyph for it, and no fallback font covers CJK Unified Ideographs Extension B and later (U+20000–U+3134F). Only the rare characters that Wikisource provides as images are visible.
+
+**Expected result**
+The character is rendered, as it is in the browser.
+
+**Suggested fix**
+Install a font covering CJK Extensions B–H in the PDF rendering environment, e.g. HanaMin (Debian package fonts-hanazono) or Plangothic / Jigmo, in addition to Noto CJK, which only covers the BMP and part of Extension B.
+
+**Context**
+Reported in November 2026 by PacmanD on the technical village pump of the Chinese Wikipedia, while using Wikipedia2Book (https://wikipedia2book.toolforge.org/), which embeds the official Wikimedia PDF of each page unchanged, so the tool cannot fix it on its side. Wikipedia2Book itself installs fonts-hanazono for the pages it generates.
+```
+
+Après création : noter le numéro de la tâche (`T…`) dans la section 18 des spécifications (`FunctionalSpec.fr.md`/`.en.md`) et cocher la ligne de `todo.md`.
+
+## 15. Phabricator — T224922 (revue de la maintenance de l'extension Collection) — commentaire
+
+Tâche : [T224922 Code Stewardship Review: Collection Extension](https://phabricator.wikimedia.org/T224922), ouverte, 17 abonnés, dernière activité le 26/10/2026. C'est là que se discute l'avenir de Spécial:Livre :
+- en octobre 2024, Bugreporter a demandé s'il fallait garder l'extension en production et a proposé à la place un outil sur Toolforge ou Cloud VPS, moins risqué ;
+- le 25/06/2025, Steelpillow a proposé MediaWiki2LaTeX pour remplacer le PDF de livres ;
+- le même jour, sbassett a compté environ 2 millions de requêtes vers Special:Book en 90 jours sur en.wikipedia, avec un usage notable sur es, de et it.
+
+Wikipedia2Book répond exactement à la proposition de Bugreporter. Un commentaire factuel prévient les 17 abonnés, c'est-à-dire les personnes qui décideront du sort de l'extension.
+
+```
+For the record, since a Toolforge tool was suggested above as a lower-risk way to keep book PDFs: Wikipedia2Book (https://wikipedia2book.toolforge.org/, AGPL, https://github.com/gmoulard/wikipedia2book) does this. It takes a saved book (Book:… or User:…/Books/…), a Wikibooks printable version or table of contents, or a list of pages from eight Wikimedia projects, and builds one printable PDF from the official Special:DownloadAsPdf PDF of each page, with a cover, a table of contents, bookmarks, page numbers and a license page; books of more than 300 articles are split into volumes. Nothing is stored on the server.
+
+If it helps the decision about Collection's download features, the PDF part of Special:Book could simply point to it, as fr:Modèle:Livre sauvegardé already does on every saved book; creating and saving books with Special:Book would keep working as it is. Disclosure: I am its author.
+```
+
+Avant de publier : si `Template:Saved book` sur en.wikipedia a aussi le lien, le citer en plus du modèle français. Ne pas commenter [T370740](https://phabricator.wikimedia.org/T370740) : c'est un bug sur le PDF d'un seul article, sans rapport avec les livres.
+
+## 16. Toolhub — compléter la fiche existante
+
+Toolhub a déjà deux fiches : [wikipedia2book](https://toolhub.wikimedia.org/tools/wikipedia2book), créée à la main (titre « wikipedia to PDF book »), et `toolforge-wikipedia2book`, importée automatiquement de Toolforge. La première est incomplète. Se connecter à Toolhub (compte Wikimédia), ouvrir la fiche, puis « Edit » :
+
+| Champ | Valeur actuelle | Valeur proposée |
+|---|---|---|
+| Titre | wikipedia to PDF book | Wikipedia2Book |
+| Sous-titre | vide | Printable PDF books from Wikimedia pages |
+| Description | Wikipédia seulement, « no project setup » | Builds a printable PDF book from a saved book, a Wikibooks printable version or table of contents, or a list of pages from Wikipedia, Wikisource, Wikibooks, Wikivoyage, Wikiversity, Wikiquote, Wiktionary and Wikinews. Uses the official PDF of each page, with a cover, a table of contents, page numbers and a license page; volumes beyond 300 articles. |
+| Mots-clés | vides | book, PDF, print, export, ebook, offline, Special:Book, Collection |
+| Wikis | `*.wikipedia.org` | `*.wikipedia.org`, `*.wikisource.org`, `*.wikibooks.org`, `*.wikivoyage.org`, `*.wikiversity.org`, `*.wikiquote.org`, `*.wiktionary.org`, `*.wikinews.org` |
+| Langues de l'interface | fr, en, arz | les 12 langues de `SUPPORTED_LANGUAGES` (`app/static/i18n.js`) |
+| Signalement des bugs | vide | https://github.com/gmoulard/wikipedia2book/issues |
+| Documentation développeur | vide | https://gmoulard.github.io/wikipedia2book/TechnicalSpec.en |
+| Élément Wikidata | vide | le QID de l'action 13a, une fois l'élément créé |
+
+Pas de conflit d'intérêts à signaler : c'est la fiche de ton propre outil.
+
+## 17. Messages système de Spécial:Livre — en, es, de, it
+
+Même demande que l'action 1, sur les wikis où sbassett a vu le plus de trafic vers Special:Book (T224922). Sur en.wikipedia, `MediaWiki:Coll-unknown subpage text` affiche encore le texte par défaut « This subpage of Book does not exist. »
+
+17a. en.wikipedia — page [MediaWiki talk:Coll-unknown subpage text](https://en.wikipedia.org/wiki/MediaWiki_talk:Coll-unknown_subpage_text), nouvelle section `Edit request: point to a working PDF tool` :
+
+```
+{{edit fully-protected|MediaWiki:Coll-unknown subpage text|answered=no}}
+Old links to book PDF rendering (Special:Book?bookcmd=render_collection…) now show "This subpage of Book does not exist." According to [[phab:T224922]], Special:Book still gets about 2 million requests every 90 days on this wiki. Please replace the message with:
+: ''Wikipedia no longer produces PDFs of books from this page. Paste the address of the saved book into [[toolforge:wikipedia2book/|Wikipedia2Book]] to get a PDF; see also [[Help:Books]].''
+and add to [[MediaWiki:Coll-notice-download-pdf-text]]:
+: ''To get a PDF of a whole book, save it, then use [[toolforge:wikipedia2book/|Wikipedia2Book]], listed in [[Help:Books]] and [[Wikipedia:Books]].''
+Disclosure: I am the author of Wikipedia2Book (conflict of interest), so please adapt or decline as you see fit. ~~~~
+```
+
+17b. es, de, it — attendre la réponse de l'action 1 (fr) et de 17a. Si l'une est acceptée, traduire le même texte et le déposer sur la page de demande aux administrateurs d'interface de chaque wiki (à repérer avant, par les liens interlangues de « Wikipedia:Interface administrators' noticeboard »).
+
+## 18. Réponses aux questions sur les livres en PDF (Teahouse, Help desk, Bistro…)
+
+Pas de message à l'avance : répondre seulement à une vraie question récente, sans relancer une discussion archivée.
+
+Où chercher (« book PDF », « livre PDF », « Special:Book », « Spécial:Livre ») :
+- en.wikipedia : [Wikipedia:Teahouse](https://en.wikipedia.org/wiki/Wikipedia:Teahouse), [Wikipedia:Help desk](https://en.wikipedia.org/wiki/Wikipedia:Help_desk), [Help talk:Books](https://en.wikipedia.org/wiki/Help_talk:Books), [Help talk:Download as PDF](https://en.wikipedia.org/wiki/Help_talk:Download_as_PDF) ;
+- fr.wikipedia : [Wikipédia:Le Bistro](https://fr.wikipedia.org/wiki/Wikip%C3%A9dia:Le_Bistro), [Wikipédia:Forum des nouveaux](https://fr.wikipedia.org/wiki/Wikip%C3%A9dia:Forum_des_nouveaux), [Discussion aide:Livres](https://fr.wikipedia.org/wiki/Discussion_aide:Livres).
+
+Modèle de réponse (en) :
+
+```
+:Book PDF rendering from [[Special:Book]] was turned off in 2017. You can paste the address of your saved book (or a list of articles) into [[toolforge:wikipedia2book/|Wikipedia2Book]], which builds a PDF from the official PDF of each article, with a cover and a table of contents. (Disclosure: I wrote that tool.) ~~~~
+```
+
+Ne pas écrire sur [Wikipedia talk:WikiProject Wikipedia-Books](https://en.wikipedia.org/wiki/Wikipedia_talk:WikiProject_Wikipedia-Books) : aucune discussion depuis avril 2022.
+
+## 19. Diff (blog communautaire de Wikimédia) — billet
+
+Proposer un billet sur [diff.wikimedia.org](https://diff.wikimedia.org/) (relecture par l'équipe éditoriale). Le billet doit raconter une utilisation, pas présenter un produit, et signaler le conflit d'intérêts (« I am the developer of the tool »).
+
+Titre proposé : `Printing Wikipedia again: PDF books from saved books and Wikibooks`
+
+Plan :
+1. Le constat : depuis 2017, Spécial:Livre ne produit plus de PDF, mais les livres enregistrés et les versions imprimables de Wikilivres existent toujours, et Special:Book reçoit encore des millions de visites (T224922).
+2. Un exemple : *Épaves de la rade de Saint-Pierre* (`docs/static/Wrecks-of-Saint-Pierre-harbor.json`), de la page de livre au PDF imprimé, avec deux ou trois captures.
+3. Le principe : PDF officiel de chaque page, rien de reconstruit, licence et auteurs repris, rien de gardé sur le serveur.
+4. Les usages : classe, atelier hors ligne, version papier d'un livre de Wikilivres, recueil de Wikisource.
+5. Les limites : 300 articles par volume, polices du PDF officiel (action 14).
+6. Comment contribuer : traductions, GitHub, Phabricator.
+
+## 20. Présentations orales
+
+20a. **WikiConvention francophone** : proposer une présentation courte (5 à 10 min) avec démo en direct (page de livre → PDF) dès l'appel à propositions sur Meta.
+
+20b. **[Wikimania 2027](https://meta.wikimedia.org/wiki/Wikimania_2027)** (Santiago du Chili, 3e trimestre 2027, appel à propositions pas encore publié) : thème « Offline and print: PDF books from Wikimedia projects », en ligne si pas de déplacement.
+
+## 21. Éducation et usage hors ligne — messages
+
+21a. **Wikimédia France, programme éducation** : message à l'équipe éducation (formulaire de contact du site de Wikimédia France) pour proposer l'outil aux enseignants qui veulent imprimer un dossier d'articles, avec un PDF d'exemple.
+
+21b. **Hors ligne** : page de discussion de [m:Offline](https://meta.wikimedia.org/wiki/Offline) (vérifier avant qu'elle est encore suivie) :
+
+```
+For offline and low-connectivity projects that need paper rather than files: [[toolforge:wikipedia2book/|Wikipedia2Book]] builds a printable PDF book from a list of articles or a saved book, from the official PDF of each page, in 12 interface languages and for eight Wikimedia projects. It may complement Kiwix where printed copies are needed (schools, libraries). Disclosure: I am its author. ~~~~
 ```
