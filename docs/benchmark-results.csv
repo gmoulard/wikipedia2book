@@ -88,3 +88,11 @@ date,version,target,level,scenario,pages,wikipedia_s,application_s,transfer_s,to
 2026-11-17,1.12.5+,workflow,min,50-pages,50,0.8,0.85,0.01,1.66,-7,ok
 2026-11-17,1.12.5+,workflow,min,200-pages,200,7.06,1.93,0.02,9.02,-4,ok
 2026-11-17,1.12.5+,workflow,min,livre-reference-images,107,18.64,1.85,0.04,20.53,-7,ok
+2026-11-18,1.13.0,workflow,max,50-pages,50,9.96,0.78,0.01,10.75,-14,ok
+2026-11-18,1.13.0,workflow,max,200-pages,200,19.66,1.78,0.02,21.47,-12,ok
+2026-11-18,1.13.0,workflow,max,1-article,4,0.22,0.37,0.0,0.59,-14,ok
+2026-11-18,1.13.0,workflow,max,50-pages-sans-numerotation,49,0.8,0.54,0.01,1.34,-11,ok
+2026-11-18,1.13.0,workflow,max,200-pages-chapitres,205,4.53,1.94,0.02,6.49,-12,ok
+2026-11-18,1.13.0,workflow,max,200-pages-a5-paysage,201,17.84,1.77,0.04,19.65,-12,ok
+2026-11-18,1.13.0,workflow,max,20-articles,253,5.05,2.22,0.02,7.29,-12,ok
+2026-11-18,1.13.0,workflow,max,livre-reference-images,107,15.57,1.69,0.03,17.29,-15,ok
