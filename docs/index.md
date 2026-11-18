@@ -21,15 +21,6 @@ Assemble the official PDFs of Wikipedia (and other Wikimedia projects) pages int
 * Generate the book with navigation bookmarks, continuous page numbering and a table of contents.
 * Interface in 12 languages: French, English, Spanish, Portuguese, Italian, German, Dutch, Turkish, Chinese, Japanese, Arabic and Persian (right-to-left for Arabic and Persian). The headings the app adds to the PDF (table of contents, chapters, conclusion, license, bookmarks…) follow the interface language.
 
-## Architecture
-
-- Python and FastAPI for the backend.
-- HTML, CSS and JavaScript for the web interface (single page, no framework).
-- Official MediaWiki API for search and exploration; official PDF endpoint to fetch full articles at export time.
-- JSON exchanged with the API, with no server-side persistence.
-- WeasyPrint for the cover, chapter pages, license page (CC BY-SA 4.0, with article sources) and conclusion; pypdf to recompose pages to the book format; PyMuPDF to assemble the book on temporary disk in batches, so that large books do not run out of memory, and to add bookmarks, links and page numbers; reportlab for converting imported images to PDF.
-- Docker for deployment.
-
 ## Documentation 
 
 - [documentation](https://gmoulard.github.io/wikipedia2book/) on site GitHub Pages
@@ -52,68 +43,6 @@ Every document is listed in [docs.md](docs.md):
 ### developement 
 - [Northflank](https://prod--wikipedia2book--wkvpbnfj6h4v.code.run) 
 
-## Repository structure
-
-```
-wikipedia2book/
-├── app/                         # FastAPI application (stateless server)
-│   ├── main.py                  # API endpoints and PDF assembly (progress streamed as NDJSON)
-│   ├── models.py                # Pydantic models: the whole book state (Project, Article, UploadedDocument)
-│   ├── wikipedia_api.py         # Single MediaWiki client: search, links, book pages, official PDFs
-│   ├── admin.py                 # Administration page: Wikimedia sign-in of administrators
-│   ├── explorer.py              # Breadth-first exploration of internal links
-│   ├── json_source.py           # Downloads a JSON book from a URL for /api/pdf/from-json
-│   ├── book_builder.py          # HTML for cover, table of contents, chapters, license and conclusion
-│   ├── pdf_generator.py         # WeasyPrint rendering, page fitting, page numbers, image import
-│   ├── isolation.py             # Runs the book assembly in a separate process (memory given back after each book)
-│   ├── resource_gate.py           # Makes each generation stage wait while the server lacks memory or disk space
-│   ├── request_limits.py        # Abuse protection: request size, generations per client, send timeout, alerts
-│   └── static/                  # Single-page web interface (no framework)
-│       ├── index.html
-│       ├── app.js               # Front-end logic
-│       ├── i18n.js              # Interface translations (12 languages)
-│       ├── admin.html, admin.js, admin.css   # Administration page (/admin)
-│       ├── styles.css
-│       ├── Wikipedia2bookLogo.png
-│       ├── WikipediaLogo.png  # Wikipedia logo from Commons (CC BY-SA 3.0, Wikimedia trademark), optional on the cover and last page
-│       └── testPerformanceReference.json   (reference book of the benchmark)
-├── scripts/
-│   ├── docker-build.sh          # Docker build with git commit/date/author injected
-│   ├── toolforge-deploy.sh      # Deployment script run in the Toolforge tool account
-│   ├── toolviews_stats.py       # Daily Toolviews usage statistics (not part of the app)
-│   ├── toolforge-hourly.sh, toolforge_hourly.py  # Hits per hour from the Toolforge webservice logs
-│   ├── update-stats.sh          # Statistics update run by GitHub Actions (daily and before each deployment)
-│   ├── toolviews_chart.py       # Usage charts page for GitHub Pages
-│   ├── benchmark.py, benchmark/     # Benchmark run before each production release
-│   ├── benchmark_table.py       # Builds the benchmark results table of the specifications from docs/benchmark-results.csv
-│   └── limit_check.py           # Limit test: largest book a deployment can generate (section 13.12)
-├── tests/                       # unittest suite (no network, WeasyPrint stubbed when missing)
-├── .github/workflows/           # Toolforge deployment, Toolviews stats, GitHub Pages, tag check, benchmark, security
-├── Dockerfile                   # Image used by Northflank
-├── Procfile, Aptfile, .python-version, toolforge-fonts.conf  # Toolforge buildpacks
-├── toolinfo.json                # Toolhub metadata
-├── CITATION.cff                 # Citation metadata
-├── codemeta.json                # CodeMeta software metadata
-├── requirements.txt             # Python dependencies
-├── .claude/skills/              # Git submodule (gmoulard/claude_skills): generic Claude Code procedures code-style, spec-sync, debug-frontend, release, deploy-production
-├── docs/                        # Documentation site (GitHub Pages source)
-│   ├── docs.md                  # List of every document
-│   ├── FunctionalSpec.fr.md, FunctionalSpec.en.md  # Functional specification (French original, English translation)
-│   ├── TechnicalSpec.fr.md, TechnicalSpec.en.md    # Technical specification
-│   ├── CHANGELOG.fr.md, CHANGELOG.en.md            # Version history
-│   ├── _config.yml              # Just the Docs theme for the site
-│   ├── benchmark-results.csv    # Every benchmark measurement, for analysis
-│   ├── toolviews.csv, toolforge_hourly.csv, stats.md  # Usage statistics and their charts (generated)
-│   ├── comparison-mediawiki2latex.md  # Comparison with mediawiki2latex
-│   ├── comparison-ws-export.md  # Comparison with WS Export
-│   ├── helpSearch.<lang>.md  # User guide for the source field in the 12 interface languages (French is the reference)
-│   ├── tests-manuels.md  # Manual tests of the source field, browser and API (in French)
-│   ├── testLimitetoolforge.md   # Limit test results on Toolforge, by version (French)
-│   └── _includes/head_custom.html  # Mermaid rendering and statistics chart on the site
-├── CODE_OF_CONDUCT.md
-└── LICENSE                      # GNU AGPL v3.0
-```
-
 ## Project status
 
 The repository contains the FastAPI backend and the matching web interface. It lets you build the book in browser memory, search for or add references without downloading the full content, explore Wikipedia links, control the selection, organize chapters and set up the cover. At generation time, the full PDFs of the selected articles are fetched from Wikipedia and merged in memory. The server stores neither the book nor the PDFs: the user explicitly imports and downloads a JSON file from the interface.
@@ -131,16 +60,7 @@ uvicorn app.main:app --reload
 
 The web interface is available at `http://localhost:8000` and the interactive API documentation at `http://localhost:8000/docs`.
 
-The container can be run directly:
-
-```bash
-sh scripts/docker-build.sh
-docker run --rm -p 8000:8000 wikipedia2book
-```
-
-The `scripts/docker-build.sh` script automatically injects the git commit, date and author into the image via `--build-arg`, so the footer displays the correct version.
-
-The application is then reachable at `http://localhost:8000`.
+To run it in the Docker container instead, see section 13.4 of the [technical specification](TechnicalSpec.en.md).
 
 ## Administration page
 
@@ -205,55 +125,7 @@ python scripts/limit_check.py --base-url https://your-server --search 50
 
 It doubles the number of articles until the first failure, then narrows down by bisection. Add `--save-pdf ./tmp` to keep each generated book (`./tmp` is ignored by git). With the monitoring token (`Authorization: Bearer`, see "Administration page"), `GET /api/health/details` shows the memory of the container and its limit, and `GET /api/health/generations` the memory reached at each stage of the last generations (details in section 13 of the [technical specification](TechnicalSpec.en.md)).
 
-**Viewing alerts.** Each time a limit is crossed (request too large, generations per client or for the whole server, full queue, send timeout, MediaWiki API slowed down), the server writes one JSON line containing `"alert"` to its standard output and counts it in `GET /api/health/details` (field `alerts`, count and last time per type). Both are reset when the server restarts (field `started`). No email is sent. `/api/health/details` needs the monitoring token (`WIKIPEDIA2BOOK_MONITOR_TOKEN`, sent as `Authorization: Bearer`); the administration page `/admin` shows the same counters after a Wikimedia sign-in.
-
-| Environment | Counters | Log lines |
-|---|---|---|
-| Toolforge | `curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" https://wikipedia2book.toolforge.org/api/health/details \| jq '.started, .alerts'` | `ssh <login>@login.toolforge.org`, `become wikipedia2book`, then `toolforge webservice logs \| grep '"alert"'` (`-f` to follow) |
-| Northflank | `curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" https://prod--wikipedia2book--wkvpbnfj6h4v.code.run/api/health/details` | Northflank console, service *Logs* tab, search `"alert"` |
-| Docker | `curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" http://localhost:8000/api/health/details \| jq .alerts` | `docker logs <container> 2>&1 \| grep '"alert"'` (`-f` to follow) |
-| Local `uvicorn` | `curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" http://localhost:8000/api/health/details` | The terminal running the server |
-
-Toolforge, counters and log lines (log over SSH, in the tool account):
-
-```bash
-curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" https://wikipedia2book.toolforge.org/api/health/details | jq '.started, .alerts'
-curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" https://wikipedia2book.toolforge.org/api/health/details | jq -r '.alerts | to_entries[] | "\(.key)  \(.value.count)  \(.value.last)"'
-```
-
-```powershell
-(Invoke-RestMethod https://wikipedia2book.toolforge.org/api/health/details -Headers @{Authorization = "Bearer $env:WIKIPEDIA2BOOK_MONITOR_TOKEN"}).alerts
-```
-
-```bash
-ssh <login>@login.toolforge.org
-become wikipedia2book
-toolforge webservice logs | grep '"alert"'
-toolforge webservice logs -f | grep --line-buffered '"alert"'
-for pod in $(kubectl get pods -o name | grep '/wikipedia2book-'); do kubectl logs --timestamps "$pod" | grep '"alert"'; done
-for pod in $(kubectl get pods -o name | grep '/wikipedia2book-'); do kubectl logs "$pod" | grep -o '"alert": "[a-z_]*"'; done | sort | uniq -c
-```
-
-```bash
-ssh <login>@login.toolforge.org 'become wikipedia2book toolforge webservice logs' | grep '"alert"'
-```
-
-Northflank, counters and log lines (Northflank CLI, Node.js 22.13 or later; project `wikipedia2book` and service `prod`, as in the public address):
-
-```bash
-curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" https://prod--wikipedia2book--wkvpbnfj6h4v.code.run/api/health/details | jq '.started, .alerts'
-```
-
-```bash
-npm i -g @northflank/cli
-northflank login
-northflank get service logs --projectId wikipedia2book --serviceId prod --textIncludes '"alert"' --lineLimit 500
-northflank get service logs --projectId wikipedia2book --serviceId prod --textIncludes '"alert"' -f
-northflank get service logs --projectId wikipedia2book --serviceId prod --textIncludes '"alert"' --lineLimit 1000 | grep -o '"alert": "[a-z_]*"' | sort | uniq -c
-```
-
-How to read them: section 14 of the [technical specification](TechnicalSpec.en.md).
-
+**Viewing alerts.** Each time a limit is crossed, the server writes a JSON line containing `"alert"` to its standard output and counts it in `GET /api/health/details`. Commands to read them on Toolforge, Northflank, Docker and a local server, and how to interpret them: section 14 of the [technical specification](TechnicalSpec.en.md).
 
 ## Technology stack
 
