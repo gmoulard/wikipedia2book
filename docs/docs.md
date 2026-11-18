@@ -6,6 +6,7 @@ Every document in the `docs/` folder. French is the reference; section numbers a
 
 | Document | Français | English | Contenu / Content |
 |---|---|---|---|
+| Accueil / Home | | [index.md](index.md) | Page d'accueil du site : présentation, fonctionnalités, installation, déploiement. |
 | Spécification fonctionnelle / Functional specification | [FunctionalSpec.fr.md](FunctionalSpec.fr.md) | [FunctionalSpec.en.md](FunctionalSpec.en.md) | Sections 1 à 12, 15, 16, 18 : livre, sources, organisation, format, mise en page, génération du PDF, interface, administration, licences, critères d'acceptation, évolutions. |
 | Spécification technique / Technical specification | [TechnicalSpec.fr.md](TechnicalSpec.fr.md) | [TechnicalSpec.en.md](TechnicalSpec.en.md) | Sections 13, 14, 17 : architecture, API, déploiement, statistiques, schémas, benchmark, test aux limites, optimisation du conteneur, sécurité, structure du dépôt. |
 | Historique des versions / Version history | [CHANGELOG.fr.md](CHANGELOG.fr.md) | [CHANGELOG.en.md](CHANGELOG.en.md) | Section 19 : une ligne par version publiée. |

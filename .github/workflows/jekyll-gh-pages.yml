@@ -52,10 +52,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-      - name: Usage statistics page and home page
+      - name: Usage statistics page
         run: |
           python3 scripts/toolviews_chart.py docs/toolviews.csv docs/stats.md --hourly docs/toolforge_hourly.csv
-          sed -E -e 's#\]\(docs/#](#g' -e 's#\]\((CODE_OF_CONDUCT\.md|LICENSE|CITATION\.cff|codemeta\.json)\)#](https://github.com/gmoulard/wikipedia2book/blob/main/\1)#g' README.md > docs/index.md
       - name: Setup Pages
         uses: actions/configure-pages@v6
       - name: Build with Jekyll
