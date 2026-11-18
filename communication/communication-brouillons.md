@@ -29,12 +29,13 @@ Pour toutes les publications :
 | Action 13a (Wikidata) | non publiée | Création refusée par l'AbuseFilter n° 11 (avertissement « badwords ») ; renvoyer la même modification confirme l'avertissement : à décider. |
 | Action 15 (Phabricator) | moi depuis ton compte, 18/11 11:32 | Commentaire publié sur [T224922](https://phabricator.wikimedia.org/T224922#12575282), texte du brouillon inchangé (en:Template:Saved book ne renvoie pas vers Wikipedia2Book : seul le modèle français est cité), avec mention de l'auteur. | Réponse à suivre. |
 | Action 14 (Phabricator, caractères CJK rares) | toi, 18/11 | Tâche [T445303](https://phabricator.wikimedia.org/T445303) déposée (étiquettes Proton et All-and-every-Wikisource, PDF-Rendering étant archivé), brouillon dans [phabricator-cjk-wikisource.md](phabricator-cjk-wikisource.md). | Réponse à suivre. |
-| Action 16 (Toolhub) | non publiée | Connexion OAuth Wikimédia à faire par toi sur toolhub.wikimedia.org. |
+| Action 16 (Toolhub) | toi (connexion), puis moi depuis ton compte par l'API, 18/11 | Fiche [wikipedia2book](https://toolhub.wikimedia.org/tools/wikipedia2book) complétée selon le tableau de l'action 16 (wikis et langues aussi dans les annotations), icône [Wikipedia2book_Logo.png](https://commons.wikimedia.org/wiki/File:Wikipedia2book_Logo.png), espace parasite retirée des champs auteur, e-mail gardé. | Élément Wikidata à ajouter après l'action 13a. |
 | Action 19 (Diff) | toi, puis moi depuis ton compte, 18/11 | Billet [n° 223381](https://diff.wikimedia.org/?p=223381) : présentation en étapes et captures, puis texte de [story.en.md](story.en.md) ajouté à la suite ; soumis à relecture le 18/11, copie dans [diff-article.md](diff-article.md). | Relecture de l'équipe éditoriale à suivre ; attribution de l'image et remerciements à ajouter. |
-| Action 20a (WikiConvention francophone) | toi, 18/11 | Présentation proposée. | Réponse à suivre. |
+| Action 20a (WikiConvention francophone) | vérifié le 18/11 | Aucune édition planifiée, rien à proposer. | À reprendre à l'annonce d'une prochaine édition. |
 | Action 20b (Wikimania 2027) | toi, 18/11 | Fait. | Réponse à suivre. |
 | Action 17b (es, de) | moi depuis ton compte, 18/11 11:36–11:37 UTC | Demandes aux administrateurs d'interface publiées sans attendre les réponses à 1 et 17a, avec logo et conflit d'intérêts : es.wikipedia [Tablón de solicitudes](https://es.wikipedia.org/w/index.php?diff=176352232) (format Asunto / Usuario / Respuesta) ; de.wikipedia [Technik/Skin/MediaWiki/Änderungen](https://de.wikipedia.org/w/index.php?diff=272266029). Pas it (ancien compte bloqué). | Réponses à suivre. |
-| Actions 12c, 18, 21 | non publiées | Conditionnelles (réponse attendue), à faire au fil de l'eau, ou hors wiki ; [m:Talk:Offline](https://meta.wikimedia.org/wiki/Talk:Offline) n'existe pas (page non suivie), 21b abandonnée. |
+| Action 12c (de.wikibooks) | moi depuis ton compte, 18/11 11:46 UTC | Publiée sans attendre de réponse à l'action 9 (ton choix), en réponse sous elle sur [Hilfe Diskussion:Sammlungen](https://de.wikibooks.org/w/index.php?diff=1094422) : code de `MediaWiki:Gadget-addWikipedia2BookLink.js` (lien « Wikipedia2Book (PDF) » sous « Drucken/exportieren », sinon dans le menu Werkzeuge, vers `?source=<adresse de la page>`), description et ligne de `MediaWiki:Gadgets-definition`, proposé sans `default` (activation sur demande), logo déjà en tête de la section, conflit d'intérêts signalé. | À installer par un administrateur d'interface ; réponse à suivre. |
+| Actions 18, 21 | non publiées | Conditionnelles (réponse attendue), à faire au fil de l'eau, ou hors wiki ; [m:Talk:Offline](https://meta.wikimedia.org/wiki/Talk:Offline) n'existe pas (page non suivie), 21b abandonnée. |
 | fr.wikibooks [Wikilivres/Créer la version imprimable d'un livre](https://fr.wikibooks.org/wiki/Wikilivres/Cr%C3%A9er_la_version_imprimable_d%27un_livre) | 16/11 | Remplace l'action prévue sur « Aide:Version imprimable », page qui n'existe pas. |
 
 ## 0. Correction de Help:Print versions (en.wikibooks) — modification directe
@@ -223,7 +224,7 @@ Ich bin der Autor des Werkzeugs (Interessenkonflikt); die Änderung müsste ein 
 
 12b. de.wikisource — [Wikisource:Skriptorium](https://de.wikisource.org/wiki/Wikisource:Skriptorium), même proposition, en précisant que WS Export reste l'outil principal pour une œuvre seule et que Wikipedia2Book sert surtout à relier plusieurs textes en un seul PDF.
 
-12c. de.wikibooks — proposition du gadget `addWikipedia2BookLink` : seulement si la Rundschau (action 9) répond favorablement.
+12c. de.wikibooks — proposition du gadget `addWikipedia2BookLink` : seulement si la Rundschau (action 9) répond favorablement. [x] 18/11/2026 : publiée sans attendre ([diff](https://de.wikibooks.org/w/index.php?diff=1094422)).
 
 ## 13. Hors des wikis
 
