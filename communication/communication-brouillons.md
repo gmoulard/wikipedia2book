@@ -28,9 +28,13 @@ Pour toutes les publications :
 | Action 5 (it.wikipedia) | toi, compte CapitaineCanette, 18/11 11:09 UTC | Publiée sur [Discussioni aiuto:Libri](https://it.wikipedia.org/w/index.php?diff=153424523), avec logo, conflit d'intérêts et mention de l'ancien compte (bloqué sans limite de durée depuis le 22/08/2026, motif « Nome utente inappropriato », blocage #1029446). | Réponse à suivre. |
 | Action 13a (Wikidata) | non publiée | Création refusée par l'AbuseFilter n° 11 (avertissement « badwords ») ; renvoyer la même modification confirme l'avertissement : à décider. |
 | Action 15 (Phabricator) | moi depuis ton compte, 18/11 11:32 | Commentaire publié sur [T224922](https://phabricator.wikimedia.org/T224922#12575282), texte du brouillon inchangé (en:Template:Saved book ne renvoie pas vers Wikipedia2Book : seul le modèle français est cité), avec mention de l'auteur. | Réponse à suivre. |
-| Actions 14, 16 (Phabricator, Toolhub) | non publiées | Phabricator connecté (action 15 publiée) ; connexion OAuth Wikimédia à faire par toi sur toolhub.wikimedia.org. |
+| Action 14 (Phabricator, caractères CJK rares) | toi, 18/11 | Tâche [T445303](https://phabricator.wikimedia.org/T445303) déposée (étiquettes Proton et All-and-every-Wikisource, PDF-Rendering étant archivé), brouillon dans [phabricator-cjk-wikisource.md](phabricator-cjk-wikisource.md). | Réponse à suivre. |
+| Action 16 (Toolhub) | non publiée | Connexion OAuth Wikimédia à faire par toi sur toolhub.wikimedia.org. |
+| Action 19 (Diff) | toi, puis moi depuis ton compte, 18/11 | Billet [n° 223381](https://diff.wikimedia.org/?p=223381) : présentation en étapes et captures, puis texte de [story.en.md](story.en.md) ajouté à la suite ; soumis à relecture le 18/11, copie dans [diff-article.md](diff-article.md). | Relecture de l'équipe éditoriale à suivre ; attribution de l'image et remerciements à ajouter. |
 | Action 20a (WikiConvention francophone) | toi, 18/11 | Présentation proposée. | Réponse à suivre. |
-| Actions 12c, 17b, 18, 19, 20b, 21 | non publiées | Conditionnelles (réponse attendue), à faire au fil de l'eau, ou hors wiki ; [m:Talk:Offline](https://meta.wikimedia.org/wiki/Talk:Offline) n'existe pas (page non suivie), 21b abandonnée. |
+| Action 20b (Wikimania 2027) | toi, 18/11 | Fait. | Réponse à suivre. |
+| Action 17b (es, de) | moi depuis ton compte, 18/11 11:36–11:37 UTC | Demandes aux administrateurs d'interface publiées sans attendre les réponses à 1 et 17a, avec logo et conflit d'intérêts : es.wikipedia [Tablón de solicitudes](https://es.wikipedia.org/w/index.php?diff=176352232) (format Asunto / Usuario / Respuesta) ; de.wikipedia [Technik/Skin/MediaWiki/Änderungen](https://de.wikipedia.org/w/index.php?diff=272266029). Pas it (ancien compte bloqué). | Réponses à suivre. |
+| Actions 12c, 18, 21 | non publiées | Conditionnelles (réponse attendue), à faire au fil de l'eau, ou hors wiki ; [m:Talk:Offline](https://meta.wikimedia.org/wiki/Talk:Offline) n'existe pas (page non suivie), 21b abandonnée. |
 | fr.wikibooks [Wikilivres/Créer la version imprimable d'un livre](https://fr.wikibooks.org/wiki/Wikilivres/Cr%C3%A9er_la_version_imprimable_d%27un_livre) | 16/11 | Remplace l'action prévue sur « Aide:Version imprimable », page qui n'existe pas. |
 
 ## 0. Correction de Help:Print versions (en.wikibooks) — modification directe
@@ -312,6 +316,35 @@ Disclosure: I am the author of Wikipedia2Book (conflict of interest), so please 
 ```
 
 17b. es, de, it — attendre la réponse de l'action 1 (fr) et de 17a. Si l'une est acceptée, traduire le même texte et le déposer sur la page de demande aux administrateurs d'interface de chaque wiki (à repérer avant, par les liens interlangues de « Wikipedia:Interface administrators' noticeboard »).
+
+Publiée le 18/11 sans attendre les réponses, sur es et de seulement (pas it : ancien compte bloqué) ; voir « Déjà fait ».
+
+17b-es. es.wikipedia — page [Wikipedia:Administradores de interfaz/Tablón de solicitudes](https://es.wikipedia.org/wiki/Wikipedia:Administradores_de_interfaz/Tabl%C3%B3n_de_solicitudes), nouvelle section `MediaWiki:Coll-unknown subpage text y MediaWiki:Coll-notice-download-pdf-text: PDF de los libros`, résumé `Solicitud: mensajes de Especial:Libro (conflicto de intereses: soy el autor de Wikipedia2Book)` :
+
+```
+; Asunto
+[[File:Wikipedia2book Logo.png|70px|link=toolforge:wikipedia2book/]]
+Los enlaces antiguos a la generación de PDF de libros (Especial:Libro?bookcmd=render_collection…) muestran ahora el mensaje por defecto de [[MediaWiki:Coll-unknown subpage text]]. Según [[phab:T224922]], Especial:Libro sigue recibiendo muchas visitas en este wiki. Propongo crear [[MediaWiki:Coll-unknown subpage text]] con:
+: ''Wikipedia ya no genera PDF de libros desde esta página. Pegue la dirección del libro guardado en [[toolforge:wikipedia2book/|Wikipedia2Book]] para obtener un PDF; véase también [[Ayuda:Libros]].''
+y añadir a [[MediaWiki:Coll-notice-download-pdf-text]]:
+: ''Para obtener el PDF de un libro completo, guárdelo y use [[toolforge:wikipedia2book/|Wikipedia2Book]].''
+Aviso: soy el autor de Wikipedia2Book (conflicto de intereses); adapten o rechacen la propuesta como estimen oportuno.
+; Usuario que lo solicita
+* ~~~~
+; Respuesta
+(a rellenar por un administrador de interfaz)
+```
+
+17b-de. de.wikipedia — page [Wikipedia:Technik/Skin/MediaWiki/Änderungen](https://de.wikipedia.org/wiki/Wikipedia:Technik/Skin/MediaWiki/%C3%84nderungen), nouvelle section `MediaWiki:Coll-unknown subpage text und MediaWiki:Coll-notice-download-pdf-text: PDF von Büchern`, résumé `Änderungswunsch: Systemnachrichten von Spezial:Buch (Interessenkonflikt: ich bin der Autor von Wikipedia2Book)` :
+
+```
+[[File:Wikipedia2book Logo.png|70px|link=toolforge:wikipedia2book/]]
+Alte Links zur PDF-Erzeugung von Büchern (Spezial:Buch?bookcmd=render_collection…) zeigen jetzt nur die Standardmeldung von [[MediaWiki:Coll-unknown subpage text]]. Laut [[phab:T224922]] wird Spezial:Buch in diesem Wiki weiterhin häufig aufgerufen. Vorschlag: [[MediaWiki:Coll-unknown subpage text]] anlegen mit
+: ''Wikipedia erzeugt auf dieser Seite keine PDFs von Büchern mehr. Füge die Adresse des gespeicherten Buchs in [[toolforge:wikipedia2book/|Wikipedia2Book]] ein, um ein PDF zu erhalten; siehe auch [[Hilfe:Buchfunktion]].''
+und in [[MediaWiki:Coll-notice-download-pdf-text]] ergänzen:
+: ''Für ein PDF eines ganzen Buchs: Buch speichern, dann [[toolforge:wikipedia2book/|Wikipedia2Book]] verwenden.''
+Hinweis: Ich bin der Autor von Wikipedia2Book (Interessenkonflikt); bitte nach eigenem Ermessen anpassen oder ablehnen. ~~~~
+```
 
 ## 18. Réponses aux questions sur les livres en PDF (Teahouse, Help desk, Bistro…)
 
