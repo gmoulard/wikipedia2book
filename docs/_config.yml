@@ -24,6 +24,9 @@ compress_html:
   ignore:
     envs: all
 
+exclude:
+  - serve-docs.ps1
+
 relative_links:
   enabled: true
   collections: false
