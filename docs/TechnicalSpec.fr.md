@@ -26,6 +26,10 @@ Traduction anglaise : [TechnicalSpec.en.md](https://gmoulard.github.io/wikipedia
 	- [13.13 Stratégie d'optimisation du conteneur](#1313-strat%C3%A9gie-doptimisation-du-conteneur)
 - [14. Sécurité et robustesse](#14-s%C3%A9curit%C3%A9-et-robustesse)
 - [17. Structure du dépôt](#17-structure-du-dépôt)
+- [20. Exécution et déploiement d'une instance](#20-ex%C3%A9cution-et-d%C3%A9ploiement-dune-instance)
+	- [20.1 Lancer l'application](#201-lancer-lapplication)
+	- [20.2 Page d'administration](#202-page-dadministration)
+	- [20.3 Déployer son propre conteneur](#203-d%C3%A9ployer-son-propre-conteneur)
 
 ## 13\. Architecture technique
 
@@ -991,3 +995,143 @@ Wikipedia2Book/
 ```
 
 Chaque fichier de code (`.py`, `.js`, `.css`, `index.html`, scripts shell, `Dockerfile`, workflows GitHub Actions) commence par un en-tête de licence AGPL-3.0 (projet, dépôt, copyright, version 3 de la licence). `CITATION.cff` et `codemeta.json` décrivent la version archivée sur Software Heritage (v1.6.4, SWHID `swh:1:dir:9c7c016d9603a4b0201ad64535767a353031bd91`) ; `CODE_OF_CONDUCT.md` renvoie au code de conduite MediaWiki.
+
+## 20\. Exécution et déploiement d'une instance
+
+Comment lancer l'application, activer sa page d'administration et déployer son propre conteneur. Le déploiement des instances officielles (Northflank, Toolforge) est décrit dans les sections 13.5 à 13.7.
+
+### 20.1 Lancer l'application
+
+Avec Python 3.12 et les dépendances système de WeasyPrint installées :
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+L'interface web est accessible sur `http://localhost:8000` et la documentation interactive de l'API sur `http://localhost:8000/docs`.
+
+Le conteneur peut être lancé directement :
+
+```bash
+sh scripts/docker-build.sh
+docker run --rm -p 8000:8000 wikipedia2book
+```
+
+Le script `scripts/docker-build.sh` injecte automatiquement dans l'image le commit, la date et l'auteur git par `--build-arg`, pour que le pied de page affiche la bonne version.
+
+L'application est alors accessible sur `http://localhost:8000`.
+
+### 20.2 Page d'administration
+
+`/admin` montre l'état, l'utilisation et les performances du service (mémoire, générations en cours, requêtes par heure, durées, limites et alertes) aux administrateurs, qui se connectent avec leur compte Wikimédia (OAuth 2.0, identification seulement). Détails en section 12.2 de la [spécification fonctionnelle](FunctionalSpec.fr.md). Pour l'activer sur un déploiement :
+
+1. Enregistrer une application OAuth 2.0 sur [Special:OAuthConsumerRegistration](https://meta.wikimedia.org/wiki/Special:OAuthConsumerRegistration/propose/oauth2) : « User identity verification only », adresse de retour `https://<votre-hôte>/admin/callback`. Elle est approuvée automatiquement.
+2. Donner au serveur l'identifiant du client, son secret et l'adresse de retour. Sur Toolforge, l'adresse de retour est posée dans le `Procfile` ; les deux secrets vont dans l'environnement de l'outil :
+
+   ```bash
+   toolforge envvars create WIKIPEDIA2BOOK_OAUTH_CLIENT_ID
+   ```
+
+   ```bash
+   toolforge envvars create WIKIPEDIA2BOOK_OAUTH_CLIENT_SECRET
+   ```
+
+   puis redémarrer le webservice. Ailleurs, positionner `WIKIPEDIA2BOOK_OAUTH_CLIENT_ID`, `WIKIPEDIA2BOOK_OAUTH_CLIENT_SECRET` et `WIKIPEDIA2BOOK_OAUTH_CALLBACK` dans l'environnement du conteneur.
+3. Facultatif : lister les administrateurs dans `WIKIPEDIA2BOOK_ADMINS`, noms d'utilisateur Wikimédia écrits en hexadécimal UTF-8, séparés par des virgules (`python -c "print('Exemple'.encode().hex())"`).
+4. Pour lire les endpoints de supervision `GET /api/health/details` et `GET /api/health/generations` depuis un script, positionner `WIKIPEDIA2BOOK_MONITOR_TOKEN` (32 caractères au moins, `python -c "import secrets; print(secrets.token_urlsafe(32))"`) et l'envoyer en `Authorization: Bearer <jeton>` ; sans la variable, ces endpoints répondent toujours HTTP 401.
+
+### 20.3 Déployer son propre conteneur
+
+Deux réglages déterminent le poids que peut avoir une génération. Ce sont des variables d'environnement, posées dans le `Dockerfile` (ligne `ENV`) et lues au démarrage du serveur :
+
+| Variable | Valeur par défaut dans le `Dockerfile` | Signification |
+|---|---|---|
+| `WIKIPEDIA2BOOK_ARTICLE_LIMIT` | `300` (aussi la valeur par défaut quand la variable n'est pas positionnée, sur tous les hébergements) | Nombre maximal d'articles par livre. Au-delà, l'API refuse le livre d'emblée (HTTP 413, code `too_many_articles`) ; l'interface web lit la limite dans `/api/version` et génère alors le livre en plusieurs volumes, chacun sous la limite. `0` lève la limite. |
+| `WIKIPEDIA2BOOK_DOWNLOADS` | `2` | Nombre de PDF d'articles téléchargés depuis Wikipédia en même temps pour un livre. |
+| `WIKIPEDIA2BOOK_MEMORY_RATIO` | `0.95` (valeur par défaut, absente du `Dockerfile`) | Part de la limite de mémoire du conteneur que les générations peuvent utiliser. Avant chaque étape (téléchargement, recomposition, assemblage), une génération estime la mémoire dont elle a besoin d'après la taille des fichiers et attend, en affichant « Serveur occupé », tant que la mémoire utilisée plus les réserves en cours plus son estimation dépasseraient cette part. `0` désactive le contrôle. |
+| `WIKIPEDIA2BOOK_GENERATIONS_RATIO` | `0.5` (valeur par défaut, absente du `Dockerfile`) | Part de la limite de mémoire du conteneur réservée par les générations admises en même temps (25 Mo + 3 fois les données base64 du livre chacune). Les générations suivantes attendent dès le début, en affichant « Serveur occupé », avant de charger quoi que ce soit. `0` désactive le contrôle. |
+| `MALLOC_ARENA_MAX` | `2` (posée dans le `Dockerfile` et dans le `Procfile` de Toolforge) | Limite les arènes mémoire de la glibc pour que le serveur rende au système la mémoire libérée. |
+| `WIKIPEDIA2BOOK_CLIENT_GENERATIONS` | `5` (valeur par défaut) | Générations simultanées par client (adresse IP publique, et jeton aléatoire gardé par le navigateur). Au-delà, HTTP 429 avec `Retry-After` ; l'interface web attend et réessaie. `0` lève la limite. |
+| `WIKIPEDIA2BOOK_CLIENT_PER_MINUTE` | `20` (valeur par défaut) | Générations lancées par client et par minute. `0` lève la limite. |
+| `WIKIPEDIA2BOOK_TOTAL_GENERATIONS` | `0` (valeur par défaut ; `50` sur Toolforge) | Générations simultanées pour tout le serveur, pour les hébergements qui masquent l'adresse des visiteurs. `0` lève la limite. |
+| `WIKIPEDIA2BOOK_TOTAL_PER_MINUTE` | `0` (valeur par défaut ; `200` sur Toolforge) | Générations lancées par minute pour tout le serveur. `0` lève la limite. |
+| `WIKIPEDIA2BOOK_WAITING_GENERATIONS` | `100` (valeur par défaut) | Générations en attente d'admission en même temps ; les suivantes reçoivent HTTP 429. `0` lève la limite. |
+| `WIKIPEDIA2BOOK_CLIENT_IP_HEADER` | vide (valeur par défaut) | En-tête qui porte l'adresse du visiteur quand le conteneur tourne derrière un proxy de confiance, par exemple `x-forwarded-for` (sa dernière valeur est utilisée). Le laisser vide sans proxy : un client pourrait écrire l'en-tête lui-même. |
+| `WIKIPEDIA2BOOK_DISK_RATIO` | `0.95` (valeur par défaut, absente du `Dockerfile`) | Part du disque temporaire que les générations peuvent remplir. Un téléchargement d'article (30 Mo réservés) et l'assemblage du livre (50 Mo + deux fois la taille des articles) attendent, en affichant « Serveur occupé », tant que l'espace disque utilisé plus les réserves en cours plus leur estimation dépasseraient cette part. `0` désactive le contrôle. |
+
+Les modifier dans le `Dockerfile` puis reconstruire l'image, ou les remplacer au lancement du conteneur, sans reconstruire :
+
+```bash
+docker run --rm -p 8000:8000 -e WIKIPEDIA2BOOK_ARTICLE_LIMIT=100 -e WIKIPEDIA2BOOK_DOWNLOADS=1 wikipedia2book
+```
+
+Le serveur refuse de démarrer avec une valeur invalide et dit pourquoi.
+
+**Nombre de téléchargements simultanés.** Il ne peut qu'être abaissé, à `1`, pas monté au-dessus de `2` : la [politique robots de Wikimédia](https://wikitech.wikimedia.org/wiki/Robot_policy) limite le service PDF à quelques requêtes simultanées, et le serveur impose au plus 2 téléchargements et 25 Mbit/s pour tout le processus, quel que soit ce réglage. Seule l'instance Toolforge, que la politique exempte, télécharge 4 PDF à la fois. L'abaisser à `1` ménage Wikimédia et un petit serveur, au prix d'une phase de téléchargement plus longue.
+
+**Limite d'articles et mémoire du conteneur.** Lever la limite (`0`) n'est sûr que si le conteneur a assez de mémoire : un livre qui ne tient pas fait arrêter et redémarrer tout le conteneur par la plateforme, ce qui coupe aussi les générations de tous les autres utilisateurs. Régler la limite d'après la mémoire du conteneur, avec une marge pour plusieurs utilisateurs à la fois. Mesures avec de vrais articles (environ 17 pages par article) :
+
+| Mémoire du conteneur | Plus gros livre généré | Remarques |
+|---|---|---|
+| 256 Mo | moins de 20 articles | Northflank : redémarrage à 20 articles, déjà très lent à 10 |
+| 2 Gio | environ 800 articles (14 000 pages, 780 Mo de PDF) | Toolforge : échec à 1 000 articles ; l'instance officielle limite les livres à 300 articles (les plus gros sont générés en volumes) |
+
+Compter environ 250 Mo pour le serveur et le processus d'assemblage eux-mêmes, plus 2 à 2,5 Mo par article au pic, et garder la limite bien en dessous de ce que le conteneur peut tenir, par exemple un tiers à la moitié : avec 2 Gio, cela donne quelques centaines d'articles ; avec 256 Mo, il ne reste rien pour un livre de quelque taille que ce soit. Pour trouver le vrai maximum d'un déploiement, lancer contre lui le test aux limites (il peut faire redémarrer le serveur, donc pas aux heures chargées) :
+
+```bash
+python scripts/limit_check.py --base-url https://your-server --search 50
+```
+
+Il double le nombre d'articles jusqu'au premier échec, puis affine par dichotomie. Ajouter `--save-pdf ./tmp` pour garder chaque livre généré (`./tmp` est ignoré par git). Avec le jeton de supervision (`Authorization: Bearer`, voir section 20.2), `GET /api/health/details` donne la mémoire du conteneur et sa limite, et `GET /api/health/generations` la mémoire atteinte à chaque étape des dernières générations (détails en section 13).
+
+**Consulter les alertes.** Chaque fois qu'une limite est franchie (requête trop grosse, générations par client ou pour tout le serveur, file pleine, délai d'envoi, API MediaWiki ralentie), le serveur écrit sur sa sortie standard une ligne JSON contenant `"alert"` et la compte dans `GET /api/health/details` (champ `alerts`, nombre et dernière fois par type). Les deux repartent de zéro au redémarrage du serveur (champ `started`). Aucun e-mail n'est envoyé. `/api/health/details` exige le jeton de supervision (`WIKIPEDIA2BOOK_MONITOR_TOKEN`, envoyé en `Authorization: Bearer`) ; la page d'administration `/admin` montre les mêmes compteurs après une connexion Wikimédia.
+
+| Environnement | Compteurs | Lignes du journal |
+|---|---|---|
+| Toolforge | `curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" https://wikipedia2book.toolforge.org/api/health/details \| jq '.started, .alerts'` | `ssh <login>@login.toolforge.org`, `become wikipedia2book`, puis `toolforge webservice logs \| grep '"alert"'` (`-f` pour suivre) |
+| Northflank | `curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" https://prod--wikipedia2book--wkvpbnfj6h4v.code.run/api/health/details` | Console Northflank, onglet *Logs* du service, recherche `"alert"` |
+| Docker | `curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" http://localhost:8000/api/health/details \| jq .alerts` | `docker logs <container> 2>&1 \| grep '"alert"'` (`-f` pour suivre) |
+| `uvicorn` en local | `curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" http://localhost:8000/api/health/details` | Le terminal où tourne le serveur |
+
+Toolforge, compteurs et lignes du journal (journal par SSH, dans le compte de l'outil) :
+
+```bash
+curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" https://wikipedia2book.toolforge.org/api/health/details | jq '.started, .alerts'
+curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" https://wikipedia2book.toolforge.org/api/health/details | jq -r '.alerts | to_entries[] | "\(.key)  \(.value.count)  \(.value.last)"'
+```
+
+```powershell
+(Invoke-RestMethod https://wikipedia2book.toolforge.org/api/health/details -Headers @{Authorization = "Bearer $env:WIKIPEDIA2BOOK_MONITOR_TOKEN"}).alerts
+```
+
+```bash
+ssh <login>@login.toolforge.org
+become wikipedia2book
+toolforge webservice logs | grep '"alert"'
+toolforge webservice logs -f | grep --line-buffered '"alert"'
+for pod in $(kubectl get pods -o name | grep '/wikipedia2book-'); do kubectl logs --timestamps "$pod" | grep '"alert"'; done
+for pod in $(kubectl get pods -o name | grep '/wikipedia2book-'); do kubectl logs "$pod" | grep -o '"alert": "[a-z_]*"'; done | sort | uniq -c
+```
+
+```bash
+ssh <login>@login.toolforge.org 'become wikipedia2book toolforge webservice logs' | grep '"alert"'
+```
+
+Northflank, compteurs et lignes du journal (CLI Northflank, Node.js 22.13 ou plus récent ; projet `wikipedia2book` et service `prod`, comme dans l'adresse publique) :
+
+```bash
+curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" https://prod--wikipedia2book--wkvpbnfj6h4v.code.run/api/health/details | jq '.started, .alerts'
+```
+
+```bash
+npm i -g @northflank/cli
+northflank login
+northflank get service logs --projectId wikipedia2book --serviceId prod --textIncludes '"alert"' --lineLimit 500
+northflank get service logs --projectId wikipedia2book --serviceId prod --textIncludes '"alert"' -f
+northflank get service logs --projectId wikipedia2book --serviceId prod --textIncludes '"alert"' --lineLimit 1000 | grep -o '"alert": "[a-z_]*"' | sort | uniq -c
+```
+
+Comment les lire : section 14.

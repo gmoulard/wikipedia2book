@@ -46,6 +46,9 @@ Traduction anglaise : [FunctionalSpec.en.md](https://gmoulard.github.io/wikipedi
 - [15. Respect des licences Wikipédia](#15-respect-des-licences-wikip%C3%A9dia)
 - [16. Critères d'acceptation](#16-crit%C3%A8res-dacceptation)
 - [18. État d'avancement et évolutions futures](#18-%C3%A9tat-davancement-et-%C3%A9volutions-futures)
+- [21. Code de conduite et citation](#21-code-de-conduite-et-citation)
+	- [21.1 Code de conduite](#211-code-de-conduite)
+	- [21.2 Citation](#212-citation)
 
 ## 1\. Présentation de Wikipedia2Book
 
@@ -485,7 +488,7 @@ Une fois le PDF lancé, le logiciel :
 
 * **Numérotation sans réécriture des pages** : le numéro de chaque page est ajouté dans deux petits flux placés autour du contenu existant de la page, qui n'est ni relu ni réécrit (police Helvetica intégrée de MuPDF). L'ancienne superposition d'une page de numéros réécrivait le contenu de chaque page sans le compresser : un livre de 100 articles pesait 173 Mo au lieu de 96 (mesure locale du 16/11/2026).
 
-* **Limite de 300 articles par livre, sur tous les hébergements** : au-delà, la génération est refusée d'emblée (HTTP 413, `detail` = `{"code": "too_many_articles", "count", "limit", "message"}`), sur `/api/pdf`, `/api/pdf/stream` et les endpoints de génération directe. C'est une limite volontaire, pour ménager le service PDF de Wikimédia (chaque livre y télécharge tous ses articles) et la mémoire du conteneur, que le test aux limites remplit presque entièrement vers 600 articles (section 13.12). La valeur (300 sur Toolforge en 1.8.7 et 1.8.8, 2 000 en 1.8.9 et 1.9.0, 300 partout depuis la 1.9.1) reste sous la limite mesurée de la mémoire de Toolforge, entre 800 et 1 000 articles. L'interface ne propose pas de choix : au-delà de la limite, elle découpe d'elle-même le livre en volumes (voir ci-dessous) ; la fenêtre d'alerte avec le message traduit (« Ce livre compte {count} articles, mais la génération est limitée à {limit} articles par livre… ») ne reste que pour un volume que le serveur refuserait encore. Deux variables d'environnement, posées dans le `Dockerfile` (`ENV`) ou passées au conteneur (`docker run -e`), règlent un déploiement : `WIKIPEDIA2BOOK_ARTICLE_LIMIT` (nombre maximal d'articles par livre, `0` = pas de limite ; `300` dans le `Dockerfile`, et 300 aussi quand elle n'est pas positionnée, sur Toolforge comme ailleurs) et `WIKIPEDIA2BOOK_DOWNLOADS` (téléchargements simultanés par livre : de 1 à 2 hors Toolforge, politique robots de Wikimédia, de 1 à 4 sur Toolforge ; `2` dans le `Dockerfile`). Une valeur invalide empêche le serveur de démarrer, avec un message explicite (`main.deployment_settings`). La limite d'articles se règle d'après la mémoire du conteneur : environ 250 Mo pour le serveur et le processus d'assemblage, plus 2 à 2,5 Mo par article au pic, avec une large marge pour plusieurs utilisateurs (README, « Deploying your own container » ; mesures en section 13.12).
+* **Limite de 300 articles par livre, sur tous les hébergements** : au-delà, la génération est refusée d'emblée (HTTP 413, `detail` = `{"code": "too_many_articles", "count", "limit", "message"}`), sur `/api/pdf`, `/api/pdf/stream` et les endpoints de génération directe. C'est une limite volontaire, pour ménager le service PDF de Wikimédia (chaque livre y télécharge tous ses articles) et la mémoire du conteneur, que le test aux limites remplit presque entièrement vers 600 articles (section 13.12). La valeur (300 sur Toolforge en 1.8.7 et 1.8.8, 2 000 en 1.8.9 et 1.9.0, 300 partout depuis la 1.9.1) reste sous la limite mesurée de la mémoire de Toolforge, entre 800 et 1 000 articles. L'interface ne propose pas de choix : au-delà de la limite, elle découpe d'elle-même le livre en volumes (voir ci-dessous) ; la fenêtre d'alerte avec le message traduit (« Ce livre compte {count} articles, mais la génération est limitée à {limit} articles par livre… ») ne reste que pour un volume que le serveur refuserait encore. Deux variables d'environnement, posées dans le `Dockerfile` (`ENV`) ou passées au conteneur (`docker run -e`), règlent un déploiement : `WIKIPEDIA2BOOK_ARTICLE_LIMIT` (nombre maximal d'articles par livre, `0` = pas de limite ; `300` dans le `Dockerfile`, et 300 aussi quand elle n'est pas positionnée, sur Toolforge comme ailleurs) et `WIKIPEDIA2BOOK_DOWNLOADS` (téléchargements simultanés par livre : de 1 à 2 hors Toolforge, politique robots de Wikimédia, de 1 à 4 sur Toolforge ; `2` dans le `Dockerfile`). Une valeur invalide empêche le serveur de démarrer, avec un message explicite (`main.deployment_settings`). La limite d'articles se règle d'après la mémoire du conteneur : environ 250 Mo pour le serveur et le processus d'assemblage, plus 2 à 2,5 Mo par article au pic, avec une large marge pour plusieurs utilisateurs (section 20.3 ; mesures en section 13.12).
 
 * **Mémoire vérifiée avant chaque étape** (`app/resource_gate.py`, `MEMORY_GATE` dans `main.py`) : avant de télécharger un article, un document ou une image de fond, avant de recomposer un article et avant l'assemblage du livre, la génération estime la mémoire dont l'étape a besoin d'après la taille des fichiers : téléchargement 10 Mo par fichier (sa taille n'est pas encore connue, la réserve dépend donc du nombre de fichiers téléchargés en même temps), recomposition 5 Mo + 25 fois la taille du PDF reçu, assemblage 100 Mo + 2,5 fois la taille des articles recomposés + 35 fois celle des images de fond (coefficients mesurés le 2026-11-17, section 13.12). L'étape ne démarre que si la mémoire utilisée par le conteneur (cgroup), plus les réserves des étapes en cours, plus son estimation, reste sous une part de la limite du conteneur : `WIKIPEDIA2BOOK_MEMORY_RATIO`, 0,95 par défaut (`0` = pas de contrôle ; toute valeur hors de 0 à 1 empêche le démarrage). Sinon elle attend, sans limite de temps, son tour dans l'ordre d'arrivée (une grosse étape n'est pas doublée par les petites), et la fenêtre de progression affiche « Serveur occupé : votre livre reprend dès qu'il y a assez de mémoire (attente : 14 s)… » (événement `{"type": "busy", "seconds"}` du flux, renvoyé toutes les 10 s, clé `progress.busy`). Une étape démarre toujours quand aucune autre n'a de réserve, pour qu'un livre plus gros que la marge se fasse quand même, seul ; sans limite de mémoire connue (poste local), rien n'attend. Fermer la fenêtre abandonne l'attente. Chaque attente d'au moins une seconde est notée dans le journal des générations (étape `memory_wait`), et `/api/health/details` donne l'état du contrôle (`memory_gate`).
 
@@ -662,3 +665,27 @@ L'essentiel du socle fonctionnel décrit dans ce document est implémenté : liv
 * Caractères chinois rares (僻字) dans le PDF officiel de Wikisource : vérifié en novembre 2026, une partie des caractères des extensions CJK B et suivantes y laisse un blanc (police LiberationSerif sans glyphe, par exemple 𡼢 U+21F22 dans « 大南寔錄/大南寔錄前編/卷10 » de zh.wikisource.org), seuls ceux que Wikisource fournit en image s'affichent ; l'application ne modifie pas ce PDF : signalé à Wikimédia le 18/11/2026 (https://phabricator.wikimedia.org/T445303). Demande exprimée par PacmanD sur le Bistro technique de la Wikipédia en chinois (novembre 2026), dont l'autre partie — importer une œuvre entière depuis sa page sommaire — est faite (section 3.1).
 
 Toute évolution doit préserver les principes fondamentaux du logiciel, notamment le contrôle total de l'utilisateur sur la sélection des articles et la gestion d'un seul livre à la fois.
+
+## 21\. Code de conduite et citation
+
+### 21.1 Code de conduite
+
+Le développement de ce logiciel est couvert par un [code de conduite](https://github.com/gmoulard/wikipedia2book/blob/main/CODE_OF_CONDUCT.md).
+
+### 21.2 Citation
+
+Pour citer Wikipedia2Book dans un travail, citer la version archivée sur [Software Heritage](https://archive.softwareheritage.org/swh:1:dir:9c7c016d9603a4b0201ad64535767a353031bd91;origin=https://github.com/gmoulard/wikipedia2book;visit=swh:1:snp:3b1fa78021c1ad7819b82a6f38f200a9f3bfa85e;anchor=swh:1:rev:d0cd2a14a00fb848f2555a9ee62c4147230e6080) :
+
+```bibtex
+@software{moulard_wikipedia2book_2026,
+  author  = {Moulard, Guillaume},
+  title   = {Wikipedia2Book},
+  version = {v1.6.4},
+  year    = {2026},
+  url     = {https://github.com/gmoulard/wikipedia2book},
+  license = {AGPL-3.0-only},
+  note    = {SWHID: swh:1:dir:9c7c016d9603a4b0201ad64535767a353031bd91}
+}
+```
+
+Les métadonnées de citation lisibles par machine sont aussi disponibles dans [`CITATION.cff`](https://github.com/gmoulard/wikipedia2book/blob/main/CITATION.cff) et [`codemeta.json`](https://github.com/gmoulard/wikipedia2book/blob/main/codemeta.json).

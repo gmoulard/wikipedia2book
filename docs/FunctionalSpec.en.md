@@ -46,6 +46,9 @@ This is the English translation of [FunctionalSpec.fr.md](https://gmoulard.githu
 - [15. Compliance with Wikipedia licenses](#15-compliance-with-wikipedia-licenses)
 - [16. Acceptance criteria](#16-acceptance-criteria)
 - [18. Status and future developments](#18-status-and-future-developments)
+- [21. Code of Conduct and citation](#21-code-of-conduct-and-citation)
+	- [21.1 Code of Conduct](#211-code-of-conduct)
+	- [21.2 Citation](#212-citation)
 
 ## 1\. Overview of Wikipedia2Book
 
@@ -485,7 +488,7 @@ Once the PDF is started, the software:
 
 * **Numbering without rewriting the pages**: each page number is added in two small streams placed around the page's existing content, which is neither read again nor rewritten (MuPDF's built-in Helvetica font). The former overlay of a page of numbers rewrote the content of every page without compressing it: a 100-article book weighed 173 MB instead of 96 (local measurement, 16/11/2026).
 
-* **Limit of 300 articles per book, on every host**: beyond that, generation is refused at once (HTTP 413, `detail` = `{"code": "too_many_articles", "count", "limit", "message"}`), on `/api/pdf`, `/api/pdf/stream` and the direct generation endpoints. It is a deliberate limit, to spare the Wikimedia PDF service (each book downloads all its articles from it) and the container memory, which the limit test almost fills around 600 articles (section 13.12). The value (300 on Toolforge in 1.8.7 and 1.8.8, 2,000 in 1.8.9 and 1.9.0, 300 everywhere since 1.9.1) stays below the measured memory limit of Toolforge, between 800 and 1,000 articles. The interface offers no choice: beyond the limit, it splits the book into volumes by itself (see below); the alert window with the translated message ("This book has {count} articles, but generation is limited to {limit} articles per book…") only remains for a volume the server would still refuse. Two environment variables, set in the `Dockerfile` (`ENV`) or passed to the container (`docker run -e`), configure a deployment: `WIKIPEDIA2BOOK_ARTICLE_LIMIT` (maximum number of articles per book, `0` = no limit; `300` in the `Dockerfile`, and 300 as well when it is not set, on Toolforge as elsewhere) and `WIKIPEDIA2BOOK_DOWNLOADS` (simultaneous downloads per book: 1 to 2 outside Toolforge, Wikimedia robot policy, 1 to 4 on Toolforge; `2` in the `Dockerfile`). An invalid value prevents the server from starting, with an explicit message (`main.deployment_settings`). The article limit is set from the container memory: about 250 MB for the server and the assembly process, plus 2 to 2.5 MB per article at the peak, with a wide margin for several users (README, "Deploying your own container"; measurements in section 13.12).
+* **Limit of 300 articles per book, on every host**: beyond that, generation is refused at once (HTTP 413, `detail` = `{"code": "too_many_articles", "count", "limit", "message"}`), on `/api/pdf`, `/api/pdf/stream` and the direct generation endpoints. It is a deliberate limit, to spare the Wikimedia PDF service (each book downloads all its articles from it) and the container memory, which the limit test almost fills around 600 articles (section 13.12). The value (300 on Toolforge in 1.8.7 and 1.8.8, 2,000 in 1.8.9 and 1.9.0, 300 everywhere since 1.9.1) stays below the measured memory limit of Toolforge, between 800 and 1,000 articles. The interface offers no choice: beyond the limit, it splits the book into volumes by itself (see below); the alert window with the translated message ("This book has {count} articles, but generation is limited to {limit} articles per book…") only remains for a volume the server would still refuse. Two environment variables, set in the `Dockerfile` (`ENV`) or passed to the container (`docker run -e`), configure a deployment: `WIKIPEDIA2BOOK_ARTICLE_LIMIT` (maximum number of articles per book, `0` = no limit; `300` in the `Dockerfile`, and 300 as well when it is not set, on Toolforge as elsewhere) and `WIKIPEDIA2BOOK_DOWNLOADS` (simultaneous downloads per book: 1 to 2 outside Toolforge, Wikimedia robot policy, 1 to 4 on Toolforge; `2` in the `Dockerfile`). An invalid value prevents the server from starting, with an explicit message (`main.deployment_settings`). The article limit is set from the container memory: about 250 MB for the server and the assembly process, plus 2 to 2.5 MB per article at the peak, with a wide margin for several users (section 20.3; measurements in section 13.12).
 
 * **Memory checked before each stage** (`app/resource_gate.py`, `MEMORY_GATE` in `main.py`): before downloading an article, a document or a background image, before refitting an article and before assembling the book, the generation estimates the memory the stage needs from the size of the files: download 10 MB per file (its size is not known yet, so the reserve depends on the number of files downloaded at the same time), refitting 5 MB + 25 times the size of the received PDF, assembly 100 MB + 2.5 times the size of the refitted articles + 35 times that of the background images (factors measured on 2026-11-17, section 13.12). The stage only starts if the memory used by the container (cgroup), plus the reserves of the running stages, plus its estimate, stays under a share of the container limit: `WIKIPEDIA2BOOK_MEMORY_RATIO`, 0.95 by default (`0` = no check; any value outside 0 to 1 prevents startup). Otherwise it waits, with no time limit, for its turn in order of arrival (a big stage is not overtaken by small ones), and the progress window shows "Server busy: your book resumes as soon as there is enough memory (waiting: 14 s)…" (stream event `{"type": "busy", "seconds"}`, sent again every 10 s, key `progress.busy`). A stage always starts when no other has a reserve, so that a book larger than the margin is still made, alone; with no known memory limit (local machine), nothing waits. Closing the window abandons the wait. Each wait of at least one second is recorded in the generation journal (`memory_wait` stage), and `/api/health/details` gives the state of the check (`memory_gate`).
 
@@ -662,3 +665,27 @@ Possible developments, not implemented to date:
 * Rare Chinese characters (僻字) in the official Wikisource PDF: checked in November 2026, some characters of the CJK extensions B and later leave a blank there (LiberationSerif font without the glyph, for example 𡼢 U+21F22 in "大南寔錄/大南寔錄前編/卷10" on zh.wikisource.org), only those Wikisource provides as images are shown; the application does not change this PDF: reported to Wikimedia on 2026-11-18 (https://phabricator.wikimedia.org/T445303). Request made by PacmanD on the technical Village pump of the Chinese Wikipedia (November 2026), whose other part — importing a whole work from its contents page — is done (section 3.1).
 
 Any development must preserve the core principles of the software, in particular the user's full control over the selection of articles and the handling of a single book at a time.
+
+## 21\. Code of Conduct and citation
+
+### 21.1 Code of Conduct
+
+The development of this software is covered by a [Code of Conduct](https://github.com/gmoulard/wikipedia2book/blob/main/CODE_OF_CONDUCT.md).
+
+### 21.2 Citation
+
+If you use Wikipedia2Book in your work, please cite the archived release on [Software Heritage](https://archive.softwareheritage.org/swh:1:dir:9c7c016d9603a4b0201ad64535767a353031bd91;origin=https://github.com/gmoulard/wikipedia2book;visit=swh:1:snp:3b1fa78021c1ad7819b82a6f38f200a9f3bfa85e;anchor=swh:1:rev:d0cd2a14a00fb848f2555a9ee62c4147230e6080):
+
+```bibtex
+@software{moulard_wikipedia2book_2026,
+  author  = {Moulard, Guillaume},
+  title   = {Wikipedia2Book},
+  version = {v1.6.4},
+  year    = {2026},
+  url     = {https://github.com/gmoulard/wikipedia2book},
+  license = {AGPL-3.0-only},
+  note    = {SWHID: swh:1:dir:9c7c016d9603a4b0201ad64535767a353031bd91}
+}
+```
+
+Machine-readable citation metadata is also available in [`CITATION.cff`](https://github.com/gmoulard/wikipedia2book/blob/main/CITATION.cff) and [`codemeta.json`](https://github.com/gmoulard/wikipedia2book/blob/main/codemeta.json).
