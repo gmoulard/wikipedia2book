@@ -1,6 +1,6 @@
 # Brouillons de communication sur Wikipedia2Book
 
-Préparé le 18/11/2026 à partir de `todo-mediawiki2latex-visibility.md` et de la section « Communication » de `todo.md`. **Rien n'est publié** : chaque action attend ton accord, numéro par numéro.
+Préparé le 18/11/2026 à partir de `todo-mediawiki2latex-visibility.md` et de la section « Communication » de `../todo.md`. **Rien n'est publié** : chaque action attend ton accord, numéro par numéro.
 
 Pour toutes les publications :
 - résumé de modification qui signale le conflit d'intérêts : « conflit d'intérêts : je suis l'auteur de Wikipedia2Book » ou « COI: I am the author of Wikipedia2Book » ;
@@ -8,7 +8,7 @@ Pour toutes les publications :
 - Ajouté un liens vers wikipedia2book https://wikipedia2book.toolforge.org/
 - Ajouté l'image https://www.mediawiki.org/wiki/Reading/Web/PDF_Functionality#/media/File:Wikipedia2book_Logo.png e, 70*70 avec un liens vers https://wikipedia2book.toolforge.org/
 - Ajouté quand quand il y a une URL un liens [ Télécharger en PDF ](https://iw.toolforge.org/wikipedia2book/api/pdf/from-source?source=https://...) comme sur la page : https://fr.wikipedia.org/wiki/Utilisateur:474D6F756C617264/Livres/Les_%C3%A9paves_de_la_rade_de_Saint-Pierre_suite_a_l'%C3%A9ruption_de_la_montagne_Pel%C3%A9e_en_1902
-- texte de présentation de référence : celui de `todo.md`, adapté à chaque page.
+- texte de présentation de référence : celui de `../todo.md`, adapté à chaque page.
 
 ## Déjà fait (rien à publier)
 
@@ -230,7 +230,7 @@ Ich bin der Autor des Werkzeugs (Interessenkonflikt); die Änderung müsste ein 
 * [[toolforge:wikipedia2book/|Wikipedia2Book]], a community tool on Toolforge, can now build a printable PDF from a saved book, a Wikibooks compilation or printable version, or a list of pages from eight Wikimedia projects, with a cover, a table of contents and page numbers.
 ```
 
-## 14. Phabricator — caractères CJK rares dans le PDF officiel de Wikisource (`todo.md`, section 3)
+## 14. Phabricator — caractères CJK rares dans le PDF officiel de Wikisource (`../todo.md`, section 3)
 
 Créer une tâche sur https://phabricator.wikimedia.org/maniphest/task/edit/form/1/, étiquettes `Proton` (service PDF) et `Wikisource`. Pas de conflit d'intérêts à signaler (signalement d'un bug du service de Wikimédia), mais préciser d'où vient le constat.
 
@@ -254,7 +254,7 @@ Install a font covering CJK Extensions B–H in the PDF rendering environment, e
 Reported in November 2026 by PacmanD on the technical village pump of the Chinese Wikipedia, while using Wikipedia2Book (https://wikipedia2book.toolforge.org/), which embeds the official Wikimedia PDF of each page unchanged, so the tool cannot fix it on its side. Wikipedia2Book itself installs fonts-hanazono for the pages it generates.
 ```
 
-Après création : noter le numéro de la tâche (`T…`) dans la section 18 des spécifications (`FunctionalSpec.fr.md`/`.en.md`) et cocher la ligne de `todo.md`.
+Après création : noter le numéro de la tâche (`T…`) dans la section 18 des spécifications (`FunctionalSpec.fr.md`/`.en.md`) et cocher la ligne de `../todo.md`.
 
 ## 15. Phabricator — T224922 (revue de la maintenance de l'extension Collection) — commentaire
 
@@ -338,62 +338,10 @@ Plan :
 5. Les limites : 300 articles par volume, polices du PDF officiel (action 14).
 6. Comment contribuer : traductions, GitHub, Phabricator.
 
-### 19a. Texte complet du billet (à coller dans Diff, relecture de Junko Nakayama le 18/11)
+### 19a. Texte complet du billet
 
-Les passages entre `[[À COMPLÉTER : …]]` sont ta propre histoire : je ne la connais pas, à écrire avec tes mots (ou à supprimer). Le reste vient du dépôt (historique Git, CHANGELOG, statistiques Toolviews).
+Dans [story.md](story.md) (relecture de Junko Nakayama le 18/11, attribution de l'image à ajouter).
 
-**Attribution de l'image demandée par la relectrice** : dans Diff, cliquer sur l'image → « Replace » → « Open Media Library », puis à droite remplir : *Author* = l'auteur indiqué sur la page Commons de [File:Wikipedia2book Logo.png](https://commons.wikimedia.org/wiki/File:Wikipedia2book_Logo.png) ; *License* = la licence indiquée sur cette même page (à recopier telle quelle, ne pas la deviner) ; *Link* = `https://commons.wikimedia.org/wiki/File:Wikipedia2book_Logo.png`. Même chose pour chaque capture ajoutée (une capture du PDF contient des images Wikipédia : citer leurs fichiers Commons, ou choisir une page sans image). Voir la [checklist de publication](https://diff.wikimedia.org/publishing-checklist/).
-
-Titre : `Printing Wikipedia again: the story of Wikipedia2Book`
-
-```
-Disclosure: I am the developer of Wikipedia2Book. This post tells why I built it, what it does, and how it was made.
-
-WHY I BUILT IT
-
-For years, Wikipedia had a feature that many readers loved: you could gather articles into a "book" with Special:Book, and download it as a single PDF, or order a printed copy. In 2017 the PDF rendering of books was switched off. The saved books are still there, thousands of them, and Special:Book still receives a lot of visits (see Phabricator task T224922), but the button that turned them into a PDF no longer works. The printable versions of Wikibooks and the works of Wikisource have the same problem: the text is ready to be read on paper, but there is no simple way to get one clean, printable volume.
-
-[[À COMPLÉTER : ton point de départ personnel. Par exemple : quel livre tu voulais imprimer, pour qui (classe, famille, association, lecture hors ligne), ce que tu as essayé avant (Special:Book, mediawiki2latex, export article par article), et pourquoi tu as décidé de l'écrire toi-même. Le livre d'exemple, « Les épaves de la rade de Saint-Pierre », sur les navires coulés lors de l'éruption de la montagne Pelée en 1902, peut servir de fil rouge si c'est lui qui t'a lancé.]]
-
-So I built a small tool to give that button back: Wikipedia2Book, at https://wikipedia2book.toolforge.org/
-
-WHAT IT DOES
-
-You paste what you want to read, and you get one PDF book.
-
-- Sources: the address of an article, a saved Wikipedia book (Special:Book / "Book:" pages), a Wikibooks book or its printable version, a Wikisource work, a list of pages (one per line, wiki links, URLs or titles), or a plain search. Pages can come from eight Wikimedia projects: Wikipedia, Wikisource, Wikibooks, Wikivoyage, Wikiversity, Wikiquote, Wiktionary and Wikinews, in any language, and you can mix languages in one book.
-- Organisation: the order of a saved book is kept, with its chapters and subtitle. You can move articles and chapters, add chapters, find related articles from the links of a page, and add your own images, PDF files or any web page.
-- Editing: title, subtitle, author, introduction and conclusion; a cover and a last page with a background image or colour; page format (A4, Letter, Legal and others), orientation and margins; table of contents at the start or the end, with clickable links; page numbers on every page.
-- The PDF: a cover, a table of contents, each article, and a license page that names every source article with a link to its history, so the book respects CC BY-SA. Bookmarks let you jump from article to article.
-- Large books are split into volumes automatically (300 articles per volume), each with its own cover, contents and numbering.
-- The interface is translated into 12 languages (English, French, German, Spanish, Italian, Portuguese, Dutch, Turkish, Chinese, Japanese, Persian and Arabic, the last two right to left), and the pages added to the PDF are written in the chosen language.
-- Everything the interface does is also available as a simple web address: a link such as https://wikipedia2book.toolforge.org/api/pdf/from-source?source=<address of a book> downloads the PDF directly, so a wiki page can offer its own "Download as PDF" link.
-
-HOW IT WORKS, AND WHAT IT DOES NOT DO
-
-The content of the articles is never rebuilt. For each page, Wikipedia2Book asks Wikimedia for its official PDF, the same one you get from the "Download as PDF" link of the article, and only adds what a book needs around it: cover, table of contents, chapter pages, page numbers and license. Text, images and references are exactly those of the wiki. Each page is only scaled and centred on the format chosen for the book.
-
-The server keeps nothing. There is no account and no database: your book lives in your browser, and you save it yourself as a small JSON file that you can reopen, share, or publish so that others can rebuild the same book. The tool follows the Wikimedia User-Agent and API rules, and is free software (AGPL-3.0), hosted on Toolforge.
-
-HOW IT WAS MADE
-
-Wikipedia2Book is a very young project. The first line was written on 7 November 2026: I started from a written specification, first drafted with ChatGPT, and then built the application with Claude Code, an AI coding assistant, describing what I wanted and testing every step myself. The project is openly "vibe coded": the code is written and reviewed by AI agents, while I decide what the tool must do, check the results on real books, and keep a detailed specification and changelog in French and English.
-
-- 7 November: first version, a single book in memory, chapters, PDF with bookmarks.
-- 9 to 11 November: import of saved Wikipedia books in their real order (the API returns links in alphabetical order, so the tool reads the wikitext), continuous page numbers, license page, the first interface languages, then twelve.
-- 12 November: version 1.0, online on Toolforge.
-- 13 to 18 November: one field for every kind of source, lists of pages, the other Wikimedia projects, Wikibooks and Wikisource contents pages, volumes, background images, web pages, and a lot of work so that big books do not make the server run out of memory.
-
-In twelve days the tool went through more than 370 changes and 13 minor versions. Between 12 and 17 November it received about 12,000 requests on Toolforge. [[À COMPLÉTER : ce que t'a appris ce mode de développement, ce qui a été difficile (par exemple l'ordre des articles, la mémoire sur Toolforge, les écritures rares en chinois), ce qui t'a surpris.]]
-
-WHAT'S NEXT, AND HOW YOU CAN HELP
-
-The tool has limits: the fonts and layout of each article are those of the official Wikimedia PDF, and some scripts are not always displayed perfectly there; a book is limited to 300 articles per volume.
-
-You can help by trying it with your own saved books, reporting problems or ideas on GitHub (https://github.com/gmoulard/wikipedia2book), improving a translation of the interface or of the help page, or simply adding a "Download as PDF" link on a book page of your wiki.
-
-[[À COMPLÉTER (facultatif) : un remerciement, par exemple aux personnes qui ont testé ou contribué au code.]]
-```
 
 ## 20. Présentations orales
 
