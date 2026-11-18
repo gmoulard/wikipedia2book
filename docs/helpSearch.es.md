@@ -42,6 +42,7 @@ Sin código de idioma, se usa el idioma elegido junto al campo. El orden de los 
 ## Libros completos
 
 - **Página de libro de Wikipedia**: escribe su dirección o su nombre, por ejemplo `Utilisateur:Alexbzh972/Livres/Martinique`. Todos sus artículos se añaden en el orden de la página, con sus capítulos, su título y su subtítulo.
+- **Compilación de Wikilibros**: escribe la dirección de la compilación, por ejemplo `https://fr.wikibooks.org/wiki/Wikilivres:Compilations/Programmation_C`. Sus páginas se añaden en el orden de la lista, como en una página de libro de Wikipedia.
 - **Libro de Wikilibros u obra de Wikisource**: escribe la dirección o el título de su índice, por ejemplo `https://fr.wikibooks.org/wiki/Cosmologie` o `s:Les Misérables`. Una ventana te pregunta qué quieres:
   - «El libro completo»: todas sus páginas, ordenadas en capítulos;
   - «El libro completo y su índice»: lo mismo, con la página del índice al principio;

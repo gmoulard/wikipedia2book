@@ -298,6 +298,24 @@ class ResolveSourceTest(unittest.TestCase):
         self.assertEqual(self.resolve("https://fr.wikibooks.org/wiki/Wikilivres:Accueil").status_code, 422)
         self.assertNotIn("book", [call[0] for call in FakeClient.calls])
 
+    def test_wikibooks_compilation_is_read_as_a_book(self):
+        title = "Wikilivres:Compilations/Programmation C"
+        FakeClient.pages = {title: (title, 4)}
+        FakeClient.wikitext = "{{Compilation}}\n\n: [[Programmation C/Avant-propos|Avant-propos]]\n: [[Programmation C/Sommaire|Sommaire]]\n;Bases\n: [[Programmation C/Types de base|Types de base]]\n"
+        body = self.resolve("https://fr.wikibooks.org/wiki/Wikilivres:Compilations/Programmation_C").json()
+        self.assertEqual(body["kind"], "book")
+        self.assertEqual(body["book_title"], "Programmation C")
+        articles = body["book"]["articles"]
+        self.assertEqual([article["title"] for article in articles], ["Programmation C/Avant-propos", "Programmation C/Sommaire", "Programmation C/Types de base"])
+        self.assertEqual({(article["site"], article["language"]) for article in articles}, {("wikibooks", "fr")})
+        self.assertEqual([chapter["title"] for chapter in body["book"]["chapters"]], ["Bases"])
+
+    def test_project_discussion_with_links_is_still_refused(self):
+        title = "Wikilivres:Le Bistro"
+        FakeClient.pages = {title: (title, 4)}
+        FakeClient.wikitext = "== Question ==\nJe cherche [[Programmation C]] et [[Programmation Python]].\n: Voir [[Aide:Livres]] ou [[Cosmologie]], merci.\n: [[Cosmologie]]\n"
+        self.assertEqual(self.resolve("https://fr.wikibooks.org/wiki/Wikilivres:Le_Bistro").status_code, 422)
+
     def test_unknown_site_is_422(self):
         self.assertEqual(self.resolve("Chat", "fr", "wikidata").status_code, 422)
         self.assertEqual(self.resolve("https://commons.wikimedia.org/wiki/Main_Page").status_code, 422)

@@ -42,6 +42,7 @@ Zonder taalcode geldt de taal die naast het veld is gekozen. De volgorde van de 
 ## Hele boeken
 
 - **Boekpagina op Wikipedia**: voer het adres of de naam in, bijvoorbeeld `Utilisateur:Alexbzh972/Livres/Martinique`. Alle artikelen worden toegevoegd in de volgorde van de pagina, met hoofdstukken, titel en ondertitel.
+- **Wikibooks-compilatie**: voer het adres van de compilatie in, bijvoorbeeld `https://fr.wikibooks.org/wiki/Wikilivres:Compilations/Programmation_C`. De pagina's worden toegevoegd in de volgorde van de lijst, zoals bij een boekpagina op Wikipedia.
 - **Boek op Wikibooks of werk op Wikisource**: voer het adres of de titel van de inhoudsopgave in, bijvoorbeeld `https://fr.wikibooks.org/wiki/Cosmologie` of `s:Les Misérables`. Een venster vraagt wat u wilt:
   - „Het hele boek”: alle pagina's, in hoofdstukken geordend;
   - „Het hele boek en de inhoudsopgave”: hetzelfde, met de inhoudsopgave vooraan;

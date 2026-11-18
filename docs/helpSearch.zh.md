@@ -42,6 +42,7 @@
 ## 整本书
 
 - **维基百科图书页面**：输入其地址或名称，例如 `Utilisateur:Alexbzh972/Livres/Martinique`。所有条目按页面中的顺序添加，并带有章节、标题和副标题。
+- **维基教科书的汇编**：输入汇编的地址，例如 `https://fr.wikibooks.org/wiki/Wikilivres:Compilations/Programmation_C`。其中的页面按列表顺序添加，与维基百科图书页面相同。
 - **维基教科书的书或维基文库的作品**：输入其目录页的地址或标题，例如 `https://fr.wikibooks.org/wiki/Cosmologie` 或 `s:Les Misérables`。会弹出窗口询问：
   - “整本书”：所有页面，按章节排列；
   - “整本书及其目录”：同上，目录页放在最前；

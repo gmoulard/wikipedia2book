@@ -51,6 +51,7 @@ Abréviations : **T** = https://wikipedia2book.toolforge.org. Dans les adresses 
 | 3.6 | Œuvre de Wikisource | `s:Les Misérables` (langue FR) | `T/api/pdf/from-source?source=s:Les%20Mis%C3%A9rables&wiki=fr` | Fenêtre de choix ; « Le livre entier » donne 365 chapitres en 5 parties, sans « Texte entier » | 1.11.0 |
 | 3.7 | Version imprimable écrite à la main (adresse) | `https://fr.wikibooks.org/wiki/Hélices_de_navires_à_déplacement/Version_imprimable` | `T/api/pdf/from-source?source=https://fr.wikibooks.org/wiki/H%C3%A9lices_de_navires_%C3%A0_d%C3%A9placement/Version_imprimable` | 13 pages, un chapitre par titre `= … =`, couverture écartée, titre « Hélices de navires à déplacement » | 1.12.0 |
 | 3.8 | Version imprimable par `{{imprimable}}` (adresse) | `https://fr.wikibooks.org/wiki/Programmation_C/Version_imprimable` | `T/api/pdf/from-source?source=https://fr.wikibooks.org/wiki/Programmation_C/Version_imprimable` | La fenêtre de choix du sommaire « Programmation C » (21 pages) | 1.12.0 |
+| 3.9 | Compilation de Wikilivres | `https://fr.wikibooks.org/wiki/Wikilivres:Compilations/Programmation_C` | `T/api/pdf/from-source?source=https://fr.wikibooks.org/wiki/Wikilivres:Compilations/Programmation_C` | Les pages de la compilation dans l'ordre de la liste, titre « Programmation C » ; une discussion (`Wikilivres:Le_Bistro`) reste refusée (422) | 1.13.0 |
 
 ## 4. Listes de pages (plusieurs lignes)
 
@@ -151,6 +152,8 @@ Pour lire seulement la structure, sans PDF : même corps sur `POST /api/books/fr
 | 7.5 | Image de fond de couverture | Étape Édition, « Image de fond de la couverture », fichier ou adresse (7.2 ou 7.3) | `cover_image` : `{"title": "…", "url": "…"}` ou `data_base64` | Fond de la couverture, sans déformation | 1.9.6 |
 | 7.6 | Image de dernière page | Étape Édition, « Image de fond de la dernière page » | `back_image` | Page à part après la licence | 1.9.6 |
 | 7.7 | Adresse inaccessible | Document `https://example.org/inexistant.png` | Même adresse | Génération arrêtée, l'adresse en cause est nommée ; 502 par l'API | 1.10.0 |
+| 7.8 | Titre d'un document | Étape Organisation, champ de titre du document importé | `uploaded_documents[].title` | Le titre saisi remplace le nom du fichier dans la table des matières, les signets et la licence ; à l'import, nom du fichier sans extension | 1.13.0 |
+| 7.9 | Page web | Étape Organisation, champ d'adresse : `https://www.gnu.org/licenses/agpl-3.0.html` | `uploaded_documents[]` avec `"kind": "html"` et `"url"` | Document « Page web convertie en PDF », texte et images de la page, sans scripts ; une page Wikimédia est renvoyée vers le champ Sources | 1.13.0 |
 
 ## 8. Organisation et mise en page
 

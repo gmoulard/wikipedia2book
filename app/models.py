@@ -65,7 +65,7 @@ def _one_source(data_base64: str | None, url: str | None, mime_type: str | None)
 class UploadedDocument(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()))
     title: str = Field(min_length=1, max_length=300)
-    kind: Literal["image", "pdf"]
+    kind: Literal["image", "pdf", "html"]
     mime_type: str = Field(default="", max_length=100)
     data_base64: str | None = Field(default=None, min_length=1, max_length=30_000_000)
     url: str | None = Field(default=None, max_length=2048, pattern=REMOTE_URL)
@@ -73,6 +73,8 @@ class UploadedDocument(BaseModel):
 
     @model_validator(mode="after")
     def single_source(self) -> "UploadedDocument":
+        if self.kind == "html" and self.url is None:
+            raise ValueError("Une page web est donnée par son adresse (url), jamais par son contenu.")
         _one_source(self.data_base64, self.url, self.mime_type)
         return self
 
@@ -128,6 +130,8 @@ class Project(BaseModel):
     back_color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
     cover_logo: bool = False
     back_logo: bool = False
+    cover_app_logo: bool = False
+    back_app_logo: bool = False
     page_format: Literal["A0", "A1", "A2", "A3", "A4", "A5", "A6", "Letter", "Legal", "custom"] = "A4"
     custom_width_mm: float = Field(default=148, ge=50, le=1000)
     custom_height_mm: float = Field(default=210, ge=50, le=1000)

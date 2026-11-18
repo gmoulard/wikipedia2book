@@ -42,6 +42,7 @@ Without a language code, the language chosen next to the field is used. The orde
 ## Whole books
 
 - **Wikipedia book page**: enter its address or name, for example `Utilisateur:Alexbzh972/Livres/Martinique`. All its articles are added in the order of the page, with its chapters, title and subtitle.
+- **Wikibooks compilation**: enter the address of the compilation, for example `https://fr.wikibooks.org/wiki/Wikilivres:Compilations/Programmation_C`. Its pages are added in the order of the list, as for a Wikipedia book page.
 - **Wikibooks book or Wikisource work**: enter the address or title of its contents page, for example `https://fr.wikibooks.org/wiki/Cosmologie` or `s:Les Misérables`. A window asks what you want:
   - "The whole book": all its pages, arranged in chapters;
   - "The whole book and its table of contents": the same, with the contents page first;

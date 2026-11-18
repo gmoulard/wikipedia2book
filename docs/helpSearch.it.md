@@ -42,6 +42,7 @@ Senza codice di lingua vale la lingua scelta accanto al campo. L'ordine dei pref
 ## Libri interi
 
 - **Pagina di libro di Wikipedia**: inserisci il suo indirizzo o il suo nome, per esempio `Utilisateur:Alexbzh972/Livres/Martinique`. Tutte le sue voci vengono aggiunte nell'ordine della pagina, con capitoli, titolo e sottotitolo.
+- **Raccolta di Wikibooks**: inserisci l'indirizzo della raccolta, per esempio `https://fr.wikibooks.org/wiki/Wikilivres:Compilations/Programmation_C`. Le sue pagine vengono aggiunte nell'ordine dell'elenco, come per una pagina di libro di Wikipedia.
 - **Libro di Wikibooks od opera di Wikisource**: inserisci l'indirizzo o il titolo del suo indice, per esempio `https://fr.wikibooks.org/wiki/Cosmologie` o `s:Les Misérables`. Una finestra ti chiede cosa vuoi:
   - «L'intero libro»: tutte le sue pagine, ordinate in capitoli;
   - «L'intero libro e il suo indice»: lo stesso, con la pagina dell'indice in testa;

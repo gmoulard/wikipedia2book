@@ -192,17 +192,22 @@ class ColorAndLogoTest(unittest.TestCase):
 
     def test_logo_on_the_cover_and_the_last_page(self):
         self.assertNotIn('class="cover-logo"', book_builder.build_cover_html(Project(name="Livre")))
-        logo = base64.b64encode(book_builder.WIKIPEDIA_LOGO.read_bytes()).decode("ascii")
-        self.assertIn(f'<img class="cover-logo" src="data:image/png;base64,{logo}"', book_builder.build_cover_html(Project(name="Livre", cover_logo=True)))
-        back = book_builder.build_back_cover_html(Project(name="Livre", back_logo=True, back_color="#336699"))
-        self.assertIn('<img class="back-logo"', back)
-        self.assertIn(".back-logo { position: absolute; right: 15mm; bottom: 15mm; width: 25mm; }", back)
-        self.assertIn(".cover-logo { position: absolute; right: 0; bottom: 0; width: 25mm; }", book_builder.build_cover_html(Project(name="Livre", cover_logo=True)))
+        wikipedia = base64.b64encode(book_builder.WIKIPEDIA_LOGO.read_bytes()).decode("ascii")
+        app = base64.b64encode(book_builder.APP_LOGO.read_bytes()).decode("ascii")
+        cover = book_builder.build_cover_html(Project(name="Livre", cover_logo=True))
+        self.assertIn(f'<div class="cover-logo"><img src="data:image/png;base64,{wikipedia}" alt="Wikipedia"></div>', cover)
+        self.assertIn(".cover-logo { position: absolute; right: 0; bottom: 0; }", cover)
+        both = book_builder.build_cover_html(Project(name="Livre", cover_logo=True, cover_app_logo=True))
+        self.assertLess(both.index(app), both.index(wikipedia))
+        back = book_builder.build_back_cover_html(Project(name="Livre", back_app_logo=True, back_color="#336699"))
+        self.assertIn(f'<div class="back-logo"><img src="data:image/png;base64,{app}" alt="Wikipedia2Book"></div>', back)
+        self.assertIn(".back-logo { position: absolute; right: 15mm; bottom: 15mm; }", back)
+        self.assertIn(".back-logo img { width: 25mm; margin-left: 4mm; vertical-align: bottom; }", back)
         self.assertIn("@page  { background-color: #336699; }", back)
 
     def test_a_last_page_needs_an_image_a_color_or_the_logo(self):
         self.assertFalse(book_builder.has_back_cover(Project(name="Livre")))
-        for fields in ({"back_image": BACK}, {"back_color": "#336699"}, {"back_logo": True}):
+        for fields in ({"back_image": BACK}, {"back_color": "#336699"}, {"back_logo": True}, {"back_app_logo": True}):
             with self.subTest(fields=fields):
                 self.assertTrue(book_builder.has_back_cover(Project(name="Livre", **fields)))
 

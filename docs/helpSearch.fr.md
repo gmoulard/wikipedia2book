@@ -42,6 +42,7 @@ Sans code de langue, c'est la langue choisie à côté du champ qui compte. L'or
 ## Livres entiers
 
 - **Page de livre de Wikipédia** : saisissez son adresse ou son nom, par exemple `Utilisateur:Alexbzh972/Livres/Martinique`. Tous ses articles sont ajoutés dans l'ordre de la page, avec ses chapitres, son titre et son sous-titre.
+- **Compilation de Wikilivres** : saisissez l'adresse de la compilation, par exemple `https://fr.wikibooks.org/wiki/Wikilivres:Compilations/Programmation_C`. Ses pages sont ajoutées dans l'ordre de la liste, comme pour une page de livre de Wikipédia.
 - **Livre de Wikilivres ou œuvre de Wikisource** : saisissez l'adresse ou le titre de son sommaire, par exemple `https://fr.wikibooks.org/wiki/Cosmologie` ou `s:Les Misérables`. Une fenêtre vous demande ce que vous voulez :
   - « Le livre entier » : toutes ses pages, rangées en chapitres ;
   - « Le livre entier et son sommaire » : la même chose, avec la page de sommaire en tête ;

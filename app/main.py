@@ -36,7 +36,7 @@ from collections.abc import Mapping
 from datetime import datetime, timedelta, timezone
 from io import BytesIO
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 from typing import Any
 
@@ -89,6 +89,7 @@ from app.resource_gate import Reservation, ResourceGate, release_memory
 from app.request_limits import Alerts, ClosingStreamingResponse, GenerationLimits, LimitRefused, RequestGuard, client_keys, count_setting
 from app import wikipedia_api
 from app.json_source import JsonSourceError, download, fetch_project, project_from_payload
+from app.html_document import HTML_PAGE_BYTES, HTML_TYPES, html_for_print
 from app.volumes import book_volumes, volume_project
 from app.models import (
     Article,
@@ -126,6 +127,7 @@ from app.wikipedia_api import (
     SUBPAGE_BOOK_MIN,
     SUBPAGE_BOOK_SITES,
     WIKIPEDIA_PDF_PAPERS,
+    WIKIMEDIA_HOST,
     MediaWikiClient,
     article_pdf_url,
     MediaWikiError,
@@ -134,6 +136,7 @@ from app.wikipedia_api import (
     FULL_TEXT_PAGES,
     article_url,
     book_wikitext_title,
+    is_book_listing,
     is_printable_wikitext,
     parse_article_url,
     parse_book_wikitext,
@@ -943,7 +946,11 @@ async def _resolve_source(client: MediaWikiClient, text: str, default_language: 
                 )
         return SourceResolution(kind="article", article=article)
     if site != "wikipedia":
-        raise ValueError(f"Seules les pages de contenu de {language}.{site}.org (textes, pages d’auteur…) sont acceptées.")
+        content = await client.get_wikitext(title, language, site) or ""
+        book = parse_book_wikitext(content, limit=200) if is_book_listing(content) else None
+        if book is None or not book.chapters:
+            raise ValueError(f"Seules les pages de contenu de {language}.{site}.org (textes, pages d’auteur…) et les compilations ou pages de livre sont acceptées.")
+        return SourceResolution(kind="book", book=_book_import(book, language, site), book_title=_book_name(title))
     return SourceResolution(kind="book", book=await _wikipedia_book(client, language, title), book_title=_book_name(title))
 
 
@@ -1314,18 +1321,42 @@ async def _build_book_pdf(
         # NE PAS recomposer dans le processus du serveur : pypdf y prend environ 25 fois la taille du PDF, que l'allocateur ne rend pas ; un processus de travail recyclé après chaque article rend tout en se terminant.
         return await run_in_worker(_fit_to_file, pdf_data, path, page_width_mm, page_height_mm)
 
-    def document_pdf(data: bytes, is_pdf: bool) -> bytes:
-        if is_pdf:
-            return data
-        return image_to_pdf(data, page_width_mm, page_height_mm)
-
-    async def document_data(document: UploadedDocument) -> tuple[bytes, bool]:
+    async def document_data(document: UploadedDocument) -> tuple[bytes, str]:
         if document.url is None:
-            return base64.b64decode(document.data_base64), document.kind == "pdf"
+            return base64.b64decode(document.data_base64), document.kind
         started_at = time.monotonic()
-        data, content_type = await fetch_remote_file(document.url, DOCUMENT_TYPES, f"le document « {document.title} »")
-        record.stage("fetch_document", "server", _memory_snapshot(), url=document.url, duration_s=round(time.monotonic() - started_at, 2), size_bytes=len(data), pdf=content_type == "application/pdf")
-        return data, content_type == "application/pdf"
+        if document.kind == "html":
+            data, kind = await html_page(document), "html"
+        else:
+            data, content_type = await fetch_remote_file(document.url, DOCUMENT_TYPES, f"le document « {document.title} »")
+            kind = "pdf" if content_type == "application/pdf" else "image"
+        record.stage("fetch_document", "server", _memory_snapshot(), url=document.url, duration_s=round(time.monotonic() - started_at, 2), size_bytes=len(data), pdf=kind == "pdf", html=kind == "html")
+        return data, kind
+
+    async def html_page(document: UploadedDocument) -> bytes:
+        label = f"la page web « {document.title} »"
+        # NE PAS télécharger une page Wikimédia par ce chemin : tout appel à Wikimédia passe par MediaWikiClient (User-Agent, limites de la politique robots) ; ces pages s'ajoutent par le champ Sources.
+        if WIKIMEDIA_HOST.match(urlsplit(document.url).hostname or ""):
+            raise RemoteFileError(f"{label[0].upper()}{label[1:]} est une page Wikimédia : ajoutez-la par le champ Sources, qui reprend son PDF officiel : {document.url}")
+        try:
+            page, content_type = await download(document.url, HTML_PAGE_BYTES, label)
+        except JsonSourceError as error:
+            raise RemoteFileError(str(error)) from error
+        if content_type not in HTML_TYPES:
+            raise RemoteFileError(f"{label[0].upper()}{label[1:]} n’est pas une page HTML ({content_type or 'type inconnu'}) : {document.url}")
+        html = await html_for_print(page, document.url, lambda address, size, what: download(address, size, what), page_width_mm, page_height_mm)
+        return html.encode("utf-8")
+
+    async def document_pdf(data: bytes, kind: str) -> bytes:
+        if kind == "image":
+            return await asyncio.to_thread(image_to_pdf, data, page_width_mm, page_height_mm)
+        if kind == "html":
+            if not ISOLATE_ASSEMBLY:
+                return await asyncio.to_thread(generate_pdf, data.decode("utf-8"))
+            preload(["app.main"])
+            # NE PAS rendre une page web dans le processus du serveur : une page lourde y prendrait beaucoup de mémoire, que l'allocateur ne rend pas.
+            return await run_in_worker(generate_pdf, data.decode("utf-8"))
+        return data
 
     # NE PAS garder les images de fond en mémoire ni dans le livre transmis à l'assemblage : chaque génération en garderait deux copies (octets et base64) pendant toute sa durée. Elles vont dans le dossier temporaire, supprimé à la fin de la génération ; une image donnée par son adresse est retéléchargée à chaque génération, seule l'adresse est enregistrée dans le JSON.
     background_files: dict[str, tuple[Path, str, str]] = {}
@@ -1375,16 +1406,15 @@ async def _build_book_pdf(
                     await started.put(progress("fetch_article", title=item.title))
                     url = article_pdf_url(item.title, item.language, paper, item.site)
                     data = await client.get_article_pdf(item.title, item.language, paper, item.site)
-                    is_pdf = True
+                    kind = "pdf"
                 else:
                     await started.put(progress("prepare_document", title=item.title))
                     url = item.url
-                    data, is_pdf = await document_data(item)
+                    data, kind = await document_data(item)
                 download_s, size = round(time.monotonic() - fetch_started, 2), len(data)
             async with MEMORY_GATE.reserve(fit_reserve(len(data)), announce_busy) as reservation:
                 note_wait(reservation, "fit")
-                if not is_pdf:
-                    data = await asyncio.to_thread(document_pdf, data, False)
+                data = await document_pdf(data, kind)
                 # NE PAS appeler pypdf directement ici : un calcul bloquant gèle le serveur et retarde l'envoi des messages de progression.
                 fitted_items[item.key] = asyncio.ensure_future(fit_part(data))
                 # NE PAS libérer le créneau avant la fin de la recomposition : sur un serveur au processeur limité (Toolforge), les PDF bruts téléchargés s'accumuleraient en mémoire en attendant d'être recomposés.

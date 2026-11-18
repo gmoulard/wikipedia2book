@@ -139,7 +139,7 @@ function sameArticle(a, b) {
 function normalizeProject(input) {
   const project = {
     main_articles: [], discovered_articles: [], uploaded_documents: [],
-    book_title: '', book_subtitle: '', book_author: '', introduction: '', conclusion: '', cover_image: null, back_image: null, cover_color: null, back_color: null, cover_logo: false, back_logo: false,
+    book_title: '', book_subtitle: '', book_author: '', introduction: '', conclusion: '', cover_image: null, back_image: null, cover_color: null, back_color: null, cover_logo: false, back_logo: false, cover_app_logo: false, back_app_logo: false,
     page_format: 'A4', custom_width_mm: 148, custom_height_mm: 210, orientation: 'portrait',
     margin_top_mm: 18, margin_bottom_mm: 18, margin_inside_mm: 18, margin_outside_mm: 16,
     margin_binding_mm: 0, article_order: [], chapters: [], toc_position: 'start', volume_breaks: [], unassigned_first: false, table_of_contents: true, page_numbers: true, ...input,
@@ -366,14 +366,16 @@ function renderOrganization() {
     const k = articleKey(a);
     const isDoc = Boolean(a.kind);
     const origin = isDoc
-      ? (a.kind === 'pdf' ? t('org.docPdf') : t('org.docImage'))
+      ? ({ pdf: t('org.docPdf'), image: t('org.docImage'), html: t('org.docHtml') }[a.kind] || t('org.docImage'))
       : (a.origin_title ? t('org.discoveredFrom', { origin: a.origin_title }) : t('org.mainArticleOrigin', { lang: articleSiteLabel(a) }));
     const openHref = isDoc ? '#' : safeUrl(a.url);
     const openTitle = isDoc ? t('org.openDocument') : t('org.openWikipedia');
     const removeTitle = isDoc ? t('org.docRemoveTitle') : t('meta.removeArticle');
     return `<div class="org-row org-article" draggable="true" data-slot-type="article" data-slot-index="${idx}" data-article-key="${escapeHtml(k)}">
       <span class="drag-handle" aria-hidden="true">\u2630</span>
-      <div class="org-article-text"><div class="org-article-title">${escapeHtml(a.title)}</div><div class="org-article-origin">${escapeHtml(origin)}</div></div>
+      <div class="org-article-text">${isDoc
+        ? `<input class="doc-title" aria-label="${escapeHtml(t('org.docTitleAria'))}" title="${escapeHtml(t('org.docTitleAria'))}" value="${escapeHtml(a.title)}" maxlength="300">`
+        : `<div class="org-article-title">${escapeHtml(a.title)}</div>`}<div class="org-article-origin">${escapeHtml(origin)}</div></div>
       <button class="remove-article org-remove" type="button" title="${escapeHtml(removeTitle)}" aria-label="${escapeHtml(removeTitle)} : ${escapeHtml(a.title)}">×</button>
       <a class="article-title org-open${isDoc ? ' doc-open' : ''}" href="${escapeHtml(openHref)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(openTitle)}" aria-label="${escapeHtml(openTitle)}\u00a0: ${escapeHtml(a.title)}">\u2197</a>
     </div>`;
@@ -536,8 +538,9 @@ function renderBackgrounds() {
     else if (!image) preview.removeAttribute('src');
     showWarning();
     field.querySelector('.background-remove').hidden = !image;
-    const { color, logo } = BACKGROUND_EXTRAS[field.dataset.background];
+    const { color, logo, appLogo } = BACKGROUND_EXTRAS[field.dataset.background];
     const picker = field.querySelector('.background-color');
+    field.querySelector('.background-app-logo').checked = Boolean(state.project?.[appLogo]);
     field.querySelector('.background-color-on').checked = Boolean(state.project?.[color]);
     picker.disabled = !state.project?.[color];
     if (state.project?.[color]) picker.value = state.project[color];
@@ -545,14 +548,18 @@ function renderBackgrounds() {
   });
 }
 
-const BACKGROUND_EXTRAS = { cover_image: { color: 'cover_color', logo: 'cover_logo' }, back_image: { color: 'back_color', logo: 'back_logo' } };
+const BACKGROUND_EXTRAS = {
+  cover_image: { color: 'cover_color', logo: 'cover_logo', appLogo: 'cover_app_logo' },
+  back_image: { color: 'back_color', logo: 'back_logo', appLogo: 'back_app_logo' },
+};
 
 function saveBackgroundExtras(field) {
-  const { color, logo } = BACKGROUND_EXTRAS[field.dataset.background];
+  const { color, logo, appLogo } = BACKGROUND_EXTRAS[field.dataset.background];
   const picker = field.querySelector('.background-color');
   const patch = {
     [color]: field.querySelector('.background-color-on').checked ? picker.value : null,
     [logo]: field.querySelector('.background-logo').checked,
+    [appLogo]: field.querySelector('.background-app-logo').checked,
   };
   Object.assign(state.project, patch);
   queueSave(patch);
@@ -579,8 +586,10 @@ async function setBackground(field, blob, title) {
   showToast(t('edition.backgroundAddedToast'));
 }
 
+const WIKIMEDIA_HOST = /(^|\.)(wikimedia|wikipedia|wikisource|wikibooks|wikivoyage|wikiversity|wikiquote|wiktionary|wikinews)\.org$/;
+
 async function wikimediaFileUrl(address) {
-  const match = address.hostname.match(/(^|\.)(wikimedia|wikipedia|wikisource|wikibooks|wikivoyage|wikiversity|wikiquote|wiktionary|wikinews)\.org$/);
+  const match = address.hostname.match(WIKIMEDIA_HOST);
   const page = decodeURIComponent(address.pathname).match(/^\/wiki\/[^:/]+:(.+)$/);
   if (!match || !page) return null;
   const api = new URL(`https://${address.hostname}/w/api.php`);
@@ -638,8 +647,13 @@ async function addDocumentFromUrl(value) {
   try {
     const address = new URL(text);
     const file = await wikimediaFileUrl(address);
-    const kind = (file ? file.mime === 'application/pdf' : /\.pdf$/i.test(address.pathname)) ? 'pdf' : 'image';
-    const url = file ? (kind === 'pdf' ? file.original : file.thumb) : address.href;
+    const url = file ? (file.mime === 'application/pdf' ? file.original : file.thumb) : address.href;
+    let kind = file ? (file.mime === 'application/pdf' ? 'pdf' : 'image') : /\.pdf$/i.test(address.pathname) ? 'pdf' : /\.(png|jpe?g|gif|webp)$/i.test(address.pathname) ? 'image' : null;
+    if (!kind) {
+      // NE PAS accepter une page Wikimédia comme page web : le serveur la refuserait, elle s'ajoute par le champ Sources, qui reprend son PDF officiel.
+      if (WIKIMEDIA_HOST.test(address.hostname)) { showToast(t('org.docWikimediaPage'), true); return; }
+      kind = await loadImage(url).then(() => 'image', () => 'html');
+    }
     if (kind === 'image') await loadImage(url);
     state.project.uploaded_documents = [
       ...(state.project.uploaded_documents || []),
@@ -1051,7 +1065,7 @@ async function handleDocumentUpload(files) {
     const base64 = dataUrl.split(',')[1] || '';
     state.project.uploaded_documents = [
       ...(state.project.uploaded_documents || []),
-      { id: crypto.randomUUID(), title: file.name, kind: isPdf ? 'pdf' : 'image', mime_type: file.type, data_base64: base64, selected: true },
+      { id: crypto.randomUUID(), title: (file.name.replace(/\.[^.]+$/, '') || file.name).slice(0, 300), kind: isPdf ? 'pdf' : 'image', mime_type: file.type, data_base64: base64, selected: true },
     ];
     added += 1;
   }
@@ -1507,7 +1521,7 @@ document.addEventListener('change', async (event) => {
   if (event.target.matches('#articleLanguage')) { if ($('#articleQuery').value.trim().length >= 2) searchArticles($('#articleQuery').value); return; }
   if (event.target.matches('input[name="orientation"]')) { const layout = collectLayoutSettings(); Object.assign(state.project, layout); queueSave(layout); renderBackgrounds(); return; }
   if (event.target.matches('#pageNumbers')) { queueSave({ page_numbers: event.target.checked }); return; }
-  if (event.target.matches('.background-color-on, .background-color, .background-logo')) { saveBackgroundExtras(event.target.closest('.background-field')); return; }
+  if (event.target.matches('.background-color-on, .background-color, .background-logo, .background-app-logo')) { saveBackgroundExtras(event.target.closest('.background-field')); return; }
   if (event.target.matches('input[name="tocChoice"]')) { queueSave({ table_of_contents: event.target.value !== 'none', toc_position: event.target.value === 'end' ? 'end' : 'start' }); return; }
   const textSettings = { bookTitle: 'book_title', bookDescription: 'description', bookSubtitle: 'book_subtitle', bookAuthor: 'book_author', bookIntroduction: 'introduction', bookConclusion: 'conclusion' };
   if (textSettings[event.target.id]) patchSetting(event.target.id, textSettings[event.target.id]);
@@ -1527,6 +1541,12 @@ document.addEventListener('input', (event) => {
     else searchArticles(event.target.value);
   }
   if (event.target.matches('#articleFilter')) renderArticles();
+  const docTitleEl = event.target.closest('.doc-title');
+  if (docTitleEl && state.project) {
+    const key = docTitleEl.closest('.org-article')?.dataset.articleKey;
+    const doc = (state.project.uploaded_documents || []).find((item) => `doc:${item.id}` === key);
+    if (doc && docTitleEl.value.trim()) { doc.title = docTitleEl.value.trim().slice(0, 300); queueSave({ uploaded_documents: state.project.uploaded_documents }); }
+  }
   const chapterNameEl = event.target.closest('.chapter-name');
   if (chapterNameEl && state.project) {
     const row = chapterNameEl.closest('.org-chapter-row');

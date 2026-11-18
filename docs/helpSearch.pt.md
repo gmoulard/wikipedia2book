@@ -42,6 +42,7 @@ Sem código de língua, conta a língua escolhida ao lado do campo. A ordem dos 
 ## Livros inteiros
 
 - **Página de livro da Wikipédia**: escreva o endereço ou o nome, por exemplo `Utilisateur:Alexbzh972/Livres/Martinique`. Todos os artigos são adicionados pela ordem da página, com os capítulos, o título e o subtítulo.
+- **Compilação dos Wikilivros**: escreva o endereço da compilação, por exemplo `https://fr.wikibooks.org/wiki/Wikilivres:Compilations/Programmation_C`. As suas páginas são adicionadas pela ordem da lista, como numa página de livro da Wikipédia.
 - **Livro dos Wikilivros ou obra da Wikisource**: escreva o endereço ou o título do sumário, por exemplo `https://fr.wikibooks.org/wiki/Cosmologie` ou `s:Les Misérables`. Uma janela pergunta o que pretende:
   - «O livro inteiro»: todas as páginas, organizadas em capítulos;
   - «O livro inteiro e o seu sumário»: o mesmo, com a página do sumário no início;

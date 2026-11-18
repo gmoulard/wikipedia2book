@@ -156,7 +156,7 @@ def build_cover_html(project: Project, language: str = "fr") -> str:
         text_css = COVER_TEXT_CSS[cover_text_style(project.cover_image, page_width, page_height, text_area)]
     else:
         text_css = COVER_TEXT_CSS[color_text_style(project.cover_color)] if project.cover_color else ""
-    cover_logo = _logo_img("cover-logo") if project.cover_logo else ""
+    cover_logo = _logos_html("cover-logo", project.cover_logo, project.cover_app_logo)
     return f"""<!doctype html>
     <html {_html_attrs(language)}>
     <head>
@@ -178,7 +178,8 @@ h2 {{ font-size: 18pt; }}
 .author {{ margin-top: 32pt; color: #555; }}
 .cover-note {{ margin-top: 20pt; color: #555; font-size: 9pt; }}
 .opening {{ page-break-after: always; }}
-.cover-logo {{ position: absolute; right: 0; bottom: 0; width: 25mm; }}
+.cover-logo {{ position: absolute; right: 0; bottom: 0; }}
+.cover-logo img {{ width: 25mm; margin-left: 4mm; vertical-align: bottom; }}
 {text_css}
     </style>
     </head>
@@ -296,7 +297,7 @@ h1 {{ font-size: 30pt; }}
 
 APP_URL = "https://wikipedia2book.toolforge.org/"
 SOURCE_URL = "https://github.com/gmoulard/wikipedia2book"
-COLOPHON_LOGO = Path(__file__).parent / "static" / "Wikipedia2bookLogoPrint.png"
+COLOPHON_LOGO = Path(__file__).parent / "static" / "Wikipedia2bookLogoPrintTransparent.png"
 COLOPHON_CSS = (
     ".colophon {{ margin-top: 28pt; text-align: center; break-inside: avoid; font: 9pt {fonts}; line-height: 1.6; }}"
     ".colophon img {{ width: 100mm; max-width: 100%; }}"
@@ -316,9 +317,15 @@ def color_text_style(color: str) -> str:
     return "light" if 0.2126 * red + 0.7152 * green + 0.0722 * blue < 0.5 else "dark"
 
 
-def _logo_img(css_class: str) -> str:
-    logo = base64.b64encode(WIKIPEDIA_LOGO.read_bytes()).decode("ascii")
-    return f'<img class="{css_class}" src="data:image/png;base64,{logo}" alt="Wikipedia">'
+APP_LOGO = Path(__file__).parent / "static" / "Wikipedia2bookLogoSmall.png"
+
+
+def _logos_html(css_class: str, wikipedia: bool, app: bool) -> str:
+    images = [(path, alt) for path, alt, wanted in ((APP_LOGO, "Wikipedia2Book", app), (WIKIPEDIA_LOGO, "Wikipedia", wikipedia)) if wanted]
+    if not images:
+        return ""
+    tags = "".join(f'<img src="data:image/png;base64,{base64.b64encode(path.read_bytes()).decode("ascii")}" alt="{alt}">' for path, alt in images)
+    return f'<div class="{css_class}">{tags}</div>'
 
 
 def _background_css(image: BookImage | None, page: str) -> str:
@@ -425,21 +432,22 @@ def _colophon_html(language: str) -> str:
 
 
 def has_back_cover(project: Project) -> bool:
-    return bool(project.back_image or project.back_color or project.back_logo)
+    return bool(project.back_image or project.back_color or project.back_logo or project.back_app_logo)
 
 
 def build_back_cover_html(project: Project) -> str:
     page_width, page_height, *_ = _page_layout(project)
     logo_width = min(25.0, page_width / 4)
     logo_margin = min(15.0, page_width / 10)
-    logo = _logo_img("back-logo") if project.back_logo else ""
+    logo = _logos_html("back-logo", project.back_logo, project.back_app_logo)
     return f"""<!doctype html>
 <html><head><meta charset="utf-8"><style>
 @page {{ size: {page_width:g}mm {page_height:g}mm; margin: 0; }}
 {_color_css(project.back_color, "")}
 {_background_css(project.back_image, "")}
 body {{ margin: 0; }}
-.back-logo {{ position: absolute; right: {logo_margin:g}mm; bottom: {logo_margin:g}mm; width: {logo_width:g}mm; }}
+.back-logo {{ position: absolute; right: {logo_margin:g}mm; bottom: {logo_margin:g}mm; }}
+.back-logo img {{ width: {logo_width:g}mm; margin-left: 4mm; vertical-align: bottom; }}
 </style></head><body><div>{logo}</div></body></html>"""
 
 

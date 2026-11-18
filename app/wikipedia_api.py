@@ -422,6 +422,17 @@ def parse_book_wikitext(content: str, limit: int = 200) -> WikipediaBook:
     return WikipediaBook(subtitle=subtitle, chapters=[chapter for chapter in chapters if chapter[1]])
 
 
+BOOK_LISTING_LINE = re.compile(r"^\s*:+\s*\[\[[^\[\]]+\]\]\s*$")
+LINKED_LINE = re.compile(r"\[\[[^\[\]]+\]\]")
+
+
+# NE PAS accepter une page de projet sur ses seuls liens : une discussion (Bistro, salle de lecture) en contient aussi ; une compilation ou une page de livre est une liste de lignes « : [[…]] » sans autre texte.
+def is_book_listing(content: str) -> bool:
+    linked = [line for line in content.splitlines() if LINKED_LINE.search(line) and not line.strip().startswith(("=", ";", "{{"))]
+    listing = [line for line in linked if BOOK_LISTING_LINE.match(line)]
+    return len(listing) >= 2 and len(listing) >= 0.8 * len(linked)
+
+
 WIKIMEDIA_HOST = re.compile(r"^(?:[a-z0-9-]+\.)*(?:wikimedia|wikipedia|wikisource|wikibooks|wikivoyage|wikiversity|wikiquote|wiktionary|wikinews)\.org$")
 
 

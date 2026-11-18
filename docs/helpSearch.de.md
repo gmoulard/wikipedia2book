@@ -42,6 +42,7 @@ Ohne Sprachcode gilt die neben dem Feld gewählte Sprache. Die Reihenfolge der P
 ## Ganze Bücher
 
 - **Wikipedia-Buchseite**: Geben Sie ihre Adresse oder ihren Namen ein, zum Beispiel `Utilisateur:Alexbzh972/Livres/Martinique`. Alle Artikel werden in der Reihenfolge der Seite hinzugefügt, mit Kapiteln, Titel und Untertitel.
+- **Wikibooks-Sammlung**: Geben Sie die Adresse der Sammlung ein, zum Beispiel `https://fr.wikibooks.org/wiki/Wikilivres:Compilations/Programmation_C`. Ihre Seiten werden in der Reihenfolge der Liste hinzugefügt, wie bei einer Wikipedia-Buchseite.
 - **Wikibooks-Buch oder Wikisource-Werk**: Geben Sie die Adresse oder den Titel des Inhaltsverzeichnisses ein, zum Beispiel `https://fr.wikibooks.org/wiki/Cosmologie` oder `s:Les Misérables`. Ein Fenster fragt, was Sie möchten:
   - „Das ganze Buch“: alle seine Seiten, in Kapitel geordnet;
   - „Das ganze Buch mit seinem Inhaltsverzeichnis“: dasselbe, mit dem Inhaltsverzeichnis vorne;

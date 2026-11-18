@@ -42,6 +42,7 @@ Dil kodu yoksa alanın yanında seçilen dil kullanılır. Öneklerin sırası �
 ## Bütün kitaplar
 
 - **Vikipedi kitap sayfası**: adresini ya da adını girin, örneğin `Utilisateur:Alexbzh972/Livres/Martinique`. Tüm maddeleri sayfadaki sırayla, bölümleri, başlığı ve alt başlığıyla eklenir.
+- **Vikikitap derlemesi**: derlemenin adresini girin, örneğin `https://fr.wikibooks.org/wiki/Wikilivres:Compilations/Programmation_C`. Sayfaları, bir Vikipedi kitap sayfasında olduğu gibi listedeki sırayla eklenir.
 - **Vikikitap kitabı ya da Vikikaynak eseri**: içindekiler sayfasının adresini ya da başlığını girin, örneğin `https://fr.wikibooks.org/wiki/Cosmologie` ya da `s:Les Misérables`. Bir pencere ne istediğinizi sorar:
   - «Kitabın tamamı»: bölümlere ayrılmış tüm sayfaları;
   - «Kitabın tamamı ve içindekiler sayfası»: aynısı, içindekiler sayfası başta;
