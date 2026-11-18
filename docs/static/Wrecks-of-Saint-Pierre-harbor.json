@@ -1,7 +1,7 @@
 {
   "format": "wikipedia2book-workspace",
   "version": 1,
-  "saved_at": "2026-11-16T18:24:57.762Z",
+  "saved_at": "2026-11-18T01:51:21.741Z",
   "projects": [
     {
       "main_articles": [
@@ -140,6 +140,12 @@
         "title": "erruption.jpg",
         "url": "https://gmoulard.github.io/wikipedia2book/static/erruption.jpg"
       },
+      "cover_color": null,
+      "cover_text_color": "#d4af37",
+      "cover_font": "sans-serif",
+      "back_color": null,
+      "cover_logo": true,
+      "back_logo": false,
       "page_format": "A4",
       "custom_width_mm": 148,
       "custom_height_mm": 210,
@@ -192,7 +198,7 @@
       "id": "889ef69c-81d4-48f1-91f1-ee8f3c82f481",
       "name": "My book",
       "created_at": "2026-11-16T17:00:26.031Z",
-      "updated_at": "2026-11-16T18:24:49.536Z"
+      "updated_at": "2026-11-18T01:50:20.723Z"
     }
   ]
 }
