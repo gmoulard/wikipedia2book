@@ -92,7 +92,7 @@ class CoverTextStyleTest(unittest.TestCase):
         cases = {
             "dark": png("white"),
             "light": png("black"),
-            "band": png("white", split=(0, 0, 0)),
+            "mixed": png("white", split=(0, 0, 0)),
         }
         for style, image in cases.items():
             with self.subTest(style=style):
@@ -105,15 +105,16 @@ class CoverTextStyleTest(unittest.TestCase):
         wide = png("white", size=(1200, 400), split=(0, 0, 0))
         self.assertEqual(book_builder.cover_text_style(wide, 210, 297, (120, 18, 192, 188)), "dark")
 
-    def test_unreadable_image_gets_the_band(self):
+    def test_unreadable_image_is_mixed(self):
         svg = BookImage(mime_type="image/svg+xml", data_base64=base64.b64encode(b'<svg xmlns="http://www.w3.org/2000/svg"/>').decode("ascii"))
-        self.assertEqual(book_builder.cover_text_style(svg, 210, 297, self.AREA), "band")
+        self.assertEqual(book_builder.cover_text_style(svg, 210, 297, self.AREA), "mixed")
 
     def test_cover_html_applies_the_style(self):
         dark = book_builder.build_cover_html(Project(name="Livre", cover_image=png("black")))
         self.assertIn(".cover, .cover .author, .cover .cover-note { color: #fff; }", dark)
-        band = book_builder.build_cover_html(Project(name="Livre", cover_image=png("white", split=(0, 0, 0))))
-        self.assertIn(".cover-text { padding:", band)
+        mixed = book_builder.build_cover_html(Project(name="Livre", cover_image=png("white", split=(0, 0, 0))))
+        self.assertNotIn(".cover-text {", mixed)
+        self.assertNotIn("rgba(255, 255, 255", mixed)
         plain = book_builder.build_cover_html(Project(name="Livre", cover_color=None))
         self.assertNotIn("color: #fff", plain)
         self.assertNotIn(".cover-text {", plain)

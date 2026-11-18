@@ -291,7 +291,7 @@ class ImageFormatTest(unittest.TestCase):
 
         image = BookImage(mime_type="image/png", data_base64=base64.b64encode(EPS).decode())
         self.assertIs(fit_background(image, 10, 10), image)
-        self.assertEqual(cover_text_style(image, 210, 297, (0, 0, 210, 200)), "band")
+        self.assertEqual(cover_text_style(image, 210, 297, (0, 0, 210, 200)), "mixed")
         self.assertEqual(self.ghostscript_calls, [])
 
     def test_weasyprint_has_the_image_and_fetcher_fixes(self):

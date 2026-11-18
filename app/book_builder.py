@@ -409,21 +409,22 @@ def cover_text_style(image: BookImage, width: float, height: float, area: tuple[
     try:
         luminances = sorted(_cover_luminances(image, width, height, area))
     except (OSError, ValueError, binascii.Error, Image.DecompressionBombError):
-        return "band"
+        return "mixed"
     if not luminances:
-        return "band"
+        return "mixed"
     margin = int(len(luminances) * (1 - READABLE_SHARE))
     if luminances[margin] >= BLACK_TEXT_MIN_LUMINANCE:
         return "dark"
     if luminances[len(luminances) - 1 - margin] <= WHITE_TEXT_MAX_LUMINANCE:
         return "light"
-    return "band"
+    return "mixed"
 
 
 COVER_TEXT_CSS = {
     "dark": "",
     "light": ".cover, .cover .author, .cover .cover-note { color: #fff; }",
-    "band": ".cover-text { padding: 14pt 18pt; background: rgba(255, 255, 255, 0.85); }",
+    # NE PAS remettre de bandeau blanc derrière le texte de couverture : retiré à la demande de l'utilisateur, le texte garde sa couleur sur une image contrastée.
+    "mixed": "",
 }
 
 
