@@ -23,7 +23,7 @@ Une action réalisée est cochée (`[x]`) avec la version ou la date qui l'a fai
 - [x] Intégrer n'importe quelle page HTML, convertie en PDF par le serveur et intégrée comme un PDF — étape Organisation, champ d'adresse (1.13.0).
 - [x] Pouvoir renommer une photo ou un document importé, pour ne pas voir le nom du fichier à l'impression — titre modifiable à l'étape Organisation (1.13.0).
 - [x] Accepter les compilations de Wikilivres (`Wikilivres:Compilations/…`) et lire comme un livre toute page faite de lignes `: [[…]]` (1.13.0).
-- [x] Logo Wikipedia2Book au choix sur la couverture et la dernière page, logo de la licence à fond transparent (fichiers d'origine gardés), dernière page sans numéro, logos en bas à droite (1.13.0).
+- [x] Logo de la licence à fond transparent (fichiers d'origine gardés), dernière page sans numéro, logo Wikipédia en bas à droite (1.13.0) ; le logo Wikipedia2Book sur la couverture et la dernière page, ajouté en 1.13.0, est retiré à la demande.
 
 ## 3. Améliorations possibles
 

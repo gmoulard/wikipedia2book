@@ -156,7 +156,7 @@ def build_cover_html(project: Project, language: str = "fr") -> str:
         text_css = COVER_TEXT_CSS[cover_text_style(project.cover_image, page_width, page_height, text_area)]
     else:
         text_css = COVER_TEXT_CSS[color_text_style(project.cover_color)] if project.cover_color else ""
-    cover_logo = _logos_html("cover-logo", project.cover_logo, project.cover_app_logo)
+    cover_logo = _logos_html("cover-logo", project.cover_logo)
     return f"""<!doctype html>
     <html {_html_attrs(language)}>
     <head>
@@ -317,15 +317,12 @@ def color_text_style(color: str) -> str:
     return "light" if 0.2126 * red + 0.7152 * green + 0.0722 * blue < 0.5 else "dark"
 
 
-APP_LOGO = Path(__file__).parent / "static" / "Wikipedia2bookLogoSmall.png"
-
-
-def _logos_html(css_class: str, wikipedia: bool, app: bool) -> str:
-    images = [(path, alt) for path, alt, wanted in ((APP_LOGO, "Wikipedia2Book", app), (WIKIPEDIA_LOGO, "Wikipedia", wikipedia)) if wanted]
-    if not images:
+# NE PAS remettre le logo Wikipedia2Book sur la couverture ni la dernière page : retiré à la demande de l'utilisateur (1.13.0), seul le logo Wikipédia y est proposé.
+def _logos_html(css_class: str, wikipedia: bool) -> str:
+    if not wikipedia:
         return ""
-    tags = "".join(f'<img src="data:image/png;base64,{base64.b64encode(path.read_bytes()).decode("ascii")}" alt="{alt}">' for path, alt in images)
-    return f'<div class="{css_class}">{tags}</div>'
+    logo = base64.b64encode(WIKIPEDIA_LOGO.read_bytes()).decode("ascii")
+    return f'<div class="{css_class}"><img src="data:image/png;base64,{logo}" alt="Wikipedia"></div>'
 
 
 def _background_css(image: BookImage | None, page: str) -> str:
@@ -432,14 +429,14 @@ def _colophon_html(language: str) -> str:
 
 
 def has_back_cover(project: Project) -> bool:
-    return bool(project.back_image or project.back_color or project.back_logo or project.back_app_logo)
+    return bool(project.back_image or project.back_color or project.back_logo)
 
 
 def build_back_cover_html(project: Project) -> str:
     page_width, page_height, *_ = _page_layout(project)
     logo_width = min(25.0, page_width / 4)
     logo_margin = min(15.0, page_width / 10)
-    logo = _logos_html("back-logo", project.back_logo, project.back_app_logo)
+    logo = _logos_html("back-logo", project.back_logo)
     return f"""<!doctype html>
 <html><head><meta charset="utf-8"><style>
 @page {{ size: {page_width:g}mm {page_height:g}mm; margin: 0; }}

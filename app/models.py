@@ -126,12 +126,11 @@ class Project(BaseModel):
     conclusion: str = Field(default="", max_length=20000)
     cover_image: BookImage | None = None
     back_image: BookImage | None = None
-    cover_color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
+    # NE PAS revenir à None par défaut : couverture bleue rgb(39, 60, 117) demandée par l'utilisateur ; garder aligné avec normalizeProject (app.js) et le sélecteur de couverture (index.html). null explicite = sans couleur.
+    cover_color: str | None = Field(default="#273c75", pattern=r"^#[0-9a-fA-F]{6}$")
     back_color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
     cover_logo: bool = False
     back_logo: bool = False
-    cover_app_logo: bool = False
-    back_app_logo: bool = False
     page_format: Literal["A0", "A1", "A2", "A3", "A4", "A5", "A6", "Letter", "Legal", "custom"] = "A4"
     custom_width_mm: float = Field(default=148, ge=50, le=1000)
     custom_height_mm: float = Field(default=210, ge=50, le=1000)

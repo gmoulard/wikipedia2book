@@ -821,7 +821,7 @@ Wikipedia2Book/
 │       ├── admin.html, admin.js, admin.css
 │       ├── Wikipedia2bookLogo.png
 │       ├── WikipediaLogo.png   (logo Wikipédia de Commons, CC BY-SA 3.0, couverture et dernière page)
-│       ├── Wikipedia2bookLogoSmall.png, Wikipedia2bookLogoPrintTransparent.png   (icône réduite, logo de la licence à fond transparent)
+│       ├── Wikipedia2bookLogoPrintTransparent.png   (logo de la licence à fond transparent)
 │       └── testPerformanceReference.json   (livre de référence du benchmark)
 │
 ├── scripts/

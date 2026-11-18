@@ -114,7 +114,7 @@ class CoverTextStyleTest(unittest.TestCase):
         self.assertIn(".cover, .cover .author, .cover .cover-note { color: #fff; }", dark)
         band = book_builder.build_cover_html(Project(name="Livre", cover_image=png("white", split=(0, 0, 0))))
         self.assertIn(".cover-text { padding:", band)
-        plain = book_builder.build_cover_html(Project(name="Livre"))
+        plain = book_builder.build_cover_html(Project(name="Livre", cover_color=None))
         self.assertNotIn("color: #fff", plain)
         self.assertNotIn(".cover-text {", plain)
 
@@ -175,7 +175,14 @@ class ColorAndLogoTest(unittest.TestCase):
             with self.subTest(color=color), self.assertRaises(ValidationError):
                 Project(name="Livre", back_color=color)
         project = Project(name="Livre")
-        self.assertEqual((project.cover_color, project.back_color, project.cover_logo, project.back_logo), (None, None, False, False))
+        self.assertEqual((project.cover_color, project.back_color, project.cover_logo, project.back_logo), ("#273c75", None, False, False))
+        self.assertIsNone(Project(name="Livre", cover_color=None).cover_color)
+
+    def test_default_cover_is_blue_with_white_text(self):
+        html = book_builder.build_cover_html(Project(name="Livre"))
+        self.assertIn("#273c75", html)
+        self.assertEqual(book_builder.color_text_style("#273c75"), "light")
+        self.assertNotIn("#273c75", book_builder.build_cover_html(Project(name="Livre", cover_color=None)))
 
     def test_cover_color_sets_the_background_and_the_text(self):
         dark = book_builder.build_cover_html(Project(name="Livre", cover_color="#1d2927"))
@@ -193,21 +200,22 @@ class ColorAndLogoTest(unittest.TestCase):
     def test_logo_on_the_cover_and_the_last_page(self):
         self.assertNotIn('class="cover-logo"', book_builder.build_cover_html(Project(name="Livre")))
         wikipedia = base64.b64encode(book_builder.WIKIPEDIA_LOGO.read_bytes()).decode("ascii")
-        app = base64.b64encode(book_builder.APP_LOGO.read_bytes()).decode("ascii")
         cover = book_builder.build_cover_html(Project(name="Livre", cover_logo=True))
         self.assertIn(f'<div class="cover-logo"><img src="data:image/png;base64,{wikipedia}" alt="Wikipedia"></div>', cover)
         self.assertIn(".cover-logo { position: absolute; right: 0; bottom: 0; }", cover)
-        both = book_builder.build_cover_html(Project(name="Livre", cover_logo=True, cover_app_logo=True))
-        self.assertLess(both.index(app), both.index(wikipedia))
-        back = book_builder.build_back_cover_html(Project(name="Livre", back_app_logo=True, back_color="#336699"))
-        self.assertIn(f'<div class="back-logo"><img src="data:image/png;base64,{app}" alt="Wikipedia2Book"></div>', back)
+        self.assertNotIn("Wikipedia2Book", cover)
+        old_file = Project.model_validate({"name": "Livre", "cover_app_logo": True, "back_app_logo": True})
+        self.assertFalse(book_builder.has_back_cover(old_file))
+        self.assertNotIn('class="cover-logo"', book_builder.build_cover_html(old_file))
+        back = book_builder.build_back_cover_html(Project(name="Livre", back_logo=True, back_color="#336699"))
+        self.assertIn(f'<div class="back-logo"><img src="data:image/png;base64,{wikipedia}" alt="Wikipedia"></div>', back)
         self.assertIn(".back-logo { position: absolute; right: 15mm; bottom: 15mm; }", back)
         self.assertIn(".back-logo img { width: 25mm; margin-left: 4mm; vertical-align: bottom; }", back)
         self.assertIn("@page  { background-color: #336699; }", back)
 
     def test_a_last_page_needs_an_image_a_color_or_the_logo(self):
         self.assertFalse(book_builder.has_back_cover(Project(name="Livre")))
-        for fields in ({"back_image": BACK}, {"back_color": "#336699"}, {"back_logo": True}, {"back_app_logo": True}):
+        for fields in ({"back_image": BACK}, {"back_color": "#336699"}, {"back_logo": True}):
             with self.subTest(fields=fields):
                 self.assertTrue(book_builder.has_back_cover(Project(name="Livre", **fields)))
 
