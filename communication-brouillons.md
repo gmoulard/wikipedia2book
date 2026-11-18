@@ -7,6 +7,12 @@ Pour toutes les publications :
 - signature `~~~~` sur les pages de discussion ;
 - texte de présentation de référence : celui de `todo.md`, adapté à chaque page.
 
+## Décisions (18/11/2026)
+
+Validées : 0, 1, 2, 4, 5, 6, 7, 8a, 8b, 9, 10a, 10b, 10c, 11 (après 10), 12a, 12b, 13a, 13b. 12c reste suspendue à la réponse de la Rundschau (action 9).
+
+Refusée : 3 (Help talk:Books, en.wikipedia).
+
 ## Déjà fait (rien à publier)
 
 | Page | Par | Remarque |
@@ -52,7 +58,7 @@ Dans `== Konvertierung von Wikitext (Export) ==` › `=== PDF ===`, après la pu
 
 Résumé : `Wikipedia2Book bei PDF ergänzt (Interessenkonflikt: ich bin der Autor des Werkzeugs)`
 
-## 3. en.wikipedia — Help:Books/FAQ — proposition en page de discussion
+## 3. en.wikipedia — Help:Books/FAQ — proposition en page de discussion (refusée le 18/11)
 
 Page : [Help talk:Books](https://en.wikipedia.org/wiki/Help_talk:Books), nouvelle section.
 
