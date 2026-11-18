@@ -5,6 +5,9 @@ Préparé le 18/11/2026 à partir de `todo-mediawiki2latex-visibility.md` et de 
 Pour toutes les publications :
 - résumé de modification qui signale le conflit d'intérêts : « conflit d'intérêts : je suis l'auteur de Wikipedia2Book » ou « COI: I am the author of Wikipedia2Book » ;
 - signature `~~~~` sur les pages de discussion ;
+- Ajouté un liens vers wikipedia2book https://wikipedia2book.toolforge.org/
+- Ajouté l'image https://www.mediawiki.org/wiki/Reading/Web/PDF_Functionality#/media/File:Wikipedia2book_Logo.png e, 70*70 avec un liens vers https://wikipedia2book.toolforge.org/
+- Ajouté quand quand il y a une URL un liens [ Télécharger en PDF ](https://iw.toolforge.org/wikipedia2book/api/pdf/from-source?source=https://...) comme sur la page : https://fr.wikipedia.org/wiki/Utilisateur:474D6F756C617264/Livres/Les_%C3%A9paves_de_la_rade_de_Saint-Pierre_suite_a_l'%C3%A9ruption_de_la_montagne_Pel%C3%A9e_en_1902
 - texte de présentation de référence : celui de `todo.md`, adapté à chaque page.
 
 ## Déjà fait (rien à publier)
