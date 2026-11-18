@@ -340,7 +340,7 @@ Plan :
 
 ### 19a. Texte complet du billet
 
-Dans [story.md](story.md) (relecture de Junko Nakayama le 18/11, attribution de l'image à ajouter).
+Dans [story.fr.md](story.fr.md) et [story.en.md](story.en.md) (relecture de Junko Nakayama le 18/11, attribution de l'image à ajouter).
 
 
 ## 20. Présentations orales
