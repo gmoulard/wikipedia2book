@@ -178,6 +178,27 @@ class ColorAndLogoTest(unittest.TestCase):
         self.assertEqual((project.cover_color, project.back_color, project.cover_logo, project.back_logo), ("#273c75", None, False, False))
         self.assertIsNone(Project(name="Livre", cover_color=None).cover_color)
 
+    def test_cover_text_color_and_font(self):
+        html = book_builder.build_cover_html(Project(name="Livre"))
+        self.assertIn(".cover, .cover .author, .cover .cover-note { color: #d4af37; }", html)
+        self.assertIn(f".cover {{ font-family: {book_builder.SERIF_FONTS}; }}", html)
+        chosen = book_builder.build_cover_html(Project(name="Livre", cover_text_color="#123456", cover_font="monospace"))
+        self.assertIn("color: #123456; }", chosen)
+        self.assertIn('"DejaVu Sans Mono"', chosen)
+        self.assertIn(f".cover {{ font-family: {book_builder.SANS_FONTS}; }}", book_builder.build_cover_html(Project(name="Livre", cover_font="sans-serif")))
+        automatic = book_builder.build_cover_html(Project(name="Livre", cover_text_color=None))
+        self.assertNotIn("#d4af37", automatic)
+        self.assertIn(".cover, .cover .author, .cover .cover-note { color: #fff; }", automatic)
+        for field, value in (("cover_text_color", "gold"), ("cover_text_color", "#d4af37; } body {"), ("cover_font", "Comic Sans"), ("cover_font", "serif; } x {")):
+            with self.subTest(field=field, value=value), self.assertRaises(ValidationError):
+                Project(name="Livre", **{field: value})
+
+    def test_cover_fonts_are_installed(self):
+        root = Path(__file__).resolve().parent.parent
+        for name in ("Dockerfile", "Aptfile"):
+            self.assertIn("fonts-dejavu-core", (root / name).read_text(encoding="utf-8"))
+        self.assertEqual(set(book_builder.COVER_FONTS), {"serif", "sans-serif", "monospace"})
+
     def test_default_cover_is_blue_with_white_text(self):
         html = book_builder.build_cover_html(Project(name="Livre"))
         self.assertIn("#273c75", html)

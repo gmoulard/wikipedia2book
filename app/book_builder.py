@@ -181,6 +181,8 @@ h2 {{ font-size: 18pt; }}
 .cover-logo {{ position: absolute; right: 0; bottom: 0; }}
 .cover-logo img {{ width: 25mm; margin-left: 4mm; vertical-align: bottom; }}
 {text_css}
+.cover {{ font-family: {COVER_FONTS[project.cover_font]}; }}
+{_cover_text_color_css(project.cover_text_color)}
     </style>
     </head>
     <body>
@@ -195,6 +197,13 @@ TOC_LINK_PREFIX = "https://wikipedia2book.invalid/toc/"
 # NE PAS placer HanaMinA ni Noto CJK avant le générique : HanaMinB ne couvre que les extensions CJK B et suivantes (caractères rares, 僻字), les caractères chinois et japonais courants restent à Noto CJK, choisi selon la langue de la page.
 SERIF_FONTS = '"DejaVu Serif", "HanaMinB", serif'
 SANS_FONTS = '"DejaVu Sans", "HanaMinB", sans-serif'
+MONO_FONTS = '"DejaVu Sans Mono", "HanaMinB", monospace'
+# NE PAS proposer une police absente du Dockerfile et de l'Aptfile : WeasyPrint prendrait une police de repli sans prévenir.
+COVER_FONTS = {"serif": SERIF_FONTS, "sans-serif": SANS_FONTS, "monospace": MONO_FONTS}
+
+
+def _cover_text_color_css(color: str | None) -> str:
+    return f".cover, .cover .author, .cover .cover-note {{ color: {color}; }}" if color else ""
 
 
 GENERATED_BLOCK_ENTRIES = 100

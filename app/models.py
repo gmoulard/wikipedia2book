@@ -128,6 +128,8 @@ class Project(BaseModel):
     back_image: BookImage | None = None
     # NE PAS revenir à None par défaut : couverture bleue rgb(39, 60, 117) demandée par l'utilisateur ; garder aligné avec normalizeProject (app.js) et le sélecteur de couverture (index.html). null explicite = sans couleur.
     cover_color: str | None = Field(default="#273c75", pattern=r"^#[0-9a-fA-F]{6}$")
+    cover_text_color: str | None = Field(default="#d4af37", pattern=r"^#[0-9a-fA-F]{6}$")
+    cover_font: Literal["serif", "sans-serif", "monospace"] = "serif"
     back_color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
     cover_logo: bool = False
     back_logo: bool = False
