@@ -1,62 +1,59 @@
-# Printing Wikipedia again: the story of Wikipedia2Book
+# Imprimer Wikipédia à nouveau : l'histoire de Wikipedia2Book
 
 Billet pour [Diff](https://diff.wikimedia.org/?p=223381) (action 19 de [communication-brouillons.md](communication-brouillons.md), relecture de Junko Nakayama le 18/11/2026).
 
-Les passages entre `[[À COMPLÉTER : …]]` sont ta propre histoire, à écrire avec tes mots (ou à supprimer). Le reste vient du dépôt (historique Git, CHANGELOG, statistiques Toolviews).
-
-**Attribution de l'image demandée par la relectrice** : dans Diff, cliquer sur l'image → « Replace » → « Open Media Library », puis à droite remplir : *Author* = l'auteur indiqué sur la page Commons de [File:Wikipedia2book Logo.png](https://commons.wikimedia.org/wiki/File:Wikipedia2book_Logo.png) ; *License* = la licence indiquée sur cette même page (à recopier telle quelle) ; *Link* = `https://commons.wikimedia.org/wiki/File:Wikipedia2book_Logo.png`. Même chose pour chaque capture ajoutée (une capture du PDF contient des images Wikipédia : citer leurs fichiers Commons, ou choisir une page sans image). Voir la [checklist de publication](https://diff.wikimedia.org/publishing-checklist/).
-
 ---
 
-*Disclosure: I am the developer of Wikipedia2Book. This post tells why I built it, what it does, and how it was made.*
+*Conflit d'intérêts : je suis le développeur de Wikipedia2Book. Ce billet raconte pourquoi je l'ai créé, ce qu'il fait et comment il a été fait.*
 
-## Why I built it
+## Pourquoi je l'ai créé
 
-For years, Wikipedia had a feature that many readers loved: you could gather articles into a "book" with Special:Book, and download it as a single PDF, or order a printed copy. In 2017 the PDF rendering of books was switched off. The saved books are still there, thousands of them, and Special:Book still receives a lot of visits (see Phabricator task T224922), but the button that turned them into a PDF no longer works. The printable versions of Wikibooks and the works of Wikisource have the same problem: the text is ready to be read on paper, but there is no simple way to get one clean, printable volume.
+Pendant des années, Wikipédia a proposé une fonction que beaucoup de lecteurs aimaient : rassembler des articles dans un « livre » avec Spécial:Livre, puis le télécharger en un seul PDF, ou en commander un exemplaire imprimé. En 2017, la production des PDF de livres a été arrêtée. Les livres enregistrés existent toujours, par milliers, et Spécial:Livre reçoit encore beaucoup de visites (voir la tâche Phabricator T224922), mais le bouton qui les transformait en PDF ne fonctionne plus. Les versions imprimables de Wikilivres et les œuvres de Wikisource ont le même problème : le texte est prêt à être lu sur papier, mais il n'existe pas de moyen simple d'en tirer un volume propre et imprimable.
 
-[[À COMPLÉTER : ton point de départ personnel. Par exemple : quel livre tu voulais imprimer, pour qui (classe, famille, association, lecture hors ligne), ce que tu as essayé avant (Special:Book, mediawiki2latex, export article par article), et pourquoi tu as décidé de l'écrire toi-même. Le livre d'exemple, « Les épaves de la rade de Saint-Pierre », sur les navires coulés lors de l'éruption de la montagne Pelée en 1902, peut servir de fil rouge si c'est lui qui t'a lancé.]]
+Mon point de départ, c'était une série d'articles que j'avais commencés sur Wikipédia en français : les épaves de la rade de Saint-Pierre, en Martinique, les navires coulés lors de l'éruption de la montagne Pelée en 1902. Je les avais rassemblés dans une page de livre, [Les épaves de la rade de Saint-Pierre suite à l'éruption de la montagne Pelée en 1902](https://fr.wikipedia.org/wiki/Utilisateur:474D6F756C617264/Livres/Les_%C3%A9paves_de_la_rade_de_Saint-Pierre_suite_a_l'%C3%A9ruption_de_la_montagne_Pel%C3%A9e_en_1902), et je voulais simplement les avoir ensemble, dans un seul livre.
 
-So I built a small tool to give that button back: [Wikipedia2Book](https://wikipedia2book.toolforge.org/).
+J'ai donc écrit un petit outil pour retrouver ce bouton : [Wikipedia2Book](https://wikipedia2book.toolforge.org/).
 
-The original idea was very modest: take the PDF files that Wikipedia already generates for each article, and put them end to end in a single PDF of many pages. That's all. But with modern development tools, adding one more feature was so easy that I kept adding them: a cover, a table of contents, chapters, other wikis, twelve languages, volumes… Oops!
+L'idée de départ était très modeste : prendre les fichiers PDF que Wikipédia génère déjà pour chaque article, et les mettre bout à bout dans un seul PDF de plusieurs pages. C'est tout. Mais avec les outils de développement modernes, ajouter une fonctionnalité de plus était si facile que j'en ai ajouté plein : une couverture, une table des matières, des chapitres, les autres wikis, douze langues, des volumes… Oups !
 
-## What it does
+## Ce qu'il fait
 
-You paste what you want to read, and you get one PDF book.
+On colle ce qu'on veut lire, on obtient un livre PDF.
 
-- **Sources**: the address of an article, a saved Wikipedia book (Special:Book / "Book:" pages), a Wikibooks book or its printable version, a Wikisource work, a list of pages (one per line, wiki links, URLs or titles), or a plain search. Pages can come from eight Wikimedia projects: Wikipedia, Wikisource, Wikibooks, Wikivoyage, Wikiversity, Wikiquote, Wiktionary and Wikinews, in any language, and you can mix languages in one book.
-- **Organisation**: the order of a saved book is kept, with its chapters and subtitle. You can move articles and chapters, add chapters, find related articles from the links of a page, and add your own images, PDF files or any web page.
-- **Editing**: title, subtitle, author, introduction and conclusion; a cover and a last page with a background image or colour; page format (A4, Letter, Legal and others), orientation and margins; table of contents at the start or the end, with clickable links; page numbers on every page.
-- **The PDF**: a cover, a table of contents, each article, and a license page that names every source article with a link to its history, so the book respects CC BY-SA. Bookmarks let you jump from article to article.
-- **Volumes**: large books are split automatically (300 articles per volume), each volume with its own cover, contents and numbering.
-- **Languages**: the interface is translated into 12 languages (English, French, German, Spanish, Italian, Portuguese, Dutch, Turkish, Chinese, Japanese, Persian and Arabic, the last two right to left), and the pages added to the PDF are written in the chosen language.
-- **Links**: everything the interface does is also available as a simple web address: a link such as `https://wikipedia2book.toolforge.org/api/pdf/from-source?source=<address of a book>` downloads the PDF directly, so a wiki page can offer its own "Download as PDF" link.
+- **Sources** : l'adresse d'un article, un livre Wikipédia enregistré (Spécial:Livre, pages « Livre: »), un livre de Wikilivres ou sa version imprimable, une œuvre de Wikisource, une liste de pages (une par ligne : liens wiki, adresses ou titres), ou une simple recherche. Les pages peuvent venir de huit projets Wikimédia : Wikipédia, Wikisource, Wikilivres, Wikivoyage, Wikiversité, Wikiquote, Wiktionnaire et Wikinews, dans toutes les langues, et on peut mélanger les langues dans un même livre.
+- **Organisation** : l'ordre d'un livre enregistré est conservé, avec ses chapitres et son sous-titre. On peut déplacer articles et chapitres, ajouter des chapitres, trouver des articles liés à partir des liens d'une page, et ajouter ses propres images, fichiers PDF ou n'importe quelle page web.
+- **Édition** : titre, sous-titre, auteur, introduction et conclusion ; une couverture et une dernière page avec une image ou une couleur de fond ; format de page (A4, Letter, Legal et d'autres), orientation et marges ; table des matières au début ou à la fin, avec des liens cliquables ; numéro sur chaque page.
+- **Le PDF** : une couverture, une table des matières, chaque article, et une page de licence qui cite chaque article source avec un lien vers son historique, pour que le livre respecte la licence CC BY-SA. Des signets permettent de passer d'un article à l'autre.
+- **Un vrai livre imprimé** : c'est sûrement le plus intéressant, le PDF est fait pour l'impression (formats de page, marges pour la reliure, couverture et dernière page), on peut donc l'envoyer à n'importe quel service d'impression à la demande et acheter un vrai livre imprimé et relié, comme le proposait autrefois Spécial:Livre.
+- **Volumes** : les gros livres sont découpés automatiquement (300 articles par volume), chaque volume avec sa couverture, sa table des matières et sa numérotation.
+- **Langues** : l'interface est traduite en 12 langues (anglais, français, allemand, espagnol, italien, portugais, néerlandais, turc, chinois, japonais, persan et arabe, ces deux dernières de droite à gauche), et les pages ajoutées au PDF sont écrites dans la langue choisie.
+- **Liens** : tout ce que fait l'interface existe aussi sous forme d'une simple adresse web : un lien comme `https://wikipedia2book.toolforge.org/api/pdf/from-source?source=<adresse d'un livre>` télécharge directement le PDF, si bien qu'une page wiki peut proposer son propre lien « Télécharger en PDF ».
 
-## How it works, and what it does not do
+## Comment il fonctionne, et ce qu'il ne fait pas
 
-The content of the articles is never rebuilt. For each page, Wikipedia2Book asks Wikimedia for its official PDF, the same one you get from the "Download as PDF" link of the article, and only adds what a book needs around it: cover, table of contents, chapter pages, page numbers and license. Text, images and references are exactly those of the wiki. Each page is only scaled and centred on the format chosen for the book.
+Le contenu des articles n'est jamais reconstruit. Pour chaque page, Wikipedia2Book demande à Wikimédia son PDF officiel, celui qu'on obtient avec le lien « Télécharger en PDF » de l'article, et n'ajoute autour que ce dont un livre a besoin : couverture, table des matières, pages de chapitre, numéros de page et licence. Le texte, les images et les références sont exactement ceux du wiki. Chaque page est seulement mise à l'échelle et centrée sur le format choisi pour le livre.
 
-The server keeps nothing. There is no account and no database: your book lives in your browser, and you save it yourself as a small JSON file that you can reopen, share, or publish so that others can rebuild the same book. The tool follows the Wikimedia User-Agent and API rules, and is free software (AGPL-3.0), hosted on Toolforge.
+Le serveur ne garde rien. Pas de compte, pas de base de données : le livre vit dans le navigateur, et on l'enregistre soi-même dans un petit fichier JSON qu'on peut rouvrir, partager ou publier pour que d'autres reconstruisent le même livre. L'outil respecte les règles de Wikimédia sur le User-Agent et l'API ; c'est un logiciel libre (AGPL-3.0), hébergé sur Toolforge.
 
-## How it was made
+## Comment il a été fait
 
-Wikipedia2Book is a very young project. The first line was written on 7 November 2026: I started from a written specification, first drafted with ChatGPT, and then built the application with Claude Code, an AI coding assistant, describing what I wanted and testing every step myself. The project is openly "vibe coded": the code is written and reviewed by AI agents, while I decide what the tool must do, check the results on real books, and keep a detailed specification and changelog in French and English.
+Wikipedia2Book est un projet très jeune. La première ligne a été écrite le 7 novembre 2026 : je suis parti d'une spécification écrite, d'abord rédigée avec ChatGPT, puis j'ai construit l'application avec Claude Code, un assistant de programmation par IA, en décrivant ce que je voulais et en testant moi-même chaque étape. Le projet est ouvertement « vibe codé » : le code est écrit et relu par des agents IA, tandis que je décide de ce que l'outil doit faire, vérifie les résultats sur de vrais livres et tiens une spécification et un historique détaillés, en français et en anglais.
 
-- **7 November**: first version, a single book in memory, chapters, PDF with bookmarks.
-- **9 to 11 November**: import of saved Wikipedia books in their real order (the API returns links in alphabetical order, so the tool reads the wikitext), continuous page numbers, license page, the first interface languages, then twelve.
-- **12 November**: version 1.0, online on Toolforge.
-- **13 to 18 November**: one field for every kind of source, lists of pages, the other Wikimedia projects, Wikibooks and Wikisource contents pages, volumes, background images, web pages, and a lot of work so that big books do not make the server run out of memory.
+- **7 novembre** : première version, un seul livre en mémoire, des chapitres, un PDF avec signets.
+- **9 au 11 novembre** : import des livres Wikipédia enregistrés dans leur ordre réel (l'API renvoie les liens par ordre alphabétique, l'outil lit donc le wikitexte), numérotation continue des pages, page de licence, les premières langues de l'interface, puis douze.
+- **12 novembre** : version 1.0, en ligne sur Toolforge.
+- **13 au 18 novembre** : un seul champ pour tous les types de sources, les listes de pages, les autres projets Wikimédia, les sommaires de Wikilivres et de Wikisource, les volumes, les images de fond, les pages web, et beaucoup de travail pour que les gros livres ne fassent pas manquer de mémoire au serveur.
 
-In twelve days the tool went through more than 370 changes and 13 minor versions. Between 12 and 17 November it received about 12,000 requests on Toolforge.
+En douze jours, l'outil a connu plus de 370 modifications et 13 versions mineures. Entre le 12 et le 17 novembre, il a reçu environ 12 000 requêtes sur Toolforge.
 
-That speed is the real story. Working with large language models inside a harness made for software development, an application in which the AI reads the code, edits it, runs the tests and checks the result in a browser, gave me a velocity I could never have reached alone: a feature I describe in the morning is usually written, tested, documented and online the same day. Speed does not mean shortcuts. Everything is in the open, in a [public repository](https://github.com/gmoulard/wikipedia2book/): every change is a readable commit, about thirty automated test files run before each deployment, security checks run on every change to the main branch, and the functional and technical specifications are kept in step with the code, so anyone can review what the tool does and how.
+Cette vitesse, c'est la vraie histoire. Travailler avec des grands modèles de langage dans un environnement conçu pour le développement logiciel, une application dans laquelle l'IA lit le code, le modifie, lance les tests et vérifie le résultat dans un navigateur, m'a donné une vélocité que je n'aurais jamais atteinte seul : une fonctionnalité décrite le matin est en général écrite, testée, documentée et en ligne le jour même. Vitesse ne veut pas dire raccourcis. Tout est ouvert, dans un [dépôt public](https://github.com/gmoulard/wikipedia2book/) : chaque modification est un commit lisible, une trentaine de fichiers de tests automatiques tournent avant chaque déploiement, des contrôles de sécurité à chaque modification de la branche principale, et les spécifications fonctionnelle et technique suivent le code, si bien que chacun peut vérifier ce que fait l'outil et comment.
 
 [[À COMPLÉTER : ce que t'a appris ce mode de développement, ce qui a été difficile (par exemple l'ordre des articles, la mémoire sur Toolforge, les écritures rares en chinois), ce qui t'a surpris.]]
 
-## What's next, and how you can help
+## La suite, et comment aider
 
-The tool has limits: the fonts and layout of each article are those of the official Wikimedia PDF, and some scripts are not always displayed perfectly there; a book is limited to 300 articles per volume.
+L'outil a ses limites : la police et la mise en page de chaque article sont celles du PDF officiel de Wikimédia, où certaines écritures ne s'affichent pas toujours parfaitement ; un livre est limité à 300 articles par volume.
 
-You can help by trying it with your own saved books, reporting problems or ideas on [GitHub](https://github.com/gmoulard/wikipedia2book), improving a translation of the interface or of the help page, or simply adding a "Download as PDF" link on a book page of your wiki.
+Vous pouvez aider en l'essayant avec vos propres livres enregistrés, en signalant problèmes et idées sur [GitHub](https://github.com/gmoulard/wikipedia2book), en améliorant une traduction de l'interface ou de la page d'aide, ou simplement en ajoutant un lien « Télécharger en PDF » sur une page de livre de votre wiki.
 
 [[À COMPLÉTER (facultatif) : un remerciement, par exemple aux personnes qui ont testé ou contribué au code.]]

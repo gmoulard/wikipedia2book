@@ -89,7 +89,7 @@ GET endpoints can be opened directly in the address bar:
 
 * Hits per hour since the server started (section 13.8): `http://localhost:8000/api/stats/hourly`.
 
-* Container state, to follow live during a limit test (section 13.12): `http://localhost:8000/api/health/details`, for example in production `https://wikipedia2book.toolforge.org/api/health/details`. Reserved for monitoring: `Authorization: Bearer <token>` header, the token being set by `WIKIPEDIA2BOOK_MONITOR_TOKEN` (at least 32 characters, for example `python -c "import secrets; print(secrets.token_urlsafe(32))"`; without it, the endpoint always answers HTTP 401, `detail.code` = `monitor_token_required`), for example `curl -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" <address>`. JSON response, with no personal data at all, never cached, not counted in the hits per hour: `version`, `started` (server start: if it changes, the server has restarted), `now`, `generations_in_progress` (PDF generations in progress), `memory_gate`, `disk_gate` and `generation_gate` (memory and disk space checks and admission of generations: `ratio`, `reserved_bytes`, `active_stages`, `waiting_stages`), `memory` (the container's `used_bytes`, `limit_bytes`, `peak_bytes` and `used_percent`, read from the cgroup files `memory.current`, `memory.max`, `memory.peak` — or `memory.usage_in_bytes`, `memory.limit_in_bytes`, `memory.max_usage_in_bytes` with cgroup v1 —, then the process's `process_rss_bytes` and `process_peak_rss_bytes`, read from `/proc/self/status`; `null` when the information does not exist, for example outside Linux or without a limit) and `temporary` (`free_bytes` and `total_bytes` of the temporary folder's disk, `generation_files_bytes` used by the folders of the generations in progress). Just before a crash, it shows whether memory or temporary space is reaching its limit. Tests: `tests/test_health_details.py`.
+* Container state, to follow live during a limit test (section 13.12): `http://localhost:8000/api/health/details`, for example in production `https://wikipedia2book.toolforge.org/api/health/details`. Reserved for monitoring: `Authorization: Bearer <token>` header, the token being set by `WIKIPEDIA2BOOK_MONITOR_TOKEN` (at least 32 characters, for example `python -c "import secrets; print(secrets.token_urlsafe(32))"`; without it, the endpoint always answers HTTP 401, `detail.code` = `monitor_token_required`), for example `curl -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" <address>`. JSON response, with no personal data at all, never cached, not counted in the hits per hour: `version`, `started` (server start: if it changes, the server has restarted), `now`, `generations_in_progress` (PDF generations in progress), `memory_gate`, `disk_gate` and `generation_gate` (memory and disk space checks and admission of generations: `ratio`, `reserved_bytes`, `active_stages`, `waiting_stages`), `request_limits` (generation limits per client and for the whole server, waiting queue, number of clients and generations in progress, section 14), `alerts` (limit crossings per type: `count`, `last`), `memory` (the container's `used_bytes`, `limit_bytes`, `peak_bytes` and `used_percent`, read from the cgroup files `memory.current`, `memory.max`, `memory.peak` — or `memory.usage_in_bytes`, `memory.limit_in_bytes`, `memory.max_usage_in_bytes` with cgroup v1 —, then the process's `process_rss_bytes` and `process_peak_rss_bytes`, read from `/proc/self/status`; `null` when the information does not exist, for example outside Linux or without a limit) and `temporary` (`free_bytes` and `total_bytes` of the temporary folder's disk, `generation_files_bytes` used by the folders of the generations in progress). Just before a crash, it shows whether memory or temporary space is reaching its limit. Tests: `tests/test_health_details.py`.
 
 * Generation journal, to diagnose a slow or failed generation afterwards: `http://localhost:8000/api/health/generations`, for example `https://wikipedia2book.toolforge.org/api/health/generations`. Same monitoring token. JSON response, never cached, not counted in the hits per hour: `version`, `started`, `now` and `generations`, up to the last 1,000 generations since the server started (`GENERATION_LOG_KEEP`), fewer when together they exceed 40,000 stages (`GENERATION_LOG_STAGES`, about 30 MB of memory, a stage taking about 760 bytes; a 10-article book has about thirty stages, a 300-article book about 330), the oldest being removed first, newest first. Each generation gives `id`, `started`, `version`, `language`, the number of `articles`, `documents` and `chapters`, `page_format`, `orientation`, `page_numbers`, `table_of_contents`, `status` (`running`, `done`, `error`, or `aborted` if the client gives up), `duration_s`, `size_bytes` (success) or `error` (error type only, or the stop message of the assembly process), and `stages`, the list of stages reached: `at_s` (seconds since the start), `stage`, `process` (`server` or `assembly`), `container_bytes` (container memory), `rss_bytes` and `peak_rss_bytes` (memory of the process that reached the stage) and, for the assembly process, `server_rss_bytes`. Stages: `start`, `fetch_image` (background image given by its address: `image` = `cover_image` or `back_image`, download `duration_s`, `size_bytes`), `fetch_document` (imported document given by its address: `duration_s`, `size_bytes`, `pdf`), `downloads_done` (with `article_pages`), `memory_wait` (a stage waited for memory: `reason` = `generation`, `disk`, `download`, `fit`, `fetch_image`, `assembly_disk` or `assembly`, `waited_s`, `reserved_bytes`), then in the assembly process `assembly_start`, `fit_backgrounds` (shrinking of background images: `duration_s`, `bytes_before`, `bytes_after`), `cover_html` (cover HTML, including the analysis of the background image for the text color: `duration_s`, `background`), `render_cover`, `render_toc_count` (numbering), `render_toc`, `render_chapters`, `render_conclusion`, `render_license`, `render_back_cover` (last page background image), `merge_parts` (merging the parts), `merge_reopen` (reopening the merged book), `outline_and_links`, `stamp_page_numbers` (numbering) and `save`. No title, address or anything identifying the user is recorded. The journal lives in memory and is lost when the server restarts: each stage is therefore also written to standard output as one JSON line, and stays readable in the platform logs (`toolforge webservice logs` on Toolforge), even when the platform stops the whole container for lack of memory. Each downloaded article or document has its `download` stage (`kind` = `article` or `document`, `download_s`, `fit_s`, `size_bytes`, `pages`), and each background image its `fetch_image` stage; the downloaded address (`url`: article PDF, full address of a file given by the user) is only kept in the in-memory journal, read with the monitoring token or by the admin page, never copied to standard output (user's choice). A single generation: `GET /api/health/generations/{id}` (`id` from the journal), response `{"version", "started", "generation"}`, or HTTP 404 when it is no longer in the journal; not counted in the hits per hour, like the whole journal. Its request: `GET /api/health/generations/{id}/request`, the requested book in the `wikipedia2book-workspace` format (JSON file as an attachment, content of imported files removed, `removed_base64_chars`), kept apart from the journal (`generation_requests`, at most 1 MB per request, `GENERATION_REQUEST_MAX_BYTES`, 30 MB in all, `GENERATION_REQUESTS_BYTES`), never written to standard output; `request_bytes` gives its size in the journal; HTTP 404 when it is no longer in memory. Tests: `tests/test_generation_log.py`, `tests/test_admin.py`.
 
@@ -457,6 +457,8 @@ flowchart TB
         PDFG["pdf_generator.py<br/>WeasyPrint · pypdf · PyMuPDF · reportlab"]
         WAPI["wikipedia_api.py<br/>MediaWikiClient"]
         JSRC["json_source.py<br/>JSON book from a URL"]
+        GUARD["request_limits.py<br/>request limits · alerts"]
+        GUARD --> MAIN
         MODELS["models.py<br/>Project · Article · UploadedDocument · BookChapter"]
         MAIN --> EXPL
         MAIN --> BB
@@ -485,7 +487,7 @@ flowchart TB
     classDef app fill:#eaf3ff,stroke:#3366cc,color:#202122
     classDef wiki fill:#fef6e7,stroke:#ac6600,color:#202122
     classDef shared fill:#f8f9fa,stroke:#a2a9b1,color:#202122
-    class I18N,APP,FILE,MAIN,EXPL,BB,PDFG,WAPI,ISO,JSRC,ADM app
+    class I18N,APP,FILE,MAIN,EXPL,BB,PDFG,WAPI,ISO,JSRC,ADM,GUARD app
     class MW,REST wiki
     class MODELS shared
 ```
@@ -626,7 +628,7 @@ Two series of measurements, in tables whose common columns are aligned (date, ve
 Test to run by hand to find the largest book a deployment can generate. Unlike the benchmark, it pushes the server until it fails: a server that runs out of memory is stopped and restarted by its platform, which interrupts other users' generations in progress and resets the hourly counter (section 13.8). Run it on Toolforge only, which is exempt from the Wikimedia limits (section 13.2), and outside busy hours.
 
 * **Script**: `scripts/limit_check.py --base-url <url> [--steps 25,50,100,200,400,800] [--source-page France] [--language fr]`, or by bisection: `--search <start> [--precision 50] [--max 2000]` doubles the number of articles from `<start>` up to the first failure, then halves the interval between the last success and the first failure down to the requested precision; after each failure, it waits until the server answers again (`/api/version`, at most 10 minutes); the steps tested on the way down reuse articles already requested from Wikimedia, which serves them from its cache; it ends with "Limite entre N articles (réussi) et M articles (échec)". `--save-pdf <folder>` saves each PDF received (`limite-<N>-articles.pdf`), for example in `./tmp`, which git ignores; without this option, the PDF is checked, counted and then discarded. It takes the pages linked from a Wikipedia page (by default, the French article *France*; existing pages only, red links excluded, in alphabetical order), generates bigger and bigger books with the first N, measures each generation like the benchmark (same phases, PDF checked and pages counted), and stops at the first failure. Each step reuses the articles of the previous one, already cached by Wikimedia.
-* **Simultaneous generations**: `scripts/limit_check.py --base-url <url> --parallel 10,20,50 [--book app/static/testPerformanceReference.json]` requests N generations of the same book at the same time, by default the reference book *Wrecks of Saint-Pierre harbor* (10 articles, 107 pages, background images by address), step after step, and stops at the first step where a generation fails; the script never abandons a generation, however long it waits "Server busy" (no response timeout), after waiting for the server to answer again. Table: books in parallel, passed, failed, total duration of the step, median generation, slowest, errors met. It measures what a server bears when several people generate at the same time (memory of the assembly processes, shared `DOWNLOAD_CONCURRENCY`, queueing); same precautions as the limit test: on Toolforge only, outside usage hours, since a failure can restart production.
+* **Simultaneous generations**: `scripts/limit_check.py --base-url <url> --parallel 10,20,50 [--book app/static/testPerformanceReference.json]` requests N generations of the same book at the same time, by default the reference book *Wrecks of Saint-Pierre harbor* (10 articles, 107 pages, background images by address), step after step, and stops at the first step where a generation fails; the script never abandons a generation, however long it waits "Server busy" (no response timeout), after waiting for the server to answer again. An HTTP 429 refusal (generation limits, section 14) is not a failure: the generation is requested again after the given delay. On Toolforge, the limit of 50 simultaneous generations for the whole server makes a large step run in waves; to measure the raw capacity, lift it for the test (`toolforge envvars create WIKIPEDIA2BOOK_TOTAL_GENERATIONS 0`, then restart). Table: books in parallel, passed, failed, 429 refusals requested again, total duration of the step, median generation, slowest, errors met. It measures what a server bears when several people generate at the same time (memory of the assembly processes, shared `DOWNLOAD_CONCURRENCY`, queueing); same precautions as the limit test: on Toolforge only, outside usage hours, since a failure can restart production.
 * **Tests**: `tests/test_limit_check.py` (fake generator, no network); `--parallel` mode tested with a fake generator counting simultaneous generations.
 * **Results on Toolforge, from version 1.8.3 on** (A4 format, page numbers and table of contents, pages linked from the article *France*, from a client machine; details of each run: [testLimitetoolforge.md](testLimitetoolforge.md), in French):
 
@@ -792,11 +794,91 @@ The software currently implements:
 
 * A shared, asynchronous wait before retrying when Wikimedia answers HTTP 429 or 503 (at most 4 retries, section 7), on top of, outside Toolforge, the limits of the Wikimedia robot policy (2 simultaneous PDF downloads for the whole server, 25 Mbps over 10 s, section 13.2).
 
+* **Protection against abuse** (`app/request_limits.py`, `RequestGuard` middleware in front of the whole application):
+  * **Request size**: any request body is limited to 60 MB (`MAX_BODY_BYTES`). It is refused at once from the `Content-Length` header, or as soon as the data read exceeds the limit: HTTP 413, `detail` = `{"code": "request_too_large", "limit", "message"}`, message translated in the interface (key `export.requestTooLarge`). Without this limit, a JSON book holding a gigabyte of base64 documents was read whole into memory before any check.
+  * **Generations per client**: at most 5 simultaneous generations and 20 per minute per client (`WIKIPEDIA2BOOK_CLIENT_GENERATIONS`, `WIKIPEDIA2BOOK_CLIENT_PER_MINUTE`), on every endpoint that generates a PDF.
+    * A client is recognised in two ways, limited separately: by its IP address when it is public, and by a random token that the interface keeps in the browser (`localStorage`, key `w2b-client`) and sends in the `X-Wikipedia2Book-Client` header.
+    * A private address is never used: behind a proxy that hides visitors, they would all have the same one.
+    * Toolforge hides the IP address of every visitor; its proxy itself limits each address to 100 requests per minute across Toolforge. Only the token is used there, and a malicious user can erase it.
+    * Behind a trusted proxy (Northflank, your own container), `WIKIPEDIA2BOOK_CLIENT_IP_HEADER=x-forwarded-for` reads the address from that header (last value, the one added by the proxy). Only set it behind a proxy, otherwise the client can write the header itself.
+    * Keys are salted hashes (random salt per process), never the address or the token in clear. They stay in memory at most one minute after the client's last generation, and are never logged or written to disk.
+  * **Generations for the whole server**:
+    * on Toolforge, where visitors' addresses are unknown, at most 50 simultaneous generations and 200 per minute (`WIKIPEDIA2BOOK_TOTAL_GENERATIONS`, `WIKIPEDIA2BOOK_TOTAL_PER_MINUTE`, `0` by default elsewhere);
+    * everywhere, at most 100 generations waiting for admission (`WIKIPEDIA2BOOK_WAITING_GENERATIONS`).
+  * **Response to a refusal**: HTTP 429 with `Retry-After`, and `detail` = `{"code": "too_many_requests", "reason", "limit", "retry_after", "message"}`.
+    * Delay: 10 s for a simultaneous generations limit, the time left in the minute for a per-minute limit, 30 s for a full queue.
+    * `reason`: `client_concurrent`, `client_per_minute`, `total_concurrent`, `total_per_minute` or `queue_full`.
+    * The interface waits for the delay while showing it ("Too many requests right now: retrying automatically in 10 s…", key `progress.limited`), then requests the generation again, endlessly and without counting this refusal as a crash. The limit test requests again in the same way (section 13.12).
+    * Each value is set by its environment variable, `0` = no limit; an invalid value prevents startup.
+  * **Send timeout**: a client that stops reading the PDF or the progress stream for 20 s (`SEND_TIMEOUT_S`) is cut off. Its generation is closed at once: temporary folder deleted and memory reserves given back (`ClosingStreamingResponse`).
+  * **MediaWiki API**: at most 10 requests per second for the whole server (`wikipedia_api.ApiLimiter`: searches, pages, links, explorations); the following ones wait their turn. A malicious user therefore cannot get the tool blocked by Wikimedia under its User-Agent. PDFs follow their own limits (section 13.2).
+  * **Internal network**: a file given by its address is downloaded from the checked IP address; the name is only used for the `Host` header and the certificate. A name that changes address between the check and the connection (DNS rebinding) therefore does not lead to the internal network.
+  * **Alerts**:
+    * Types: `request_too_large`, `client_concurrent`, `client_per_minute`, `total_concurrent`, `total_per_minute`, `queue_full`, `send_timeout`, and `wikimedia_api_throttle` when a MediaWiki API request waits at least 10 s.
+    * Each crossing writes a JSON line `{"alert": …}` to standard output (platform logs) and is counted in `/api/health/details`: `alerts` (count and last time per type) and `request_limits` (limits and generations in progress).
+    * No email is sent.
+    * No IP address, token or title in alerts.
+    * **Viewing alerts**: two sources, in every environment.
+      * **Server state** (`GET /api/health/details`):
+        * the `alerts` field gives, for each type, the number of crossings and the last time (UTC) since the server started;
+        * `request_limits` gives the limits, and the generations and clients in progress;
+        * `started` gives the start time: the counters go back to zero at each restart (deployment, lack of memory).
+        * Example: `curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" <address>/api/health/details | jq '.started, .alerts, .request_limits'`. The endpoint needs the monitoring token (`WIKIPEDIA2BOOK_MONITOR_TOKEN`, section 13.3); without a token, the `/admin` page shows the same counters after sign-in.
+      * **Server log** (standard output): one JSON line per crossing, to filter on `"alert"`, for example `{"alert": "client_per_minute", "at": "2026-11-17T07:12:03+00:00", "count": 3, "path": "/api/pdf/stream", "limit": 20}`. `count` is the number of crossings of that type since the start.
+      * **Per environment**:
+        * **Toolforge**: counters from any machine (bash with `jq`, or PowerShell); log over SSH in the tool account (`toolforge webservice logs`, or `kubectl logs` for every line with its time and the number of alerts per type). The last command reads the log without an interactive session. The log only covers the current container: a restart erases it, like the counters. SSH port 22 may be blocked by some corporate networks.
+
+          ```bash
+          curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" https://wikipedia2book.toolforge.org/api/health/details | jq '.started, .alerts'
+          curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" https://wikipedia2book.toolforge.org/api/health/details | jq -r '.alerts | to_entries[] | "\(.key)  \(.value.count)  \(.value.last)"'
+          ```
+
+          ```powershell
+          (Invoke-RestMethod https://wikipedia2book.toolforge.org/api/health/details -Headers @{Authorization = "Bearer $env:WIKIPEDIA2BOOK_MONITOR_TOKEN"}).alerts
+          ```
+
+          ```bash
+          ssh <login>@login.toolforge.org
+          become wikipedia2book
+          toolforge webservice logs | grep '"alert"'
+          toolforge webservice logs -f | grep --line-buffered '"alert"'
+          for pod in $(kubectl get pods -o name | grep '/wikipedia2book-'); do kubectl logs --timestamps "$pod" | grep '"alert"'; done
+          for pod in $(kubectl get pods -o name | grep '/wikipedia2book-'); do kubectl logs "$pod" | grep -o '"alert": "[a-z_]*"'; done | sort | uniq -c
+          ```
+
+          ```bash
+          ssh <login>@login.toolforge.org 'become wikipedia2book toolforge webservice logs' | grep '"alert"'
+          ```
+        * **Northflank**: counters at the same address as the application; log in the Northflank console (Wikipedia2Book service, *Logs* tab, search `"alert"`) or with the Northflank CLI (Node.js 22.13 or later; `northflank login` opens the browser to sign in). The project `wikipedia2book` and the service `prod` are deduced from the public address `prod--wikipedia2book--….code.run`; check them in the console if they changed. `--textIncludes` filters on the Northflank side, `-f` follows live, the last command counts alerts per type.
+
+          ```bash
+          curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" https://prod--wikipedia2book--wkvpbnfj6h4v.code.run/api/health/details | jq '.started, .alerts'
+          ```
+
+          ```bash
+          npm i -g @northflank/cli
+          northflank login
+          northflank get service logs --projectId wikipedia2book --serviceId prod --textIncludes '"alert"' --lineLimit 500
+          northflank get service logs --projectId wikipedia2book --serviceId prod --textIncludes '"alert"' -f
+          northflank get service logs --projectId wikipedia2book --serviceId prod --textIncludes '"alert"' --lineLimit 1000 | grep -o '"alert": "[a-z_]*"' | sort | uniq -c
+          ```
+        * **Docker container**:
+          * counters: `curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" http://localhost:8000/api/health/details | jq .alerts`;
+          * log: `docker logs <container> 2>&1 | grep '"alert"'`, or `docker logs -f` to follow (`docker ps` gives the container name).
+        * **Local machine** (`uvicorn`): the lines appear in the terminal that runs the server; the counters are at `http://localhost:8000/api/health/details`, with the monitoring token.
+      * **Reading**:
+        * repeated `client_concurrent` or `client_per_minute`: a client that insists. A single crossing can come from a user who chains volumes; the interface then retries by itself.
+        * `total_concurrent`, `total_per_minute` or `queue_full`: heavy traffic or a distributed attack, to compare with `generations_in_progress` and the memory in the same `/api/health/details`.
+        * `send_timeout`: a client that no longer reads, or a very slow network.
+        * `request_too_large`: a book too heavy (imported documents) or a malicious upload.
+        * `wikimedia_api_throttle`: a burst of requests to the MediaWiki API (explorations, searches), slowed down by the server.
+  * Tests: `tests/test_request_limits.py`.
+
 * No article HTML content is interpreted or re-injected by the application: only the official Wikipedia PDF (binary) and the text fields validated by the API pass through the server.
 
 External URLs are never executed as code.
 
-Not covered by the current implementation, to be considered for a later version: preventive rate limiting of requests to the Wikipedia API (today only a 429/503 refusal makes it wait), structured error logging, explicit quotas on the size of downloaded PDFs.
+Not covered by the current implementation, to be considered for a later version: structured error logging, explicit quotas on the size of downloaded article PDFs, a limit on the total number of pages of a book.
 
 ## 17\. Repository structure
 
@@ -816,6 +898,7 @@ Wikipedia2Book/
 │   ├── pdf_generator.py
 │   ├── isolation.py
 │   ├── resource_gate.py
+│   ├── request_limits.py
 │   │
 │   └── static/
 │       ├── index.html
@@ -858,6 +941,7 @@ Wikipedia2Book/
 │   ├── test_isolation.py
 │   ├── test_admin.py
 │   ├── test_resource_gate.py
+│   ├── test_request_limits.py
 │   ├── test_rate_limit.py
 │   ├── test_media_policy.py
 │   ├── test_toolviews_chart.py

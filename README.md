@@ -67,6 +67,7 @@ wikipedia2book/
 │   ├── pdf_generator.py         # WeasyPrint rendering, page fitting, page numbers, image import
 │   ├── isolation.py             # Runs the book assembly in a separate process (memory given back after each book)
 │   ├── resource_gate.py           # Makes each generation stage wait while the server lacks memory or disk space
+│   ├── request_limits.py        # Abuse protection: request size, generations per client, send timeout, alerts
 │   └── static/                  # Single-page web interface (no framework)
 │       ├── index.html
 │       ├── app.js               # Front-end logic
@@ -171,6 +172,12 @@ Two settings control how heavy a generation can be. They are environment variabl
 | `WIKIPEDIA2BOOK_MEMORY_RATIO` | `0.95` (default, not set in the `Dockerfile`) | Share of the container memory limit that the generations may use. Before each stage (download, refitting, assembly), a generation estimates the memory it needs from the file sizes and waits, showing "Server busy", while the used memory plus the running reserves plus its estimate would exceed this share. `0` disables the check. |
 | `WIKIPEDIA2BOOK_GENERATIONS_RATIO` | `0.5` (default, not set in the `Dockerfile`) | Share of the container memory limit reserved by the generations admitted at once (25 MB + 3 times the base64 data of the book each). Further generations wait at the very start, showing "Server busy", before loading anything. `0` disables the check. |
 | `MALLOC_ARENA_MAX` | `2` (set in the `Dockerfile` and the Toolforge `Procfile`) | Limits glibc memory arenas so that the server gives freed memory back to the system. |
+| `WIKIPEDIA2BOOK_CLIENT_GENERATIONS` | `5` (default) | Simultaneous generations per client (public IP address, and the random token kept by the browser). Beyond it, HTTP 429 with `Retry-After`; the web interface waits and tries again. `0` lifts the limit. |
+| `WIKIPEDIA2BOOK_CLIENT_PER_MINUTE` | `20` (default) | Generations started per client and per minute. `0` lifts the limit. |
+| `WIKIPEDIA2BOOK_TOTAL_GENERATIONS` | `0` (default; `50` on Toolforge) | Simultaneous generations for the whole server, for hosts that hide visitors' addresses. `0` lifts the limit. |
+| `WIKIPEDIA2BOOK_TOTAL_PER_MINUTE` | `0` (default; `200` on Toolforge) | Generations started per minute for the whole server. `0` lifts the limit. |
+| `WIKIPEDIA2BOOK_WAITING_GENERATIONS` | `100` (default) | Generations waiting for admission at the same time; further ones get HTTP 429. `0` lifts the limit. |
+| `WIKIPEDIA2BOOK_CLIENT_IP_HEADER` | empty (default) | Header holding the visitor's address when the container runs behind a trusted proxy, for example `x-forwarded-for` (its last value is used). Leave it empty without a proxy: a client could write the header itself. |
 | `WIKIPEDIA2BOOK_DISK_RATIO` | `0.95` (default, not set in the `Dockerfile`) | Share of the temporary disk that generations may fill. An article download (30 MB reserved) and the book assembly (50 MB + twice the size of the articles) wait, showing "Server busy", while the used disk space plus the running reserves plus their estimate would exceed this share. `0` disables the check. |
 
 Change them in the `Dockerfile` and rebuild the image, or override them when starting the container, without rebuilding:
@@ -197,6 +204,55 @@ python scripts/limit_check.py --base-url https://your-server --search 50
 ```
 
 It doubles the number of articles until the first failure, then narrows down by bisection. Add `--save-pdf ./tmp` to keep each generated book (`./tmp` is ignored by git). With the monitoring token (`Authorization: Bearer`, see "Administration page"), `GET /api/health/details` shows the memory of the container and its limit, and `GET /api/health/generations` the memory reached at each stage of the last generations (details in section 13 of the [technical specification](docs/TechnicalSpec.en.md)).
+
+**Viewing alerts.** Each time a limit is crossed (request too large, generations per client or for the whole server, full queue, send timeout, MediaWiki API slowed down), the server writes one JSON line containing `"alert"` to its standard output and counts it in `GET /api/health/details` (field `alerts`, count and last time per type). Both are reset when the server restarts (field `started`). No email is sent. `/api/health/details` needs the monitoring token (`WIKIPEDIA2BOOK_MONITOR_TOKEN`, sent as `Authorization: Bearer`); the administration page `/admin` shows the same counters after a Wikimedia sign-in.
+
+| Environment | Counters | Log lines |
+|---|---|---|
+| Toolforge | `curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" https://wikipedia2book.toolforge.org/api/health/details \| jq '.started, .alerts'` | `ssh <login>@login.toolforge.org`, `become wikipedia2book`, then `toolforge webservice logs \| grep '"alert"'` (`-f` to follow) |
+| Northflank | `curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" https://prod--wikipedia2book--wkvpbnfj6h4v.code.run/api/health/details` | Northflank console, service *Logs* tab, search `"alert"` |
+| Docker | `curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" http://localhost:8000/api/health/details \| jq .alerts` | `docker logs <container> 2>&1 \| grep '"alert"'` (`-f` to follow) |
+| Local `uvicorn` | `curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" http://localhost:8000/api/health/details` | The terminal running the server |
+
+Toolforge, counters and log lines (log over SSH, in the tool account):
+
+```bash
+curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" https://wikipedia2book.toolforge.org/api/health/details | jq '.started, .alerts'
+curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" https://wikipedia2book.toolforge.org/api/health/details | jq -r '.alerts | to_entries[] | "\(.key)  \(.value.count)  \(.value.last)"'
+```
+
+```powershell
+(Invoke-RestMethod https://wikipedia2book.toolforge.org/api/health/details -Headers @{Authorization = "Bearer $env:WIKIPEDIA2BOOK_MONITOR_TOKEN"}).alerts
+```
+
+```bash
+ssh <login>@login.toolforge.org
+become wikipedia2book
+toolforge webservice logs | grep '"alert"'
+toolforge webservice logs -f | grep --line-buffered '"alert"'
+for pod in $(kubectl get pods -o name | grep '/wikipedia2book-'); do kubectl logs --timestamps "$pod" | grep '"alert"'; done
+for pod in $(kubectl get pods -o name | grep '/wikipedia2book-'); do kubectl logs "$pod" | grep -o '"alert": "[a-z_]*"'; done | sort | uniq -c
+```
+
+```bash
+ssh <login>@login.toolforge.org 'become wikipedia2book toolforge webservice logs' | grep '"alert"'
+```
+
+Northflank, counters and log lines (Northflank CLI, Node.js 22.13 or later; project `wikipedia2book` and service `prod`, as in the public address):
+
+```bash
+curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" https://prod--wikipedia2book--wkvpbnfj6h4v.code.run/api/health/details | jq '.started, .alerts'
+```
+
+```bash
+npm i -g @northflank/cli
+northflank login
+northflank get service logs --projectId wikipedia2book --serviceId prod --textIncludes '"alert"' --lineLimit 500
+northflank get service logs --projectId wikipedia2book --serviceId prod --textIncludes '"alert"' -f
+northflank get service logs --projectId wikipedia2book --serviceId prod --textIncludes '"alert"' --lineLimit 1000 | grep -o '"alert": "[a-z_]*"' | sort | uniq -c
+```
+
+How to read them: section 14 of the [technical specification](docs/TechnicalSpec.en.md).
 
 
 ## Technology stack

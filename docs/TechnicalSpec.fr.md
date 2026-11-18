@@ -89,7 +89,7 @@ Les endpoints GET peuvent être ouverts directement dans la barre d'adresse :
 
 * Hits par heure depuis le démarrage du serveur (section 13.8) : `http://localhost:8000/api/stats/hourly`.
 
-* État du conteneur, à suivre en direct pendant un test aux limites (section 13.12) : `http://localhost:8000/api/health/details`, par exemple sur la production `https://wikipedia2book.toolforge.org/api/health/details`. Réservé à la supervision : en-tête `Authorization: Bearer <jeton>`, le jeton étant défini par `WIKIPEDIA2BOOK_MONITOR_TOKEN` (32 caractères au moins, par exemple `python -c "import secrets; print(secrets.token_urlsafe(32))"` ; sans lui, l'endpoint répond toujours HTTP 401, `detail.code` = `monitor_token_required`), par exemple `curl -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" <adresse>`. Réponse JSON, sans aucune donnée personnelle, jamais mise en cache, non comptée dans les hits par heure : `version`, `started` (démarrage du serveur : s'il change, le serveur a redémarré), `now`, `generations_in_progress` (générations de PDF en cours), `memory_gate`, `disk_gate` et `generation_gate` (contrôles de la mémoire, de la place disque et admission des générations : `ratio`, `reserved_bytes`, `active_stages`, `waiting_stages`), `memory` (`used_bytes`, `limit_bytes`, `peak_bytes` et `used_percent` du conteneur, lus dans les fichiers cgroup `memory.current`, `memory.max`, `memory.peak` — ou `memory.usage_in_bytes`, `memory.limit_in_bytes`, `memory.max_usage_in_bytes` en cgroup v1 —, puis `process_rss_bytes` et `process_peak_rss_bytes` du processus, lus dans `/proc/self/status`; `null` quand l'information n'existe pas, par exemple hors Linux ou sans limite) et `temporary` (`free_bytes` et `total_bytes` du disque du dossier temporaire, `generation_files_bytes` occupés par les dossiers des générations en cours). Juste avant un plantage, il montre si c'est la mémoire ou l'espace temporaire qui approche de sa limite. Tests : `tests/test_health_details.py`.
+* État du conteneur, à suivre en direct pendant un test aux limites (section 13.12) : `http://localhost:8000/api/health/details`, par exemple sur la production `https://wikipedia2book.toolforge.org/api/health/details`. Réservé à la supervision : en-tête `Authorization: Bearer <jeton>`, le jeton étant défini par `WIKIPEDIA2BOOK_MONITOR_TOKEN` (32 caractères au moins, par exemple `python -c "import secrets; print(secrets.token_urlsafe(32))"` ; sans lui, l'endpoint répond toujours HTTP 401, `detail.code` = `monitor_token_required`), par exemple `curl -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" <adresse>`. Réponse JSON, sans aucune donnée personnelle, jamais mise en cache, non comptée dans les hits par heure : `version`, `started` (démarrage du serveur : s'il change, le serveur a redémarré), `now`, `generations_in_progress` (générations de PDF en cours), `memory_gate`, `disk_gate` et `generation_gate` (contrôles de la mémoire, de la place disque et admission des générations : `ratio`, `reserved_bytes`, `active_stages`, `waiting_stages`), `request_limits` (limites de générations par client et pour tout le serveur, file d'attente, nombre de clients et de générations en cours, section 14), `alerts` (franchissements de limites par type : `count`, `last`), `memory` (`used_bytes`, `limit_bytes`, `peak_bytes` et `used_percent` du conteneur, lus dans les fichiers cgroup `memory.current`, `memory.max`, `memory.peak` — ou `memory.usage_in_bytes`, `memory.limit_in_bytes`, `memory.max_usage_in_bytes` en cgroup v1 —, puis `process_rss_bytes` et `process_peak_rss_bytes` du processus, lus dans `/proc/self/status`; `null` quand l'information n'existe pas, par exemple hors Linux ou sans limite) et `temporary` (`free_bytes` et `total_bytes` du disque du dossier temporaire, `generation_files_bytes` occupés par les dossiers des générations en cours). Juste avant un plantage, il montre si c'est la mémoire ou l'espace temporaire qui approche de sa limite. Tests : `tests/test_health_details.py`.
 
 * Journal des générations, pour diagnostiquer après coup une génération lente ou en échec : `http://localhost:8000/api/health/generations`, par exemple `https://wikipedia2book.toolforge.org/api/health/generations`. Même jeton de supervision. Réponse JSON, jamais mise en cache, non comptée dans les hits par heure : `version`, `started`, `now` et `generations`, jusqu'aux 1 000 dernières générations depuis le démarrage du serveur (`GENERATION_LOG_KEEP`), moins quand elles dépassent ensemble 40 000 étapes (`GENERATION_LOG_STAGES`, environ 30 Mo de mémoire, une étape en prenant environ 760 octets ; un livre de 10 articles compte une trentaine d'étapes, un livre de 300 articles environ 330), les plus anciennes étant retirées d'abord, la plus récente en premier. Chaque génération donne `id`, `started`, `version`, `language`, le nombre d'`articles`, de `documents` et de `chapters`, `page_format`, `orientation`, `page_numbers`, `table_of_contents`, `status` (`running`, `done`, `error` ou `aborted` si le client abandonne), `duration_s`, `size_bytes` (réussite) ou `error` (type de l'erreur seulement, ou le message d'arrêt du processus d'assemblage), et `stages`, la liste des étapes franchies : `at_s` (secondes depuis le début), `stage`, `process` (`server` ou `assembly`), `container_bytes` (mémoire du conteneur), `rss_bytes` et `peak_rss_bytes` (mémoire du processus qui a franchi l'étape) et, pour le processus d'assemblage, `server_rss_bytes`. Étapes : `start`, `fetch_image` (image de fond donnée par son adresse : `image` = `cover_image` ou `back_image`, `duration_s` du téléchargement, `size_bytes`), `fetch_document` (document importé donné par son adresse : `duration_s`, `size_bytes`, `pdf`), `downloads_done` (avec `article_pages`), `memory_wait` (une étape a attendu de la mémoire : `reason` = `generation`, `disk`, `download`, `fit`, `fetch_image`, `assembly_disk` ou `assembly`, `waited_s`, `reserved_bytes`), puis dans le processus d'assemblage `assembly_start`, `fit_backgrounds` (réduction des images de fond : `duration_s`, `bytes_before`, `bytes_after`), `cover_html` (HTML de la couverture, dont l'analyse de l'image de fond pour la couleur du texte : `duration_s`, `background`), `render_cover`, `render_toc_count` (numérotation), `render_toc`, `render_chapters`, `render_conclusion`, `render_license`, `render_back_cover` (image de fond de dernière page), `merge_parts` (fusion des parties), `merge_reopen` (réouverture du livre fusionné), `outline_and_links`, `stamp_page_numbers` (numérotation) et `save`. Aucun titre, aucune adresse ni rien qui identifie l'utilisateur n'y figure. Le journal vit en mémoire et disparaît quand le serveur redémarre : chaque étape est donc aussi écrite sur la sortie standard, en une ligne JSON, et reste lisible dans les journaux de la plateforme (`toolforge webservice logs` sur Toolforge), même quand la plateforme arrête tout le conteneur faute de mémoire. Chaque article ou document téléchargé a son étape `download` (`kind` = `article` ou `document`, `download_s`, `fit_s`, `size_bytes`, `pages`), et chaque image de fond son étape `fetch_image` ; l'adresse téléchargée (`url` : PDF de l'article, adresse complète d'un fichier donné par l'utilisateur) n'est gardée que dans le journal en mémoire, lu avec le jeton de supervision ou par la page d'admin, jamais recopiée sur la sortie standard (choix de l'utilisateur). Une seule génération : `GET /api/health/generations/{id}` (`id` du journal), réponse `{"version", "started", "generation"}`, ou HTTP 404 quand elle n'est plus dans le journal ; non comptée dans les hits par heure, comme le journal entier. Sa demande : `GET /api/health/generations/{id}/request`, le livre demandé au format `wikipedia2book-workspace` (fichier JSON en pièce jointe, contenu des fichiers importés retiré, `removed_base64_chars`), gardé à part du journal (`generation_requests`, 1 Mo au plus par demande, `GENERATION_REQUEST_MAX_BYTES`, 30 Mo en tout, `GENERATION_REQUESTS_BYTES`), jamais écrit sur la sortie standard ; `request_bytes` en donne la taille dans le journal ; HTTP 404 quand elle n'est plus en mémoire. Tests : `tests/test_generation_log.py`, `tests/test_admin.py`.
 
@@ -457,6 +457,8 @@ flowchart TB
         PDFG["pdf_generator.py<br/>WeasyPrint · pypdf · PyMuPDF · reportlab"]
         WAPI["wikipedia_api.py<br/>MediaWikiClient"]
         JSRC["json_source.py<br/>livre JSON depuis une URL"]
+        GUARD["request_limits.py<br/>requêtes limitées · alertes"]
+        GUARD --> MAIN
         MODELS["models.py<br/>Project · Article · UploadedDocument · BookChapter"]
         MAIN --> EXPL
         MAIN --> BB
@@ -485,7 +487,7 @@ flowchart TB
     classDef app fill:#eaf3ff,stroke:#3366cc,color:#202122
     classDef wiki fill:#fef6e7,stroke:#ac6600,color:#202122
     classDef shared fill:#f8f9fa,stroke:#a2a9b1,color:#202122
-    class I18N,APP,FILE,MAIN,EXPL,BB,PDFG,WAPI,ISO,JSRC,ADM app
+    class I18N,APP,FILE,MAIN,EXPL,BB,PDFG,WAPI,ISO,JSRC,ADM,GUARD app
     class MW,REST wiki
     class MODELS shared
 ```
@@ -626,7 +628,7 @@ Deux séries de mesures, dans des tableaux aux colonnes communes alignées (date
 Test à jouer à la main pour connaître la taille maximale d'un livre qu'un déploiement sait générer. Contrairement au benchmark, il pousse le serveur jusqu'à l'échec : un serveur qui manque de mémoire est arrêté et redémarré par sa plateforme, ce qui interrompt les générations en cours des autres utilisateurs et remet à zéro le compteur horaire (section 13.8). Le jouer sur Toolforge seulement, exempté des limites de Wikimédia (section 13.2), et pas aux heures d'usage.
 
 * **Script** : `scripts/limit_check.py --base-url <url> [--steps 25,50,100,200,400,800] [--source-page France] [--language fr]`, ou par dichotomie : `--search <départ> [--precision 50] [--max 2000]` double le nombre d'articles à partir de `<départ>` jusqu'au premier échec, puis coupe en deux l'intervalle entre le dernier succès et le premier échec jusqu'à la précision demandée ; après chaque échec, il attend que le serveur réponde de nouveau (`/api/version`, 10 minutes au plus) ; les paliers testés en redescendant réutilisent des articles déjà demandés à Wikimédia, qui les sert depuis son cache ; il termine par « Limite entre N articles (réussi) et M articles (échec) ». `--save-pdf <dossier>` enregistre chaque PDF reçu (`limite-<N>-articles.pdf`), par exemple dans `./tmp`, que git ignore ; sans cette option, le PDF est vérifié, compté puis oublié. Il prend les pages liées depuis une page Wikipédia (par défaut, l'article *France* en français ; pages existantes seulement, liens rouges exclus, par ordre alphabétique), génère des livres de plus en plus gros avec les N premiers, mesure chaque génération comme le benchmark (mêmes phases, PDF vérifié et pages comptées), et s'arrête au premier échec. Chaque palier réutilise les articles du précédent, déjà en cache chez Wikimédia.
-* **Générations simultanées** : `scripts/limit_check.py --base-url <url> --parallel 10,20,50 [--book app/static/testPerformanceReference.json]` demande en même temps N générations du même livre, par défaut le livre de référence *Épaves de la rade de Saint-Pierre* (10 articles, 107 pages, images de fond par adresse), palier après palier, et s'arrête au premier palier où une génération échoue ; le script n'abandonne jamais une génération, quelle que soit la durée de son attente « Serveur occupé » (pas de délai de réponse), après avoir attendu que le serveur réponde de nouveau. Tableau : livres en parallèle, réussis, échecs, durée totale du palier, génération médiane, la plus lente, erreurs rencontrées. Il mesure ce que supporte un serveur quand plusieurs personnes génèrent en même temps (mémoire des processus d'assemblage, `DOWNLOAD_CONCURRENCY` partagé, file d'attente) ; mêmes précautions que le test aux limites : sur Toolforge seulement, hors des heures d'usage, un échec pouvant faire redémarrer la production.
+* **Générations simultanées** : `scripts/limit_check.py --base-url <url> --parallel 10,20,50 [--book app/static/testPerformanceReference.json]` demande en même temps N générations du même livre, par défaut le livre de référence *Épaves de la rade de Saint-Pierre* (10 articles, 107 pages, images de fond par adresse), palier après palier, et s'arrête au premier palier où une génération échoue ; le script n'abandonne jamais une génération, quelle que soit la durée de son attente « Serveur occupé » (pas de délai de réponse), après avoir attendu que le serveur réponde de nouveau. Un refus HTTP 429 (limites de générations, section 14) n'est pas un échec : la génération est redemandée après le délai indiqué. Sur Toolforge, la limite de 50 générations simultanées pour tout le serveur fait passer un grand palier par vagues ; pour mesurer la capacité brute, la lever le temps du test (`toolforge envvars create WIKIPEDIA2BOOK_TOTAL_GENERATIONS 0`, puis redémarrage). Tableau : livres en parallèle, réussis, échecs, refus 429 redemandés, durée totale du palier, génération médiane, la plus lente, erreurs rencontrées. Il mesure ce que supporte un serveur quand plusieurs personnes génèrent en même temps (mémoire des processus d'assemblage, `DOWNLOAD_CONCURRENCY` partagé, file d'attente) ; mêmes précautions que le test aux limites : sur Toolforge seulement, hors des heures d'usage, un échec pouvant faire redémarrer la production.
 * **Tests** : `tests/test_limit_check.py` (faux générateur, sans réseau) ; mode `--parallel` testé avec un faux générateur qui compte les générations simultanées.
 * **Résultats sur Toolforge, depuis la version 1.8.3** (format A4, numérotation et table des matières, pages liées depuis l'article *France*, depuis un poste client ; détail de chaque passage : [testLimitetoolforge.md](testLimitetoolforge.md)) :
 
@@ -792,11 +794,91 @@ Le logiciel met en œuvre aujourd'hui :
 
 * Une attente avant de réessayer, partagée et asynchrone, quand Wikimédia répond HTTP 429 ou 503 (au plus 4 nouvelles tentatives, section 7), en plus, hors Toolforge, des limites de la politique robots de Wikimédia (2 téléchargements de PDF simultanés pour tout le serveur, 25 Mbit/s sur 10 s, section 13.2).
 
+* **Protection contre une utilisation abusive** (`app/request_limits.py`, middleware `RequestGuard` placé devant toute l'application) :
+  * **Taille des requêtes** : tout corps de requête est limité à 60 Mo (`MAX_BODY_BYTES`). Il est refusé d'emblée d'après l'en-tête `Content-Length`, ou dès que les données lues dépassent la limite : HTTP 413, `detail` = `{"code": "request_too_large", "limit", "message"}`, message traduit dans l'interface (clé `export.requestTooLarge`). Sans cette limite, un livre JSON contenant un Go de documents en base64 était lu en entier en mémoire avant tout contrôle.
+  * **Générations par client** : au plus 5 générations simultanées et 20 par minute par client (`WIKIPEDIA2BOOK_CLIENT_GENERATIONS`, `WIKIPEDIA2BOOK_CLIENT_PER_MINUTE`), sur tous les endpoints qui génèrent un PDF.
+    * Un client est reconnu de deux façons, limitées séparément : par son adresse IP quand elle est publique, et par un jeton aléatoire que l'interface garde dans le navigateur (`localStorage`, clé `w2b-client`) et envoie dans l'en-tête `X-Wikipedia2Book-Client`.
+    * Une adresse privée n'est jamais prise en compte : derrière un proxy qui masque les visiteurs, tous auraient la même.
+    * Toolforge masque l'adresse IP de tous les visiteurs ; son proxy limite lui-même chaque adresse à 100 requêtes par minute pour tout Toolforge. Seul le jeton y sert, et un utilisateur malveillant peut l'effacer.
+    * Derrière un proxy de confiance (Northflank, conteneur personnel), `WIKIPEDIA2BOOK_CLIENT_IP_HEADER=x-forwarded-for` fait lire l'adresse dans cet en-tête (dernière valeur, celle ajoutée par le proxy). Ne le positionner que derrière un proxy, sinon le client peut écrire l'en-tête lui-même.
+    * Les clés sont des empreintes salées (sel aléatoire propre au processus), jamais l'adresse ou le jeton en clair. Elles restent en mémoire au plus une minute après la dernière génération du client, et ne sont jamais journalisées ni écrites sur disque.
+  * **Générations pour tout le serveur** :
+    * sur Toolforge, où l'adresse des visiteurs n'est pas connue, au plus 50 générations simultanées et 200 par minute (`WIKIPEDIA2BOOK_TOTAL_GENERATIONS`, `WIKIPEDIA2BOOK_TOTAL_PER_MINUTE`, `0` par défaut ailleurs) ;
+    * partout, au plus 100 générations en attente d'admission (`WIKIPEDIA2BOOK_WAITING_GENERATIONS`).
+  * **Réponse en cas de refus** : HTTP 429 avec `Retry-After`, et `detail` = `{"code": "too_many_requests", "reason", "limit", "retry_after", "message"}`.
+    * Délai : 10 s pour une limite de générations simultanées, le temps restant dans la minute pour une limite par minute, 30 s pour une file pleine.
+    * `reason` : `client_concurrent`, `client_per_minute`, `total_concurrent`, `total_per_minute` ou `queue_full`.
+    * L'interface attend le délai en l'affichant (« Trop de demandes en ce moment : nouvel essai automatique dans 10 s… », clé `progress.limited`), puis redemande la génération, sans fin et sans compter ce refus comme un plantage. Le test aux limites redemande de la même façon (section 13.12).
+    * Chaque valeur se règle par sa variable d'environnement, `0` = pas de limite ; une valeur invalide empêche le démarrage.
+  * **Délai d'envoi** : un client qui ne lit plus le PDF ou le flux de progression pendant 20 s (`SEND_TIMEOUT_S`) est coupé. Sa génération est refermée aussitôt : dossier temporaire supprimé et réserves de mémoire rendues (`ClosingStreamingResponse`).
+  * **API MediaWiki** : au plus 10 requêtes par seconde pour tout le serveur (`wikipedia_api.ApiLimiter` : recherches, pages, liens, explorations) ; les suivantes attendent leur tour. Un utilisateur malveillant ne peut donc pas faire bloquer l'outil par Wikimédia sous son User-Agent. Les PDF suivent leurs propres limites (section 13.2).
+  * **Réseau interne** : un fichier donné par son adresse est téléchargé depuis l'adresse IP vérifiée ; le nom ne sert qu'à l'en-tête `Host` et au certificat. Un nom qui change d'adresse entre la vérification et la connexion (DNS rebinding) ne mène donc pas au réseau interne.
+  * **Alertes** :
+    * Types : `request_too_large`, `client_concurrent`, `client_per_minute`, `total_concurrent`, `total_per_minute`, `queue_full`, `send_timeout`, et `wikimedia_api_throttle` quand une requête à l'API MediaWiki attend au moins 10 s.
+    * Chaque franchissement écrit une ligne JSON `{"alert": …}` sur la sortie standard (journaux de la plateforme) et est compté dans `/api/health/details` : `alerts` (nombre et dernière heure par type) et `request_limits` (limites et générations en cours).
+    * Aucun e-mail n'est envoyé.
+    * Ni adresse IP, ni jeton, ni titre dans les alertes.
+    * **Consulter les alertes** : deux sources, dans tous les environnements.
+      * **État du serveur** (`GET /api/health/details`) :
+        * le champ `alerts` donne, pour chaque type, le nombre de franchissements et la dernière heure (UTC) depuis le démarrage du serveur ;
+        * `request_limits` donne les limites, les générations et les clients en cours ;
+        * `started` donne l'heure du démarrage : les compteurs repartent de zéro à chaque redémarrage (déploiement, manque de mémoire).
+        * Exemple : `curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" <adresse>/api/health/details | jq '.started, .alerts, .request_limits'`. L'endpoint exige le jeton de supervision (`WIKIPEDIA2BOOK_MONITOR_TOKEN`, section 13.3) ; sans jeton, la page `/admin` montre les mêmes compteurs après connexion.
+      * **Journal du serveur** (sortie standard) : une ligne JSON par franchissement, à filtrer sur `"alert"`, par exemple `{"alert": "client_per_minute", "at": "2026-11-17T07:12:03+00:00", "count": 3, "path": "/api/pdf/stream", "limit": 20}`. `count` est le nombre de franchissements de ce type depuis le démarrage.
+      * **Par environnement** :
+        * **Toolforge** : depuis n'importe quel poste pour les compteurs (bash avec `jq`, ou PowerShell) ; par SSH dans le compte de l'outil pour le journal (`toolforge webservice logs`, ou `kubectl logs` pour toutes les lignes avec leur heure et le nombre d'alertes par type). La dernière commande lit le journal sans session interactive. Le journal ne couvre que le conteneur en cours : un redémarrage l'efface, comme les compteurs. Le port SSH 22 peut être bloqué par certains réseaux d'entreprise.
+
+          ```bash
+          curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" https://wikipedia2book.toolforge.org/api/health/details | jq '.started, .alerts'
+          curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" https://wikipedia2book.toolforge.org/api/health/details | jq -r '.alerts | to_entries[] | "\(.key)  \(.value.count)  \(.value.last)"'
+          ```
+
+          ```powershell
+          (Invoke-RestMethod https://wikipedia2book.toolforge.org/api/health/details -Headers @{Authorization = "Bearer $env:WIKIPEDIA2BOOK_MONITOR_TOKEN"}).alerts
+          ```
+
+          ```bash
+          ssh <login>@login.toolforge.org
+          become wikipedia2book
+          toolforge webservice logs | grep '"alert"'
+          toolforge webservice logs -f | grep --line-buffered '"alert"'
+          for pod in $(kubectl get pods -o name | grep '/wikipedia2book-'); do kubectl logs --timestamps "$pod" | grep '"alert"'; done
+          for pod in $(kubectl get pods -o name | grep '/wikipedia2book-'); do kubectl logs "$pod" | grep -o '"alert": "[a-z_]*"'; done | sort | uniq -c
+          ```
+
+          ```bash
+          ssh <login>@login.toolforge.org 'become wikipedia2book toolforge webservice logs' | grep '"alert"'
+          ```
+        * **Northflank** : compteurs à la même adresse que l'application ; journal dans la console Northflank (service de Wikipedia2Book, onglet *Logs*, recherche `"alert"`) ou avec le CLI Northflank (Node.js 22.13 ou plus ; `northflank login` ouvre le navigateur pour se connecter). Le projet `wikipedia2book` et le service `prod` sont déduits de l'adresse publique `prod--wikipedia2book--….code.run` ; les vérifier dans la console s'ils ont changé. `--textIncludes` filtre côté Northflank, `-f` suit en direct, la dernière commande compte les alertes par type.
+
+          ```bash
+          curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" https://prod--wikipedia2book--wkvpbnfj6h4v.code.run/api/health/details | jq '.started, .alerts'
+          ```
+
+          ```bash
+          npm i -g @northflank/cli
+          northflank login
+          northflank get service logs --projectId wikipedia2book --serviceId prod --textIncludes '"alert"' --lineLimit 500
+          northflank get service logs --projectId wikipedia2book --serviceId prod --textIncludes '"alert"' -f
+          northflank get service logs --projectId wikipedia2book --serviceId prod --textIncludes '"alert"' --lineLimit 1000 | grep -o '"alert": "[a-z_]*"' | sort | uniq -c
+          ```
+        * **Conteneur Docker** :
+          * compteurs : `curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" http://localhost:8000/api/health/details | jq .alerts` ;
+          * journal : `docker logs <conteneur> 2>&1 | grep '"alert"'`, ou `docker logs -f` pour suivre (`docker ps` donne le nom du conteneur).
+        * **Poste local** (`uvicorn`) : les lignes s'affichent dans le terminal qui lance le serveur ; les compteurs sont sur `http://localhost:8000/api/health/details`, avec le jeton de supervision.
+      * **Lecture** :
+        * `client_concurrent` ou `client_per_minute` répétés : un client qui insiste. Un seul franchissement peut venir d'un utilisateur qui enchaîne des volumes ; l'interface réessaie alors toute seule.
+        * `total_concurrent`, `total_per_minute` ou `queue_full` : affluence ou attaque répartie, à rapprocher de `generations_in_progress` et de la mémoire dans le même `/api/health/details`.
+        * `send_timeout` : un client qui ne lit plus, ou un réseau très lent.
+        * `request_too_large` : un livre trop lourd (documents importés) ou un envoi malveillant.
+        * `wikimedia_api_throttle` : une rafale de requêtes vers l'API MediaWiki (explorations, recherches), freinée par le serveur.
+  * Tests : `tests/test_request_limits.py`.
+
 * Aucun contenu HTML d'article n'est interprété ni réinjecté par l'application : seuls le PDF officiel Wikipédia (binaire) et les champs texte validés par l'API transitent par le serveur.
 
 Les URL externes ne sont jamais exécutées comme du code.
 
-Points non couverts par l'implémentation actuelle, à considérer pour une version ultérieure : limitation préventive du débit des requêtes vers l'API Wikipédia (aujourd'hui, seul un refus 429/503 fait attendre), journalisation structurée des erreurs, quotas explicites sur la taille des PDFs téléchargés.
+Points non couverts par l'implémentation actuelle, à considérer pour une version ultérieure : journalisation structurée des erreurs, quotas explicites sur la taille des PDF d'articles téléchargés, limite du nombre total de pages d'un livre.
 
 ## 17\. Structure du dépôt
 
@@ -816,6 +898,7 @@ Wikipedia2Book/
 │   ├── pdf_generator.py
 │   ├── isolation.py
 │   ├── resource_gate.py
+│   ├── request_limits.py
 │   │
 │   └── static/
 │       ├── index.html
@@ -858,6 +941,7 @@ Wikipedia2Book/
 │   ├── test_isolation.py
 │   ├── test_admin.py
 │   ├── test_resource_gate.py
+│   ├── test_request_limits.py
 │   ├── test_rate_limit.py
 │   ├── test_media_policy.py
 │   ├── test_toolviews_chart.py
