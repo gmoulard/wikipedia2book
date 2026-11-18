@@ -58,7 +58,7 @@ def wikimedia(username, token_status=200):
 
 class AdminSettingsTest(unittest.TestCase):
     def test_default_admins_are_written_in_hexadecimal(self):
-        self.assertEqual(admin_settings({}).admins, frozenset({"GMoulard", "CapitaineCanette"}))
+        self.assertEqual(admin_settings({}).admins, frozenset({"474D6F756C617264", "GMoulard", "CapitaineCanette"}))
         self.assertNotIn("GMoulard", Path(admin.__file__).read_text(encoding="utf-8"))
 
     def test_admins_variable_replaces_the_default(self):

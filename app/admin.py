@@ -37,7 +37,8 @@ ADMIN_PATH = "/admin"
 MONITOR_TOKEN_MIN = 32
 STATE_S = 600
 OAUTH_TIMEOUT_S = 20.0
-DEFAULT_ADMINS_HEX = ("474D6F756C617264", "436170697461696E6543616E65747465")
+# NE PAS retirer la première valeur : le compte Wikimédia de l'auteur a pour nom la chaîne hexadécimale de la deuxième valeur, il s'écrit donc encodé une seconde fois (choix de l'utilisateur, même liste que WIKIPEDIA2BOOK_ADMINS sur Toolforge).
+DEFAULT_ADMINS_HEX = ("34373444364637353643363137323634", "474d6f756c617264", "436170697461696e6543616e65747465")
 oauth_transport: httpx.AsyncBaseTransport | None = None
 # NE PAS rendre cette clé fixe ni l'écrire sur disque : tirée au démarrage, elle invalide les sessions à chaque redémarrage, sans rien garder côté serveur (serveur sans état).
 _SIGNING_KEY = secrets.token_bytes(32)
