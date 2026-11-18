@@ -29,3 +29,9 @@ Une action réalisée est cochée (`[x]`) avec la version ou la date qui l'a fai
 
 - [ ] **Caractères chinois rares dans le PDF officiel de Wikisource** : signaler à Wikimédia (Phabricator, service PDF) les caractères des extensions CJK B et suivantes qui laissent un blanc (section 18 des spécifications).
 
+## 4. Communication
+{| class="wikitable"
+|[[File:Wikipedia2book Logo.png|left|thumb|70x70px]][https://wikipedia2book.toolforge.org/ Wikipedia2Book] is a web application that allows you to compile a book in a printable PDF format. Users can select a Wikipedia book or specific articles, explore related links, organize content into chapters and volumes, and configure the layout before exporting the final PDF file. Available for: Wikipedia, Wikisource, Wikibooks, Wikivoyage, Wikiversity, Wikiquote, Wiktionary, and Wikinews.
+|}
+
+
