@@ -27,7 +27,7 @@ Une action réalisée est cochée (`[x]`) avec la version ou la date qui l'a fai
 
 ## 3. Améliorations possibles
 
-- [ ] **Caractères chinois rares dans le PDF officiel de Wikisource** : signaler à Wikimédia (Phabricator, service PDF) les caractères des extensions CJK B et suivantes qui laissent un blanc (section 18 des spécifications).
+- [x] **Caractères chinois rares dans le PDF officiel de Wikisource** : signalé à Wikimédia le 18/11/2026, https://phabricator.wikimedia.org/T445303 (étiquettes Proton et All-and-every-Wikisource) ; suivre la réponse (section 18 des spécifications).
 
 ## 4. Communication
 {| class="wikitable"

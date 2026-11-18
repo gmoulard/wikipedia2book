@@ -1,22 +1,23 @@
 # Brouillon : signalement Phabricator (service PDF, caractères CJK rares)
 
-À déposer à la main sur https://phabricator.wikimedia.org/ (projet : *Proton* / *Wikimedia-PDF-Rendering*, à vérifier au moment du dépôt).
+Déposé le 18/11/2026 : https://phabricator.wikimedia.org/T445303 (formulaire Bug Report, étiquettes Proton et All-and-every-Wikisource ; PDF-Rendering est archivé).
 
-**Titre** : Rare CJK characters (Extension B and later) render as blanks in REST API PDFs
+Ticket voisin, fermé : T226633 (« PDF renderer needs better CJK font », 2019-2020, polices Noto CJK). Texte déposé : modèle du formulaire Bug Report rempli avec les mêmes éléments.
+
+**Titre** : PDF export drops rare CJK characters (Extension B and later) on zh.wikisource
 
 **Description**
 
-The official PDF export (`/api/rest_v1/page/pdf/{title}/a4`) leaves blank spaces for some characters from CJK Unified Ideographs Extension B and later planes. The font used in the PDF (LiberationSerif, as reported in the PDF's font list) has no glyph for them, and no fallback font covers them.
+The official PDF export of the REST API (`/api/rest_v1/page/pdf/{title}/a4`) leaves blank spaces for some characters from the CJK Unified Ideographs Extension B and later planes (U+20000 and above), although they are in the page HTML.
 
-Steps to reproduce:
+Steps to reproduce (checked on 2026-11-18):
 
-1. Open https://zh.wikisource.org/api/rest_v1/page/pdf/大南寔錄%2F大南寔錄前編%2F卷10/a4
-2. Look for 𡼢 (U+21F22), which is shown correctly on the HTML page.
+1. Get the HTML of https://zh.wikisource.org/wiki/大南寔錄/大南寔錄前編/卷10 (`/api/rest_v1/page/html/…`): it contains three characters above U+20000: 𡼢 U+21F22, 𨭎 U+28B4E, 𪻳 U+2AEF3.
+2. Get the PDF: https://zh.wikisource.org/api/rest_v1/page/pdf/大南寔錄%2F大南寔錄前編%2F卷10/a4
+3. Extract its text (e.g. with pypdf): only U+28B4E is there; U+21F22 and U+2AEF3 are missing and show as blanks. The embedded fonts are LiberationSerif, DejaVuSans and Type 3 subsets; no font of the renderer seems to cover these code points.
 
-Expected: the character is rendered (e.g. with a font such as HanaMinB, Noto Serif CJK or BabelStone Han as a fallback).
+Expected: every character of the page is rendered, with a fallback font covering CJK Extension B to H (for instance HanaMinB, Debian package `fonts-hanazono`).
 
-Actual: a blank space. Only characters that Wikisource provides as images are visible.
+This affects readers who print classical Chinese texts from Wikisource (reported by a user on the Chinese Wikipedia technical village pump, November 2026). Tools that embed the official PDF unchanged, such as Wikipedia2Book (https://wikipedia2book.toolforge.org/, disclosure: I maintain it), cannot fix it on their side.
 
-This affects users printing classical Chinese texts from Wikisource (report from a user on the Chinese Wikipedia technical village pump, November 2026). Tools built on top of this API, such as Wikipedia2Book (https://wikipedia2book.toolforge.org/), embed the official PDF unchanged and cannot fix it on their side.
-
-Suggested fix: install a font covering CJK Extension B–H (for instance `fonts-hanazono` on Debian) in the PDF rendering service and add it to the fallback chain.
+Related: T226633 (CJK fonts for the PDF renderer, resolved).
