@@ -540,7 +540,7 @@ L'application est une page unique, organisée en trois étapes accessibles par d
 
 * 02 — Organisation : réorganisation des articles, documents importés, chapitres et volumes.
 
-* 03 — Édition : identité du livre (titre, sous-titre, auteur, note de couverture, introduction, conclusion, images de fond de la couverture et de la dernière page), table des matières (aucune, au début, à la fin) et format d'impression (format papier, orientation, préréglage de marges, numérotation des pages).
+* 03 — Édition, en quatre blocs : A « Identité du livre » (image et couleurs de la couverture, couleur et police du texte, logo Wikipédia, titre, sous-titre, auteur, note de couverture), B « Contenu » (introduction, numérotation des pages, table des matières : aucune, au début, à la fin, conclusion), C « Dernière page » (image, couleur ou logo de la page de fin) et D « Format d'impression » (format papier, orientation, préréglage et réglage des marges). Les blocs vont deux par ligne (A et B, puis C et D), un par ligne sur un petit écran.
 
 En bas des étapes Sources et Organisation, un bouton « Étape suivante : … » ouvre l'étape suivante et remonte en haut de la page.
 

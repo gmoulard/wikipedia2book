@@ -540,7 +540,7 @@ The application is a single page, organized in three steps reachable through tab
 
 * 02 — Organization: reordering articles, imported documents, chapters and volumes.
 
-* 03 — Editing: book identity (title, subtitle, author, cover note, introduction, conclusion, background images of the cover and of the last page), table of contents (none, at the start, at the end) and print format (paper size, orientation, margin preset, page numbering).
+* 03 — Editing, in four blocks: A "Book identity" (cover image and colors, text color and font, Wikipedia logo, title, subtitle, author, cover note), B "Content" (introduction, page numbering, table of contents: none, at the start, at the end, conclusion), C "Last page" (image, color or logo of the end page) and D "Print format" (paper size, orientation, margin preset and fine margin settings). The blocks go two per row (A and B, then C and D), one per row on a small screen.
 
 At the bottom of the Sources and Organization steps, a "Next step: …" button opens the next step and scrolls back to the top of the page.
 

@@ -112,7 +112,7 @@
           </div>
           <div class="edition-layout">
             <section class="settings-section">
-              <div class="settings-heading"><span class="settings-index">A</span><div><h3 data-i18n="edition.identityTitle">Identité du livre</h3><p data-i18n="edition.identitySubtitle">Les informations de couverture et d'ouverture</p></div></div>
+              <div class="settings-heading"><span class="settings-index">A</span><div><h3 data-i18n="edition.identityTitle">Identité du livre</h3><p data-i18n="edition.identitySubtitle">Image, couleurs, titre et auteur de la couverture</p></div></div>
               <div class="form-grid">
                 <div class="field field-wide background-field" data-background="cover_image">
                   <span data-i18n="edition.coverImageLabel">Image de fond de la couverture</span>
@@ -143,8 +143,20 @@
                 <label class="field field-wide"><span data-i18n="edition.subtitleLabel">Sous-titre</span><input id="bookSubtitle" type="text" placeholder="Facultatif" data-i18n-placeholder="common.optional"></label>
                 <label class="field field-wide"><span data-i18n="edition.authorLabel">Auteur ou éditeur</span><input id="bookAuthor" type="text" placeholder="Facultatif" data-i18n-placeholder="common.optional"></label>
                 <label class="field field-wide"><span data-i18n="heading.descLabel">Note de couverture</span><input id="bookDescription" type="text" maxlength="2000" placeholder="Note affichée sur la couverture (facultatif)" data-i18n-placeholder="heading.descPlaceholder" autocomplete="off"></label>
+              </div>
+            </section>
+            <section class="settings-section">
+              <div class="settings-heading"><span class="settings-index">B</span><div><h3 data-i18n="edition.contentTitle">Contenu</h3><p data-i18n="edition.contentSubtitle">Introduction, numérotation, table des matières et conclusion</p></div></div>
+              <div class="form-grid">
                 <label class="field field-wide"><span data-i18n="edition.introLabel">Introduction</span><textarea id="bookIntroduction" rows="4" placeholder="Quelques mots pour ouvrir le livre…" data-i18n-placeholder="edition.introPlaceholder"></textarea></label>
+                <label class="field field-wide checkbox-field"><input id="pageNumbers" type="checkbox" checked> <span data-i18n="edition.pageNumbers">Numéroter les pages</span></label>
+                <fieldset class="field field-wide orientation-field toc-field"><legend data-i18n="org.toc">Table des matières</legend><div class="segmented-control segmented-three"><label><input type="radio" name="tocChoice" value="none"><span data-i18n="edition.tocNone">Aucune</span></label><label><input type="radio" name="tocChoice" value="start"><span data-i18n="edition.tocStart">Au début</span></label><label><input type="radio" name="tocChoice" value="end"><span data-i18n="edition.tocEnd">À la fin</span></label></div></fieldset>
                 <label class="field field-wide"><span data-i18n="edition.conclusionLabel">Conclusion</span><textarea id="bookConclusion" rows="4" placeholder="Quelques mots pour refermer le livre…" data-i18n-placeholder="edition.conclusionPlaceholder"></textarea></label>
+              </div>
+            </section>
+            <section class="settings-section">
+              <div class="settings-heading"><span class="settings-index">C</span><div><h3 data-i18n="edition.lastPageTitle">Dernière page</h3><p data-i18n="edition.lastPageSubtitle">Image, couleur ou logo de la page de fin, après la licence</p></div></div>
+              <div class="form-grid">
                 <div class="field field-wide background-field" data-background="back_image">
                   <span data-i18n="edition.backImageLabel">Image de fond de la dernière page</span>
                   <div class="background-picker">
@@ -166,7 +178,7 @@
               </div>
             </section>
             <section class="settings-section">
-              <div class="settings-heading"><span class="settings-index">B</span><div><h3 data-i18n="edition.formatTitle">Format d'impression</h3><p data-i18n="edition.formatSubtitle">Format, orientation et marges en millimètres</p></div></div>
+              <div class="settings-heading"><span class="settings-index">D</span><div><h3 data-i18n="edition.formatTitle">Format d'impression</h3><p data-i18n="edition.formatSubtitle">Format, orientation et marges en millimètres</p></div></div>
               <div class="form-grid settings-grid">
                 <label class="field"><span data-i18n="edition.paperFormatLabel">Format papier</span><select id="pageFormat"><option>A5</option><option selected>A4</option><option>A6</option><option>A3</option><option>A2</option><option>A1</option><option>A0</option><option>Letter</option><option>Legal</option><option value="custom" data-i18n="edition.customOption">Personnalisé</option></select></label>
                 <fieldset class="field orientation-field"><legend data-i18n="edition.orientationLegend">Orientation</legend><div class="segmented-control"><label><input type="radio" name="orientation" value="portrait"><span data-i18n="edition.portrait">Portrait</span></label><label><input type="radio" name="orientation" value="landscape"><span data-i18n="edition.landscape">Paysage</span></label></div></fieldset>
@@ -179,8 +191,6 @@
                   <label class="field"><span data-i18n="edition.marginOutside">Marge extérieure (mm)</span><input id="marginOutside" type="number" min="0" max="100" value="16"></label>
                   <label class="field field-wide"><span data-i18n="edition.marginBinding">Marge de reliure (mm)</span><input id="marginBinding" type="number" min="0" max="40" value="0"></label>
                 </div></details>
-                <label class="field field-wide checkbox-field"><input id="pageNumbers" type="checkbox" checked> <span data-i18n="edition.pageNumbers">Numéroter les pages</span></label>
-                <fieldset class="field field-wide orientation-field toc-field"><legend data-i18n="org.toc">Table des matières</legend><div class="segmented-control segmented-three"><label><input type="radio" name="tocChoice" value="none"><span data-i18n="edition.tocNone">Aucune</span></label><label><input type="radio" name="tocChoice" value="start"><span data-i18n="edition.tocStart">Au début</span></label><label><input type="radio" name="tocChoice" value="end"><span data-i18n="edition.tocEnd">À la fin</span></label></div></fieldset>
               </div>
             </section>
           </div>
