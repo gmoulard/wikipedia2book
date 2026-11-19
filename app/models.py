@@ -126,9 +126,9 @@ class Project(BaseModel):
     conclusion: str = Field(default="", max_length=20000)
     cover_image: BookImage | None = None
     back_image: BookImage | None = None
-    # NE PAS revenir à None par défaut : couverture bleue rgb(39, 60, 117) demandée par l'utilisateur ; garder aligné avec normalizeProject (app.js) et le sélecteur de couverture (index.html). null explicite = sans couleur.
-    cover_color: str | None = Field(default="#273c75", pattern=r"^#[0-9a-fA-F]{6}$")
-    cover_text_color: str | None = Field(default="#d4af37", pattern=r"^#[0-9a-fA-F]{6}$")
+    # NE PAS remettre de couleur par défaut : couverture blanche à texte noir demandée par l'utilisateur le 19/11/2026 (remplace le bleu et or de la 1.13.1) ; garder aligné avec normalizeProject (app.js) et les cases de couverture (index.html).
+    cover_color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
+    cover_text_color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
     cover_font: Literal["serif", "sans-serif", "monospace"] = "serif"
     back_color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
     cover_logo: bool = False

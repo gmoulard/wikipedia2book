@@ -172,16 +172,17 @@ def build_cover_html(project: Project, language: str = "fr") -> str:
     h1, h2 {{ line-height: 1.2; }}
 h1 {{ font-size: 26pt; }}
 h2 {{ font-size: 18pt; }}
-.cover {{ display: flex; min-height: 65vh; flex-direction: column; justify-content: center; page-break-after: always; }}
-.cover h1 {{ max-width: 90%; margin-bottom: 8pt; }}
-.subtitle {{ margin: 0; font-size: 15pt; }}
-.author {{ margin-top: 32pt; color: #555; }}
-.cover-note {{ margin-top: 20pt; color: #555; font-size: 9pt; }}
+.cover {{ display: flex; min-height: 65vh; flex-direction: column; justify-content: center; page-break-after: always; color: #202122; font-family: {SANS_FONTS}; }}
+.cover h1 {{ margin: 0 0 12pt; padding-bottom: 4pt; border-bottom: 0.75pt solid #a2a9b1; font-size: 28pt; font-weight: normal; }}
+.subtitle, .author {{ padding-bottom: 2pt; border-bottom: 0.75pt dotted #c8ccd1; font-size: 11pt; font-weight: bold; }}
+.subtitle {{ margin: 0; }}
+.author {{ margin: 48pt 0 0; }}
+.cover-note {{ margin: 40pt 0 0; font-size: 11pt; line-height: 1.5; }}
 .opening {{ page-break-after: always; }}
 .cover-logo {{ position: absolute; right: 0; bottom: 0; }}
 .cover-logo img {{ width: 25mm; margin-left: 4mm; vertical-align: bottom; }}
 {text_css}
-.cover {{ font-family: {COVER_FONTS[project.cover_font]}; }}
+.cover h1 {{ font-family: {COVER_FONTS[project.cover_font]}; }}
 {_cover_text_color_css(project.cover_text_color)}
     </style>
     </head>

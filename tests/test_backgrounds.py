@@ -176,18 +176,19 @@ class ColorAndLogoTest(unittest.TestCase):
             with self.subTest(color=color), self.assertRaises(ValidationError):
                 Project(name="Livre", back_color=color)
         project = Project(name="Livre")
-        self.assertEqual((project.cover_color, project.back_color, project.cover_logo, project.back_logo), ("#273c75", None, False, False))
+        self.assertEqual((project.cover_color, project.back_color, project.cover_logo, project.back_logo), (None, None, False, False))
+        self.assertIsNone(project.cover_text_color)
         self.assertIsNone(Project(name="Livre", cover_color=None).cover_color)
 
     def test_cover_text_color_and_font(self):
-        html = book_builder.build_cover_html(Project(name="Livre"))
+        html = book_builder.build_cover_html(Project(name="Livre", cover_text_color="#d4af37"))
         self.assertIn(".cover, .cover .author, .cover .cover-note { color: #d4af37; }", html)
-        self.assertIn(f".cover {{ font-family: {book_builder.SERIF_FONTS}; }}", html)
+        self.assertIn(f".cover h1 {{ font-family: {book_builder.SERIF_FONTS}; }}", html)
         chosen = book_builder.build_cover_html(Project(name="Livre", cover_text_color="#123456", cover_font="monospace"))
         self.assertIn("color: #123456; }", chosen)
         self.assertIn('"DejaVu Sans Mono"', chosen)
-        self.assertIn(f".cover {{ font-family: {book_builder.SANS_FONTS}; }}", book_builder.build_cover_html(Project(name="Livre", cover_font="sans-serif")))
-        automatic = book_builder.build_cover_html(Project(name="Livre", cover_text_color=None))
+        self.assertIn(f".cover h1 {{ font-family: {book_builder.SANS_FONTS}; }}", book_builder.build_cover_html(Project(name="Livre", cover_font="sans-serif")))
+        automatic = book_builder.build_cover_html(Project(name="Livre", cover_color="#273c75"))
         self.assertNotIn("#d4af37", automatic)
         self.assertIn(".cover, .cover .author, .cover .cover-note { color: #fff; }", automatic)
         for field, value in (("cover_text_color", "gold"), ("cover_text_color", "#d4af37; } body {"), ("cover_font", "Comic Sans"), ("cover_font", "serif; } x {")):
@@ -200,11 +201,14 @@ class ColorAndLogoTest(unittest.TestCase):
             self.assertIn("fonts-dejavu-core", (root / name).read_text(encoding="utf-8"))
         self.assertEqual(set(book_builder.COVER_FONTS), {"serif", "sans-serif", "monospace"})
 
-    def test_default_cover_is_blue_with_white_text(self):
-        html = book_builder.build_cover_html(Project(name="Livre"))
-        self.assertIn("#273c75", html)
+    def test_default_cover_is_white_with_dark_text_and_rules(self):
+        html = book_builder.build_cover_html(Project(name="Livre", book_subtitle="Sous-titre", book_author="Auteur"))
+        for absent in ("#273c75", "#d4af37", "color: #fff"):
+            self.assertNotIn(absent, html)
+        self.assertIn(f"color: #202122; font-family: {book_builder.SANS_FONTS}; }}", html)
+        self.assertIn("border-bottom: 0.75pt solid #a2a9b1; font-size: 28pt; font-weight: normal;", html)
+        self.assertIn(".subtitle, .author { padding-bottom: 2pt; border-bottom: 0.75pt dotted #c8ccd1;", html)
         self.assertEqual(book_builder.color_text_style("#273c75"), "light")
-        self.assertNotIn("#273c75", book_builder.build_cover_html(Project(name="Livre", cover_color=None)))
 
     def test_cover_color_sets_the_background_and_the_text(self):
         dark = book_builder.build_cover_html(Project(name="Livre", cover_color="#1d2927"))
