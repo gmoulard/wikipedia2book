@@ -176,7 +176,7 @@ class ColorAndLogoTest(unittest.TestCase):
             with self.subTest(color=color), self.assertRaises(ValidationError):
                 Project(name="Livre", back_color=color)
         project = Project(name="Livre")
-        self.assertEqual((project.cover_color, project.back_color, project.cover_logo, project.back_logo), (None, None, False, False))
+        self.assertEqual((project.cover_color, project.back_color, project.cover_logo, project.back_logo), (None, None, True, False))
         self.assertIsNone(project.cover_text_color)
         self.assertIsNone(Project(name="Livre", cover_color=None).cover_color)
 
@@ -201,13 +201,14 @@ class ColorAndLogoTest(unittest.TestCase):
             self.assertIn("fonts-dejavu-core", (root / name).read_text(encoding="utf-8"))
         self.assertEqual(set(book_builder.COVER_FONTS), {"serif", "sans-serif", "monospace"})
 
-    def test_default_cover_is_white_with_dark_text_and_rules(self):
+    def test_default_cover_is_white_with_dark_text_and_title_rule(self):
         html = book_builder.build_cover_html(Project(name="Livre", book_subtitle="Sous-titre", book_author="Auteur"))
         for absent in ("#273c75", "#d4af37", "color: #fff"):
             self.assertNotIn(absent, html)
         self.assertIn(f"color: #202122; font-family: {book_builder.SANS_FONTS}; }}", html)
         self.assertIn("border-bottom: 0.75pt solid #a2a9b1; font-size: 28pt; font-weight: normal;", html)
-        self.assertIn(".subtitle, .author { padding-bottom: 2pt; border-bottom: 0.75pt dotted #c8ccd1;", html)
+        self.assertIn(".subtitle, .author { font-size: 11pt; font-weight: bold; }", html)
+        self.assertNotIn("dotted", html)
         self.assertEqual(book_builder.color_text_style("#273c75"), "light")
 
     def test_cover_color_sets_the_background_and_the_text(self):
@@ -224,7 +225,8 @@ class ColorAndLogoTest(unittest.TestCase):
         self.assertLess(html.index("background-color: #000000"), html.index("background: url("))
 
     def test_logo_on_the_cover_and_the_last_page(self):
-        self.assertNotIn('class="cover-logo"', book_builder.build_cover_html(Project(name="Livre")))
+        self.assertIn('class="cover-logo"', book_builder.build_cover_html(Project(name="Livre")))
+        self.assertNotIn('class="cover-logo"', book_builder.build_cover_html(Project(name="Livre", cover_logo=False)))
         wikipedia = base64.b64encode(book_builder.WIKIPEDIA_LOGO.read_bytes()).decode("ascii")
         cover = book_builder.build_cover_html(Project(name="Livre", cover_logo=True))
         self.assertIn(f'<div class="cover-logo"><img src="data:image/png;base64,{wikipedia}" alt="Wikipedia"></div>', cover)
@@ -232,7 +234,7 @@ class ColorAndLogoTest(unittest.TestCase):
         self.assertNotIn("Wikipedia2Book", cover)
         old_file = Project.model_validate({"name": "Livre", "cover_app_logo": True, "back_app_logo": True})
         self.assertFalse(book_builder.has_back_cover(old_file))
-        self.assertNotIn('class="cover-logo"', book_builder.build_cover_html(old_file))
+        self.assertNotIn('alt="Wikipedia2Book"', book_builder.build_cover_html(old_file))
         back = book_builder.build_back_cover_html(Project(name="Livre", back_logo=True, back_color="#336699"))
         self.assertIn(f'<div class="back-logo"><img src="data:image/png;base64,{wikipedia}" alt="Wikipedia"></div>', back)
         self.assertIn(".back-logo { position: absolute; right: 15mm; bottom: 15mm; }", back)

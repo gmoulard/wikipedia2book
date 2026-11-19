@@ -131,7 +131,8 @@ class Project(BaseModel):
     cover_text_color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
     cover_font: Literal["serif", "sans-serif", "monospace"] = "serif"
     back_color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
-    cover_logo: bool = False
+    # NE PAS remettre False : logo Wikipédia sur la couverture par défaut, demandé par l'utilisateur le 19/11/2026 ; garder aligné avec normalizeProject (app.js).
+    cover_logo: bool = True
     back_logo: bool = False
     page_format: Literal["A0", "A1", "A2", "A3", "A4", "A5", "A6", "Letter", "Legal", "custom"] = "A4"
     custom_width_mm: float = Field(default=148, ge=50, le=1000)

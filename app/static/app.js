@@ -139,7 +139,7 @@ function sameArticle(a, b) {
 function normalizeProject(input) {
   const project = {
     main_articles: [], discovered_articles: [], uploaded_documents: [],
-    book_title: '', book_subtitle: '', book_author: '', introduction: '', conclusion: '', cover_image: null, back_image: null, cover_color: null, cover_text_color: null, cover_font: 'serif', back_color: null, cover_logo: false, back_logo: false,
+    book_title: '', book_subtitle: '', book_author: '', introduction: '', conclusion: '', cover_image: null, back_image: null, cover_color: null, cover_text_color: null, cover_font: 'serif', back_color: null, cover_logo: true, back_logo: false,
     page_format: 'A4', custom_width_mm: 148, custom_height_mm: 210, orientation: 'portrait',
     margin_top_mm: 18, margin_bottom_mm: 18, margin_inside_mm: 18, margin_outside_mm: 16,
     margin_binding_mm: 0, article_order: [], chapters: [], toc_position: 'start', volume_breaks: [], unassigned_first: false, table_of_contents: true, page_numbers: true, ...input,
