@@ -1,13 +1,13 @@
 # Wikipedia2Book
 
 <table><tr><td>
-<a href="https://wikipedia2book.toolforge.org/"><img src="https://gmoulard.github.io/wikipedia2book/static/Wikipedia2bookLogo.png" alt="Wikipedia2Book logo"></a>
+<a href="https://wikipedia2book.toolforge.org/"><img src="https://gmoulard.github.io/wikipedia2book/static/Wikipedia2bookLogo.png" alt="Wikipedia2Book logo" width="100"></a>
 </td><td><a href="https://wikipedia2book.toolforge.org/"><strong>Wikipedia2Book</strong></a> is a web application that allows you to compile a book in a printable PDF format.
 Users can select a Wikipedia book or specific articles, explore related links, organize content into chapters and volumes, and configure the layout before exporting the final PDF file.
 Available for: Wikipedia, Wikisource, Wikibooks, Wikivoyage, Wikiversity, Wikiquote, Wiktionary, and Wikinews.
 </td></tr></table>
 
-## Features je ne suis pas un readme
+## Features
 
 Assemble the official PDFs of Wikipedia (and other Wikimedia projects) pages into a single printable book.
 
@@ -21,19 +21,7 @@ Assemble the official PDFs of Wikipedia (and other Wikimedia projects) pages int
 * Generate the book with navigation bookmarks, continuous page numbering and a table of contents.
 * Interface in 12 languages: French, English, Spanish, Portuguese, Italian, German, Dutch, Turkish, Chinese, Japanese, Arabic and Persian (right-to-left for Arabic and Persian). The headings the app adds to the PDF (table of contents, chapters, conclusion, license, bookmarks…) follow the interface language.
 
-## Documentation 
 
-- [documentation](https://gmoulard.github.io/wikipedia2book/) on site GitHub Pages
-
-Every document is listed in [docs.md](docs.md):
-- functional specification: [FunctionalSpec.fr.md](FunctionalSpec.fr.md) (French, the reference version), [FunctionalSpec.en.md](FunctionalSpec.en.md) (English translation);
-- technical specification: [TechnicalSpec.fr.md](TechnicalSpec.fr.md), [TechnicalSpec.en.md](TechnicalSpec.en.md);
-- version history: [CHANGELOG.fr.md](CHANGELOG.fr.md), [CHANGELOG.en.md](CHANGELOG.en.md);
-- deployment (Toolforge production, Northflank pre-production, API documentation, examples): section 13.5 of the [technical specification](TechnicalSpec.en.md);
-- running the application, with or without Docker, and deploying your own container (settings, article limit and memory, alerts): section 13.4 of the [technical specification](TechnicalSpec.en.md);
-- administration page (`/admin`): section 12.2 of the [functional specification](FunctionalSpec.en.md), setup in section 13.7 of the [technical specification](TechnicalSpec.en.md);
-- license (AGPL-3.0 for the code, CC BY-SA for the books): section 15 of the [functional specification](FunctionalSpec.en.md);
-- code of conduct and citation: section 17 of the [technical specification](TechnicalSpec.en.md).
 
 ## Technology stack
 

@@ -34,46 +34,42 @@ relative_links:
 defaults:
   - scope: { path: "index.md" }
     values: { title: Accueil / Home, nav_order: 1 }
-  - scope: { path: "docs.md" }
-    values: { title: Documents, nav_order: 2 }
   - scope: { path: "FunctionalSpec.fr.md" }
-    values: { title: Spécification fonctionnelle, parent: "Fonctionnel / Functional", nav_order: 1 }
+    values: { title: Spécification fonctionnelle, parent: "Fonctionnel / Functional", nav_order: 1, nav_exclude: true }
   - scope: { path: "FunctionalSpec.en.md" }
     values: { title: Functional specification, parent: "Fonctionnel / Functional", nav_order: 2 }
   - scope: { path: "CHANGELOG.fr.md" }
     values: { title: Historique des versions, parent: "Fonctionnel / Functional", nav_order: 3 }
-  - scope: { path: "CHANGELOG.en.md" }
-    values: { title: Version history, parent: "Fonctionnel / Functional", nav_order: 4 }
   - scope: { path: "helpSearch.fr.md" }
-    values: { title: "Aide à la recherche / Search help", parent: "Fonctionnel / Functional", nav_order: 5, has_children: true }
+    values: { title: "Search help", parent: "Fonctionnel / Functional", nav_order: 5, has_children: true }
   - scope: { path: "helpSearch.en.md" }
-    values: { title: "English", parent: "Aide à la recherche / Search help", nav_order: 1, grand_parent: "Fonctionnel / Functional" }
+    values: { title: "English", parent: "Search help", nav_order: 1, grand_parent: "Fonctionnel / Functional" }
   - scope: { path: "helpSearch.de.md" }
-    values: { title: "Deutsch", parent: "Aide à la recherche / Search help", nav_order: 2, grand_parent: "Fonctionnel / Functional" }
+    values: { title: "Deutsch", parent: "Search help", nav_order: 2, grand_parent: "Fonctionnel / Functional" }
   - scope: { path: "helpSearch.es.md" }
-    values: { title: "Español", parent: "Aide à la recherche / Search help", nav_order: 3, grand_parent: "Fonctionnel / Functional" }
+    values: { title: "Español", parent: "Search help", nav_order: 3, grand_parent: "Fonctionnel / Functional" }
   - scope: { path: "helpSearch.it.md" }
-    values: { title: "Italiano", parent: "Aide à la recherche / Search help", nav_order: 4, grand_parent: "Fonctionnel / Functional" }
+    values: { title: "Italiano", parent: "Search help", nav_order: 4, grand_parent: "Fonctionnel / Functional" }
   - scope: { path: "helpSearch.pt.md" }
-    values: { title: "Português", parent: "Aide à la recherche / Search help", nav_order: 5, grand_parent: "Fonctionnel / Functional" }
+    values: { title: "Português", parent: "Search help", nav_order: 5, grand_parent: "Fonctionnel / Functional" }
   - scope: { path: "helpSearch.nl.md" }
-    values: { title: "Nederlands", parent: "Aide à la recherche / Search help", nav_order: 6, grand_parent: "Fonctionnel / Functional" }
+    values: { title: "Nederlands", parent: "Search help", nav_order: 6, grand_parent: "Fonctionnel / Functional" }
   - scope: { path: "helpSearch.tr.md" }
-    values: { title: "Türkçe", parent: "Aide à la recherche / Search help", nav_order: 7, grand_parent: "Fonctionnel / Functional" }
+    values: { title: "Türkçe", parent: "Search help", nav_order: 7, grand_parent: "Fonctionnel / Functional" }
   - scope: { path: "helpSearch.zh.md" }
-    values: { title: "中文", parent: "Aide à la recherche / Search help", nav_order: 8, grand_parent: "Fonctionnel / Functional" }
+    values: { title: "中文", parent: "Search help", nav_order: 8, grand_parent: "Fonctionnel / Functional" }
   - scope: { path: "helpSearch.ja.md" }
-    values: { title: "日本語", parent: "Aide à la recherche / Search help", nav_order: 9, grand_parent: "Fonctionnel / Functional" }
+    values: { title: "日本語", parent: "Search help", nav_order: 9, grand_parent: "Fonctionnel / Functional" }
   - scope: { path: "helpSearch.fa.md" }
-    values: { title: "فارسی", parent: "Aide à la recherche / Search help", nav_order: 10, grand_parent: "Fonctionnel / Functional" }
+    values: { title: "فارسی", parent: "Search help", nav_order: 10, grand_parent: "Fonctionnel / Functional" }
   - scope: { path: "helpSearch.ar.md" }
-    values: { title: "العربية", parent: "Aide à la recherche / Search help", nav_order: 11, grand_parent: "Fonctionnel / Functional" }
+    values: { title: "العربية", parent: "Search help", nav_order: 11, grand_parent: "Fonctionnel / Functional" }
   - scope: { path: "comparison-mediawiki2latex.md" }
     values: { title: Comparison with mediawiki2latex, parent: "Fonctionnel / Functional", nav_order: 6 }
   - scope: { path: "comparison-ws-export.md" }
     values: { title: Comparison with WS Export, parent: "Fonctionnel / Functional", nav_order: 7 }
   - scope: { path: "TechnicalSpec.fr.md" }
-    values: { title: Spécification technique, parent: "Technique / Technical", nav_order: 1 }
+    values: { title: Spécification technique, parent: "Technique / Technical", nav_order: 1, nav_exclude: true }
   - scope: { path: "TechnicalSpec.en.md" }
     values: { title: Technical specification, parent: "Technique / Technical", nav_order: 2 }
   - scope: { path: "tests-manuels.md" }

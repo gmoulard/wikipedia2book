@@ -9,6 +9,59 @@
     .side-bar .site-header, .side-bar .site-nav, .side-bar .site-footer { width: 16.5rem; }
   }
 </style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flag-icons@7.2.3/css/flag-icons.min.css">
+<style>
+  .nav-list-item.has-flag { display: flex; align-items: center; }
+  .nav-list-item.has-flag > .nav-list-link { flex: 0 1 auto; padding-right: 0; }
+  .nav-flag { display: inline-flex; flex: 0 0 auto; margin-left: 0.25rem; line-height: 0; }
+  #site-nav .fi { width: 1.1rem; line-height: 0.8rem; margin-right: 0.4rem; box-shadow: 0 0 0 1px #d7d7d7; vertical-align: -0.1em; }
+  .nav-flag .fi { margin-right: 0; }
+</style>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const flagIcon = (country) => `<span class="fi fi-${country}" aria-hidden="true"></span>`;
+    const pathOf = (link) => link.getAttribute("href") ?? location.pathname;
+    const translations = {
+      "FunctionalSpec.en.html": { href: "FunctionalSpec.fr.html", label: "Spécification fonctionnelle (français)" },
+      "TechnicalSpec.en.html": { href: "TechnicalSpec.fr.html", label: "Spécification technique (français)" },
+    };
+    const helpCountries = { fr: "fr", en: "gb", de: "de", es: "es", it: "it", pt: "pt", nl: "nl", tr: "tr", zh: "cn", ja: "jp", fa: "ir", ar: "arab" };
+    const links = [...document.querySelectorAll("#site-nav a.nav-list-link")];
+    // NE PAS lire seulement l'attribut href : Just the Docs le retire du lien de la page affichée.
+    links.forEach((link) => {
+      const path = pathOf(link);
+      const name = path.split("/").pop();
+      const translation = translations[name];
+      if (translation) {
+        const anchor = document.createElement("a");
+        anchor.className = "nav-flag";
+        anchor.href = path.replace(/[^/]*$/, translation.href);
+        anchor.title = translation.label;
+        anchor.setAttribute("aria-label", translation.label);
+        anchor.innerHTML = flagIcon("fr");
+        link.parentElement.classList.add("has-flag");
+        link.after(anchor);
+      }
+      const help = name.match(/^helpSearch\.([a-z]{2})\.html$/);
+      if (!help) return;
+      if (help[1] === "fr") {
+        const children = link.parentElement.querySelector(":scope > .nav-list");
+        if (!children) return;
+        const item = document.createElement("li");
+        item.className = "nav-list-item";
+        const french = document.createElement("a");
+        french.className = "nav-list-link";
+        french.href = path;
+        french.innerHTML = `${flagIcon("fr")}Français`;
+        if (!link.getAttribute("href")) french.classList.add("active");
+        item.append(french);
+        children.prepend(item);
+      } else {
+        link.insertAdjacentHTML("afterbegin", flagIcon(helpCountries[help[1]]));
+      }
+    });
+  });
+</script>
 <style>
   .doc-language { margin: 0 1rem; align-self: center; font: inherit; font-size: 0.875rem; padding: 0.2rem 0.4rem; border: 1px solid #d7d7d7; border-radius: 4px; background: transparent; color: inherit; }
 </style>
@@ -25,7 +78,7 @@
 <script>
   document.addEventListener("DOMContentLoaded", () => {
     const names = { fr: "Français", en: "English", de: "Deutsch", es: "Español", it: "Italiano", pt: "Português", nl: "Nederlands", tr: "Türkçe", zh: "中文", ja: "日本語", fa: "فارسی", ar: "العربية" };
-    const translations = { helpSearch: Object.keys(names), FunctionalSpec: ["fr", "en"], TechnicalSpec: ["fr", "en"], CHANGELOG: ["fr", "en"] };
+    const translations = { helpSearch: Object.keys(names), FunctionalSpec: ["fr", "en"], TechnicalSpec: ["fr", "en"] };
     const match = location.pathname.match(/\/([A-Za-z]+)\.([a-z]{2})\.html$/);
     if (!match || !translations[match[1]]?.includes(match[2])) return;
     const [, page, current] = match;

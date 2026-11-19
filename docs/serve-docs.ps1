@@ -116,9 +116,27 @@ try {
     Write-Host "Site prêt : $url (rechargé à chaque modification de docs/). Ctrl+C pour arrêter."
     if (-not $NoBrowser) { Start-Process $url }
     & $docker logs -f --since 1s $id
-    $current = & $docker inspect -f "{{.Id}}" $name 2>$null
-    if ($current -and $current -ne $id) { Write-Host "Conteneur remplacé par un autre lancement de ce script (-Restart)." }
+    & $docker inspect $id *> $null
+    if ($LASTEXITCODE -ne 0) {
+        $deadline = (Get-Date).AddSeconds(15)
+        do {
+            $current = & $docker inspect -f "{{.Id}}" $name 2>$null
+            if ($current) { break }
+            Start-Sleep -Seconds 1
+        } while ((Get-Date) -lt $deadline)
+        if ($current) {
+            Write-Host "Conteneur remplacé par un autre lancement de ce script (-Restart) : le site tourne toujours sur $url, ce terminal ne suit plus ses messages."
+        } else {
+            Write-Host "Conteneur supprimé hors de ce script (docker rm ou Docker Desktop)."
+        }
+        $id = $null
+    } elseif ((& $docker inspect -f "{{.State.Running}}" $id 2>$null) -ne "true") {
+        $code = & $docker inspect -f "{{.State.ExitCode}}" $id 2>$null
+        Write-Host "Jekyll s'est arrêté (code de sortie $code) : voir les messages ci-dessus."
+    }
 } finally {
-    & $docker rm -f $id *> $null
-    Write-Host "Conteneur arrêté."
+    if ($id) {
+        & $docker rm -f $id *> $null
+        Write-Host "Conteneur arrêté."
+    }
 }

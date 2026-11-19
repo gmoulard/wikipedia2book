@@ -3,7 +3,7 @@
 <table border="0" ><tr><td>
 <img src="https://gmoulard.github.io/wikipedia2book/static/Wikipedia2bookLogo.png" alt="Wikipedia2Book logo" width="100"  >
 </td><td markdown="1">
-Traduction anglaise : [CHANGELOG.en.md](https://gmoulard.github.io/wikipedia2book/CHANGELOG.en.html). Ce document en français fait référence. La documentation est en trois parties : spécification fonctionnelle ([FunctionalSpec.fr.md](https://gmoulard.github.io/wikipedia2book/FunctionalSpec.fr.html)), spécification technique ([TechnicalSpec.fr.md](https://gmoulard.github.io/wikipedia2book/TechnicalSpec.fr.html)) et historique des versions ([CHANGELOG.fr.md](https://gmoulard.github.io/wikipedia2book/CHANGELOG.fr.html)) ; les numéros de section sont communs aux trois (« section 13.3 » renvoie à la spécification technique). Tous les documents : [docs.md](https://gmoulard.github.io/wikipedia2book/docs.html).
+Ce document en français fait référence. La documentation est en trois parties : spécification fonctionnelle ([FunctionalSpec.fr.md](https://gmoulard.github.io/wikipedia2book/FunctionalSpec.fr.html)), spécification technique ([TechnicalSpec.fr.md](https://gmoulard.github.io/wikipedia2book/TechnicalSpec.fr.html)) et historique des versions ([CHANGELOG.fr.md](https://gmoulard.github.io/wikipedia2book/CHANGELOG.fr.html)) ; les numéros de section sont communs aux trois (« section 13.3 » renvoie à la spécification technique).
 </td></tr></table>
 
 ---

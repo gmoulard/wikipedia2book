@@ -34,10 +34,10 @@ Assemble the official PDFs of Wikipedia (and other Wikimedia projects) pages int
 
 - [documentation](https://gmoulard.github.io/wikipedia2book/) on site GitHub Pages
 
-Every document is listed in [docs.md](docs/docs.md):
+Main documents:
 - functional specification: [FunctionalSpec.fr.md](docs/FunctionalSpec.fr.md) (French, the reference version), [FunctionalSpec.en.md](docs/FunctionalSpec.en.md) (English translation);
 - technical specification: [TechnicalSpec.fr.md](docs/TechnicalSpec.fr.md), [TechnicalSpec.en.md](docs/TechnicalSpec.en.md);
-- version history: [CHANGELOG.fr.md](docs/CHANGELOG.fr.md), [CHANGELOG.en.md](docs/CHANGELOG.en.md).
+- version history, in French only: [CHANGELOG.fr.md](docs/CHANGELOG.fr.md).
 
 ## Deployment
 
@@ -97,10 +97,9 @@ wikipedia2book/
 ├── requirements.txt             # Python dependencies
 ├── .claude/skills/              # Git submodule (gmoulard/claude_skills): generic Claude Code procedures code-style, spec-sync, debug-frontend, release, deploy-production
 ├── docs/                        # Documentation site (GitHub Pages source)
-│   ├── docs.md                  # List of every document
 │   ├── FunctionalSpec.fr.md, FunctionalSpec.en.md  # Functional specification (French original, English translation)
 │   ├── TechnicalSpec.fr.md, TechnicalSpec.en.md    # Technical specification
-│   ├── CHANGELOG.fr.md, CHANGELOG.en.md            # Version history
+│   ├── CHANGELOG.fr.md          # Version history (French)
 │   ├── _config.yml              # Just the Docs theme for the site
 │   ├── benchmark-results.csv    # Every benchmark measurement, for analysis
 │   ├── toolviews.csv, toolforge_hourly.csv, toolforge_generations.csv, stats.md  # Usage statistics and their charts (generated)

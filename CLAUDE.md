@@ -66,8 +66,8 @@ Valeurs propres à ce dépôt, lues par les skills génériques de `.claude/skil
   - encodage mixte : `app/static/app.js` mélange accents en `\uXXXX` et en UTF-8 brut ;
   - robustesse : erreurs réseau Wikipédia (`MediaWikiClient`), validation Pydantic, pas d'échec silencieux.
 - **`spec-sync`** :
-  - référence : `docs/FunctionalSpec.fr.md` (sections 1 à 12, 15, 16, 18), `docs/TechnicalSpec.fr.md` (sections 13, 14, 17) et `docs/CHANGELOG.fr.md` (section 19), en français, qui fait foi ; numéros de section communs aux trois ; index de tous les documents : `docs/docs.md`, à tenir à jour quand un document est ajouté ou renommé ; traductions : les mêmes fichiers en `.en.md`, libellés cités tels que dans le bloc `en` de `app/static/i18n.js` ;
-  - évolutions non implémentées : section 18 ; schémas Mermaid : section 13.10 (modules et génération du PDF), dessinés sur GitHub Pages par `docs/_includes/head_custom.html` (thème Just the Docs, `docs/_config.yml`) (Mermaid épinglé, jsDelivr) ; arborescence : section 17 et README ; historique : section 19, `docs/CHANGELOG.*.md` ; exemples d'API : section 13.3 ;
+  - référence : `docs/FunctionalSpec.fr.md` (sections 1 à 12, 15, 16, 18), `docs/TechnicalSpec.fr.md` (sections 13, 14, 17) et `docs/CHANGELOG.fr.md` (section 19), en français, qui fait foi ; numéros de section communs aux trois ; traductions : les mêmes fichiers en `.en.md`, libellés cités tels que dans le bloc `en` de `app/static/i18n.js` ;
+  - évolutions non implémentées : section 18 ; schémas Mermaid : section 13.10 (modules et génération du PDF), dessinés sur GitHub Pages par `docs/_includes/head_custom.html` (thème Just the Docs, `docs/_config.yml`) (Mermaid épinglé, jsDelivr) ; arborescence : section 17 et README ; historique : section 19, `docs/CHANGELOG.fr.md` (en français seulement, plus de traduction anglaise depuis le 19/11/2026, à la demande de l'utilisateur) ; exemples d'API : section 13.3 ;
   - README et page d'accueil du site `docs/index.md` cohérents avec la spec française.
 - **`debug-frontend`** :
   - production : `https://wikipedia2book.toolforge.org/` (suit `production-toolforge`) ; aussi `https://prod--wikipedia2book--wkvpbnfj6h4v.code.run/` (Northflank, suit `main`) ;
@@ -78,7 +78,7 @@ Valeurs propres à ce dépôt, lues par les skills génériques de `.claude/skil
 - **`release`** :
   - fichier de version : `app/version.py` (`VERSION = "x.y.z"`) ;
   - application déployée (version à demander) : `app/`, `requirements.txt`, `Dockerfile`, `Procfile`, `Aptfile`, `.python-version`, `toolforge-fonts.conf` ; pas de version pour `docs/`, `README.md`, `CLAUDE.md`, `scripts/`, `.github/workflows/`, `tests/`, `.claude/` ;
-  - historique : tableau de `docs/CHANGELOG.fr.md` (section 19 « Historique des versions », résumé en français) et de `docs/CHANGELOG.en.md` (« Version history », résumé en anglais), ligne `| X.Y.Z   | AAAA-MM-JJ | GMoulard  | Résumé. |` ;
+  - historique : tableau de `docs/CHANGELOG.fr.md` (section 19 « Historique des versions », résumé en français ; pas de version anglaise), ligne `| X.Y.Z   | AAAA-MM-JJ | GMoulard  | Résumé. |` ;
   - auteur du commit de version : `gmoulard <gmoulard@gmail.com>` ; en session cloud, ne pas écrire l'adresse : l'auteur vient des variables `GIT_AUTHOR_NAME`/`GIT_AUTHOR_EMAIL` de l'environnement « W2B » (commit sans `--author`) ; si elles manquent, le signaler avant de committer plutôt que d'accepter l'identité de la session ; message de tag : `Wikipedia2Book X.Y.Z` ;
   - branche principale : `main` ;
   - tests : `python3 -m unittest discover -s tests` (Linux, sessions cloud ; `pip install -r requirements.txt` si `fastapi`/`httpx` manquent) ou `.venv/Scripts/python.exe -m unittest discover -s tests -v` (poste Windows) ;
