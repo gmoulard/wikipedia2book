@@ -54,7 +54,7 @@ jobs:
         uses: actions/checkout@v7
       - name: Usage statistics page
         run: |
-          python3 scripts/toolviews_chart.py docs/toolviews.csv docs/stats.md --hourly docs/toolforge_hourly.csv
+          python3 scripts/toolviews_chart.py docs/toolviews.csv docs/stats.md --hourly docs/toolforge_hourly.csv --generations docs/toolforge_generations.csv
       - name: Setup Pages
         uses: actions/configure-pages@v6
       - name: Build with Jekyll

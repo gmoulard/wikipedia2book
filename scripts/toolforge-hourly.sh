@@ -30,3 +30,11 @@ for pod in $pods; do
     | sort | uniq -c | awk '{ print $2 ";" $1 }'
 done
 echo "END-HOURLY"
+
+echo "BEGIN-GENERATIONS"
+for pod in $pods; do
+  kubectl logs --timestamps "$pod" \
+    | awk -v pod="$pod" '$2 == "{\"generation\":" && match($0, /"status": "(done|error|aborted)"/) { s = substr($0, RSTART + 11, RLENGTH - 12); print pod ";" substr($1, 1, 13) ";" s }' \
+    | sort | uniq -c | awk '{ print $2 ";" $1 }'
+done
+echo "END-GENERATIONS"

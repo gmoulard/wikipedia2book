@@ -102,3 +102,6 @@ date,version,target,level,scenario,pages,wikipedia_s,application_s,transfer_s,to
 2026-11-18,1.13.1+,workflow,min,50-pages,50,0.6,0.66,0.01,1.26,-27,ok
 2026-11-18,1.13.1+,workflow,min,200-pages,200,6.7,1.5,0.02,8.23,-26,ok
 2026-11-18,1.13.1+,workflow,min,livre-reference-images,107,11.02,1.43,0.03,12.49,-28,ok
+2026-11-19,1.13.2+,workflow,min,50-pages,50,0.77,0.95,0.01,1.72,4,ok
+2026-11-19,1.13.2+,workflow,min,200-pages,200,6.85,2.05,0.03,8.97,1,ok
+2026-11-19,1.13.2+,workflow,min,livre-reference-images,107,4.7,2.02,0.04,6.75,2,ok

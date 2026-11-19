@@ -39,12 +39,17 @@ cat <<'LOG'
 2026-11-15T07:01:00.1Z INFO:     10.0.0.1:0 - "GET /static/app.js HTTP/1.1" 200 OK
 2026-11-15T07:02:00.1Z INFO:     10.0.0.2:0 - "POST /api/pdf/stream?language=fr HTTP/1.1" 200 OK
 2026-11-15T07:03:00.1Z INFO:     Started server process [1]
+2026-11-15T07:04:00.1Z {"generation": 1, "at_s": 0.1, "stage": "download", "process": "server", "rss": 1}
+2026-11-15T07:05:00.1Z {"generation": 1, "status": "done", "duration_s": 12.5}
+2026-11-15T07:06:00.1Z {"generation": 2, "status": "error", "duration_s": 3.0, "error": "x"}
+2026-11-15T08:00:00.1Z {"generation": 3, "status": "done", "duration_s": 9.0}
+2026-11-15T08:01:00.1Z INFO:     10.0.0.3:0 - "GET /?q={\"generation\": 4, \"status\": \"done\"} HTTP/1.1" 200 OK
 LOG
 """
 
 
-def capture(*lines):
-    return "\n".join(["bannière éventuelle", "BEGIN-HOURLY", *lines, "END-HOURLY", ""])
+def capture(*lines, generations=()):
+    return "\n".join(["bannière éventuelle", "BEGIN-HOURLY", *lines, "END-HOURLY", "BEGIN-GENERATIONS", *generations, "END-GENERATIONS", ""])
 
 
 class ParseTest(unittest.TestCase):
@@ -93,6 +98,49 @@ class RemoteScriptTest(unittest.TestCase):
             env = {**os.environ, "PATH": f"{tmp}{os.pathsep}{os.environ['PATH']}"}
             result = subprocess.run(["bash", str(ROOT / "scripts" / "toolforge-hourly.sh")], capture_output=True, text=True, env=env, check=True)
             self.assertEqual(toolforge_hourly.parse(result.stdout), {("2026-11-15T06", POD): 1, ("2026-11-15T07", POD): 2})
+            self.assertEqual(
+                toolforge_hourly.parse_generations(result.stdout),
+                {("2026-11-15T07", POD, "done"): 1, ("2026-11-15T07", POD, "error"): 1, ("2026-11-15T08", POD, "done"): 1},
+            )
+
+
+class GenerationsTest(unittest.TestCase):
+    def test_parse_merge_and_round_trip(self):
+        text = capture(generations=(f"{POD};2026-11-15T07;done;3", f"{POD};2026-11-15T07;aborted;1"))
+        captured = toolforge_hourly.parse_generations(text)
+        self.assertEqual(captured, {("2026-11-15T07", POD, "done"): 3, ("2026-11-15T07", POD, "aborted"): 1})
+        merged = toolforge_hourly.merge_generations({("2026-11-15T07", POD, "done"): 5, ("2026-11-01T00", POD, "error"): 2}, captured)
+        self.assertEqual(merged, {("2026-11-15T07", POD, "done"): 5, ("2026-11-15T07", POD, "aborted"): 1, ("2026-11-01T00", POD, "error"): 2})
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "generations.csv"
+            toolforge_hourly.write_generations(path, merged)
+            self.assertEqual(path.read_text(encoding="utf-8").splitlines()[0], "hour;pod;status;generations")
+            self.assertEqual(toolforge_hourly.read_generations(path), merged)
+
+    def test_unexpected_generation_lines_raise(self):
+        for text in (
+            "\n".join(["BEGIN-HOURLY", "END-HOURLY", ""]),
+            capture(generations=(f"{POD};2026-11-15T07;running;1",)),
+            capture(generations=(f"{POD};2026-11-15T07;done",)),
+        ):
+            with self.subTest(text=text), self.assertRaises(ValueError):
+                toolforge_hourly.parse_generations(text)
+
+    def test_daily_chart_sums_pods_and_statuses_and_fills_gaps(self):
+        generations = {
+            ("2026-11-15T07", POD, "done"): 3, ("2026-11-15T09", "wikipedia2book-old", "error"): 1,
+            ("2026-11-17T00", POD, "aborted"): 2,
+        }
+        page = toolviews_chart.build_page({"2026-11-01": {"date": "2026-11-01", "hits": "1"}}, {}, generations)
+        self.assertIn("**6** generations, 3 finished, 1 with an error, 2 abandoned", page)
+        self.assertIn("Depuis le 15/11/2026 : **6** générations", page)
+        chart = re.search(r"```mermaid\n([^`]*Daily generations[^`]*)```", page).group(1)
+        self.assertIn('x-axis ["15", "16", "17"]', chart)
+        self.assertIn('y-axis "Generations"', chart)
+        self.assertIn("bar [4, 0, 2]", chart)
+
+    def test_no_generations_section_without_data(self):
+        self.assertNotIn("generations", toolviews_chart.build_page({"2026-11-01": {"date": "2026-11-01", "hits": "1"}}, {}, {}))
 
 
 class HourlyChartTest(unittest.TestCase):

@@ -103,7 +103,7 @@ wikipedia2book/
 │   ├── CHANGELOG.fr.md, CHANGELOG.en.md            # Version history
 │   ├── _config.yml              # Just the Docs theme for the site
 │   ├── benchmark-results.csv    # Every benchmark measurement, for analysis
-│   ├── toolviews.csv, toolforge_hourly.csv, stats.md  # Usage statistics and their charts (generated)
+│   ├── toolviews.csv, toolforge_hourly.csv, toolforge_generations.csv, stats.md  # Usage statistics and their charts (generated)
 │   ├── comparison-mediawiki2latex.md  # Comparison with mediawiki2latex
 │   ├── comparison-ws-export.md  # Comparison with WS Export
 │   ├── helpSearch.<lang>.md  # User guide for the source field in the 12 interface languages (French is the reference)

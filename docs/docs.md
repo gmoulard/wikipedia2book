@@ -28,6 +28,7 @@ Sur le site, le menu reprend ce découpage : [Fonctionnel](fonctionnel.md) et [T
 | Résultats du benchmark / Benchmark results | [benchmark-results.csv](benchmark-results.csv) | [benchmark-results.csv](benchmark-results.csv) | Toutes les mesures du benchmark, une ligne par scénario et par passage (section 13.11). |
 | Visites par jour / Daily visits | [toolviews.csv](toolviews.csv) | [toolviews.csv](toolviews.csv) | Données de la page de statistiques (généré). |
 | Requêtes par heure / Hourly requests | [toolforge_hourly.csv](toolforge_hourly.csv) | [toolforge_hourly.csv](toolforge_hourly.csv) | Données du graphique horaire (généré). |
+| Générations par jour / Daily generations | [toolforge_generations.csv](toolforge_generations.csv) | [toolforge_generations.csv](toolforge_generations.csv) | Données du graphique des générations de PDF (généré). |
 
 ## Liens / Links
 

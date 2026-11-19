@@ -31,7 +31,7 @@ HOUR = "%Y-%m-%dT%H"
 SOURCE = "https://github.com/gmoulard/wikipedia2book/blob/main/docs/toolviews.csv"
 
 
-def xychart(title, labels, values, width):
+def xychart(title, labels, values, width, unit="Hits"):
     axis = ", ".join(f'"{label}"' for label in labels)
     return "\n".join([
         "```mermaid",
@@ -40,7 +40,7 @@ def xychart(title, labels, values, width):
         "xychart-beta",
         f'    title "{title}"',
         f"    x-axis [{axis}]",
-        f'    y-axis "Hits" 0 --> {math.ceil(max(max(values), 1) * 1.15)}',
+        f'    y-axis "{unit}" 0 --> {math.ceil(max(max(values), 1) * 1.15)}',
         f"    bar [{', '.join(str(value) for value in values)}]",
         "```",
     ])
@@ -73,7 +73,33 @@ def hourly_section(hourly):
     ]
 
 
-def build_page(rows, hourly=None):
+def generations_section(generations):
+    daily = defaultdict(lambda: defaultdict(int))
+    for (hour, _, status), count in generations.items():
+        daily[hour[:10]][status] += count
+    if not daily:
+        return []
+    first, last = date.fromisoformat(min(daily)), date.fromisoformat(max(daily))
+    days = [(first + timedelta(days=i)).isoformat() for i in range((last - first).days + 1)][-DAILY_DAYS:]
+    totals = {status: sum(day[status] for day in daily.values()) for status in ("done", "error", "aborted")}
+    return [
+        f"## Daily PDF generations / Générations de PDF par jour ({len(days)} days)",
+        f"Since {first}: **{sum(totals.values())}** generations, {totals['done']} finished, "
+        f"{totals['error']} with an error, {totals['aborted']} abandoned. A book in volumes counts one generation per volume.",
+        f"Depuis le {first:%d/%m/%Y} : **{sum(totals.values())}** générations, {totals['done']} terminées, "
+        f"{totals['error']} en erreur, {totals['aborted']} abandonnées. Un livre en volumes compte une génération par volume. "
+        "Source : journaux du webservice Toolforge, relevés comme les hits par heure.",
+        xychart(
+            f"Daily generations {date.fromisoformat(days[0]):%d/%m/%Y} - {date.fromisoformat(days[-1]):%d/%m/%Y}",
+            [str(date.fromisoformat(day).day) for day in days],
+            [sum(daily[day].values()) if day in daily else 0 for day in days],
+            1000,
+            "Generations",
+        ),
+    ]
+
+
+def build_page(rows, hourly=None, generations=None):
     if not rows:
         raise ValueError("toolviews.csv ne contient aucun jour")
     days = sorted(rows)
@@ -90,6 +116,7 @@ def build_page(rows, hourly=None):
         f"([toolviews.csv]({SOURCE})). Hits are HTTP requests, not people (page, static files, API calls).",
         "Les hits sont des requêtes HTTP, pas des personnes. Mise à jour quotidienne.",
         *hourly_section(hourly or {}),
+        *generations_section(generations or {}),
         f"## Daily hits / Hits par jour ({len(recent)} days)",
         xychart(
             f"Daily hits {date.fromisoformat(recent[0]):%d/%m/%Y} - {date.fromisoformat(recent[-1]):%d/%m/%Y}",
@@ -107,13 +134,15 @@ def main():
     parser.add_argument("csv", type=Path)
     parser.add_argument("output", type=Path)
     parser.add_argument("--hourly", type=Path)
+    parser.add_argument("--generations", type=Path)
     args = parser.parse_args()
     try:
         if not args.csv.exists():
             raise ValueError(f"{args.csv} introuvable")
         rows, _ = read_rows(args.csv)
         hourly = toolforge_hourly.read_rows(args.hourly) if args.hourly else {}
-        args.output.write_text(build_page(rows, hourly), encoding="utf-8")
+        generations = toolforge_hourly.read_generations(args.generations) if args.generations else {}
+        args.output.write_text(build_page(rows, hourly, generations), encoding="utf-8")
     except (ValueError, KeyError) as error:
         print(f"Erreur statistiques : {error}", file=sys.stderr)
         return 1

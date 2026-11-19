@@ -31,16 +31,17 @@ capture=$(mktemp)
 if ssh -i ~/.ssh/toolforge -o IdentitiesOnly=yes -o BatchMode=yes -o ServerAliveInterval=30 \
     gm474d6f756c617264@login.toolforge.org "become wikipedia2book bash -s" \
     < scripts/toolforge-hourly.sh > "$capture"; then
-  python3 scripts/toolforge_hourly.py docs/toolforge_hourly.csv "$capture" || status=1
+  python3 scripts/toolforge_hourly.py docs/toolforge_hourly.csv "$capture" --generations docs/toolforge_generations.csv || status=1
 else
   echo "::error::Relevé horaire impossible : journaux du webservice Toolforge inaccessibles"
   status=1
 fi
 
-python3 scripts/toolviews_chart.py docs/toolviews.csv docs/stats.md --hourly docs/toolforge_hourly.csv || status=1
+python3 scripts/toolviews_chart.py docs/toolviews.csv docs/stats.md --hourly docs/toolforge_hourly.csv --generations docs/toolforge_generations.csv || status=1
 
 files="docs/toolviews.csv docs/stats.md"
 [ -f docs/toolforge_hourly.csv ] && files="$files docs/toolforge_hourly.csv"
+[ -f docs/toolforge_generations.csv ] && files="$files docs/toolforge_generations.csv"
 git add -- $files
 if git diff --cached --quiet; then
   echo "Aucun changement"
