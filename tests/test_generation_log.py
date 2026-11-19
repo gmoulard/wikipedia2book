@@ -19,8 +19,12 @@ import contextlib
 import io
 import json
 import sys
+import tempfile
+import time
 import types
 import unittest
+from datetime import datetime, timezone
+from pathlib import Path
 from unittest.mock import patch
 
 try:
@@ -175,6 +179,71 @@ class GenerationLogTest(unittest.TestCase):
         main.hourly_hits.clear()
         self.journal()
         self.assertEqual(main.hourly_hits, {})
+
+
+
+def wait_for(condition, seconds=5):
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline:
+        if condition():
+            return True
+        time.sleep(0.05)
+    return False
+
+
+class GenerationFilesTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.directory = Path(self.tmp.name) / "generations"
+        self.output = io.StringIO()
+        self.redirect = contextlib.redirect_stdout(self.output)
+        self.redirect.__enter__()
+
+    def tearDown(self):
+        self.redirect.__exit__(None, None, None)
+        self.tmp.cleanup()
+
+    def test_one_file_per_day_with_time_and_pod(self):
+        files = main.GenerationFiles(str(self.directory))
+        files.append(datetime(2026, 11, 19, 22, 10, 3, tzinfo=timezone.utc), json.dumps({"at": "2026-11-19T22:10:03+00:00", "pod": "wikipedia2book-a", "generation": 1, "status": "done"}))
+        files.append(datetime(2026, 11, 20, 0, 0, 1, tzinfo=timezone.utc), json.dumps({"generation": 2, "stage": "start"}))
+        self.assertEqual(sorted(path.name for path in self.directory.iterdir()), ["2026-11-19.jsonl", "2026-11-20.jsonl"])
+        self.assertEqual(json.loads((self.directory / "2026-11-19.jsonl").read_text(encoding="utf-8"))["status"], "done")
+
+    def test_files_older_than_30_days_are_removed(self):
+        self.directory.mkdir()
+        for name in ("2026-10-20.jsonl", "2026-10-21.jsonl", "2026-11-18.jsonl", "notes.txt"):
+            (self.directory / name).write_text("{}\n", encoding="utf-8")
+        main.GenerationFiles(str(self.directory)).append(datetime(2026, 11, 19, 8, tzinfo=timezone.utc), "{}")
+        self.assertEqual(sorted(path.name for path in self.directory.iterdir()), ["2026-10-21.jsonl", "2026-11-18.jsonl", "2026-11-19.jsonl", "notes.txt"])
+
+    def test_missing_parent_is_reported_once_and_never_created(self):
+        directory = Path(self.tmp.name) / "absent" / "generations"
+        files = main.GenerationFiles(str(directory))
+        for _ in range(3):
+            files.append(datetime(2026, 11, 19, tzinfo=timezone.utc), "{}")
+        self.assertFalse(directory.parent.exists())
+        self.assertEqual(self.output.getvalue().count("generation_files_error"), 1)
+
+    def test_no_directory_writes_nothing(self):
+        files = main.GenerationFiles("")
+        files.write({"generation": 1, "status": "done"})
+        self.assertIsNone(files.writer)
+
+    def test_generation_lines_are_written_without_addresses(self):
+        files = main.GenerationFiles(str(self.directory))
+        with patch.object(main, "generation_files", files), patch.object(main, "generate_pdf", lambda html: _make_pdf(1)), patch.object(main, "MediaWikiClient", FakeClient):
+            asyncio.run(run_book())
+        def finished():
+            paths = list(self.directory.glob("*.jsonl")) if self.directory.exists() else []
+            return paths and '"status": "done"' in paths[0].read_text(encoding="utf-8")
+        self.assertTrue(wait_for(finished))
+        lines = [json.loads(line) for path in self.directory.glob("*.jsonl") for line in path.read_text(encoding="utf-8").splitlines()]
+        self.assertIn("downloads_done", [line.get("stage") for line in lines])
+        self.assertTrue(all(line["pod"] == files.pod and line["at"].endswith("+00:00") for line in lines))
+        body = json.dumps(lines)
+        for word in ("Chat", "Chien", "url"):
+            self.assertNotIn(word, body)
 
 
 if __name__ == "__main__":

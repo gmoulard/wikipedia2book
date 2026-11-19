@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import json
 import os
 import re
 import shutil
@@ -95,12 +96,38 @@ class RemoteScriptTest(unittest.TestCase):
             kubectl = Path(tmp) / "kubectl"
             kubectl.write_text(FAKE_KUBECTL, encoding="utf-8")
             kubectl.chmod(kubectl.stat().st_mode | stat.S_IEXEC)
-            env = {**os.environ, "PATH": f"{tmp}{os.pathsep}{os.environ['PATH']}"}
+            env = {**os.environ, "PATH": f"{tmp}{os.pathsep}{os.environ['PATH']}", "GENERATIONS_DIR": str(Path(tmp) / "absent")}
             result = subprocess.run(["bash", str(ROOT / "scripts" / "toolforge-hourly.sh")], capture_output=True, text=True, env=env, check=True)
             self.assertEqual(toolforge_hourly.parse(result.stdout), {("2026-11-15T06", POD): 1, ("2026-11-15T07", POD): 2})
             self.assertEqual(
                 toolforge_hourly.parse_generations(result.stdout),
                 {("2026-11-15T07", POD, "done"): 1, ("2026-11-15T07", POD, "error"): 1, ("2026-11-15T08", POD, "done"): 1},
+            )
+
+    def test_generation_files_are_merged_with_the_logs_at_their_maximum(self):
+        def line(at, pod, **event):
+            return json.dumps({"at": at, "pod": pod, **event})
+        with tempfile.TemporaryDirectory() as tmp:
+            kubectl = Path(tmp) / "kubectl"
+            kubectl.write_text(FAKE_KUBECTL, encoding="utf-8")
+            kubectl.chmod(kubectl.stat().st_mode | stat.S_IEXEC)
+            files = Path(tmp) / "generations"
+            files.mkdir()
+            (files / "2026-11-15.jsonl").write_text("\n".join([
+                line("2026-11-15T07:05:00+00:00", POD, generation=1, status="done", duration_s=12.5),
+                line("2026-11-15T07:20:00+00:00", POD, generation=4, status="done", duration_s=3.0),
+                line("2026-11-15T07:21:00+00:00", POD, generation=5, at_s=0.1, stage="start", process="server"),
+                line("2026-11-14T23:59:00+00:00", "wikipedia2book-old-pod", generation=9, status="aborted", duration_s=1.0),
+            ]) + "\n", encoding="utf-8")
+            (files / "notes.txt").write_text(line("2026-11-15T07:00:00+00:00", POD, generation=7, status="done") + "\n", encoding="utf-8")
+            env = {**os.environ, "PATH": f"{tmp}{os.pathsep}{os.environ['PATH']}", "GENERATIONS_DIR": str(files)}
+            result = subprocess.run(["bash", str(ROOT / "scripts" / "toolforge-hourly.sh")], capture_output=True, text=True, env=env, check=True)
+            self.assertEqual(
+                toolforge_hourly.parse_generations(result.stdout),
+                {
+                    ("2026-11-15T07", POD, "done"): 2, ("2026-11-15T07", POD, "error"): 1, ("2026-11-15T08", POD, "done"): 1,
+                    ("2026-11-14T23", "wikipedia2book-old-pod", "aborted"): 1,
+                },
             )
 
 

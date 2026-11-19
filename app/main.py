@@ -24,12 +24,14 @@ import json
 import math
 import os
 import platform
+import queue
 import re
 import secrets
 import shutil
 import socket
 import subprocess
 import tempfile
+import threading
 import time
 from collections import deque
 from collections.abc import Mapping
@@ -298,6 +300,8 @@ GENERATION_LOG_KEEP = 1000
 GENERATION_LOG_STAGES = 40_000
 generation_log: deque[dict] = deque()
 generation_ids = itertools.count(1)
+GENERATION_FILES_DAYS = 30
+GENERATION_FILE_NAME = re.compile(r"^(\d{4}-\d{2}-\d{2})\.jsonl$")
 GENERATION_REQUEST_MAX_BYTES = 1_000_000
 # NE PAS relever ce plafond sans mesure : les demandes sont gardées en mémoire, à côté du journal, jusqu'à ce total.
 GENERATION_REQUESTS_BYTES = 30_000_000
@@ -1187,6 +1191,57 @@ def note_refused_url(url: str, error: HTTPException) -> None:
         refused_urls.pop(next(iter(refused_urls)))
 
 
+class GenerationFiles:
+    # NE PAS écrire dans le fil de la requête : sur Toolforge le dossier est sur NFS, et une écriture bloquée gèlerait tout le serveur.
+    def __init__(self, directory: str, days: int = GENERATION_FILES_DAYS) -> None:
+        self.directory = Path(directory) if directory else None
+        self.days = days
+        self.pod = socket.gethostname()
+        self.lines: queue.SimpleQueue = queue.SimpleQueue()
+        self.writer: threading.Thread | None = None
+        self.day: str | None = None
+        self.failed = False
+
+    def write(self, event: dict) -> None:
+        if not self.directory:
+            return
+        now = datetime.now(timezone.utc)
+        self.lines.put((now, json.dumps({"at": now.isoformat(timespec="seconds"), "pod": self.pod, **event})))
+        if self.writer is None:
+            self.writer = threading.Thread(target=self._run, name="generation-files", daemon=True)
+            self.writer.start()
+
+    def _run(self) -> None:
+        while True:
+            self.append(*self.lines.get())
+
+    def append(self, now: datetime, line: str) -> None:
+        day = now.date().isoformat()
+        try:
+            # NE PAS créer les dossiers parents : sans le montage NFS, le fichier irait sur le disque éphémère du conteneur sans que personne le sache.
+            self.directory.mkdir(exist_ok=True)
+            if day != self.day:
+                self.purge(now)
+                self.day = day
+            with (self.directory / f"{day}.jsonl").open("a", encoding="utf-8") as handle:
+                handle.write(line + "\n")
+            self.failed = False
+        except OSError as error:
+            if not self.failed:
+                print(json.dumps({"generation_files_error": f"{type(error).__name__}: {error}", "directory": str(self.directory)}), flush=True)
+            self.failed = True
+
+    def purge(self, now: datetime) -> None:
+        oldest = (now - timedelta(days=self.days - 1)).date().isoformat()
+        for path in self.directory.iterdir():
+            match = GENERATION_FILE_NAME.match(path.name)
+            if match and match.group(1) < oldest:
+                path.unlink(missing_ok=True)
+
+
+generation_files = GenerationFiles(os.environ.get("WIKIPEDIA2BOOK_GENERATION_LOG_DIR", "").strip())
+
+
 class GenerationRecord:
     # NE PAS y mettre de titre, d'adresse IP ni rien qui identifie l'utilisateur, hors des adresses téléchargées (paramètre url de stage, jamais recopié sur la sortie standard) : le journal est lu par la supervision et la page d'admin (GET /api/health/generations) et recopié dans les journaux de la plateforme.
     def __init__(self, project: Project, selected: list[Article | UploadedDocument], language: str) -> None:
@@ -1219,12 +1274,16 @@ class GenerationRecord:
         # NE PAS écrire l'adresse sur la sortie standard : elle contient le titre de l'article ou l'adresse d'un fichier de l'utilisateur ; elle ne reste que dans le journal en mémoire, lu par la page d'admin et le jeton de supervision (choix de l'utilisateur).
         self.data["stages"].append({**event, "url": url} if url else event)
         # NE PAS enlever cette écriture sur la sortie standard : quand la plateforme arrête tout le conteneur faute de mémoire, le journal en mémoire disparaît avec le serveur et seuls les journaux de la plateforme gardent la dernière étape atteinte.
-        print(json.dumps({"generation": self.data["id"], **event}), flush=True)
+        line = {"generation": self.data["id"], **event}
+        print(json.dumps(line), flush=True)
+        generation_files.write(line)
 
     def finish(self, status: str, **details) -> None:
         _trim_generation_log()
         self.data.update(status=status, duration_s=self._elapsed(), **details)
-        print(json.dumps({"generation": self.data["id"], "status": status, "duration_s": self.data["duration_s"], **details}), flush=True)
+        line = {"generation": self.data["id"], "status": status, "duration_s": self.data["duration_s"], **details}
+        print(json.dumps(line), flush=True)
+        generation_files.write(line)
 
 
 async def build_book_pdf(project: Project, selected: list[Article | UploadedDocument], language: str):

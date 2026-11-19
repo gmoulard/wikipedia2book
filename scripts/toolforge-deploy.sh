@@ -70,9 +70,15 @@ wait_idle() {
   echo "toujours des générations en cours après 30 min : redémarrage quand même"
 }
 wait_idle
-toolforge webservice buildservice restart
+# NE PAS revenir à --mount=none : le journal des générations est écrit dans ~/generations (NFS du compte de l'outil, WIKIPEDIA2BOOK_GENERATION_LOG_DIR du Procfile), et restart garde le montage du dernier start.
+if grep -q '^mount: all$' ~/service.manifest 2>/dev/null; then
+  toolforge webservice buildservice restart || echo "redémarrage lent, vérification par /api/version"
+else
+  toolforge webservice buildservice stop || true
+  toolforge webservice buildservice start --mount=all --mem 2Gi --cpu 1 || echo "démarrage lent, vérification par /api/version"
+fi
 
-for _ in $(seq 1 20); do
+for _ in $(seq 1 30); do
   sleep 10
   if curl -fsS https://wikipedia2book.toolforge.org/api/version | grep -q "\"commit\":\"$commit\""; then
     echo "déployé : $commit"

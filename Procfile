@@ -1,1 +1,1 @@
-web: env WIKIPEDIA2BOOK_PLATFORM=toolforge MALLOC_ARENA_MAX=2 WIKIPEDIA2BOOK_OAUTH_CALLBACK=https://wikipedia2book.toolforge.org/admin/callback uvicorn app.main:app --host 0.0.0.0 --port 8000
+web: env WIKIPEDIA2BOOK_PLATFORM=toolforge MALLOC_ARENA_MAX=2 WIKIPEDIA2BOOK_OAUTH_CALLBACK=https://wikipedia2book.toolforge.org/admin/callback WIKIPEDIA2BOOK_GENERATION_LOG_DIR=/data/project/wikipedia2book/generations uvicorn app.main:app --host 0.0.0.0 --port 8000
