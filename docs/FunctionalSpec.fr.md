@@ -1,8 +1,10 @@
 # Wikipedia2Book — Spécification fonctionnelle
 
+<!-- {% raw %} -->
+
 <table border="0" ><tr><td>
 <img src="https://gmoulard.github.io/wikipedia2book/static/Wikipedia2bookLogo.png" alt="Wikipedia2Book logo" width="100"  >
-</td><td>
+</td><td markdown="1">
 Traduction anglaise : [FunctionalSpec.en.md](https://gmoulard.github.io/wikipedia2book/FunctionalSpec.en.html). Ce document en français fait référence. La documentation est en trois parties : spécification fonctionnelle ([FunctionalSpec.fr.md](https://gmoulard.github.io/wikipedia2book/FunctionalSpec.fr.html)), spécification technique ([TechnicalSpec.fr.md](https://gmoulard.github.io/wikipedia2book/TechnicalSpec.fr.html)) et historique des versions ([CHANGELOG.fr.md](https://gmoulard.github.io/wikipedia2book/CHANGELOG.fr.html)) ; les numéros de section sont communs aux trois (« section 13.3 » renvoie à la spécification technique). Tous les documents : [docs.md](https://gmoulard.github.io/wikipedia2book/docs.html).
 </td></tr></table>
 
@@ -609,6 +611,14 @@ Le logiciel :
 
 Les images et médias intégrés par Wikipédia à son export PDF conservent leurs propres mentions de licence; le logiciel ne les extrait pas séparément et n'effectue pas de vérification de licence indépendante.
 
+**Licence de Wikipedia2Book.** Wikipedia2Book est un logiciel libre, distribué sous la [GNU Affero General Public License v3.0](https://www.gnu.org/licenses/agpl-3.0.html) (AGPL-3.0). Le texte complet est dans le fichier [LICENSE](https://github.com/gmoulard/wikipedia2book/blob/main/LICENSE).
+
+En bref, on peut utiliser, étudier, modifier et redistribuer ce logiciel, à condition de publier toute version modifiée distribuée sous la même licence, avec son code source. Comme il s'agit de la GPL *Affero*, cette obligation vaut aussi quand une version modifiée est seulement proposée comme service en ligne : ses utilisateurs doivent pouvoir en obtenir le code source.
+
+Cette licence ne couvre que le code de l'application. Les livres qu'elle produit sont faits du contenu de Wikipédia, publié sous sa propre licence ([CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)), indiquée sur la page de licence de chaque PDF généré.
+
+Chaque fichier source commence par un court en-tête de licence AGPL-3.0.
+
 ## 16\. Critères d'acceptation
 
 La version actuelle est considérée comme fonctionnelle si les points suivants sont validés :
@@ -662,3 +672,5 @@ L'essentiel du socle fonctionnel décrit dans ce document est implémenté : liv
 * Caractères chinois rares (僻字) dans le PDF officiel de Wikisource : vérifié en novembre 2026, une partie des caractères des extensions CJK B et suivantes y laisse un blanc (police LiberationSerif sans glyphe, par exemple 𡼢 U+21F22 dans « 大南寔錄/大南寔錄前編/卷10 » de zh.wikisource.org), seuls ceux que Wikisource fournit en image s'affichent ; l'application ne modifie pas ce PDF : signalé à Wikimédia le 18/11/2026 (https://phabricator.wikimedia.org/T445303). Demande exprimée par PacmanD sur le Bistro technique de la Wikipédia en chinois (novembre 2026), dont l'autre partie — importer une œuvre entière depuis sa page sommaire — est faite (section 3.1).
 
 Toute évolution doit préserver les principes fondamentaux du logiciel, notamment le contrôle total de l'utilisateur sur la sélection des articles et la gestion d'un seul livre à la fois.
+
+<!-- {% endraw %} -->

@@ -2,7 +2,7 @@
 
 <table border="0" ><tr><td>
 <img src="https://gmoulard.github.io/wikipedia2book/static/Wikipedia2bookLogo.png" alt="Wikipedia2Book logo" width="100"  >
-</td><td>
+</td><td markdown="1">
 This is the English translation of [CHANGELOG.fr.md](https://gmoulard.github.io/wikipedia2book/CHANGELOG.fr.html). The French document is the reference: if the two ever differ, the French version prevails. Interface labels are quoted as they appear in the English interface. The documentation has three parts: functional specification ([FunctionalSpec.en.md](https://gmoulard.github.io/wikipedia2book/FunctionalSpec.en.html)), technical specification ([TechnicalSpec.en.md](https://gmoulard.github.io/wikipedia2book/TechnicalSpec.en.html)) and version history ([CHANGELOG.en.md](https://gmoulard.github.io/wikipedia2book/CHANGELOG.en.html)); section numbers are shared by the three ("section 13.3" refers to the technical specification). All documents: [docs.md](https://gmoulard.github.io/wikipedia2book/docs.html).
 </td></tr></table>
 

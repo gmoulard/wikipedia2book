@@ -1,5 +1,7 @@
 # Aide : que saisir dans le champ « Construire le livre » ?
 
+<!-- {% raw %} -->
+
 Le champ de la première étape accepte bien plus qu'un titre d'article : une adresse, un livre entier, une liste de pages ou le texte d'une page de livre. Tapez ou collez ce que vous voulez ajouter, puis cliquez sur « Ajouter ». Les pages ajoutées apparaissent sous le champ ; vous les rangerez à l'étape suivante.
 
 ## En bref
@@ -103,3 +105,5 @@ Le message d'erreur explique ce qui ne va pas. Il vient du serveur et reste en f
 - **Organisation** : rangez les pages, créez des chapitres, ajoutez vos propres images ou PDF, coupez le livre en volumes. Au-delà de 300 articles, le livre est découpé en volumes automatiquement.
 - **Édition** : titre, couverture, images de fond, table des matières, format et marges.
 - **Générer le PDF** : chaque article est repris tel que Wikipédia l'imprime, et l'ensemble forme un seul livre prêt à imprimer.
+
+<!-- {% endraw %} -->

@@ -37,48 +37,48 @@ defaults:
   - scope: { path: "docs.md" }
     values: { title: Documents, nav_order: 2 }
   - scope: { path: "FunctionalSpec.fr.md" }
-    values: { title: Spécification fonctionnelle, nav_order: 3 }
+    values: { title: Spécification fonctionnelle, parent: "Fonctionnel / Functional", nav_order: 1 }
   - scope: { path: "FunctionalSpec.en.md" }
-    values: { title: Functional specification, nav_order: 4 }
-  - scope: { path: "TechnicalSpec.fr.md" }
-    values: { title: Spécification technique, nav_order: 5 }
-  - scope: { path: "TechnicalSpec.en.md" }
-    values: { title: Technical specification, nav_order: 6 }
+    values: { title: Functional specification, parent: "Fonctionnel / Functional", nav_order: 2 }
   - scope: { path: "CHANGELOG.fr.md" }
-    values: { title: Historique des versions, nav_order: 7 }
+    values: { title: Historique des versions, parent: "Fonctionnel / Functional", nav_order: 3 }
   - scope: { path: "CHANGELOG.en.md" }
-    values: { title: Version history, nav_order: 8 }
+    values: { title: Version history, parent: "Fonctionnel / Functional", nav_order: 4 }
   - scope: { path: "helpSearch.fr.md" }
-    values: { title: "Aide à la recherche / Search help", nav_order: 9, has_children: true }
+    values: { title: "Aide à la recherche / Search help", parent: "Fonctionnel / Functional", nav_order: 5, has_children: true }
   - scope: { path: "helpSearch.en.md" }
-    values: { title: "English", parent: "Aide à la recherche / Search help", nav_order: 1 }
+    values: { title: "English", parent: "Aide à la recherche / Search help", nav_order: 1, grand_parent: "Fonctionnel / Functional" }
   - scope: { path: "helpSearch.de.md" }
-    values: { title: "Deutsch", parent: "Aide à la recherche / Search help", nav_order: 2 }
+    values: { title: "Deutsch", parent: "Aide à la recherche / Search help", nav_order: 2, grand_parent: "Fonctionnel / Functional" }
   - scope: { path: "helpSearch.es.md" }
-    values: { title: "Español", parent: "Aide à la recherche / Search help", nav_order: 3 }
+    values: { title: "Español", parent: "Aide à la recherche / Search help", nav_order: 3, grand_parent: "Fonctionnel / Functional" }
   - scope: { path: "helpSearch.it.md" }
-    values: { title: "Italiano", parent: "Aide à la recherche / Search help", nav_order: 4 }
+    values: { title: "Italiano", parent: "Aide à la recherche / Search help", nav_order: 4, grand_parent: "Fonctionnel / Functional" }
   - scope: { path: "helpSearch.pt.md" }
-    values: { title: "Português", parent: "Aide à la recherche / Search help", nav_order: 5 }
+    values: { title: "Português", parent: "Aide à la recherche / Search help", nav_order: 5, grand_parent: "Fonctionnel / Functional" }
   - scope: { path: "helpSearch.nl.md" }
-    values: { title: "Nederlands", parent: "Aide à la recherche / Search help", nav_order: 6 }
+    values: { title: "Nederlands", parent: "Aide à la recherche / Search help", nav_order: 6, grand_parent: "Fonctionnel / Functional" }
   - scope: { path: "helpSearch.tr.md" }
-    values: { title: "Türkçe", parent: "Aide à la recherche / Search help", nav_order: 7 }
+    values: { title: "Türkçe", parent: "Aide à la recherche / Search help", nav_order: 7, grand_parent: "Fonctionnel / Functional" }
   - scope: { path: "helpSearch.zh.md" }
-    values: { title: "中文", parent: "Aide à la recherche / Search help", nav_order: 8 }
+    values: { title: "中文", parent: "Aide à la recherche / Search help", nav_order: 8, grand_parent: "Fonctionnel / Functional" }
   - scope: { path: "helpSearch.ja.md" }
-    values: { title: "日本語", parent: "Aide à la recherche / Search help", nav_order: 9 }
+    values: { title: "日本語", parent: "Aide à la recherche / Search help", nav_order: 9, grand_parent: "Fonctionnel / Functional" }
   - scope: { path: "helpSearch.fa.md" }
-    values: { title: "فارسی", parent: "Aide à la recherche / Search help", nav_order: 10 }
+    values: { title: "فارسی", parent: "Aide à la recherche / Search help", nav_order: 10, grand_parent: "Fonctionnel / Functional" }
   - scope: { path: "helpSearch.ar.md" }
-    values: { title: "العربية", parent: "Aide à la recherche / Search help", nav_order: 11 }
-  - scope: { path: "tests-manuels.md" }
-    values: { title: Tests manuels, nav_order: 9.5 }
-  - scope: { path: "testLimitetoolforge.md" }
-    values: { title: Test aux limites, nav_order: 10 }
+    values: { title: "العربية", parent: "Aide à la recherche / Search help", nav_order: 11, grand_parent: "Fonctionnel / Functional" }
   - scope: { path: "comparison-mediawiki2latex.md" }
-    values: { title: Comparison with mediawiki2latex, nav_order: 11 }
+    values: { title: Comparison with mediawiki2latex, parent: "Fonctionnel / Functional", nav_order: 6 }
   - scope: { path: "comparison-ws-export.md" }
-    values: { title: Comparison with WS Export, nav_order: 12 }
+    values: { title: Comparison with WS Export, parent: "Fonctionnel / Functional", nav_order: 7 }
+  - scope: { path: "TechnicalSpec.fr.md" }
+    values: { title: Spécification technique, parent: "Technique / Technical", nav_order: 1 }
+  - scope: { path: "TechnicalSpec.en.md" }
+    values: { title: Technical specification, parent: "Technique / Technical", nav_order: 2 }
+  - scope: { path: "tests-manuels.md" }
+    values: { title: Tests manuels, parent: "Technique / Technical", nav_order: 3 }
+  - scope: { path: "testLimitetoolforge.md" }
+    values: { title: Test aux limites, parent: "Technique / Technical", nav_order: 4 }
   - scope: { path: "stats.md" }
-    values: { title: Statistiques / Statistics, nav_order: 13 }
+    values: { title: Statistiques / Statistics, parent: "Technique / Technical", nav_order: 5 }

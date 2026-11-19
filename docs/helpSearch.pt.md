@@ -1,5 +1,7 @@
 # Ajuda: o que se pode escrever no campo «Construir o livro»?
 
+<!-- {% raw %} -->
+
 O campo da primeira etapa aceita muito mais do que o título de um artigo: um endereço, um livro inteiro, uma lista de páginas ou o texto de uma página de livro. Escreva ou cole o que quer adicionar e clique em «Adicionar». As páginas adicionadas aparecem por baixo do campo; vai organizá-las na etapa seguinte.
 
 ## Em resumo
@@ -103,3 +105,5 @@ A mensagem de erro explica o que está mal. Vem do servidor e fica em francês, 
 - **Organização**: organize as páginas, crie capítulos, adicione as suas próprias imagens ou PDF, divida o livro em volumes. Acima de 300 artigos, o livro é dividido em volumes automaticamente.
 - **Edição**: título, capa, imagens de fundo, sumário, formato e margens.
 - **Gerar o PDF**: cada artigo é retomado tal como a Wikipédia o imprime, e o conjunto forma um único livro pronto a imprimir.
+
+<!-- {% endraw %} -->

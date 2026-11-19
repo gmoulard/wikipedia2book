@@ -1,5 +1,7 @@
 # Help: what can you enter in the "Build the book" field?
 
+<!-- {% raw %} -->
+
 The field of the first step accepts much more than an article title: an address, a whole book, a list of pages or the text of a book page. Type or paste what you want to add, then click "Add". The pages you add appear below the field; you will arrange them in the next step.
 
 ## At a glance
@@ -103,3 +105,5 @@ The error message explains what is wrong. It comes from the server and stays in 
 - **Organization**: arrange the pages, create chapters, add your own images or PDFs, split the book into volumes. Beyond 300 articles, the book is split into volumes automatically.
 - **Editing**: title, cover, background images, table of contents, page format and margins.
 - **Generate PDF**: each article is taken as Wikipedia prints it, and everything forms a single book ready to print.
+
+<!-- {% endraw %} -->

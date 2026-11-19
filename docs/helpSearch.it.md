@@ -1,5 +1,7 @@
 # Aiuto: cosa si può inserire nel campo «Costruisci il libro»?
 
+<!-- {% raw %} -->
+
 Il campo del primo passo accetta molto più di un titolo di voce: un indirizzo, un libro intero, un elenco di pagine o il testo di una pagina di libro. Digita o incolla ciò che vuoi aggiungere, poi clicca su «Aggiungi». Le pagine aggiunte compaiono sotto il campo; le ordinerai nel passo successivo.
 
 ## In breve
@@ -103,3 +105,5 @@ Il messaggio d'errore spiega cosa non va. Viene dal server e resta in francese, 
 - **Organizzazione**: ordina le pagine, crea capitoli, aggiungi immagini o PDF tuoi, dividi il libro in volumi. Oltre 300 voci, il libro viene diviso in volumi automaticamente.
 - **Modifica**: titolo, copertina, immagini di sfondo, indice, formato e margini.
 - **Genera il PDF**: ogni voce viene ripresa così come Wikipedia la stampa, e il tutto forma un unico libro pronto da stampare.
+
+<!-- {% endraw %} -->

@@ -2,7 +2,7 @@
 
 <table border="0" ><tr><td>
 <img src="https://gmoulard.github.io/wikipedia2book/static/Wikipedia2bookLogo.png" alt="Wikipedia2Book logo" width="100"  >
-</td><td>
+</td><td markdown="1">
 This is the English translation of [TechnicalSpec.fr.md](https://gmoulard.github.io/wikipedia2book/TechnicalSpec.fr.html). The French document is the reference: if the two ever differ, the French version prevails. Interface labels are quoted as they appear in the English interface. The documentation has three parts: functional specification ([FunctionalSpec.en.md](https://gmoulard.github.io/wikipedia2book/FunctionalSpec.en.html)), technical specification ([TechnicalSpec.en.md](https://gmoulard.github.io/wikipedia2book/TechnicalSpec.en.html)) and version history ([CHANGELOG.en.md](https://gmoulard.github.io/wikipedia2book/CHANGELOG.en.html)); section numbers are shared by the three ("section 13.3" refers to the technical specification). All documents: [docs.md](https://gmoulard.github.io/wikipedia2book/docs.html).
 </td></tr></table>
 
@@ -43,6 +43,51 @@ This is the English translation of [TechnicalSpec.fr.md](https://gmoulard.github
 | Book exchange        | JSON browser ↔ API |
 | PDF generation       | Official Wikimedia PDF (articles) + WeasyPrint (cover, table of contents, chapters, license, conclusion) + pypdf (page count, recomposition to the book format, reading the placeholder links of the table of contents) + PyMuPDF (assembly on temporary disk, bookmarks, internal links, page numbers, writing the final PDF) + reportlab (width of page numbers, conversion of an imported image into a PDF page) + Pillow (cover text color from the background image) |
 | Containerization     | Docker |
+
+Repository badges:
+
+<p align="left">
+  <!-- Project status, license & archive -->
+  <a href="https://github.com/gmoulard/wikipedia2book/actions/workflows/deploy-toolforge.yml"><img src="https://github.com/gmoulard/wikipedia2book/actions/workflows/deploy-toolforge.yml/badge.svg" alt="Deploy to Toolforge"></a>
+  <a href="https://github.com/gmoulard/wikipedia2book/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue" alt="License: AGPL-3.0"></a>
+  <a href="https://archive.softwareheritage.org/browse/origin/?origin_url=https://github.com/gmoulard/wikipedia2book"><img src="https://archive.softwareheritage.org/badge/origin/https://github.com/gmoulard/wikipedia2book/" alt="SWH Origin"></a>
+  <a href="https://archive.softwareheritage.org/swh:1:dir:9c7c016d9603a4b0201ad64535767a353031bd91;origin=https://github.com/gmoulard/wikipedia2book;visit=swh:1:snp:3b1fa78021c1ad7819b82a6f38f200a9f3bfa85e;anchor=swh:1:rev:d0cd2a14a00fb848f2555a9ee62c4147230e6080"><img src="https://archive.softwareheritage.org/badge/swh:1:dir:9c7c016d9603a4b0201ad64535767a353031bd91/" alt="SWH Directory"></a>
+  <a href="https://github.com/gmoulard/wikipedia2book/blob/main/CODE_OF_CONDUCT.md"><img src="https://img.shields.io/badge/Code_of_Conduct-MediaWiki-3366cc" alt="Code of Conduct"></a>
+  <img src="https://img.shields.io/badge/vibe-coded-blueviolet" alt="Vibe Coded">
+</p>
+
+<p align="left">
+  <!-- Frontend -->
+  <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript"><img src="https://img.shields.io/badge/JavaScript-vanilla-f7df1e?logo=javascript&logoColor=black" alt="JavaScript"></a>
+  <a href="https://developer.mozilla.org/en-US/docs/Web/HTML"><img src="https://img.shields.io/badge/HTML5-e34f26?logo=html5&logoColor=white" alt="HTML5"></a>
+  <a href="https://developer.mozilla.org/en-US/docs/Web/CSS"><img src="https://img.shields.io/badge/CSS3-1572b6?logo=css3&logoColor=white" alt="CSS3"></a>
+  <img src="https://img.shields.io/badge/i18n-12_languages-green" alt="12 interface languages">
+</p>
+
+<p align="left">
+  <!-- Backend -->
+  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.12-3776ab?logo=python&logoColor=white" alt="Python 3.12"></a>
+  <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI"></a>
+  <a href="https://docs.pydantic.dev/"><img src="https://img.shields.io/badge/Pydantic-e92063?logo=pydantic&logoColor=white" alt="Pydantic"></a>
+  <a href="https://www.uvicorn.org/"><img src="https://img.shields.io/badge/Uvicorn-222" alt="Uvicorn"></a>
+</p>
+
+<p align="left">
+  <!-- PDF & content -->
+  <a href="https://weasyprint.org/"><img src="https://img.shields.io/badge/WeasyPrint-HTML_to_PDF-c03a2b" alt="WeasyPrint"></a>
+  <a href="https://pypdf.readthedocs.io/"><img src="https://img.shields.io/badge/pypdf-merge-4b8bbe" alt="pypdf"></a>
+  <a href="https://www.reportlab.com/"><img src="https://img.shields.io/badge/ReportLab-page_numbers-6d4c41" alt="ReportLab"></a>
+  <a href="https://www.mediawiki.org/wiki/API:Main_page"><img src="https://img.shields.io/badge/MediaWiki-API-36c?logo=mediawiki&logoColor=white" alt="MediaWiki API"></a>
+  <a href="https://creativecommons.org/licenses/by-sa/4.0/"><img src="https://img.shields.io/badge/content-CC_BY--SA_4.0-lightgrey?logo=creativecommons" alt="Wikipedia content: CC BY-SA 4.0"></a>
+</p>
+
+<p align="left">
+  <!-- Deployment & tests -->
+  <a href="https://wikipedia2book.toolforge.org"><img src="https://img.shields.io/badge/Toolforge-deployed-3366cc?logo=wikimedia-commons&logoColor=white" alt="Toolforge"></a>
+  <a href="https://www.docker.com/"><img src="https://img.shields.io/badge/Docker-2496ed?logo=docker&logoColor=white" alt="Docker"></a>
+  <a href="https://github.com/gmoulard/wikipedia2book/actions"><img src="https://img.shields.io/badge/GitHub_Actions-CI%2FCD-2088ff?logo=githubactions&logoColor=white" alt="GitHub Actions"></a>
+  <a href="https://docs.python.org/3/library/unittest.html"><img src="https://img.shields.io/badge/tests-unittest-0a9edc" alt="unittest"></a>
+</p>
 
 ### 13.2 Wikipedia API
 
@@ -170,9 +215,66 @@ docker run --rm -p 8000:8000 wikipedia2book
 
 The application is then available at `http://localhost:8000`, with its interactive documentation at `http://localhost:8000/docs`.
 
+Without Docker, with Python 3.12 and the system dependencies of WeasyPrint installed (GTK, Pango, Cairo):
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+The application is served at the same address.
+
 The application page (`/`) and its files (`/static/…`) are served with `Cache-Control: no-cache`: the browser revalidates each file on every load (304 response if unchanged), which avoids mixing, after a deployment, a new page with old scripts or translations still in cache. Files under `/static/` carry a fingerprint (`ETag`) computed from their content, and no modification date (`Last-Modified`) (`main.ContentStaticFiles`): on Toolforge, every built file is dated 1980; with Starlette's fingerprint (date and size) and that date, a browser revalidating by date got 304 on every version and kept an old `i18n.js` (labels shown as keys, for example `admin.limits`). Tests: `tests/test_static_cache.py`.
 
 The server stores no book or PDF on disk; all the state is kept in the browser and exchanged through JSON. Deployment therefore needs neither a database nor a persistent volume, on any platform. Only a temporary folder (the system temporary directory) is used during each PDF generation, and it is deleted at the end (section 11.1): the platform must offer temporary space of about twice the size of the largest book generated.
+
+#### Deploying your own container
+
+These settings control how heavy a generation can be. They are environment variables, set in the `Dockerfile` (`ENV` line) and read when the server starts:
+
+| Variable | Default in the `Dockerfile` | Meaning |
+|---|---|---|
+| `WIKIPEDIA2BOOK_ARTICLE_LIMIT` | `300` (also the default when the variable is not set, on every host) | Maximum number of articles per book. Beyond it, the API refuses the book at once (HTTP 413, code `too_many_articles`); the web interface reads the limit from `/api/version` and generates the book in several volumes instead, each under the limit. `0` lifts the limit. |
+| `WIKIPEDIA2BOOK_DOWNLOADS` | `2` | Number of article PDFs downloaded from Wikipedia at the same time for a book. |
+| `WIKIPEDIA2BOOK_MEMORY_RATIO` | `0.95` (default, not set in the `Dockerfile`) | Share of the container memory limit that the generations may use. Before each stage (download, refitting, assembly), a generation estimates the memory it needs from the file sizes and waits, showing "Server busy", while the used memory plus the running reserves plus its estimate would exceed this share. `0` disables the check. |
+| `WIKIPEDIA2BOOK_GENERATIONS_RATIO` | `0.5` (default, not set in the `Dockerfile`) | Share of the container memory limit reserved by the generations admitted at once (25 MB + 3 times the base64 data of the book each). Further generations wait at the very start, showing "Server busy", before loading anything. `0` disables the check. |
+| `MALLOC_ARENA_MAX` | `2` (set in the `Dockerfile` and the Toolforge `Procfile`) | Limits glibc memory arenas so that the server gives freed memory back to the system. |
+| `WIKIPEDIA2BOOK_CLIENT_GENERATIONS` | `5` (default) | Simultaneous generations per client (public IP address, and the random token kept by the browser). Beyond it, HTTP 429 with `Retry-After`; the web interface waits and tries again. `0` lifts the limit. |
+| `WIKIPEDIA2BOOK_CLIENT_PER_MINUTE` | `20` (default) | Generations started per client and per minute. `0` lifts the limit. |
+| `WIKIPEDIA2BOOK_TOTAL_GENERATIONS` | `0` (default; `50` on Toolforge) | Simultaneous generations for the whole server, for hosts that hide visitors' addresses. `0` lifts the limit. |
+| `WIKIPEDIA2BOOK_TOTAL_PER_MINUTE` | `0` (default; `200` on Toolforge) | Generations started per minute for the whole server. `0` lifts the limit. |
+| `WIKIPEDIA2BOOK_WAITING_GENERATIONS` | `100` (default) | Generations waiting for admission at the same time; further ones get HTTP 429. `0` lifts the limit. |
+| `WIKIPEDIA2BOOK_CLIENT_IP_HEADER` | empty (default) | Header holding the visitor's address when the container runs behind a trusted proxy, for example `x-forwarded-for` (its last value is used). Leave it empty without a proxy: a client could write the header itself. |
+| `WIKIPEDIA2BOOK_DISK_RATIO` | `0.95` (default, not set in the `Dockerfile`) | Share of the temporary disk that generations may fill. An article download (30 MB reserved) and the book assembly (50 MB + twice the size of the articles) wait, showing "Server busy", while the used disk space plus the running reserves plus their estimate would exceed this share. `0` disables the check. |
+
+Change them in the `Dockerfile` and rebuild the image, or override them when starting the container, without rebuilding:
+
+```bash
+docker run --rm -p 8000:8000 -e WIKIPEDIA2BOOK_ARTICLE_LIMIT=100 -e WIKIPEDIA2BOOK_DOWNLOADS=1 wikipedia2book
+```
+
+The server refuses to start with an invalid value and says why.
+
+**Number of parallel downloads.** It can only be lowered, to `1`, not raised above `2`: the [Wikimedia robot policy](https://wikitech.wikimedia.org/wiki/Robot_policy) limits the PDF service to a few simultaneous requests, and the server enforces at most 2 downloads and 25 Mbps for the whole process, whatever this setting. Only the Toolforge instance, which the policy exempts, downloads 4 PDFs at a time. Lower it to `1` to make generation gentler on Wikimedia and on a small server, at the cost of a longer download phase.
+
+**Article limit and container memory.** Lifting the limit (`0`) is safe only if the container has enough memory: a book that does not fit makes the platform stop and restart the whole container, which also cuts the generations of every other user. Set the limit from the memory of your container, with margin for several users at once. Measurements with real articles (about 17 pages per article):
+
+| Container memory | Largest book generated | Notes |
+|---|---|---|
+| 256 MB | under 20 articles | Northflank: restart at 20 articles, already very slow at 10 |
+| 2 GiB | about 800 articles (14,000 pages, 780 MB of PDF) | Toolforge: failure at 1,000 articles; the official instance limits books to 300 articles (larger ones are generated in volumes) |
+
+Count about 250 MB for the server and the assembly process themselves, plus roughly 2 to 2.5 MB per article at the peak, and keep the limit well below what your container can hold, for example a third to a half: with 2 GiB, that gives a few hundred articles; with 256 MB, nothing is left for a book of any size. To find the real maximum of your deployment, run the limit test against it (section 13.12; it can make the server restart, so not during busy hours):
+
+```bash
+python scripts/limit_check.py --base-url https://your-server --search 50
+```
+
+It doubles the number of articles until the first failure, then narrows down by bisection. Add `--save-pdf ./tmp` to keep each generated book (`./tmp` is ignored by git). With the monitoring token (`Authorization: Bearer`, section 13.7), `GET /api/health/details` shows the memory of the container and its limit, and `GET /api/health/generations` the memory reached at each stage of the last generations.
+
+**Viewing alerts.** Each time a limit is crossed, the server writes a JSON line containing `"alert"` to its standard output and counts it in `GET /api/health/details`. Commands to read them on Toolforge, Northflank, Docker and a local server, and how to interpret them: section 14.
 
 ### 13.5 Environments and branches
 
@@ -184,6 +286,8 @@ The application is deployed on two platforms, each linked to a branch of the Git
 | Northflank | https://prod--wikipedia2book--wkvpbnfj6h4v.code.run | `main` | `Dockerfile` | Northflank's GitHub integration, set in its interface |
 
 Toolforge is the reference instance, offered to the Wikipedia community. Northflank receives every change pushed to `main` and serves as pre-production.
+
+On each platform, the interactive API documentation is at `/docs` (https://wikipedia2book.toolforge.org/docs). Example on Toolforge with the book *Wrecks of Saint-Pierre harbor*: [PDF generated directly](https://wikipedia2book.toolforge.org/api/pdf/from-json?url=https%3A%2F%2Fgmoulard.github.io%2Fwikipedia2book%2Fstatic%2FWrecks-of-Saint-Pierre-harbor.json) or [book opened in the interface](https://wikipedia2book.toolforge.org/?json=https://gmoulard.github.io/wikipedia2book/static/Wrecks-of-Saint-Pierre-harbor.json). Toolforge usage statistics are at https://gmoulard.github.io/wikipedia2book/stats.html (section 13.8).
 
 Release cycle:
 
@@ -228,7 +332,7 @@ The `TOOLFORGE_SSH_KEY` secret contains an OpenSSH private key dedicated to depl
 
 The second, `.github/workflows/toolviews-stats.yml` ("Toolviews stats"), updates the usage statistics every day (section 13.8).
 
-The third, `.github/workflows/jekyll-gh-pages.yml`, publishes on every push to `main` (and on manual start) the documentation site https://gmoulard.github.io/wikipedia2book/ with GitHub Pages: The site is built from the `docs/` folder: Jekyll converts its Markdown files to HTML (functional and technical specifications, version history, `docs.md`, `stats.md`…) with the Just the Docs theme (`docs/_config.yml`: theme pinned to `just-the-docs/just-the-docs@v0.12.0` through `remote_theme`, side menu in `nav_order` order, search, page titles, redirection of the old `SPECIFICATIONS.fr.html` and `SPECIFICATIONS.en.html` addresses to the functional specifications); `docs/_includes/head_custom.html`, inserted by the theme in every page, draws the Mermaid diagrams and the hourly chart, and adds to the header of translated pages (help in 12 languages, specifications and version history in French and English) a language selector that opens the same page in the chosen language; Persian and Arabic pages are displayed right to left. The home page is `docs/index.md`, a document of its own in the `docs/` folder, initialised from `README.md` but no longer a copy of it; its links are relative to the site, and `LICENSE`, `CODE_OF_CONDUCT.md`, `CITATION.cff` and `codemeta.json`, which stay at the root of the repository, point to GitHub. This is the address declared as user documentation in `toolinfo.json`. GitHub Pages does not render Mermaid blocks natively: `docs/_includes/head_custom.html`, added by Jekyll to the head of every page (default theme), loads Mermaid 11.17.2 from jsDelivr and draws the ```` ```mermaid ```` blocks (section 13.10). The site is also rebuilt (`workflow_run` trigger) after each run of "Toolviews stats" that was not cancelled, even a partial failure since statistics may have been committed, and after each run of "Tests and Toolforge deploy" on `production-toolforge` (pre-deployment hourly collection), and every build adds the usage statistics page https://gmoulard.github.io/wikipedia2book/stats.html (section 13.8).
+The third, `.github/workflows/jekyll-gh-pages.yml`, publishes on every push to `main` (and on manual start) the documentation site https://gmoulard.github.io/wikipedia2book/ with GitHub Pages: The site is built from the `docs/` folder: Jekyll converts its Markdown files to HTML (functional and technical specifications, version history, `docs.md`, `stats.md`…) with the Just the Docs theme (`docs/_config.yml`: theme pinned to `just-the-docs/just-the-docs@v0.12.0` through `remote_theme`, side menu in two parts, "Fonctionnel / Functional" (`fonctionnel.md`: functional specification, version history, help, comparisons) and "Technique / Technical" (`technique.md`: technical specification, manual tests, limit test, statistics), in `nav_order` order, search, page titles, redirection of the old `SPECIFICATIONS.fr.html` and `SPECIFICATIONS.en.html` addresses to the functional specifications); `docs/_includes/head_custom.html`, inserted by the theme in every page, draws the Mermaid diagrams and the hourly chart, opens both parts of the menu as soon as the page loads, keeps the menu against the left edge and gives the rest of the width to the content on wide screens, and adds to the header of translated pages (help in 12 languages, specifications and version history in French and English) a language selector that opens the same page in the chosen language; Persian and Arabic pages are displayed right to left. The home page is `docs/index.md`, a document of its own in the `docs/` folder, initialised from `README.md` but no longer a copy of it; its links are relative to the site, and `LICENSE`, `CODE_OF_CONDUCT.md`, `CITATION.cff` and `codemeta.json`, which stay at the root of the repository, point to GitHub. This is the address declared as user documentation in `toolinfo.json`. GitHub Pages does not render Mermaid blocks natively: `docs/_includes/head_custom.html`, added by Jekyll to the head of every page (default theme), loads Mermaid 11.17.2 from jsDelivr and draws the ```` ```mermaid ```` blocks (section 13.10). The site is also rebuilt (`workflow_run` trigger) after each run of "Toolviews stats" that was not cancelled, even a partial failure since statistics may have been committed, and after each run of "Tests and Toolforge deploy" on `production-toolforge` (pre-deployment hourly collection), and every build adds the usage statistics page https://gmoulard.github.io/wikipedia2book/stats.html (section 13.8).
 
 The fourth, `.github/workflows/tag-check.yml` ("Tag check"), runs on every push of a `v*` tag: it fails if the tag number does not match the version written in `app/version.py` (`VERSION = "x.y.z"`, since 1.7.4; `app/main.py` before). Such a failure is never fixed by moving the tag, but by a new version.
 
@@ -288,6 +392,25 @@ toolforge webservice buildservice start --mount=none --mem 2Gi --cpu 1
 ```
 
 `--mount=none`: the application does not use Toolforge's NFS storage. `--mem 2Gi --cpu 1`: WeasyPrint and the assembly of PDFs of several hundred pages exceed the 512 Mi allocated by default.
+
+#### Administration page setup
+
+The `/admin` page (section 12.2 of the functional specification) needs, on each host:
+
+1. Register an OAuth 2.0 application on [Special:OAuthConsumerRegistration](https://meta.wikimedia.org/wiki/Special:OAuthConsumerRegistration/propose/oauth2): "User identity verification only", callback URL `https://<host>/admin/callback`. It is approved automatically.
+2. Give the server the client ID, the client secret and the callback URL. On Toolforge, the callback is in the `Procfile` and the two secrets go in the tool's environment (value asked by the command, never as an argument):
+
+   ```bash
+   toolforge envvars create WIKIPEDIA2BOOK_OAUTH_CLIENT_ID
+   ```
+
+   ```bash
+   toolforge envvars create WIKIPEDIA2BOOK_OAUTH_CLIENT_SECRET
+   ```
+
+   then restart the webservice. Elsewhere, set `WIKIPEDIA2BOOK_OAUTH_CLIENT_ID`, `WIKIPEDIA2BOOK_OAUTH_CLIENT_SECRET` and `WIKIPEDIA2BOOK_OAUTH_CALLBACK` in the container environment.
+3. Optional: the list of administrators in `WIKIPEDIA2BOOK_ADMINS`, Wikimedia usernames in UTF-8 hexadecimal separated by commas (`python -c "print('Example'.encode().hex())"`).
+4. To read `GET /api/health/details` and `GET /api/health/generations` from a script, set `WIKIPEDIA2BOOK_MONITOR_TOKEN` (at least 32 characters, `python -c "import secrets; print(secrets.token_urlsafe(32))"`) and send it as `Authorization: Bearer <token>`; without the variable, these endpoints always answer HTTP 401.
 
 #### Manual deployment and operations
 
@@ -974,6 +1097,7 @@ Wikipedia2Book/
 ├── README.md
 └── docs/                         (GitHub Pages site source)
     ├── docs.md                   (list of every document)
+    ├── fonctionnel.md, technique.md  (menu parent pages: "Functional" and "Technical" parts)
     ├── FunctionalSpec.fr.md, FunctionalSpec.en.md  (functional specification: sections 1 to 12, 15, 16, 18)
     ├── TechnicalSpec.fr.md, TechnicalSpec.en.md    (technical specification: sections 13, 14, 17)
     ├── CHANGELOG.fr.md, CHANGELOG.en.md            (version history: section 19)
@@ -991,3 +1115,21 @@ Wikipedia2Book/
 ```
 
 Every code file (`.py`, `.js`, `.css`, `index.html`, shell scripts, `Dockerfile`, GitHub Actions workflows) starts with an AGPL-3.0 license header (project, repository, copyright, license version 3). `CITATION.cff` and `codemeta.json` describe the release archived on Software Heritage (v1.6.4, SWHID `swh:1:dir:9c7c016d9603a4b0201ad64535767a353031bd91`); `CODE_OF_CONDUCT.md` points to the MediaWiki Code of Conduct.
+
+**Code of conduct.** The development of Wikipedia2Book follows a [code of conduct](https://github.com/gmoulard/wikipedia2book/blob/main/CODE_OF_CONDUCT.md), MediaWiki's.
+
+**Citation.** If you use Wikipedia2Book in your work, please cite the archived release on [Software Heritage](https://archive.softwareheritage.org/swh:1:dir:9c7c016d9603a4b0201ad64535767a353031bd91;origin=https://github.com/gmoulard/wikipedia2book;visit=swh:1:snp:3b1fa78021c1ad7819b82a6f38f200a9f3bfa85e;anchor=swh:1:rev:d0cd2a14a00fb848f2555a9ee62c4147230e6080):
+
+```bibtex
+@software{moulard_wikipedia2book_2026,
+  author  = {Moulard, Guillaume},
+  title   = {Wikipedia2Book},
+  version = {v1.6.4},
+  year    = {2026},
+  url     = {https://github.com/gmoulard/wikipedia2book},
+  license = {AGPL-3.0-only},
+  note    = {SWHID: swh:1:dir:9c7c016d9603a4b0201ad64535767a353031bd91}
+}
+```
+
+Machine-readable citation metadata is also available in [`CITATION.cff`](https://github.com/gmoulard/wikipedia2book/blob/main/CITATION.cff) and [`codemeta.json`](https://github.com/gmoulard/wikipedia2book/blob/main/codemeta.json).

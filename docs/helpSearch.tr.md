@@ -1,5 +1,7 @@
 # Yardım: «Kitabı oluşturun» alanına neler girilebilir?
 
+<!-- {% raw %} -->
+
 İlk adımdaki alan bir madde başlığından çok daha fazlasını kabul eder: bir adres, bütün bir kitap, bir sayfa listesi ya da bir kitap sayfasının metni. Eklemek istediğinizi yazın ya da yapıştırın, sonra «Ekle» düğmesine tıklayın. Eklenen sayfalar alanın altında görünür; onları bir sonraki adımda düzenlersiniz.
 
 ## Kısaca
@@ -103,3 +105,5 @@ Hata iletisi sorunun ne olduğunu açıklar. Sunucudan gelir ve arayüzün dili 
 - **Düzenleme**: sayfaları sıralayın, bölümler oluşturun, kendi görsellerinizi ya da PDF'lerinizi ekleyin, kitabı ciltlere bölün. 300 maddeyi aşan kitap otomatik olarak ciltlere bölünür.
 - **Yayın**: başlık, kapak, arka plan görselleri, içindekiler, sayfa biçimi ve kenar boşlukları.
 - **PDF oluştur**: her madde Vikipedi'nin yazdırdığı haliyle alınır ve hepsi baskıya hazır tek bir kitap oluşturur.
+
+<!-- {% endraw %} -->

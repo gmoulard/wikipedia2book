@@ -1,5 +1,7 @@
 # Hilfe: Was kann man in das Feld „Buch erstellen“ eingeben?
 
+<!-- {% raw %} -->
+
 Das Feld des ersten Schritts nimmt viel mehr an als einen Artikeltitel: eine Adresse, ein ganzes Buch, eine Liste von Seiten oder den Text einer Buchseite. Tippen oder fügen Sie ein, was Sie hinzufügen möchten, und klicken Sie dann auf „Hinzufügen“. Die hinzugefügten Seiten erscheinen unter dem Feld; im nächsten Schritt ordnen Sie sie.
 
 ## Auf einen Blick
@@ -103,3 +105,5 @@ Die Fehlermeldung erklärt, was nicht stimmt. Sie kommt vom Server und bleibt au
 - **Organisation**: Seiten ordnen, Kapitel erstellen, eigene Bilder oder PDFs hinzufügen, das Buch in Bände teilen. Ab 300 Artikeln wird das Buch automatisch in Bände geteilt.
 - **Bearbeitung**: Titel, Umschlag, Hintergrundbilder, Inhaltsverzeichnis, Format und Ränder.
 - **PDF erstellen**: Jeder Artikel wird so übernommen, wie Wikipedia ihn druckt, und alles bildet ein einziges druckfertiges Buch.
+
+<!-- {% endraw %} -->

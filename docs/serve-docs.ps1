@@ -16,10 +16,11 @@
 
 param(
     [int]$Port = 4000,
-    [switch]$NoBrowser
+    [switch]$NoBrowser,
+    [switch]$Restart
 )
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 $name = "wikipedia2book-docs"
 $image = "ruby:3.3.6"
 $docs = $PSScriptRoot
@@ -46,13 +47,20 @@ if (-not (Test-Engine)) {
     if (-not $desktop) { throw "Docker Desktop introuvable : démarrez le moteur Docker puis relancez." }
     Write-Host "Démarrage de Docker Desktop..."
     Start-Process $desktop
-    $deadline = (Get-Date).AddMinutes(3)
+    $deadline = (Get-Date).AddMinutes(5)
     while (-not (Test-Engine)) {
-        if ((Get-Date) -gt $deadline) { throw "Le moteur Docker n'a pas démarré en 3 minutes." }
+        if ((Get-Date) -gt $deadline) { throw "Le moteur Docker n'a pas démarré en 5 minutes : ouvrez Docker Desktop, attendez « Engine running », puis relancez." }
         Start-Sleep -Seconds 3
     }
 }
 
+$running = & $docker inspect -f "{{.State.Running}}" $name 2>$null
+if ($running -eq "true" -and -not $Restart) {
+    $published = & $docker port $name 4000 2>$null | Select-Object -First 1
+    Write-Host "Le site tourne déjà (autre lancement de ce script) : $published"
+    Write-Host "Pour le remplacer : ./serve-docs.ps1 -Restart"
+    exit 1
+}
 & $docker rm -f $name *> $null
 
 $script = @'
@@ -61,40 +69,45 @@ cat > /tmp/Gemfile <<'GEMS'
 source "https://rubygems.org"
 gem "github-pages", group: :jekyll_plugins
 gem "webrick"
+gem "rake"
 GEMS
 export BUNDLE_GEMFILE=/tmp/Gemfile
+cd /tmp
 bundle install --quiet
 exec bundle exec jekyll serve --source /site --destination /tmp/_site --host 0.0.0.0 --port 4000 --baseurl "" --livereload --force_polling
 '@ -replace "`r", ""
+$encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($script))
 
 $arguments = @(
     "run", "-d", "--name", $name,
     "-p", "${Port}:4000", "-p", "35729:35729",
     "-v", "${docs}:/site:ro",
     "-v", "wikipedia2book-docs-gems:/usr/local/bundle",
-    "-e", "JEKYLL_ENV=development", "-e", "PAGES_REPO_NWO=gmoulard/wikipedia2book"
+    "-e", "JEKYLL_ENV=development", "-e", "PAGES_REPO_NWO=gmoulard/wikipedia2book",
+    "-e", "SERVE_SCRIPT=$encoded"
 )
 foreach ($variable in "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY") {
     $value = [Environment]::GetEnvironmentVariable($variable)
     if ($value) { $arguments += @("-e", "$variable=$value") }
 }
-$arguments += @($image, "bash", "-c", $script)
+$arguments += @($image, "sh", "-c", 'echo $SERVE_SCRIPT | base64 -d | bash')
 
-& $docker @arguments | Out-Null
+$id = & $docker @arguments
 if ($LASTEXITCODE -ne 0) { throw "Le conteneur n'a pas démarré." }
+$id = "$id".Trim()
 
 $url = "http://localhost:$Port/"
 Write-Host "Construction du site (la première fois, installation des gems : quelques minutes)..."
 try {
     $ready = $false
     while (-not $ready) {
-        $state = & $docker inspect -f "{{.State.Running}}" $name 2>$null
+        $state = & $docker inspect -f "{{.State.Running}}" $id 2>$null
         if ($state -ne "true") {
-            & $docker logs $name
+            & $docker logs $id
             throw "Le conteneur s'est arrêté."
         }
         try {
-            Invoke-WebRequest $url -UseBasicParsing -TimeoutSec 3 | Out-Null
+            Invoke-WebRequest $url -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop | Out-Null
             $ready = $true
         } catch {
             Start-Sleep -Seconds 3
@@ -102,8 +115,10 @@ try {
     }
     Write-Host "Site prêt : $url (rechargé à chaque modification de docs/). Ctrl+C pour arrêter."
     if (-not $NoBrowser) { Start-Process $url }
-    & $docker logs -f --since 1s $name
+    & $docker logs -f --since 1s $id
+    $current = & $docker inspect -f "{{.Id}}" $name 2>$null
+    if ($current -and $current -ne $id) { Write-Host "Conteneur remplacé par un autre lancement de ce script (-Restart)." }
 } finally {
-    & $docker rm -f $name *> $null
+    & $docker rm -f $id *> $null
     Write-Host "Conteneur arrêté."
 }

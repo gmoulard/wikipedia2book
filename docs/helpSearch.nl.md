@@ -1,5 +1,7 @@
 # Hulp: wat kunt u invoeren in het veld „Het boek samenstellen”?
 
+<!-- {% raw %} -->
+
 Het veld van de eerste stap accepteert veel meer dan een artikeltitel: een adres, een heel boek, een lijst van pagina's of de tekst van een boekpagina. Typ of plak wat u wilt toevoegen en klik op „Toevoegen”. De toegevoegde pagina's verschijnen onder het veld; in de volgende stap zet u ze in volgorde.
 
 ## In het kort
@@ -103,3 +105,5 @@ De foutmelding legt uit wat er mis is. Ze komt van de server en blijft in het Fr
 - **Ordening**: zet de pagina's in volgorde, maak hoofdstukken, voeg eigen afbeeldingen of PDF's toe, splits het boek in delen. Boven 300 artikelen wordt het boek automatisch in delen gesplitst.
 - **Opmaak**: titel, omslag, achtergrondafbeeldingen, inhoudsopgave, formaat en marges.
 - **PDF maken**: elk artikel wordt overgenomen zoals Wikipedia het afdrukt, en alles samen vormt één boek dat klaar is om te drukken.
+
+<!-- {% endraw %} -->

@@ -2,8 +2,26 @@
   .bench-new { display: inline-block; padding: 0 0.45em; border-radius: 0.6em; background: #1a7f37; color: #fff; font-size: 0.85em; white-space: nowrap; }
 </style>
 <style>
+  @media (min-width: 66.5rem) {
+    .side-bar { width: 16.5rem; }
+    .side-bar + .main { margin-left: 16.5rem; }
+    .main { max-width: none; }
+    .side-bar .site-header, .side-bar .site-nav, .side-bar .site-footer { width: 16.5rem; }
+  }
+</style>
+<style>
   .doc-language { margin: 0 1rem; align-self: center; font: inherit; font-size: 0.875rem; padding: 0.2rem 0.4rem; border: 1px solid #d7d7d7; border-radius: 4px; background: transparent; color: inherit; }
 </style>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll("#site-nav > .nav-list > .nav-list-item").forEach((item) => {
+      const expander = item.querySelector(":scope > .nav-list-expander");
+      if (!expander) return;
+      item.classList.add("active");
+      expander.setAttribute("aria-expanded", "true");
+    });
+  });
+</script>
 <script>
   document.addEventListener("DOMContentLoaded", () => {
     const names = { fr: "Français", en: "English", de: "Deutsch", es: "Español", it: "Italiano", pt: "Português", nl: "Nederlands", tr: "Türkçe", zh: "中文", ja: "日本語", fa: "فارسی", ar: "العربية" };

@@ -1,8 +1,10 @@
 # Wikipedia2Book — Functional specification
 
+<!-- {% raw %} -->
+
 <table border="0" ><tr><td>
 <img src="https://gmoulard.github.io/wikipedia2book/static/Wikipedia2bookLogo.png" alt="Wikipedia2Book logo" width="100"  >
-</td><td>
+</td><td markdown="1">
 This is the English translation of [FunctionalSpec.fr.md](https://gmoulard.github.io/wikipedia2book/FunctionalSpec.fr.html). The French document is the reference: if the two ever differ, the French version prevails. Interface labels are quoted as they appear in the English interface. The documentation has three parts: functional specification ([FunctionalSpec.en.md](https://gmoulard.github.io/wikipedia2book/FunctionalSpec.en.html)), technical specification ([TechnicalSpec.en.md](https://gmoulard.github.io/wikipedia2book/TechnicalSpec.en.html)) and version history ([CHANGELOG.en.md](https://gmoulard.github.io/wikipedia2book/CHANGELOG.en.html)); section numbers are shared by the three ("section 13.3" refers to the technical specification). All documents: [docs.md](https://gmoulard.github.io/wikipedia2book/docs.html).
 </td></tr></table>
 
@@ -609,6 +611,14 @@ The software:
 
 Images and media embedded by Wikipedia in its PDF export keep their own license notices; the software does not extract them separately and does not perform any independent license check.
 
+**Wikipedia2Book license.** Wikipedia2Book is free software, distributed under the [GNU Affero General Public License v3.0](https://www.gnu.org/licenses/agpl-3.0.html) (AGPL-3.0). The full text is in the [LICENSE](https://github.com/gmoulard/wikipedia2book/blob/main/LICENSE) file.
+
+In short, you may use, study, modify and redistribute this software, provided that any modified version you distribute is published under the same license with its source code. Because this is the *Affero* GPL, this obligation also applies when a modified version is only offered as a network service: its users must be able to obtain its source code.
+
+This license covers the application's code only. The books it generates are made of Wikipedia content, published under its own license ([CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)), which is stated on the license page of each generated PDF.
+
+Each source file starts with a short AGPL-3.0 license header.
+
 ## 16\. Acceptance criteria
 
 The current version is considered functional if the following points are validated:
@@ -662,3 +672,5 @@ Possible developments, not implemented to date:
 * Rare Chinese characters (僻字) in the official Wikisource PDF: checked in November 2026, some characters of the CJK extensions B and later leave a blank there (LiberationSerif font without the glyph, for example 𡼢 U+21F22 in "大南寔錄/大南寔錄前編/卷10" on zh.wikisource.org), only those Wikisource provides as images are shown; the application does not change this PDF: reported to Wikimedia on 2026-11-18 (https://phabricator.wikimedia.org/T445303). Request made by PacmanD on the technical Village pump of the Chinese Wikipedia (November 2026), whose other part — importing a whole work from its contents page — is done (section 3.1).
 
 Any development must preserve the core principles of the software, in particular the user's full control over the selection of articles and the handling of a single book at a time.
+
+<!-- {% endraw %} -->

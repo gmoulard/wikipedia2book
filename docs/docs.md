@@ -4,6 +4,8 @@ Tous les documents du répertoire `docs/`. Le français fait foi ; les numéros 
 
 Every document in the `docs/` folder. French is the reference; section numbers are shared by the functional and technical specifications and the version history.
 
+Sur le site, le menu reprend ce découpage : [Fonctionnel](fonctionnel.md) et [Technique](technique.md). / On the site, the menu follows the same split: [Functional](fonctionnel.md) and [Technical](technique.md).
+
 ## Fonctionnel / Functional
 
 | Document | Français | English | Contenu / Content |
