@@ -1,0 +1,76 @@
+# This file is part of Wikipedia2Book
+# <https://github.com/gmoulard/wikipedia2book>.
+# Copyright (c) 2026 Guillaume Moulard.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, version 3.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+name: Bug
+description: Signaler un problème / Report a problem
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci de signaler ce problème. / Thank you for reporting this problem.
+        Ne mettez aucune information personnelle. / Do not include any personal information.
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Plateforme / Platform
+      description: Où le problème s'est-il produit ? / Where did the problem happen?
+      options:
+        - Toolforge (https://wikipedia2book.toolforge.org)
+        - Northflank
+        - Docker local
+        - Autre / Other
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Gravité / Severity
+      options:
+        - Bloquant / Blocking
+        - Majeur / Major
+        - Mineur / Minor
+        - Cosmétique / Cosmetic
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Affichée en pied de page / Shown in the page footer
+      placeholder: v 1.14.0 · 6245ba8
+    validations:
+      required: false
+  - type: textarea
+    id: book
+    attributes:
+      label: Fichier JSON du livre / Book JSON file
+      description: |
+        Glissez-déposez ici le fichier .json exporté depuis l'interface, ou le JSON « requête » de la page d'administration.
+        Drag and drop here the .json file exported from the interface, or the "request" JSON from the administration page.
+    validations:
+      required: false
+  - type: textarea
+    id: description
+    attributes:
+      label: Description et capture d'écran / Description and screenshot
+      description: |
+        Ce que vous avez fait, ce qui s'est passé, ce que vous attendiez. Glissez-déposez une capture d'écran.
+        What you did, what happened, what you expected. Drag and drop a screenshot.
+    validations:
+      required: true

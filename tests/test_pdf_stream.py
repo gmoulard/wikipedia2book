@@ -1030,5 +1030,93 @@ class RemoteFilesTest(unittest.TestCase):
         self.assertIn(self.PHOTO, response.json()["detail"])
 
 
+
+class WebPageRenderingTest(unittest.TestCase):
+    PAGE = "https://github.com/gmoulard/wikipedia2book"
+    STYLE = "https://github.githubassets.com/assets/github.css"
+
+    def setUp(self):
+        self.files = {
+            self.PAGE: (f'<html><head><link rel="stylesheet" href="{self.STYLE}"><style>.inline {{ color: red }}</style></head><body><p style="color: blue">README Wikipedia2Book</p></body></html>'.encode(), "text/html"),
+            self.STYLE: (b".markdown-body { color: var(--fgColor-default); }", "text/css"),
+        }
+        self.rendered = []
+        self.fail_with_styles = True
+        self.fail_without_styles = False
+
+        async def fake_download(url, max_bytes, label):
+            if url not in self.files:
+                raise main.JsonSourceError(502, f"Introuvable : {url}")
+            return self.files[url]
+
+        def fake_generate(html):
+            self.rendered.append(html)
+            if "README" in html:
+                styled = "markdown-body" in html or ".inline" in html or 'style="' in html
+                if (styled and self.fail_with_styles) or (not styled and self.fail_without_styles):
+                    raise KeyError("--fgColor-default")
+            return _make_pdf(1)
+
+        self.patches = [
+            patch.object(main, "MediaWikiClient", FakeClient),
+            patch.object(main, "generate_pdf", fake_generate),
+            patch.object(main, "download", fake_download),
+        ]
+        for p in self.patches:
+            p.start()
+        FakeClient.fail = False
+        FakeClient.wait = None
+        FakeClient.missing = ()
+        self.client = TestClient(main.app)
+
+    def tearDown(self):
+        for p in self.patches:
+            p.stop()
+
+    def _project(self):
+        documents = [
+            {"title": "wikipedia2book", "kind": "html", "url": self.PAGE, "selected": True},
+            {"title": "Alos", "kind": "pdf", "mime_type": "application/pdf", "data_base64": base64.b64encode(_make_pdf(3)).decode("ascii"), "selected": True},
+        ]
+        return {"name": "Mon livre", "main_articles": [], "uploaded_documents": documents}
+
+    def test_page_that_weasyprint_cannot_render_with_its_styles_is_rendered_without_them(self):
+        events = _parse_stream(self.client.post("/api/pdf/stream", json=self._project()).content)
+        self.assertEqual(events[-1]["type"], "done")
+        pages = [html for html in self.rendered if "README" in html]
+        self.assertEqual(len(pages), 2)
+        self.assertNotIn("markdown-body", pages[1])
+        self.assertNotIn(".inline", pages[1])
+        self.assertNotIn('style="color: blue"', pages[1])
+        self.assertIn("@page { size: 210mm 297mm; margin: 15mm; }", pages[1])
+        stages = [stage for stage in main.generation_log[-1]["stages"] if stage["stage"] == "html_without_styles"]
+        self.assertEqual([(stage["url"], stage["error"]) for stage in stages], [(self.PAGE, "KeyError")])
+        pdf = PdfReader(BytesIO(events[-1]["pdf"]))
+        self.assertEqual(len(pdf.pages), 1 + 1 + 1 + 3 + 1)
+
+    def test_page_that_cannot_be_rendered_at_all_is_named_in_the_error(self):
+        self.fail_without_styles = True
+        events = _parse_stream(self.client.post("/api/pdf/stream", json=self._project()).content)
+        self.assertEqual(events[-1]["type"], "error")
+        detail = events[-1]["detail"]
+        self.assertIn("« wikipedia2book »", detail)
+        self.assertIn(self.PAGE, detail)
+        self.assertIn("KeyError", detail)
+        self.assertNotIn("La génération du PDF a échoué", detail)
+        response = self.client.post("/api/pdf", json=self._project())
+        self.assertEqual(response.status_code, 502)
+        self.assertIn("« wikipedia2book »", response.json()["detail"])
+
+    def test_damaged_imported_pdf_is_named_in_the_error(self):
+        project = self._project()
+        project["uploaded_documents"][1]["data_base64"] = base64.b64encode(b"%PDF-1.7 pas un vrai PDF").decode("ascii")
+        self.fail_with_styles = False
+        events = _parse_stream(self.client.post("/api/pdf/stream", json=project).content)
+        self.assertEqual(events[-1]["type"], "error")
+        self.assertIn("Le document « Alos » n’a pas pu être intégré au livre", events[-1]["detail"])
+
+    def test_unexpected_server_error_is_not_the_same_sentence_twice(self):
+        self.assertEqual(main._pdf_error_detail(KeyError("x")), "erreur inattendue du serveur (KeyError).")
+
 if __name__ == "__main__":
     unittest.main()

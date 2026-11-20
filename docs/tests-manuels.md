@@ -4,7 +4,7 @@
 
 Ce document liste tout ce que Wikipedia2Book accepte, avec pour chaque cas un exemple à essayer **dans le navigateur** et le même cas **par l'API**, le résultat attendu et la version qui l'a introduit. Il sert de recette à dérouler à la main avant une mise en production. Pour les utilisateurs, la [page d'aide](helpSearch.fr.md) explique les mêmes possibilités sans les détails techniques, dans les 12 langues de l'interface.
 
-Le comportement de référence est décrit dans la [spécification fonctionnelle](FunctionalSpec.fr.md) (section 3.1 pour les sources) et la [spécification technique](TechnicalSpec.fr.md) (section 13.3 pour l'API).
+Le comportement de référence est décrit dans la [spécification fonctionnelle](FunctionalSpec.fr.md) (section 3.1 pour les sources) et la [spécification technique](TechnicalSpec.fr.md) (section 1.3 pour l'API).
 
 ## Comment s'en servir
 

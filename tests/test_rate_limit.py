@@ -19,6 +19,7 @@ import unittest
 from unittest.mock import patch
 from email.utils import format_datetime
 from datetime import datetime, timedelta, timezone
+from urllib.parse import unquote
 
 import httpx
 
@@ -110,6 +111,32 @@ class RateLimitTest(unittest.IsolatedAsyncioTestCase):
         self.answers = [(429, {}, b""), (200, {"Content-Type": "application/json"}, b'{"query": {"search": []}}')]
         self.assertEqual(await self.client.search("Paris"), [])
         self.assertEqual(self.requests, ["/w/api.php", "/w/api.php"])
+
+    async def test_renamed_page_pdf_redirect_is_followed(self):
+        target = "/api/rest_v1/page/pdf/Liste_de_mots_fran%C3%A7ais_d'origine_am%C3%A9rindienne/a4"
+        self.answers = [(302, {"Location": "../" + target.split("/pdf/")[1]}, b""), (301, {"Location": f"https://fr.wikipedia.org{target}"}, b"")]
+        self.assertEqual(await self.client.get_article_pdf("Mots français d'origine amérindienne", "fr", "a4"), PDF)
+        self.assertEqual(self.requests, ["/api/rest_v1/page/pdf/Mots_français_d'origine_amérindienne/a4"] + [unquote(target)] * 2)
+
+    async def test_pdf_redirect_to_another_host_is_refused(self):
+        self.answers = [(302, {"Location": "https://example.org/a.pdf"}, b"")]
+        with self.assertRaises(MediaWikiError) as raised:
+            await self.client.get_article_pdf("Paris", "fr", "a4")
+        self.assertIn("hors de fr.wikipedia.org", str(raised.exception))
+        self.assertEqual(len(self.requests), 1)
+
+    async def test_endless_pdf_redirects_stop_with_the_status(self):
+        self.answers = [(302, {"Location": "/api/rest_v1/page/pdf/Paris/a4"}, b"")] * (wikipedia_api.PDF_REDIRECTS + 1)
+        with self.assertRaises(MediaWikiError) as raised:
+            await self.client.get_article_pdf("Paris", "fr", "a4")
+        self.assertIn("(HTTP 302)", str(raised.exception))
+        self.assertEqual(len(self.requests), wikipedia_api.PDF_REDIRECTS + 1)
+
+    async def test_server_error_message_gives_the_status(self):
+        self.answers = [(500, {}, b"")]
+        with self.assertRaises(MediaWikiError) as raised:
+            await self.client.get_article_pdf("Paris", "fr", "a4")
+        self.assertIn("« Paris » (HTTP 500)", str(raised.exception))
 
 
 if __name__ == "__main__":

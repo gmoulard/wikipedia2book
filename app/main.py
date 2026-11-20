@@ -91,7 +91,7 @@ from app.resource_gate import Reservation, ResourceGate, release_memory
 from app.request_limits import Alerts, ClosingStreamingResponse, GenerationLimits, LimitRefused, RequestGuard, client_keys, count_setting
 from app import wikipedia_api
 from app.json_source import JsonSourceError, download, fetch_project, project_from_payload
-from app.html_document import HTML_PAGE_BYTES, HTML_TYPES, html_for_print
+from app.html_document import HTML_PAGE_BYTES, HTML_TYPES, html_for_print, without_styles
 from app.volumes import book_volumes, volume_project
 from app.models import (
     Article,
@@ -1130,10 +1130,21 @@ def _apply_default_book_title(project: Project, selected: list[Article | Uploade
     project.book_title = first.title[:200]
 
 
+SAVE_AS_PDF_ADVICE = " Ouvrez la page dans votre navigateur, enregistrez-la en PDF (Imprimer, puis Enregistrer au format PDF) et ajoutez ce fichier au livre par « Ajouter », le champ Sources vide."
+
+
+def conversion_error(document: UploadedDocument, error: Exception) -> str:
+    where = f" : {document.url}" if document.url else ""
+    if document.kind == "html":
+        return f"La page web « {document.title} » n’a pas pu être convertie en PDF ({type(error).__name__}){where}.{SAVE_AS_PDF_ADVICE}"
+    return f"Le document « {document.title} » n’a pas pu être intégré au livre ({type(error).__name__}){where} : le fichier est peut-être endommagé."
+
+
+# NE PAS renvoyer une phrase qui reprend « La génération du PDF a échoué » : le navigateur l'ajoute déjà devant (export.failed), le message affiché était « La génération du PDF a échoué : La génération du PDF a échoué. » sans rien dire de la cause (issue #4).
 def _pdf_error_detail(error: Exception) -> str:
     if isinstance(error, (MediaWikiError, ValueError, IsolatedProcessDied)):
         return str(error)
-    return "La génération du PDF a échoué."
+    return f"erreur inattendue du serveur ({type(error).__name__})."
 
 
 def _memory_snapshot() -> dict[str, int | None]:
@@ -1294,7 +1305,7 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
     status, details = "aborted", {}
     admitted: Reservation | None = None
     try:
-        # NE PAS charger les images ni télécharger quoi que ce soit avant cette admission : à 100 générations simultanées, les données gardées par chacune hors des étapes contrôlées faisaient déborder le serveur (section 13.12).
+        # NE PAS charger les images ni télécharger quoi que ce soit avant cette admission : à 100 générations simultanées, les données gardées par chacune hors des étapes contrôlées faisaient déborder le serveur (section 1.12 de la spécification technique).
         async for admission in _admitted(GENERATION_GATE, generation_reserve(project, selected)):
             if isinstance(admission, Reservation):
                 admitted = admission
@@ -1401,22 +1412,29 @@ async def _build_book_pdf(
         try:
             page, content_type = await download(document.url, HTML_PAGE_BYTES, label)
         except JsonSourceError as error:
-            advice = " Ouvrez la page dans votre navigateur, enregistrez-la en PDF (Imprimer, puis Enregistrer au format PDF) et importez ce fichier à l’étape Organisation." if error.refused else ""
-            raise RemoteFileError(f"{error}{advice}") from error
+            raise RemoteFileError(f"{error}{SAVE_AS_PDF_ADVICE if error.refused else ''}") from error
         if content_type not in HTML_TYPES:
             raise RemoteFileError(f"{label[0].upper()}{label[1:]} n’est pas une page HTML ({content_type or 'type inconnu'}) : {document.url}")
         html = await html_for_print(page, document.url, lambda address, size, what: download(address, size, what), page_width_mm, page_height_mm)
         return html.encode("utf-8")
 
-    async def document_pdf(data: bytes, kind: str) -> bytes:
+    async def render_html(html: str) -> bytes:
+        if not ISOLATE_ASSEMBLY:
+            return await asyncio.to_thread(generate_pdf, html)
+        preload(["app.main"])
+        # NE PAS rendre une page web dans le processus du serveur : une page lourde y prendrait beaucoup de mémoire, que l'allocateur ne rend pas.
+        return await run_in_worker(generate_pdf, html)
+
+    async def document_pdf(document: UploadedDocument, data: bytes, kind: str) -> bytes:
         if kind == "image":
             return await asyncio.to_thread(image_to_pdf, data, page_width_mm, page_height_mm)
         if kind == "html":
-            if not ISOLATE_ASSEMBLY:
-                return await asyncio.to_thread(generate_pdf, data.decode("utf-8"))
-            preload(["app.main"])
-            # NE PAS rendre une page web dans le processus du serveur : une page lourde y prendrait beaucoup de mémoire, que l'allocateur ne rend pas.
-            return await run_in_worker(generate_pdf, data.decode("utf-8"))
+            html = data.decode("utf-8")
+            try:
+                return await render_html(html)
+            except Exception as error:
+                record.stage("html_without_styles", "server", _memory_snapshot(), url=document.url, error=type(error).__name__)
+                return await render_html(without_styles(html, page_width_mm, page_height_mm))
         return data
 
     # NE PAS garder les images de fond en mémoire ni dans le livre transmis à l'assemblage : chaque génération en garderait deux copies (octets et base64) pendant toute sa durée. Elles vont dans le dossier temporaire, supprimé à la fin de la génération ; une image donnée par son adresse est retéléchargée à chaque génération, seule l'adresse est enregistrée dans le JSON.
@@ -1458,6 +1476,16 @@ async def _build_book_pdf(
         started.put_nowait(busy_event(waited))
 
     async def load(client: MediaWikiClient, item: Article | UploadedDocument) -> None:
+        try:
+            await load_item(client, item)
+        except (MediaWikiError, RemoteFileError, IsolatedProcessDied):
+            raise
+        except Exception as error:
+            if isinstance(item, Article):
+                raise
+            raise RemoteFileError(conversion_error(item, error)) from error
+
+    async def load_item(client: MediaWikiClient, item: Article | UploadedDocument) -> None:
         # NE PAS rendre la réserve de disque avant l'écriture du fichier recomposé : tant qu'il n'est pas écrit, la place qu'il prendra n'apparaît pas dans l'espace utilisé du disque.
         async with slots_free, DISK_GATE.reserve(DOWNLOAD_DISK_BYTES, announce_busy) as disk:
             note_wait(disk, "disk")
@@ -1482,7 +1510,8 @@ async def _build_book_pdf(
                 download_s, size = round(time.monotonic() - fetch_started, 2), len(data)
             async with MEMORY_GATE.reserve(fit_reserve(len(data)), announce_busy) as reservation:
                 note_wait(reservation, "fit")
-                data = await document_pdf(data, kind)
+                if isinstance(item, UploadedDocument):
+                    data = await document_pdf(item, data, kind)
                 # NE PAS appeler pypdf directement ici : un calcul bloquant gèle le serveur et retarde l'envoi des messages de progression.
                 fitted_items[item.key] = asyncio.ensure_future(fit_part(data))
                 # NE PAS libérer le créneau avant la fin de la recomposition : sur un serveur au processeur limité (Toolforge), les PDF bruts téléchargés s'accumuleraient en mémoire en attendant d'être recomposés.

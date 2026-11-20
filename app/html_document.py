@@ -69,12 +69,30 @@ async def html_for_print(page: bytes, url: str, download: Download, width_mm: fl
         head = soup.new_tag("head")
         (soup.html or soup).insert(0, head)
     page_style = soup.new_tag("style")
-    page_style.string = (
-        "\n".join(styles)
-        + f"\n@page {{ size: {width_mm:g}mm {height_mm:g}mm; margin: 15mm; }}\nimg, svg, table {{ max-width: 100%; }}\nimg {{ height: auto; }}"
-    )
+    page_style.string = "\n".join(styles)
     soup.head.append(page_style)
+    _add_print_style(soup, width_mm, height_mm)
     return str(soup)
+
+
+# NE PAS abandonner la page web quand WeasyPrint échoue avec ses feuilles de style (issue #4, page d'un dépôt GitHub) : elle est rendue une seconde fois sans elles, le texte et les images comptent plus que la mise en forme.
+def without_styles(html: str, width_mm: float, height_mm: float) -> str:
+    soup = BeautifulSoup(html, "html.parser")
+    for tag in soup.select("style"):
+        tag.decompose()
+    for tag in soup.find_all(style=True):
+        del tag["style"]
+    if soup.head is None:
+        head = soup.new_tag("head")
+        (soup.html or soup).insert(0, head)
+    _add_print_style(soup, width_mm, height_mm)
+    return str(soup)
+
+
+def _add_print_style(soup: BeautifulSoup, width_mm: float, height_mm: float) -> None:
+    style = soup.new_tag("style")
+    style.string = f"@page {{ size: {width_mm:g}mm {height_mm:g}mm; margin: 15mm; }}\nimg, svg, table {{ max-width: 100%; }}\nimg {{ height: auto; }}"
+    soup.head.append(style)
 
 
 async def _resource(download: Download, address: str, accepted: set[str], budget: int, with_type: bool = False):
