@@ -61,6 +61,10 @@ Simply [open a GitHub Issue](https://github.com/gmoulard/wikipedia2book/issues/n
 
 No GitHub development skills required!
 
+**🐞 Bug — Report a problem**
+
+[Open a bug report](https://github.com/gmoulard/wikipedia2book/issues/new?template=bug.yml) (form in French and English): platform, severity, version (shown in the page footer), the book JSON file and a description with a screenshot.
+
 **🔧 Several corrections — Submit a Pull Request**
 
 If you have identified several improvements, you can directly modify `app/static/i18n.js` and submit a Pull Request.
@@ -102,6 +106,7 @@ wikipedia2book/
 │   └── limit_check.py           # Limit test: largest book a deployment can generate (section 13.12)
 ├── tests/                       # unittest suite (no network, WeasyPrint stubbed when missing)
 ├── .github/workflows/           # Toolforge deployment, Toolviews stats, GitHub Pages, tag check, benchmark, security
+├── .github/ISSUE_TEMPLATE/bug.yml  # Bug report form (platform, severity, version, book JSON, screenshot)
 ├── Dockerfile                   # Image used by Northflank
 ├── Procfile, Aptfile, .python-version, toolforge-fonts.conf  # Toolforge buildpacks
 ├── toolinfo.json                # Toolhub metadata

@@ -1091,6 +1091,7 @@ Wikipedia2Book/
 ├── .github/workflows/tag-check.yml
 ├── .github/workflows/benchmark.yml
 ├── .github/workflows/security.yml
+├── .github/ISSUE_TEMPLATE/bug.yml  (formulaire d'issue « Bug » : plateforme, gravité, version, fichier JSON du livre, description avec capture d'écran)
 ├── requirements.txt
 ├── .gitignore
 ├── CLAUDE.md
