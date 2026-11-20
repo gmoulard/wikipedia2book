@@ -34,18 +34,11 @@ Assemble the official PDFs of Wikipedia (and other Wikimedia projects) pages int
 
 - [documentation](https://gmoulard.github.io/wikipedia2book/) on site GitHub Pages
 
-Main documents:
-- functional specification: [FunctionalSpec.fr.md](docs/FunctionalSpec.fr.md) (French, the reference version), [FunctionalSpec.en.md](docs/FunctionalSpec.en.md) (English translation);
-- technical specification: [TechnicalSpec.fr.md](docs/TechnicalSpec.fr.md), [TechnicalSpec.en.md](docs/TechnicalSpec.en.md);
-- version history, in French only: [CHANGELOG.fr.md](docs/CHANGELOG.fr.md).
-
 ## Deployment
 
 ### Production deployment
 - [web app](https://wikipedia2book.toolforge.org) - exemple  [PDF](https://wikipedia2book.toolforge.org/api/pdf/from-json?url=https%3A%2F%2Fgmoulard.github.io%2Fwikipedia2book%2Fstatic%2FWrecks-of-Saint-Pierre-harbor.json
 ) / [website](https://wikipedia2book.toolforge.org/?json=https://gmoulard.github.io/wikipedia2book/static/Wrecks-of-Saint-Pierre-harbor.json)
-
-
 - [API](https://wikipedia2book.toolforge.org/docs)
 - [Toolforge usage](https://gmoulard.github.io/wikipedia2book/stats.html)
 
