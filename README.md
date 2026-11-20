@@ -43,7 +43,27 @@ Assemble the official PDFs of Wikipedia (and other Wikimedia projects) pages int
 - [Toolforge usage](https://gmoulard.github.io/wikipedia2book/stats.html)
 
 ### developement 
-- [Northflank](https://prod--wikipedia2book--wkvpbnfj6h4v.code.run) 
+- [Northflank](https://prod--wikipedia2book--wkvpbnfj6h4v.code.run)
+
+### How to contribute?
+
+There are several ways to help, depending on the size of your contribution.
+
+**✏️ Small corrections — Open an Issue**
+
+Found a typo, an awkward expression or an incorrect translation?
+
+Simply [open a GitHub Issue](https://github.com/gmoulard/wikipedia2book/issues/new) with:
+- The language concerned.
+- The original translation.
+- Your suggested correction.
+- A short explanation (optional).
+
+No GitHub development skills required!
+
+**🔧 Several corrections — Submit a Pull Request**
+
+If you have identified several improvements, you can directly modify `app/static/i18n.js` and submit a Pull Request.
 
 ## Repository structure
 
