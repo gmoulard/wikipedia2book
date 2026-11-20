@@ -3,14 +3,14 @@
 <table border="0" ><tr><td>
 <img src="https://gmoulard.github.io/wikipedia2book/static/Wikipedia2bookLogo.png" alt="Wikipedia2Book logo" width="100"  >
 </td><td markdown="1">
-Ce document en français fait référence. La documentation est en trois parties : spécification fonctionnelle ([FunctionalSpec.fr.md](https://gmoulard.github.io/wikipedia2book/FunctionalSpec.fr.html)), spécification technique ([TechnicalSpec.fr.md](https://gmoulard.github.io/wikipedia2book/TechnicalSpec.fr.html)) et historique des versions ([CHANGELOG.fr.md](https://gmoulard.github.io/wikipedia2book/CHANGELOG.fr.html)) ; les numéros de section sont communs aux trois (« section 13.3 » renvoie à la spécification technique).
+Ce document en français fait référence. La documentation est en trois parties : spécification fonctionnelle ([FunctionalSpec.fr.md](https://gmoulard.github.io/wikipedia2book/FunctionalSpec.fr.html)), spécification technique ([TechnicalSpec.fr.md](https://gmoulard.github.io/wikipedia2book/TechnicalSpec.fr.html)) et historique des versions ([CHANGELOG.fr.md](https://gmoulard.github.io/wikipedia2book/CHANGELOG.fr.html)) ; la spécification technique est numérotée à partir de 1 ; un renvoi vers un autre document le nomme (« section 1.3 de la spécification technique », « section 3.1 de la spécification fonctionnelle »). Les lignes d'historique antérieures au 2026-11-20 citent l'ancienne numérotation de la spécification technique : 13 pour 1, 14 pour 2, 17 pour 3 (« section 13.3 » y désigne la section 1.3).
 </td></tr></table>
 
 ---
 
 ## 19\. Historique des versions
 
-Numéro de version applicatif (`app/version.py`, repris par `app/main.py` et par le User-Agent envoyé à Wikimédia, affiché dans le pied de page de l'application — voir section 12). Incrémenté sur décision de l'utilisateur avant chaque commit (patch, minor ou major), selon la règle définie dans `CLAUDE.md`. Chaque version correspond au tag Git `vX.Y.Z` (section 13.5).
+Numéro de version applicatif (`app/version.py`, repris par `app/main.py` et par le User-Agent envoyé à Wikimédia, affiché dans le pied de page de l'application — voir section 12 de la spécification fonctionnelle). Incrémenté sur décision de l'utilisateur avant chaque commit (patch, minor ou major), selon la règle définie dans `CLAUDE.md`. Chaque version correspond au tag Git `vX.Y.Z` (section 1.5 de la spécification technique).
 
 | Version | Date       | Auteur    | Modifications apportées |
 | ------- | ---------- | --------- | ------------------------ |

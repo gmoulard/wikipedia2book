@@ -103,7 +103,7 @@ wikipedia2book/
 │   ├── toolviews_chart.py       # Usage charts page for GitHub Pages
 │   ├── benchmark.py, benchmark/     # Benchmark run before each production release
 │   ├── benchmark_table.py       # Builds the benchmark results table of the specifications from docs/benchmark-results.csv
-│   └── limit_check.py           # Limit test: largest book a deployment can generate (section 13.12)
+│   └── limit_check.py           # Limit test: largest book a deployment can generate (section 1.12 of the technical specification)
 ├── tests/                       # unittest suite (no network, WeasyPrint stubbed when missing)
 ├── .github/workflows/           # Toolforge deployment, Toolviews stats, GitHub Pages, tag check, benchmark, security
 ├── .github/ISSUE_TEMPLATE/bug.yml  # Bug report form (platform, severity, version, book JSON, screenshot)
@@ -221,7 +221,7 @@ Count about 250 MB for the server and the assembly process themselves, plus roug
 python scripts/limit_check.py --base-url https://your-server --search 50
 ```
 
-It doubles the number of articles until the first failure, then narrows down by bisection. Add `--save-pdf ./tmp` to keep each generated book (`./tmp` is ignored by git). With the monitoring token (`Authorization: Bearer`, see "Administration page"), `GET /api/health/details` shows the memory of the container and its limit, and `GET /api/health/generations` the memory reached at each stage of the last generations (details in section 13 of the [technical specification](docs/TechnicalSpec.en.md)).
+It doubles the number of articles until the first failure, then narrows down by bisection. Add `--save-pdf ./tmp` to keep each generated book (`./tmp` is ignored by git). With the monitoring token (`Authorization: Bearer`, see "Administration page"), `GET /api/health/details` shows the memory of the container and its limit, and `GET /api/health/generations` the memory reached at each stage of the last generations (details in section 1 of the [technical specification](docs/TechnicalSpec.en.md)).
 
 **Viewing alerts.** Each time a limit is crossed (request too large, generations per client or for the whole server, full queue, send timeout, MediaWiki API slowed down), the server writes one JSON line containing `"alert"` to its standard output and counts it in `GET /api/health/details` (field `alerts`, count and last time per type). Both are reset when the server restarts (field `started`). No email is sent. `/api/health/details` needs the monitoring token (`WIKIPEDIA2BOOK_MONITOR_TOKEN`, sent as `Authorization: Bearer`); the administration page `/admin` shows the same counters after a Wikimedia sign-in.
 
@@ -270,7 +270,7 @@ northflank get service logs --projectId wikipedia2book --serviceId prod --textIn
 northflank get service logs --projectId wikipedia2book --serviceId prod --textIncludes '"alert"' --lineLimit 1000 | grep -o '"alert": "[a-z_]*"' | sort | uniq -c
 ```
 
-How to read them: section 14 of the [technical specification](docs/TechnicalSpec.en.md).
+How to read them: section 2 of the [technical specification](docs/TechnicalSpec.en.md).
 
 
 ## Technology stack

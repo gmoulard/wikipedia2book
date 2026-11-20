@@ -3,33 +3,33 @@
 <table border="0" ><tr><td>
 <img src="https://gmoulard.github.io/wikipedia2book/static/Wikipedia2bookLogo.png" alt="Wikipedia2Book logo" width="100"  >
 </td><td markdown="1">
-Traduction anglaise : [TechnicalSpec.en.md](https://gmoulard.github.io/wikipedia2book/TechnicalSpec.en.html). Ce document en français fait référence. La documentation est en trois parties : spécification fonctionnelle ([FunctionalSpec.fr.md](https://gmoulard.github.io/wikipedia2book/FunctionalSpec.fr.html)), spécification technique ([TechnicalSpec.fr.md](https://gmoulard.github.io/wikipedia2book/TechnicalSpec.fr.html)) et historique des versions ([CHANGELOG.fr.md](https://gmoulard.github.io/wikipedia2book/CHANGELOG.fr.html)) ; les numéros de section sont communs aux trois (« section 13.3 » renvoie à la spécification technique).
+Traduction anglaise : [TechnicalSpec.en.md](https://gmoulard.github.io/wikipedia2book/TechnicalSpec.en.html). Ce document en français fait référence. La documentation est en trois parties : spécification fonctionnelle ([FunctionalSpec.fr.md](https://gmoulard.github.io/wikipedia2book/FunctionalSpec.fr.html)), spécification technique ([TechnicalSpec.fr.md](https://gmoulard.github.io/wikipedia2book/TechnicalSpec.fr.html)) et historique des versions ([CHANGELOG.fr.md](https://gmoulard.github.io/wikipedia2book/CHANGELOG.fr.html)) ; la spécification technique est numérotée à partir de 1 ; un renvoi vers un autre document le nomme (« section 1.3 de la spécification technique », « section 3.1 de la spécification fonctionnelle »).
 </td></tr></table>
 
 ---
 
 ## Table des matières
 
-- [13. Architecture technique](#13-architecture-technique)
-	- [13.1 Technologies](#131-technologies)
-	- [13.2 API Wikipédia](#132-api-wikip%C3%A9dia)
-	- [13.3 Exemples d'appels HTTP](#133-exemples-dappels-http)
-	- [13.4 Docker et exécution locale](#134-docker-et-ex%C3%A9cution-locale)
-	- [13.5 Environnements et branches](#135-environnements-et-branches)
-	- [13.6 Intégration continue (GitHub Actions)](#136-int%C3%A9gration-continue-github-actions)
-	- [13.7 Toolforge](#137-toolforge)
-	- [13.8 Statistiques d'utilisation (Toolviews)](#138-statistiques-dutilisation-toolviews)
-	- [13.9 Modèle de données et fichier de sauvegarde](#139-mod%C3%A8le-de-donn%C3%A9es-et-fichier-de-sauvegarde)
-	- [13.10 Schémas de l'architecture](#1310-sch%C3%A9mas-de-larchitecture)
-	- [13.11 Benchmark](#1311-benchmark)
-	- [13.12 Test aux limites](#1312-test-aux-limites)
-	- [13.13 Stratégie d'optimisation du conteneur](#1313-strat%C3%A9gie-doptimisation-du-conteneur)
-- [14. Sécurité et robustesse](#14-s%C3%A9curit%C3%A9-et-robustesse)
-- [17. Structure du dépôt](#17-structure-du-dépôt)
+- [1. Architecture technique](#1-architecture-technique)
+	- [1.1 Technologies](#11-technologies)
+	- [1.2 API Wikipédia](#12-api-wikip%C3%A9dia)
+	- [1.3 Exemples d'appels HTTP](#13-exemples-dappels-http)
+	- [1.4 Docker et exécution locale](#14-docker-et-ex%C3%A9cution-locale)
+	- [1.5 Environnements et branches](#15-environnements-et-branches)
+	- [1.6 Intégration continue (GitHub Actions)](#16-int%C3%A9gration-continue-github-actions)
+	- [1.7 Toolforge](#17-toolforge)
+	- [1.8 Statistiques d'utilisation (Toolviews)](#18-statistiques-dutilisation-toolviews)
+	- [1.9 Modèle de données et fichier de sauvegarde](#19-mod%C3%A8le-de-donn%C3%A9es-et-fichier-de-sauvegarde)
+	- [1.10 Schémas de l'architecture](#110-sch%C3%A9mas-de-larchitecture)
+	- [1.11 Benchmark](#111-benchmark)
+	- [1.12 Test aux limites](#112-test-aux-limites)
+	- [1.13 Stratégie d'optimisation du conteneur](#113-strat%C3%A9gie-doptimisation-du-conteneur)
+- [2. Sécurité et robustesse](#2-s%C3%A9curit%C3%A9-et-robustesse)
+- [3. Structure du dépôt](#3-structure-du-dépôt)
 
-## 13\. Architecture technique
+## 1\. Architecture technique
 
-### 13.1 Technologies
+### 1.1 Technologies
 
 | Composant        | Technologie utilisée    |
 | ----------------- | ------------------------------------------------------------ |
@@ -89,11 +89,11 @@ Badges du dépôt :
   <a href="https://docs.python.org/3/library/unittest.html"><img src="https://img.shields.io/badge/tests-unittest-0a9edc" alt="unittest"></a>
 </p>
 
-### 13.2 API Wikipédia
+### 1.2 API Wikipédia
 
 Tous les échanges avec Wikipédia passent par la classe `MediaWikiClient` de `app/wikipedia_api.py`; aucun autre module n'appelle Wikipédia. Deux services sont utilisés, sur le wiki de la langue de l'article (`<langue>` = code validé par `^[a-z0-9-]{2,12}$`) :
 
-Pour une page d'un autre projet Wikimédia (section 3.1), les mêmes appels sont faits sur `https://<langue>.<projet>.org` au lieu de `https://<langue>.wikipedia.org` (reconnaissance de la page, recherche, introduction et auteur proposés, liens pour l'exploration, PDF); seules les pages de livre restent sur Wikipédia. Les projets acceptés sont la liste `SITES` de `app/wikipedia_api.py`, tirée du type `Site` de `app/models.py`. La politique robots de Wikimédia (section 3) est la même pour tous les projets : les limites de téléchargement des PDF sont communes à tous.
+Pour une page d'un autre projet Wikimédia (section 3.1 de la spécification fonctionnelle), les mêmes appels sont faits sur `https://<langue>.<projet>.org` au lieu de `https://<langue>.wikipedia.org` (reconnaissance de la page, recherche, introduction et auteur proposés, liens pour l'exploration, PDF); seules les pages de livre restent sur Wikipédia. Les projets acceptés sont la liste `SITES` de `app/wikipedia_api.py`, tirée du type `Site` de `app/models.py`. La politique robots de Wikimédia (section 3 de la spécification fonctionnelle) est la même pour tous les projets : les limites de téléchargement des PDF sont communes à tous.
 
 * **API MediaWiki (Action API)** : `https://<langue>.wikipedia.org/w/api.php`, en GET, toujours avec `format=json&formatversion=2` et, par défaut, `action=query`.
 * **API REST** : `https://<langue>.wikipedia.org/api/rest_v1/page/pdf/<titre>/<format>`, pour le PDF officiel d'un article (le titre a ses espaces remplacés par `_` et est encodé dans l'URL).
@@ -114,10 +114,10 @@ Règles communes :
 * En-tête `User-Agent` conforme à la politique User-Agent de la Wikimedia Foundation (nom et version de l'outil, moyen de contact, bibliothèque et sa version) : `Wikipedia2Book/<version> (https://wikipedia2book.toolforge.org/; https://github.com/gmoulard/wikipedia2book) httpx/<version>`, la version étant celle de `app/version.py`.
 * Respect de la politique robots de Wikimédia (*Robot policy*) pour les PDF officiels, hors Toolforge : le service PDF relève des règles de l'API REST (sans authentification, au plus 3 requêtes simultanées et moins de 5 par seconde), respectées avec **au plus 2 téléchargements simultanés pour tout le serveur**, quel que soit le nombre de livres générés en même temps, et **au plus 25 Mbit/s** de téléchargement mesurés sur 10 s glissantes (31,25 Mo par fenêtre) : le PDF est lu par morceaux et la lecture attend quand la fenêtre est pleine. Le compteur vaut pour un processus serveur (une seule instance uvicorn par plateforme) : chaque déploiement hors Toolforge (Northflank) a son propre plafond. **Sur Toolforge, ces limites sont levées** : la politique en exempte les outils hébergés sur Wikimedia Cloud Services ; jusqu'à 4 téléchargements simultanés par livre, sans plafond de débit. Toolforge est reconnu par la variable d'environnement `WIKIPEDIA2BOOK_PLATFORM=toolforge`, que seul le `Procfile` positionne.
 * Délais d'attente : 20 secondes pour l'API MediaWiki, 120 secondes pour le téléchargement d'un PDF.
-* Erreurs : un échec réseau, une réponse HTTP en erreur, une réponse non JSON ou un champ `error` de l'API MediaWiki produisent une erreur explicite, renvoyée par l'API de l'application avec le code 502 (404 pour une page introuvable, 422 pour une entrée invalide). Une réponse REST qui ne commence pas par `%PDF-` est refusée; pendant la génération, la moindre erreur sur un article annule tout le livre, sauf un PDF répondu HTTP 404 (`MediaWikiPageNotFound`, page supprimée) : l'article est retiré du livre et signalé par l'événement `missing` (section 8). Étape du journal des générations : `missing_article` (`url`).
+* Erreurs : un échec réseau, une réponse HTTP en erreur, une réponse non JSON ou un champ `error` de l'API MediaWiki produisent une erreur explicite, renvoyée par l'API de l'application avec le code 502 (404 pour une page introuvable, 422 pour une entrée invalide). Une réponse REST qui ne commence pas par `%PDF-` est refusée; pendant la génération, la moindre erreur sur un article annule tout le livre, sauf un PDF répondu HTTP 404 (`MediaWikiPageNotFound`, page supprimée) : l'article est retiré du livre et signalé par l'événement `missing` (section 8 de la spécification fonctionnelle). Étape du journal des générations : `missing_article` (`url`).
 * Aucune donnée n'est mise en cache ni conservée : chaque opération refait ses appels.
 
-### 13.3 Exemples d'appels HTTP
+### 1.3 Exemples d'appels HTTP
 
 Les exemples ci-dessous supposent que le serveur fonctionne sur `http://localhost:8000`. Remplacer cette adresse par le domaine du déploiement pour appeler une instance distante.
 
@@ -132,9 +132,9 @@ Les endpoints GET peuvent être ouverts directement dans la barre d'adresse :
 
 * Obtenir l'introduction et le créateur d'un article : `http://localhost:8000/api/articles/intro?title=Albert%20Einstein&language=fr`.
 
-* Hits par heure depuis le démarrage du serveur (section 13.8) : `http://localhost:8000/api/stats/hourly`.
+* Hits par heure depuis le démarrage du serveur (section 1.8) : `http://localhost:8000/api/stats/hourly`.
 
-* État du conteneur, à suivre en direct pendant un test aux limites (section 13.12) : `http://localhost:8000/api/health/details`, par exemple sur la production `https://wikipedia2book.toolforge.org/api/health/details`. Réservé à la supervision : en-tête `Authorization: Bearer <jeton>`, le jeton étant défini par `WIKIPEDIA2BOOK_MONITOR_TOKEN` (32 caractères au moins, par exemple `python -c "import secrets; print(secrets.token_urlsafe(32))"` ; sans lui, l'endpoint répond toujours HTTP 401, `detail.code` = `monitor_token_required`), par exemple `curl -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" <adresse>`. Réponse JSON, sans aucune donnée personnelle, jamais mise en cache, non comptée dans les hits par heure : `version`, `started` (démarrage du serveur : s'il change, le serveur a redémarré), `now`, `generations_in_progress` (générations de PDF en cours), `memory_gate`, `disk_gate` et `generation_gate` (contrôles de la mémoire, de la place disque et admission des générations : `ratio`, `reserved_bytes`, `active_stages`, `waiting_stages`), `request_limits` (limites de générations par client et pour tout le serveur, file d'attente, nombre de clients et de générations en cours, section 14), `alerts` (franchissements de limites par type : `count`, `last`), `memory` (`used_bytes`, `limit_bytes`, `peak_bytes` et `used_percent` du conteneur, lus dans les fichiers cgroup `memory.current`, `memory.max`, `memory.peak` — ou `memory.usage_in_bytes`, `memory.limit_in_bytes`, `memory.max_usage_in_bytes` en cgroup v1 —, puis `process_rss_bytes` et `process_peak_rss_bytes` du processus, lus dans `/proc/self/status`; `null` quand l'information n'existe pas, par exemple hors Linux ou sans limite) et `temporary` (`free_bytes` et `total_bytes` du disque du dossier temporaire, `generation_files_bytes` occupés par les dossiers des générations en cours). Juste avant un plantage, il montre si c'est la mémoire ou l'espace temporaire qui approche de sa limite. Tests : `tests/test_health_details.py`.
+* État du conteneur, à suivre en direct pendant un test aux limites (section 1.12) : `http://localhost:8000/api/health/details`, par exemple sur la production `https://wikipedia2book.toolforge.org/api/health/details`. Réservé à la supervision : en-tête `Authorization: Bearer <jeton>`, le jeton étant défini par `WIKIPEDIA2BOOK_MONITOR_TOKEN` (32 caractères au moins, par exemple `python -c "import secrets; print(secrets.token_urlsafe(32))"` ; sans lui, l'endpoint répond toujours HTTP 401, `detail.code` = `monitor_token_required`), par exemple `curl -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" <adresse>`. Réponse JSON, sans aucune donnée personnelle, jamais mise en cache, non comptée dans les hits par heure : `version`, `started` (démarrage du serveur : s'il change, le serveur a redémarré), `now`, `generations_in_progress` (générations de PDF en cours), `memory_gate`, `disk_gate` et `generation_gate` (contrôles de la mémoire, de la place disque et admission des générations : `ratio`, `reserved_bytes`, `active_stages`, `waiting_stages`), `request_limits` (limites de générations par client et pour tout le serveur, file d'attente, nombre de clients et de générations en cours, section 2), `alerts` (franchissements de limites par type : `count`, `last`), `memory` (`used_bytes`, `limit_bytes`, `peak_bytes` et `used_percent` du conteneur, lus dans les fichiers cgroup `memory.current`, `memory.max`, `memory.peak` — ou `memory.usage_in_bytes`, `memory.limit_in_bytes`, `memory.max_usage_in_bytes` en cgroup v1 —, puis `process_rss_bytes` et `process_peak_rss_bytes` du processus, lus dans `/proc/self/status`; `null` quand l'information n'existe pas, par exemple hors Linux ou sans limite) et `temporary` (`free_bytes` et `total_bytes` du disque du dossier temporaire, `generation_files_bytes` occupés par les dossiers des générations en cours). Juste avant un plantage, il montre si c'est la mémoire ou l'espace temporaire qui approche de sa limite. Tests : `tests/test_health_details.py`.
 
 * Journal des générations, pour diagnostiquer après coup une génération lente ou en échec : `http://localhost:8000/api/health/generations`, par exemple `https://wikipedia2book.toolforge.org/api/health/generations`. Même jeton de supervision. Réponse JSON, jamais mise en cache, non comptée dans les hits par heure : `version`, `started`, `now` et `generations`, jusqu'aux 1 000 dernières générations depuis le démarrage du serveur (`GENERATION_LOG_KEEP`), moins quand elles dépassent ensemble 40 000 étapes (`GENERATION_LOG_STAGES`, environ 30 Mo de mémoire, une étape en prenant environ 760 octets ; un livre de 10 articles compte une trentaine d'étapes, un livre de 300 articles environ 330), les plus anciennes étant retirées d'abord, la plus récente en premier. Chaque génération donne `id`, `started`, `version`, `language`, le nombre d'`articles`, de `documents` et de `chapters`, `page_format`, `orientation`, `page_numbers`, `table_of_contents`, `status` (`running`, `done`, `error` ou `aborted` si le client abandonne), `duration_s`, `size_bytes` (réussite) ou `error` (type de l'erreur seulement, ou le message d'arrêt du processus d'assemblage), et `stages`, la liste des étapes franchies : `at_s` (secondes depuis le début), `stage`, `process` (`server` ou `assembly`), `container_bytes` (mémoire du conteneur), `rss_bytes` et `peak_rss_bytes` (mémoire du processus qui a franchi l'étape) et, pour le processus d'assemblage, `server_rss_bytes`. Étapes : `start`, `fetch_image` (image de fond donnée par son adresse : `image` = `cover_image` ou `back_image`, `duration_s` du téléchargement, `size_bytes`), `fetch_document` (document importé donné par son adresse : `duration_s`, `size_bytes`, `pdf`), `downloads_done` (avec `article_pages`), `memory_wait` (une étape a attendu de la mémoire : `reason` = `generation`, `disk`, `download`, `fit`, `fetch_image`, `assembly_disk` ou `assembly`, `waited_s`, `reserved_bytes`), puis dans le processus d'assemblage `assembly_start`, `fit_backgrounds` (réduction des images de fond : `duration_s`, `bytes_before`, `bytes_after`), `cover_html` (HTML de la couverture, dont l'analyse de l'image de fond pour la couleur du texte : `duration_s`, `background`), `render_cover`, `render_toc_count` (numérotation), `render_toc`, `render_chapters`, `render_conclusion`, `render_license`, `render_back_cover` (image de fond de dernière page), `merge_parts` (fusion des parties), `merge_reopen` (réouverture du livre fusionné), `outline_and_links`, `stamp_page_numbers` (numérotation) et `save`. Aucun titre, aucune adresse ni rien qui identifie l'utilisateur n'y figure. Le journal vit en mémoire et disparaît quand le serveur redémarre : chaque étape est donc aussi écrite sur la sortie standard, en une ligne JSON, et reste lisible dans les journaux de la plateforme (`toolforge webservice logs` sur Toolforge), même quand la plateforme arrête tout le conteneur faute de mémoire. Ces journaux de la plateforme sont eux-mêmes effacés à chaque redémarrage : quand `WIKIPEDIA2BOOK_GENERATION_LOG_DIR` désigne un dossier persistant (sur Toolforge, `/data/project/wikipedia2book/generations`, dans le stockage NFS du compte de l'outil, posé par le `Procfile`), les mêmes lignes y sont aussi écrites, une par ligne dans un fichier par jour UTC (`AAAA-MM-JJ.jsonl`), avec en plus `at` (date et heure UTC) et `pod` (nom du conteneur) ; les fichiers de plus de 30 jours (`GENERATION_FILES_DAYS`) sont supprimés au premier écrit de chaque jour (`main.GenerationFiles`). L'écriture se fait dans un fil séparé, pour qu'un stockage NFS lent ne gèle jamais le serveur ; le dossier parent n'est jamais créé (sans montage, rien n'est écrit sur le disque éphémère du conteneur), et un échec d'écriture est signalé une fois sur la sortie standard (`generation_files_error`) sans arrêter la génération. Exception voulue par l'utilisateur à la règle « rien sur disque » : seules ces lignes, sans titre, adresse ni rien qui identifie l'utilisateur. Variable absente (défaut, `Dockerfile`, Northflank) : rien n'est écrit. Chaque article ou document téléchargé a son étape `download` (`kind` = `article` ou `document`, `download_s`, `fit_s`, `size_bytes`, `pages`), et chaque image de fond son étape `fetch_image` ; l'adresse téléchargée (`url` : PDF de l'article, adresse complète d'un fichier donné par l'utilisateur) n'est gardée que dans le journal en mémoire, lu avec le jeton de supervision ou par la page d'admin, jamais recopiée sur la sortie standard (choix de l'utilisateur). Une seule génération : `GET /api/health/generations/{id}` (`id` du journal), réponse `{"version", "started", "generation"}`, ou HTTP 404 quand elle n'est plus dans le journal ; non comptée dans les hits par heure, comme le journal entier. Sa demande : `GET /api/health/generations/{id}/request`, le livre demandé au format `wikipedia2book-workspace` (fichier JSON en pièce jointe, contenu des fichiers importés retiré, `removed_base64_chars`), gardé à part du journal (`generation_requests`, 1 Mo au plus par demande, `GENERATION_REQUEST_MAX_BYTES`, 30 Mo en tout, `GENERATION_REQUESTS_BYTES`), jamais écrit sur la sortie standard ; `request_bytes` en donne la taille dans le journal ; HTTP 404 quand elle n'est plus en mémoire. Tests : `tests/test_generation_log.py`, `tests/test_admin.py`.
 
@@ -194,9 +194,9 @@ curl --fail --show-error --get 'http://localhost:8000/api/books/generate-from-wi
 	--output animaux.pdf
 ```
 
-Dans les deux cas, la réponse est le fichier PDF binaire; `--output` le sauvegarde localement. `language` règle la langue des libellés générés dans le PDF et les langues prises en charge sont celles de la section 12.1.
+Dans les deux cas, la réponse est le fichier PDF binaire; `--output` le sauvegarde localement. `language` règle la langue des libellés générés dans le PDF et les langues prises en charge sont celles de la section 12.1 de la spécification fonctionnelle.
 
-### 13.4 Docker et exécution locale
+### 1.4 Docker et exécution locale
 
 Le logiciel est livré avec :
 
@@ -228,7 +228,7 @@ L'application est servie à la même adresse.
 
 La page de l'application (`/`) et ses fichiers (`/static/…`) sont servis avec `Cache-Control: no-cache` : le navigateur revérifie chaque fichier à chaque chargement (réponse 304 s'il n'a pas changé), ce qui évite de mélanger, après un déploiement, une nouvelle page avec d'anciens scripts ou traductions restés en cache. Les fichiers de `/static/` portent une empreinte (`ETag`) calculée sur leur contenu, et aucune date de modification (`Last-Modified`) (`main.ContentStaticFiles`) : sur Toolforge, tous les fichiers construits sont datés de 1980 ; avec l'empreinte de Starlette (date et taille) et cette date, un navigateur qui revalidait par la date recevait 304 à chaque version et gardait un ancien `i18n.js` (libellés affichés sous forme de clé, par exemple `admin.limits`). Tests : `tests/test_static_cache.py`.
 
-Le serveur ne stocke aucun livre ni PDF sur disque; tout l'état est conservé dans le navigateur et échangé via JSON. Le déploiement ne demande donc ni base de données ni volume persistant, sur aucune plateforme. Seul un dossier temporaire (répertoire temporaire du système) sert pendant chaque génération de PDF, et il est supprimé à la fin (section 11.1) : la plateforme doit offrir un espace temporaire d'environ deux fois la taille du plus gros livre généré.
+Le serveur ne stocke aucun livre ni PDF sur disque; tout l'état est conservé dans le navigateur et échangé via JSON. Le déploiement ne demande donc ni base de données ni volume persistant, sur aucune plateforme. Seul un dossier temporaire (répertoire temporaire du système) sert pendant chaque génération de PDF, et il est supprimé à la fin (section 11.1 de la spécification fonctionnelle) : la plateforme doit offrir un espace temporaire d'environ deux fois la taille du plus gros livre généré.
 
 #### Déployer son propre conteneur
 
@@ -246,7 +246,7 @@ Ces réglages fixent ce qu'une génération peut demander au serveur. Ce sont de
 | `WIKIPEDIA2BOOK_TOTAL_GENERATIONS` | `0` (défaut ; `50` sur Toolforge) | Générations simultanées pour tout le serveur, pour les hébergements qui masquent l'adresse des visiteurs. `0` lève la limite. |
 | `WIKIPEDIA2BOOK_TOTAL_PER_MINUTE` | `0` (défaut ; `200` sur Toolforge) | Générations lancées par minute pour tout le serveur. `0` lève la limite. |
 | `WIKIPEDIA2BOOK_WAITING_GENERATIONS` | `100` (défaut) | Générations en attente d'admission en même temps ; les suivantes reçoivent HTTP 429. `0` lève la limite. |
-| `WIKIPEDIA2BOOK_GENERATION_LOG_DIR` | vide (défaut) ; `/data/project/wikipedia2book/generations` sur Toolforge (`Procfile`) | Dossier persistant où le journal des générations est aussi écrit, un fichier par jour, 30 jours gardés (section 13.4). Son dossier parent doit déjà exister. Vide : rien n'est écrit sur disque. |
+| `WIKIPEDIA2BOOK_GENERATION_LOG_DIR` | vide (défaut) ; `/data/project/wikipedia2book/generations` sur Toolforge (`Procfile`) | Dossier persistant où le journal des générations est aussi écrit, un fichier par jour, 30 jours gardés (section 1.4). Son dossier parent doit déjà exister. Vide : rien n'est écrit sur disque. |
 | `WIKIPEDIA2BOOK_CLIENT_IP_HEADER` | vide (défaut) | En-tête qui porte l'adresse du visiteur quand le conteneur est derrière un proxy de confiance, par exemple `x-forwarded-for` (sa dernière valeur est utilisée). À laisser vide sans proxy : un client pourrait écrire l'en-tête lui-même. |
 | `WIKIPEDIA2BOOK_DISK_RATIO` | `0.95` (défaut, absent du `Dockerfile`) | Part du disque temporaire que les générations peuvent remplir. Un téléchargement d'article (30 Mo réservés) et l'assemblage du livre (50 Mo + 2 fois la taille des articles) attendent, en affichant « Serveur occupé », tant que l'espace utilisé plus les réserves en cours plus leur estimation dépasseraient cette part. `0` désactive le contrôle. |
 
@@ -267,28 +267,28 @@ Le serveur refuse de démarrer avec une valeur invalide et dit pourquoi.
 | 256 Mo | moins de 20 articles | Northflank : redémarrage à 20 articles, déjà très lent à 10 |
 | 2 Gio | environ 800 articles (14 000 pages, 780 Mo de PDF) | Toolforge : échec à 1 000 articles ; l'instance officielle limite les livres à 300 articles (au-delà, génération en volumes) |
 
-Compter environ 250 Mo pour le serveur et le processus d'assemblage eux-mêmes, plus 2 à 2,5 Mo par article environ au pic, et garder la limite bien en dessous de ce que le conteneur peut tenir, par exemple du tiers à la moitié : avec 2 Gio, cela donne quelques centaines d'articles ; avec 256 Mo, il ne reste rien pour un livre de quelque taille que ce soit. Pour trouver le vrai maximum d'un déploiement, y lancer le test aux limites (section 13.12 ; il peut faire redémarrer le serveur, donc pas aux heures chargées) :
+Compter environ 250 Mo pour le serveur et le processus d'assemblage eux-mêmes, plus 2 à 2,5 Mo par article environ au pic, et garder la limite bien en dessous de ce que le conteneur peut tenir, par exemple du tiers à la moitié : avec 2 Gio, cela donne quelques centaines d'articles ; avec 256 Mo, il ne reste rien pour un livre de quelque taille que ce soit. Pour trouver le vrai maximum d'un déploiement, y lancer le test aux limites (section 1.12 ; il peut faire redémarrer le serveur, donc pas aux heures chargées) :
 
 ```bash
 python scripts/limit_check.py --base-url https://votre-serveur --search 50
 ```
 
-Il double le nombre d'articles jusqu'au premier échec, puis affine par dichotomie. Ajouter `--save-pdf ./tmp` pour garder chaque livre généré (`./tmp` est ignoré par git). Avec le jeton de supervision (`Authorization: Bearer`, section 13.7), `GET /api/health/details` donne la mémoire du conteneur et sa limite, et `GET /api/health/generations` la mémoire atteinte à chaque étape des dernières générations.
+Il double le nombre d'articles jusqu'au premier échec, puis affine par dichotomie. Ajouter `--save-pdf ./tmp` pour garder chaque livre généré (`./tmp` est ignoré par git). Avec le jeton de supervision (`Authorization: Bearer`, section 1.7), `GET /api/health/details` donne la mémoire du conteneur et sa limite, et `GET /api/health/generations` la mémoire atteinte à chaque étape des dernières générations.
 
-**Voir les alertes.** À chaque franchissement de limite, le serveur écrit sur sa sortie standard une ligne JSON contenant `"alert"` et la compte dans `GET /api/health/details`. Commandes pour les lire sur Toolforge, Northflank, Docker et un serveur local, et leur interprétation : section 14.
+**Voir les alertes.** À chaque franchissement de limite, le serveur écrit sur sa sortie standard une ligne JSON contenant `"alert"` et la compte dans `GET /api/health/details`. Commandes pour les lire sur Toolforge, Northflank, Docker et un serveur local, et leur interprétation : section 2.
 
-### 13.5 Environnements et branches
+### 1.5 Environnements et branches
 
 L'application est déployée sur deux plateformes, chacune reliée à une branche du dépôt GitHub `gmoulard/wikipedia2book` :
 
 | Plateforme | URL | Branche suivie | Construction de l'image | Déclenchement |
 | --- | --- | --- | --- | --- |
-| Toolforge (Wikimedia Cloud) | https://wikipedia2book.toolforge.org | `production-toolforge` | Buildpacks Toolforge (`Procfile`, `Aptfile`, `.python-version`) | Workflow GitHub Actions du dépôt (section 13.6) |
+| Toolforge (Wikimedia Cloud) | https://wikipedia2book.toolforge.org | `production-toolforge` | Buildpacks Toolforge (`Procfile`, `Aptfile`, `.python-version`) | Workflow GitHub Actions du dépôt (section 1.6) |
 | Northflank | https://prod--wikipedia2book--wkvpbnfj6h4v.code.run | `main` | `Dockerfile` | Intégration GitHub de Northflank, réglée dans son interface |
 
 Toolforge est l'instance de référence, proposée à la communauté Wikipédia. Northflank reçoit chaque changement poussé sur `main` et sert de préproduction.
 
-Sur chaque plateforme, la documentation interactive de l'API est à l'adresse `/docs` (https://wikipedia2book.toolforge.org/docs). Exemple sur Toolforge avec le livre *Épaves de la rade de Saint-Pierre* : [PDF généré directement](https://wikipedia2book.toolforge.org/api/pdf/from-json?url=https%3A%2F%2Fgmoulard.github.io%2Fwikipedia2book%2Fstatic%2FWrecks-of-Saint-Pierre-harbor.json) ou [livre ouvert dans l'interface](https://wikipedia2book.toolforge.org/?json=https://gmoulard.github.io/wikipedia2book/static/Wrecks-of-Saint-Pierre-harbor.json). Les statistiques d'utilisation de Toolforge sont sur https://gmoulard.github.io/wikipedia2book/stats.html (section 13.8).
+Sur chaque plateforme, la documentation interactive de l'API est à l'adresse `/docs` (https://wikipedia2book.toolforge.org/docs). Exemple sur Toolforge avec le livre *Épaves de la rade de Saint-Pierre* : [PDF généré directement](https://wikipedia2book.toolforge.org/api/pdf/from-json?url=https%3A%2F%2Fgmoulard.github.io%2Fwikipedia2book%2Fstatic%2FWrecks-of-Saint-Pierre-harbor.json) ou [livre ouvert dans l'interface](https://wikipedia2book.toolforge.org/?json=https://gmoulard.github.io/wikipedia2book/static/Wrecks-of-Saint-Pierre-harbor.json). Les statistiques d'utilisation de Toolforge sont sur https://gmoulard.github.io/wikipedia2book/stats.html (section 1.8).
 
 Cycle de publication :
 
@@ -313,7 +313,7 @@ Les tags servent à retrouver le code d'une version (`git checkout v1.4.0`), à 
 
 Le choix de branche de Northflank ne fait pas partie du dépôt : il se modifie dans son interface (service de build, Build settings, Branch).
 
-### 13.6 Intégration continue (GitHub Actions)
+### 1.6 Intégration continue (GitHub Actions)
 
 Cinq workflows. Le principal, `.github/workflows/deploy-toolforge.yml` (« Tests and Toolforge deploy »), a deux jobs :
 
@@ -325,19 +325,19 @@ Cinq workflows. Le principal, `.github/workflows/deploy-toolforge.yml` (« Tests
 ssh <login>@login.toolforge.org "become wikipedia2book bash -s" < scripts/toolforge-deploy.sh
 ```
 
-Juste avant ce redémarrage, qui efface les journaux du webservice, l'étape « Hourly statistics before restart » relève les hits par heure (section 13.8, « Hits par heure ») et les committe sur `main`. Elle est en `continue-on-error` : un échec du relevé apparaît en avertissement dans GitHub Actions mais ne bloque jamais le déploiement. Le job a pour cela la permission `contents: write`.
+Juste avant ce redémarrage, qui efface les journaux du webservice, l'étape « Hourly statistics before restart » relève les hits par heure (section 1.8, « Hits par heure ») et les committe sur `main`. Elle est en `continue-on-error` : un échec du relevé apparaît en avertissement dans GitHub Actions mais ne bloque jamais le déploiement. Le job a pour cela la permission `contents: write`.
 
 Les déploiements Toolforge sont sérialisés (groupe de concurrence `toolforge-deploy`, sans annulation du déploiement en cours); les autres exécutions sont indépendantes.
 
 Le secret `TOOLFORGE_SSH_KEY` contient une clé privée OpenSSH dédiée au déploiement, distincte de la clé personnelle, dont la partie publique est enregistrée sur le compte Wikimedia (idm.wikimedia.org). La révoquer suffit à couper le déploiement automatique sans toucher aux autres accès.
 
-Le second, `.github/workflows/toolviews-stats.yml` (« Toolviews stats »), met à jour chaque jour les statistiques d'utilisation (section 13.8).
+Le second, `.github/workflows/toolviews-stats.yml` (« Toolviews stats »), met à jour chaque jour les statistiques d'utilisation (section 1.8).
 
-Le troisième, `.github/workflows/jekyll-gh-pages.yml`, publie à chaque push sur `main`, chaque jour à 4 h 17 UTC (et sur lancement manuel) le site de documentation https://gmoulard.github.io/wikipedia2book/ avec GitHub Pages : Le site est construit à partir du dossier `docs/` : Jekyll y convertit en HTML les fichiers Markdown (spécifications fonctionnelle et technique, historique des versions, `stats.md`…) avec le thème Just the Docs (`docs/_config.yml` : thème épinglé `just-the-docs/just-the-docs@v0.12.0` par `remote_theme`, menu latéral en deux parties, « Fonctionnel » (`fonctionnel.md` : spécification fonctionnelle, historique, aide « Search help », comparaisons) et « Technique » (`technique.md` : spécification technique, tests manuels, test aux limites, statistiques), dans l'ordre de `nav_order`, recherche, titres des pages, redirection des anciennes adresses `SPECIFICATIONS.fr.html` et `SPECIFICATIONS.en.html` vers les spécifications fonctionnelles) ; `docs/_includes/head_custom.html`, inséré par le thème dans chaque page, dessine les schémas Mermaid et le graphique horaire, ouvre les deux parties du menu dès l'ouverture de la page, colle le menu au bord gauche et donne toute la largeur restante au contenu sur les grands écrans, ajoute dans le menu un petit drapeau français derrière « Functional specification » et « Technical specification » (les versions françaises, qui font référence, ne figurent plus dans le menu, `nav_exclude`), une entrée « Français » en tête de « Search help » et un drapeau devant chacune des 12 aides (bibliothèque flag-icons 7.2.3, jsDelivr), et ajoute dans l'en-tête des pages traduites (aide en 12 langues, spécifications en français et en anglais) un sélecteur de langue qui ouvre la même page dans la langue choisie ; les pages en persan et en arabe s'y affichent de droite à gauche. La page d'accueil est `docs/index.md`, un document à part entière du dossier `docs/`, initialisé depuis `README.md` mais qui n'en est plus une copie ; ses liens sont relatifs au site, et `LICENSE`, `CODE_OF_CONDUCT.md`, `CITATION.cff` et `codemeta.json`, restés à la racine du dépôt, pointent vers GitHub. C'est l'adresse déclarée comme documentation utilisateur dans `toolinfo.json`. GitHub Pages n'affiche pas les blocs Mermaid nativement : `docs/_includes/head_custom.html`, ajouté par Jekyll dans l'en-tête de chaque page (thème par défaut), charge Mermaid 11.17.2 depuis jsDelivr et dessine les blocs ```` ```mermaid ```` (section 13.10). Le site est aussi reconstruit (déclencheur `workflow_run`) après chaque exécution de « Toolviews stats » qui n'a pas été annulée, même en échec partiel puisque des statistiques ont pu être committées, et après chaque exécution de « Tests and Toolforge deploy » sur `production-toolforge` (relevé horaire d'avant déploiement), et chaque construction ajoute la page de statistiques d'utilisation https://gmoulard.github.io/wikipedia2book/stats.html (section 13.8). Chaque construction publie aussi un PDF d'exemple du jour, `static/Wrecks-of-Saint-Pierre-harbor.pdf` : le livre `docs/static/Wrecks-of-Saint-Pierre-harbor.json` du dépôt est envoyé à la production (`POST https://wikipedia2book.toolforge.org/api/pdf/from-json?language=en`, 3 nouvelles tentatives, 15 min au plus), la réponse est vérifiée (en-tête `%PDF-`, fin `%%EOF`, plus de 1 Mo) puis gardée dans le cache des actions sous une clé faite du jour et de l'empreinte du JSON : le PDF n'est donc généré qu'une fois par jour (ou à chaque modification du JSON), les autres constructions du jour reprennent le cache. Si la génération échoue, l'étape le signale par un avertissement et le site garde le PDF du dépôt, sans bloquer la publication.
+Le troisième, `.github/workflows/jekyll-gh-pages.yml`, publie à chaque push sur `main`, chaque jour à 4 h 17 UTC (et sur lancement manuel) le site de documentation https://gmoulard.github.io/wikipedia2book/ avec GitHub Pages : Le site est construit à partir du dossier `docs/` : Jekyll y convertit en HTML les fichiers Markdown (spécifications fonctionnelle et technique, historique des versions, `stats.md`…) avec le thème Just the Docs (`docs/_config.yml` : thème épinglé `just-the-docs/just-the-docs@v0.12.0` par `remote_theme`, menu latéral en deux parties, « Fonctionnel » (`fonctionnel.md` : spécification fonctionnelle, historique, aide « Search help », comparaisons) et « Technique » (`technique.md` : spécification technique, tests manuels, test aux limites, statistiques), dans l'ordre de `nav_order`, recherche, titres des pages, redirection des anciennes adresses `SPECIFICATIONS.fr.html` et `SPECIFICATIONS.en.html` vers les spécifications fonctionnelles) ; `docs/_includes/head_custom.html`, inséré par le thème dans chaque page, dessine les schémas Mermaid et le graphique horaire, ouvre les deux parties du menu dès l'ouverture de la page, colle le menu au bord gauche et donne toute la largeur restante au contenu sur les grands écrans, ajoute dans le menu un petit drapeau français derrière « Functional specification » et « Technical specification » (les versions françaises, qui font référence, ne figurent plus dans le menu, `nav_exclude`), une entrée « Français » en tête de « Search help » et un drapeau devant chacune des 12 aides (bibliothèque flag-icons 7.2.3, jsDelivr), et ajoute dans l'en-tête des pages traduites (aide en 12 langues, spécifications en français et en anglais) un sélecteur de langue qui ouvre la même page dans la langue choisie ; les pages en persan et en arabe s'y affichent de droite à gauche. La page d'accueil est `docs/index.md`, un document à part entière du dossier `docs/`, initialisé depuis `README.md` mais qui n'en est plus une copie ; ses liens sont relatifs au site, et `LICENSE`, `CODE_OF_CONDUCT.md`, `CITATION.cff` et `codemeta.json`, restés à la racine du dépôt, pointent vers GitHub. C'est l'adresse déclarée comme documentation utilisateur dans `toolinfo.json`. GitHub Pages n'affiche pas les blocs Mermaid nativement : `docs/_includes/head_custom.html`, ajouté par Jekyll dans l'en-tête de chaque page (thème par défaut), charge Mermaid 11.17.2 depuis jsDelivr et dessine les blocs ```` ```mermaid ```` (section 1.10). Le site est aussi reconstruit (déclencheur `workflow_run`) après chaque exécution de « Toolviews stats » qui n'a pas été annulée, même en échec partiel puisque des statistiques ont pu être committées, et après chaque exécution de « Tests and Toolforge deploy » sur `production-toolforge` (relevé horaire d'avant déploiement), et chaque construction ajoute la page de statistiques d'utilisation https://gmoulard.github.io/wikipedia2book/stats.html (section 1.8). Chaque construction publie aussi un PDF d'exemple du jour, `static/Wrecks-of-Saint-Pierre-harbor.pdf` : le livre `docs/static/Wrecks-of-Saint-Pierre-harbor.json` du dépôt est envoyé à la production (`POST https://wikipedia2book.toolforge.org/api/pdf/from-json?language=en`, 3 nouvelles tentatives, 15 min au plus), la réponse est vérifiée (en-tête `%PDF-`, fin `%%EOF`, plus de 1 Mo) puis gardée dans le cache des actions sous une clé faite du jour et de l'empreinte du JSON : le PDF n'est donc généré qu'une fois par jour (ou à chaque modification du JSON), les autres constructions du jour reprennent le cache. Si la génération échoue, l'étape le signale par un avertissement et le site garde le PDF du dépôt, sans bloquer la publication.
 
 Le quatrième, `.github/workflows/tag-check.yml` (« Tag check »), se lance à chaque push d'un tag `v*` : il échoue si le numéro du tag ne correspond pas à la version écrite dans `app/version.py` (`VERSION = "x.y.z"`, depuis la 1.7.4; `app/main.py` avant). Un tel échec ne se corrige jamais en déplaçant le tag, mais par une nouvelle version.
 
-Le cinquième, `.github/workflows/benchmark.yml` (« Benchmark »), joue le benchmark à la demande (section 13.11).
+Le cinquième, `.github/workflows/benchmark.yml` (« Benchmark »), joue le benchmark à la demande (section 1.11).
 
 Le sixième, `.github/workflows/security.yml` (« Security »), se lance à chaque push sur `main`, sur chaque pull request, chaque lundi et à la demande : vulnérabilités connues des dépendances de `requirements.txt` (pip-audit), analyse statique du Python de `app/` et `scripts/` (bandit, gravité moyenne et plus), tests de sécurité (`tests/test_security.py`) et paquets de l'image Docker (Trivy, failles critiques et élevées corrigeables, action épinglée sur un commit). CodeQL (Python et JavaScript) n'y figure pas : il tourne dans la configuration par défaut de GitHub (workflow « CodeQL », résultats dans l'onglet Security), qui refuse une seconde analyse CodeQL dans un workflow. Il ne déploie rien et ne bloque pas « Tests and Toolforge deploy ». Les tests de sécurité vérifient :
 
@@ -350,13 +350,13 @@ Le sixième, `.github/workflows/security.yml` (« Security »), se lance à chaq
 * paramètre `language` refusé s'il n'est pas un code de langue ;
 * page : toute adresse venue d'un livre JSON passe par `safeUrl` (HTTPS seul) avant d'être mise dans un lien.
 
-### 13.7 Toolforge
+### 1.7 Toolforge
 
 #### Fichiers propres à Toolforge
 
 Toolforge construit l'image avec des buildpacks et ignore le `Dockerfile`. Le dépôt fournit :
 
-* `Procfile` : commande `uvicorn` sur le port 8000 attendu par Toolforge, précédée de `env WIKIPEDIA2BOOK_PLATFORM=toolforge` (lève les limites de téléchargement, section 13.2).
+* `Procfile` : commande `uvicorn` sur le port 8000 attendu par Toolforge, précédée de `env WIKIPEDIA2BOOK_PLATFORM=toolforge` (lève les limites de téléchargement, section 1.2).
 
 * `Aptfile` : mêmes dépendances système et polices que le `Dockerfile`.
 
@@ -374,7 +374,7 @@ Toolforge construit l'image avec des buildpacks et ignore le `Dockerfile`. Le d�
 
 1. lance le build de la branche `production-toolforge` (`toolforge build start --detach --json --use-latest-versions --ref production-toolforge`) et relève dans la réponse l'identifiant du build et le commit réellement construit (`resolved_ref`);
 2. suit ce build précis par son identifiant jusqu'à sa fin (au plus 15 minutes), et affiche ses journaux en cas d'échec;
-3. crée ou met à jour les variables d'environnement `FONTCONFIG_FILE=/workspace/toolforge-fonts.conf` et `GIT_COMMIT=<commit construit>` (l'image ne contient pas de dépôt git : le pied de page lit le commit dans cette variable), puis `WIKIPEDIA2BOOK_MONITOR_TOKEN`, `WIKIPEDIA2BOOK_OAUTH_CLIENT_ID` et `WIKIPEDIA2BOOK_OAUTH_CLIENT_SECRET` à partir des secrets GitHub du même nom (section 12.2), seulement quand le secret existe : une variable absente des secrets garde sa valeur sur Toolforge. Ces trois valeurs voyagent dans le script lu sur l'entrée standard de `ssh` et sont passées à `toolforge envvars create` par l'entrée standard, jamais en argument : sur le bastion partagé, un argument de commande est visible des autres utilisateurs. Pour changer une valeur : `gh secret set WIKIPEDIA2BOOK_MONITOR_TOKEN` (la commande demande la valeur), puis un nouveau déploiement ;
+3. crée ou met à jour les variables d'environnement `FONTCONFIG_FILE=/workspace/toolforge-fonts.conf` et `GIT_COMMIT=<commit construit>` (l'image ne contient pas de dépôt git : le pied de page lit le commit dans cette variable), puis `WIKIPEDIA2BOOK_MONITOR_TOKEN`, `WIKIPEDIA2BOOK_OAUTH_CLIENT_ID` et `WIKIPEDIA2BOOK_OAUTH_CLIENT_SECRET` à partir des secrets GitHub du même nom (section 12.2 de la spécification fonctionnelle), seulement quand le secret existe : une variable absente des secrets garde sa valeur sur Toolforge. Ces trois valeurs voyagent dans le script lu sur l'entrée standard de `ssh` et sont passées à `toolforge envvars create` par l'entrée standard, jamais en argument : sur le bastion partagé, un argument de commande est visible des autres utilisateurs. Pour changer une valeur : `gh secret set WIKIPEDIA2BOOK_MONITOR_TOKEN` (la commande demande la valeur), puis un nouveau déploiement ;
 4. attend qu'aucune génération ne soit en cours (`generations_in_progress` de `/api/health/details`, avec le jeton de supervision passé par l'entrée standard de `curl`, vérifié toutes les 10 s, au plus 30 minutes, puis redémarrage quand même ; sans jeton, pas d'attente), pour ne pas couper un livre en cours de génération, puis redémarre le webservice (`toolforge webservice buildservice restart`);
 5. vérifie, pendant au plus 200 secondes, que `https://wikipedia2book.toolforge.org/api/version` renvoie bien ce commit, et affiche les journaux du webservice sinon.
 
@@ -392,7 +392,7 @@ toolforge build start --use-latest-versions --ref production-toolforge https://g
 toolforge webservice buildservice start --mount=all --mem 2Gi --cpu 1
 ```
 
-`--mount=all` : le stockage NFS du compte de l'outil est monté dans le conteneur, pour le journal des générations sur 30 jours (`/data/project/wikipedia2book/generations`, section 13.4) ; le reste de l'application ne l'utilise pas (`--mount=none` jusqu'au 19/11/2026). `scripts/toolforge-deploy.sh` vérifie `~/service.manifest` : si le service n'est pas monté (`mount: none`), il l'arrête et le relance avec `--mount=all --mem 2Gi --cpu 1`, sinon il se contente de `restart`, qui garde le montage ; un redémarrage plus long que prévu ne fait plus échouer le script, qui attend jusqu'à 300 s que `/api/version` réponde. `--mem 2Gi --cpu 1` : WeasyPrint et l'assemblage de PDF de plusieurs centaines de pages dépassent les 512 Mi attribués par défaut.
+`--mount=all` : le stockage NFS du compte de l'outil est monté dans le conteneur, pour le journal des générations sur 30 jours (`/data/project/wikipedia2book/generations`, section 1.4) ; le reste de l'application ne l'utilise pas (`--mount=none` jusqu'au 19/11/2026). `scripts/toolforge-deploy.sh` vérifie `~/service.manifest` : si le service n'est pas monté (`mount: none`), il l'arrête et le relance avec `--mount=all --mem 2Gi --cpu 1`, sinon il se contente de `restart`, qui garde le montage ; un redémarrage plus long que prévu ne fait plus échouer le script, qui attend jusqu'à 300 s que `/api/version` réponde. `--mem 2Gi --cpu 1` : WeasyPrint et l'assemblage de PDF de plusieurs centaines de pages dépassent les 512 Mi attribués par défaut.
 
 #### Mise en place de la page d'administration
 
@@ -425,7 +425,7 @@ ssh <login>@login.toolforge.org "become wikipedia2book bash -s" < scripts/toolfo
 
 * Le port SSH 22 de `login.toolforge.org` peut être bloqué par certains réseaux d'entreprise; les exécuteurs GitHub Actions n'ont pas cette limite.
 
-### 13.8 Statistiques d'utilisation (Toolviews)
+### 1.8 Statistiques d'utilisation (Toolviews)
 
 Aucun pisteur, rien n'est écrit sur disque, et personne n'est identifié. La fréquentation par jour vient de Toolviews (https://toolviews.toolforge.org/api/), qui compte les requêtes reçues par le proxy d'entrée de Toolforge pour chaque outil; la fréquentation par heure, des journaux du webservice et d'un compteur en mémoire de l'application (« Hits par heure » ci-dessous). Les scripts de relevé sont annexes : ils ne font pas partie de l'application déployée et ne changent pas sa version; le compteur en mémoire, lui, en fait partie.
 
@@ -460,7 +460,7 @@ Page publiée : https://gmoulard.github.io/wikipedia2book/stats.html (statistiqu
 
 Toolviews ne compte que par jour. Pour les heures, la source est le journal du webservice sur Toolforge : uvicorn y écrit une ligne par requête, sans heure, mais `kubectl logs --timestamps` en ajoute une. Ce journal est effacé à chaque redémarrage du webservice : il est donc relevé chaque jour par « Toolviews stats », et juste avant chaque déploiement en production par « Tests and Toolforge deploy ».
 
-* `scripts/toolforge-hourly.sh`, exécuté dans le compte de l'outil (`ssh … "become wikipedia2book bash -s" < scripts/toolforge-hourly.sh`, même clé SSH que le déploiement) : pour chaque pod en cours d'exécution dont le nom commence par `wikipedia2book-`, compte les lignes de requête HTTP du journal par heure UTC et n'imprime que `pod;heure;hits`, entre les marqueurs `BEGIN-HOURLY` et `END-HOURLY` ; puis compte les lignes de fin de génération écrites par `GenerationRecord.finish` (`{"generation": <n>, "status": "done"|"error"|"aborted", …}`) par heure UTC et par statut, et n'imprime que `pod;heure;statut;générations`, entre `BEGIN-GENERATIONS` et `END-GENERATIONS` ; il ajoute les mêmes comptes tirés des fichiers journaliers de `~/generations` (30 jours, section 13.4 ; `GENERATIONS_DIR` pour les tests), et garde pour chaque pod, heure et statut le plus grand des deux comptes : les générations d'un pod redémarré entre deux relevés ne sont plus perdues. Les adresses IP du journal ne quittent jamais Toolforge. Aucun pod trouvé : code d'erreur.
+* `scripts/toolforge-hourly.sh`, exécuté dans le compte de l'outil (`ssh … "become wikipedia2book bash -s" < scripts/toolforge-hourly.sh`, même clé SSH que le déploiement) : pour chaque pod en cours d'exécution dont le nom commence par `wikipedia2book-`, compte les lignes de requête HTTP du journal par heure UTC et n'imprime que `pod;heure;hits`, entre les marqueurs `BEGIN-HOURLY` et `END-HOURLY` ; puis compte les lignes de fin de génération écrites par `GenerationRecord.finish` (`{"generation": <n>, "status": "done"|"error"|"aborted", …}`) par heure UTC et par statut, et n'imprime que `pod;heure;statut;générations`, entre `BEGIN-GENERATIONS` et `END-GENERATIONS` ; il ajoute les mêmes comptes tirés des fichiers journaliers de `~/generations` (30 jours, section 1.4 ; `GENERATIONS_DIR` pour les tests), et garde pour chaque pod, heure et statut le plus grand des deux comptes : les générations d'un pod redémarré entre deux relevés ne sont plus perdues. Les adresses IP du journal ne quittent jamais Toolforge. Aucun pod trouvé : code d'erreur.
 * `scripts/toolforge_hourly.py <csv> <relevé>` : vérifie le relevé (marqueurs présents, chaque ligne au format attendu, sinon erreur sans rien écrire) et le fusionne dans `docs/toolforge_hourly.csv` (`hour;pod;hits`). Pour un même pod et une même heure, il garde le maximum : un relevé plus récent du même pod contient le précédent, et une rotation du journal ne fait pas baisser un compte. Des pods différents (avant et après un redémarrage) s'additionnent. Les lignes de plus de 7 jours sont supprimées. Avec `--generations docs/toolforge_generations.csv`, il vérifie aussi la section des générations et la fusionne de la même façon (maximum par heure, pod et statut) dans ce fichier (`hour;pod;status;generations`), qui garde tout l'historique.
 * `scripts/update-stats.sh daily|deploy` enchaîne, sur le poste GitHub Actions : Toolviews (`daily` seulement), le relevé horaire, la régénération de `docs/stats.md`, puis le commit et le push sur `main` (avec `git fetch` + `git rebase`, trois essais). Une étape en échec n'empêche pas les suivantes, mais le script finit en erreur pour que l'échec soit visible.
 * Graphique : `scripts/toolviews_chart.py … --hourly docs/toolforge_hourly.csv` ajoute en tête de `stats.md` un histogramme des 36 dernières heures relevées (somme des pods par heure, heures UTC, 1000 px de large), qui commence à l'heure la plus ancienne disponible si le relevé couvre moins de 36 heures. Une heure dont le journal a été perdu avant d'être relevé (redémarrage du webservice par Toolforge entre deux relevés) vaut 0. Sans fichier horaire ou sans ligne, la section est omise. Avec `--generations docs/toolforge_generations.csv`, il ajoute ensuite « Générations de PDF par jour » : le total depuis le premier jour relevé (terminées, en erreur, abandonnées ; un livre en volumes compte une génération par volume) et un histogramme des 31 derniers jours (somme des pods et des statuts, jours sans génération à 0). Sans fichier ou sans ligne, la section est omise. Le relevé ne commence qu'avec la version qui l'a ajouté : les générations plus anciennes ne sont pas comptées.
@@ -473,7 +473,7 @@ Toolviews ne compte que par jour. Pour les heures, la source est le journal du w
 * `hits` compte des requêtes HTTP, pas des personnes : une visite charge la page, les fichiers statiques, `/api/version`, puis chaque recherche ou génération. Il ne distingue pas l'interface web de l'API (seuls les journaux du webservice, `toolforge webservice logs`, le permettent, et ils sont effacés à chaque redéploiement).
 * Les hits par heure (journaux du webservice) et par jour (Toolviews) ne sont pas mesurés au même endroit : Toolviews compte au proxy d'entrée de Toolforge, le journal compte les requêtes arrivées jusqu'à l'application. Les totaux peuvent donc différer légèrement.
 
-### 13.9 Modèle de données et fichier de sauvegarde
+### 1.9 Modèle de données et fichier de sauvegarde
 
 L'état complet du livre est un objet `Project` (`app/models.py`), le même côté navigateur (`state.project`), dans les requêtes à l'API et dans le fichier de sauvegarde. Le nom `Project` est historique et conservé pour la compatibilité des fichiers déjà exportés. Toute valeur hors bornes est refusée par l'API (erreur 422).
 
@@ -507,9 +507,9 @@ Le bouton de téléchargement produit un fichier `<titre-du-livre>.json` (caract
 | `book_author` | texte, `""` | 200 caractères au plus |
 | `introduction` | texte, `""` | 20 000 caractères au plus |
 | `conclusion` | texte, `""` | 20 000 caractères au plus; vide = pas de page de conclusion |
-| `page_format` | `A0`…`A6`, `Letter`, `Legal`, `custom`; `A4` | format de page (section 9.1) |
+| `page_format` | `A0`…`A6`, `Letter`, `Legal`, `custom`; `A4` | format de page (section 9.1 de la spécification fonctionnelle) |
 | `custom_width_mm`, `custom_height_mm` | nombres, 148 × 210 | 50 à 1000 mm; utilisés si `page_format` = `custom` |
-| `orientation` | `portrait` ou `landscape`; `portrait` | orientation (section 9.3) |
+| `orientation` | `portrait` ou `landscape`; `portrait` | orientation (section 9.3 de la spécification fonctionnelle) |
 | `margin_top_mm`, `margin_bottom_mm` | nombres, 18 et 18 | 0 à 100 mm |
 | `margin_inside_mm`, `margin_outside_mm` | nombres, 18 et 16 | 0 à 100 mm |
 | `margin_binding_mm` | nombre, 0 | 0 à 40 mm, ajoutée à la marge intérieure |
@@ -555,9 +555,9 @@ Clé d'un article : `<langue>:<page_id>`, ou `<langue>:title:<titre en minuscule
 | `title` | texte | 1 à 120 caractères |
 | `article_keys` | liste de clés | articles et documents du chapitre, dans l'ordre |
 
-### 13.10 Schémas de l'architecture
+### 1.10 Schémas de l'architecture
 
-Schémas Mermaid, affichés directement par GitHub et, sur le site de documentation, par le script `docs/_includes/head_custom.html` (section 13.6). Ils doivent être mis à jour quand un module, un endpoint ou une étape de génération change.
+Schémas Mermaid, affichés directement par GitHub et, sur le site de documentation, par le script `docs/_includes/head_custom.html` (section 1.6). Ils doivent être mis à jour quand un module, un endpoint ou une étape de génération change.
 
 #### Modules et dépendances
 
@@ -666,7 +666,7 @@ sequenceDiagram
     M-->>U: done (size) puis octets du PDF, ou error (detail)
 ```
 
-### 13.11 Benchmark
+### 1.11 Benchmark
 
 Benchmark à jouer avant toute mise en production d'une version (skill `deploy-production`). Il mesure, par l'API, le temps de génération de livres PDF réels et le compare à une référence enregistrée.
 
@@ -681,7 +681,7 @@ Benchmark à jouer avant toute mise en production d'une version (skill `deploy-p
 
 #### Résultats mesurés
 
-Deux séries de mesures, dans des tableaux aux colonnes communes alignées (date, version, cible, puis pages et phases *Wikipédia*, *Application*, *Transfert*, *Total*, définies plus haut). La *cible* est l'hébergement mesuré ou le workflow. Seules les mesures d'une même cible se comparent entre elles : une cible autre que le workflow (Toolforge, Northflank, mesuré depuis un poste client) n'est pas dans l'environnement de la référence, ses écarts ne sont qu'indicatifs et son transfert inclut le réseau jusqu'au poste. Les mesures de taille maximale d'un livre sont à part, dans `docs/testLimitetoolforge.md` (section 13.12).
+Deux séries de mesures, dans des tableaux aux colonnes communes alignées (date, version, cible, puis pages et phases *Wikipédia*, *Application*, *Transfert*, *Total*, définies plus haut). La *cible* est l'hébergement mesuré ou le workflow. Seules les mesures d'une même cible se comparent entre elles : une cible autre que le workflow (Toolforge, Northflank, mesuré depuis un poste client) n'est pas dans l'environnement de la référence, ses écarts ne sont qu'indicatifs et son transfert inclut le réseau jusqu'au poste. Les mesures de taille maximale d'un livre sont à part, dans `docs/testLimitetoolforge.md` (section 1.12).
 
 * **Mesures par version** : génération d'un même livre réel, *Épaves de la rade de Saint-Pierre* (11 articles : 104 pages et 13,7 Mo jusqu'à la 1.9.4, 101 pages et 9,8 Mo depuis la 1.9.5, sans la liste « Sources et auteurs »), par `POST /api/pdf/stream` depuis un poste client, première génération après la mise en ligne de la version. Une génération répétée est plus rapide, car Wikimédia garde les PDF d'articles en cache : seule la phase *Wikipédia* en dépend. *Tests* : nombre de tests automatisés, tous réussis à la publication.
 
@@ -749,12 +749,12 @@ Deux séries de mesures, dans des tableaux aux colonnes communes alignées (date
   * Second passage du 2026-11-18 dans le workflow, 1.13.1 et changements suivants sans version (commit `aeaf152` : étape Édition en quatre blocs, plus de bandeau blanc sous le titre de couverture, message expliqué quand un site refuse le téléchargement par le serveur), niveau minimal avant la mise en production sur Toolforge : `ok` sur les trois scénarios, temps *application par page* 26 à 28 % sous la référence (0,66 s, 1,5 s et 1,43 s d'application). Le temps *Wikipédia* de `livre-reference-images` (11 s) reste long, comme aux passages précédents.
   * Passage du 2026-11-19 dans le workflow, 1.13.2 et changements suivants sans version (commit `78634c7` : couverture blanche à la manière des titres de Wikipédia, logo Wikipédia sur la couverture par défaut), niveau minimal avant la mise en production sur Toolforge : `ok` sur les trois scénarios, temps *application par page* de 1 à 4 % au-dessus de la référence (0,95 s, 2,05 s et 2,02 s d'application), dans le bruit de la mesure. Le temps *Wikipédia* de `livre-reference-images` redescend à 4,7 s.
 
-### 13.12 Test aux limites
+### 1.12 Test aux limites
 
-Test à jouer à la main pour connaître la taille maximale d'un livre qu'un déploiement sait générer. Contrairement au benchmark, il pousse le serveur jusqu'à l'échec : un serveur qui manque de mémoire est arrêté et redémarré par sa plateforme, ce qui interrompt les générations en cours des autres utilisateurs et remet à zéro le compteur horaire (section 13.8). Le jouer sur Toolforge seulement, exempté des limites de Wikimédia (section 13.2), et pas aux heures d'usage.
+Test à jouer à la main pour connaître la taille maximale d'un livre qu'un déploiement sait générer. Contrairement au benchmark, il pousse le serveur jusqu'à l'échec : un serveur qui manque de mémoire est arrêté et redémarré par sa plateforme, ce qui interrompt les générations en cours des autres utilisateurs et remet à zéro le compteur horaire (section 1.8). Le jouer sur Toolforge seulement, exempté des limites de Wikimédia (section 1.2), et pas aux heures d'usage.
 
 * **Script** : `scripts/limit_check.py --base-url <url> [--steps 25,50,100,200,400,800] [--source-page France] [--language fr]`, ou par dichotomie : `--search <départ> [--precision 50] [--max 2000]` double le nombre d'articles à partir de `<départ>` jusqu'au premier échec, puis coupe en deux l'intervalle entre le dernier succès et le premier échec jusqu'à la précision demandée ; après chaque échec, il attend que le serveur réponde de nouveau (`/api/version`, 10 minutes au plus) ; les paliers testés en redescendant réutilisent des articles déjà demandés à Wikimédia, qui les sert depuis son cache ; il termine par « Limite entre N articles (réussi) et M articles (échec) ». `--save-pdf <dossier>` enregistre chaque PDF reçu (`limite-<N>-articles.pdf`), par exemple dans `./tmp`, que git ignore ; sans cette option, le PDF est vérifié, compté puis oublié. Il prend les pages liées depuis une page Wikipédia (par défaut, l'article *France* en français ; pages existantes seulement, liens rouges exclus, par ordre alphabétique), génère des livres de plus en plus gros avec les N premiers, mesure chaque génération comme le benchmark (mêmes phases, PDF vérifié et pages comptées), et s'arrête au premier échec. Chaque palier réutilise les articles du précédent, déjà en cache chez Wikimédia.
-* **Générations simultanées** : `scripts/limit_check.py --base-url <url> --parallel 10,20,50 [--book app/static/testPerformanceReference.json]` demande en même temps N générations du même livre, par défaut le livre de référence *Épaves de la rade de Saint-Pierre* (10 articles, 107 pages, images de fond par adresse), palier après palier, et s'arrête au premier palier où une génération échoue ; le script n'abandonne jamais une génération, quelle que soit la durée de son attente « Serveur occupé » (pas de délai de réponse), après avoir attendu que le serveur réponde de nouveau. Un refus HTTP 429 (limites de générations, section 14) n'est pas un échec : la génération est redemandée après le délai indiqué. Sur Toolforge, la limite de 50 générations simultanées pour tout le serveur fait passer un grand palier par vagues ; pour mesurer la capacité brute, la lever le temps du test (`toolforge envvars create WIKIPEDIA2BOOK_TOTAL_GENERATIONS 0`, puis redémarrage). Tableau : livres en parallèle, réussis, échecs, refus 429 redemandés, durée totale du palier, génération médiane, la plus lente, erreurs rencontrées. Il mesure ce que supporte un serveur quand plusieurs personnes génèrent en même temps (mémoire des processus d'assemblage, `DOWNLOAD_CONCURRENCY` partagé, file d'attente) ; mêmes précautions que le test aux limites : sur Toolforge seulement, hors des heures d'usage, un échec pouvant faire redémarrer la production.
+* **Générations simultanées** : `scripts/limit_check.py --base-url <url> --parallel 10,20,50 [--book app/static/testPerformanceReference.json]` demande en même temps N générations du même livre, par défaut le livre de référence *Épaves de la rade de Saint-Pierre* (10 articles, 107 pages, images de fond par adresse), palier après palier, et s'arrête au premier palier où une génération échoue ; le script n'abandonne jamais une génération, quelle que soit la durée de son attente « Serveur occupé » (pas de délai de réponse), après avoir attendu que le serveur réponde de nouveau. Un refus HTTP 429 (limites de générations, section 2) n'est pas un échec : la génération est redemandée après le délai indiqué. Sur Toolforge, la limite de 50 générations simultanées pour tout le serveur fait passer un grand palier par vagues ; pour mesurer la capacité brute, la lever le temps du test (`toolforge envvars create WIKIPEDIA2BOOK_TOTAL_GENERATIONS 0`, puis redémarrage). Tableau : livres en parallèle, réussis, échecs, refus 429 redemandés, durée totale du palier, génération médiane, la plus lente, erreurs rencontrées. Il mesure ce que supporte un serveur quand plusieurs personnes génèrent en même temps (mémoire des processus d'assemblage, `DOWNLOAD_CONCURRENCY` partagé, file d'attente) ; mêmes précautions que le test aux limites : sur Toolforge seulement, hors des heures d'usage, un échec pouvant faire redémarrer la production.
 * **Tests** : `tests/test_limit_check.py` (faux générateur, sans réseau) ; mode `--parallel` testé avec un faux générateur qui compte les générations simultanées.
 * **Résultats sur Toolforge, depuis la version 1.8.3** (format A4, numérotation et table des matières, pages liées depuis l'article *France*, depuis un poste client ; détail de chaque passage : [testLimitetoolforge.md](testLimitetoolforge.md)) :
 
@@ -786,7 +786,7 @@ Test à jouer à la main pour connaître la taille maximale d'un livre qu'un dé
   * **1.12.0, mémoire vérifiée avant chaque étape** (2026-11-17, 01:16 UTC, `--parallel 20,50,100`, même livre et même relevé) : **20 livres réussis** (119,8 s, 85,5 s par génération ; 11 sur 20 avec redémarrage sans le contrôle) et **50 livres réussis** (575,7 s, 465,8 s par génération), sans redémarrage, avec jusqu'à 197 étapes en attente « Serveur occupé » ; **à 100, 2 réussis et 98 coupés** : le conteneur atteint sa limite (pic 2 147 Mo) et Toolforge le redémarre à 01:28:33, 56 s après le départ. Le relevé montre pourquoi : la mémoire du conteneur reste vers 1,9 à 2,1 Go pendant tout le palier de 50 alors que les réserves sont souvent nulles, car le processus du serveur garde la mémoire déjà utilisée (jusqu'à 2 046 Mo de RSS, l'allocateur ne la rend pas au système) ; le contrôle laisse alors passer une étape à la fois (une étape seule passe toujours), d'où la durée. À 100, ce sont les données que chaque génération garde en mémoire hors des étapes contrôlées (livre reçu, images de fond téléchargées et leur copie en base64) qui font déborder le serveur avant tout contrôle. Le contrôle ne couvre pas la mémoire gardée par le processus du serveur.
   * **Mémoire rendue et contenue** (2026-11-17, 01:52 UTC, commit `0a27d22` : `MALLOC_ARENA_MAX`, `malloc_trim`, admission à l'entrée, images de fond sur disque, recomposition dans des processus de travail ; `--parallel 50,100,500`, même livre et même relevé) : **aucun redémarrage**, même à 500 (le serveur garde son heure de démarrage du début à la fin). **50 livres réussis** en 314,6 s (575,7 s avant ces changements) et **100 réussis** en 620,3 s (2 sur 100 avant, avec redémarrage) ; **à 500, 250 réussis et 250 refusés** par une réponse HTTP 503 « Service Unavailable » qui ne vient pas de l'application (elle ne renvoie jamais 503 pour une génération) : jusqu'à 240 générations en même temps sur le serveur, les demandes suivantes sont refusées avant de l'atteindre, par la plateforme Toolforge. Pendant tout le test, au plus 17 générations admises à la fois (les autres attendent à l'entrée, jusqu'à 223), au plus 36 étapes en cours, conteneur à 1 450 Mo au plus (pic 1 639 Mo sur 2 048) et processus du serveur à 1 084 Mo au plus, redescendu vers 480 Mo entre les paliers. Un livre seul juste après la mise en production : 8,2 s, dont 3,6 s de téléchargements et de recompositions, processus du serveur vers 200 Mo.
 
-### 13.13 Stratégie d'optimisation du conteneur
+### 1.13 Stratégie d'optimisation du conteneur
 
 Démarche suivie pour tirer le maximum d'un conteneur limité sans jamais le faire redémarrer. Cible : Toolforge, 2 Gio de mémoire (limite cgroup), 1 CPU, aucun disque persistant. Cinq étapes, chacune mesurée avant de passer à la suivante. Logiciels communs à toutes les étapes : Python 3.12, FastAPI 0.162.6, Uvicorn 0.54.0, httpx 0.28.1, WeasyPrint 69.0, pypdf 6.21.4 et reportlab 4.5.1 (versions figées dans `requirements.txt` depuis la 1.6.7) ; les bibliothèques propres à une étape sont citées dans l'étape.
 
@@ -819,7 +819,7 @@ Chaque outil de la chaîne de génération a d'abord été mesuré seul, en loca
 
 #### Étape 2 : limites maximales identifiées (1.7.5 à 1.8.9)
 
-Le test aux limites (`scripts/limit_check.py`, section 13.12) génère sur Toolforge des livres de plus en plus gros, par paliers puis par dichotomie (`--search`), jusqu'au premier échec. Pendant le test, la mémoire du conteneur est relevée sur `GET /api/health/details`, qui lit `memory.current` et `memory.max` du cgroup v2 (ou `memory.usage_in_bytes` en cgroup v1), et la mémoire de chaque étape dans le journal des générations.
+Le test aux limites (`scripts/limit_check.py`, section 1.12) génère sur Toolforge des livres de plus en plus gros, par paliers puis par dichotomie (`--search`), jusqu'au premier échec. Pendant le test, la mémoire du conteneur est relevée sur `GET /api/health/details`, qui lit `memory.current` et `memory.max` du cgroup v2 (ou `memory.usage_in_bytes` en cgroup v1), et la mémoire de chaque étape dans le journal des générations.
 
 Mécanisme d'échec : quand le conteneur dépasse sa limite cgroup, le noyau tue le processus (OOM), puis Toolforge redémarre le conteneur, ce qui coupe toutes les générations en cours.
 
@@ -892,7 +892,7 @@ Mesures pendant tout le test :
 * au plus 17 générations admises à la fois, les autres attendant à l'entrée ;
 * conteneur à 1 639 Mo au plus haut, sur 2 048 ;
 * processus du serveur à 1 084 Mo au plus, redescendu vers 480 Mo entre les paliers ;
-* un livre seul se génère en 8,2 s, et le benchmark ne montre aucun écart quand la mémoire suffit (section 13.11, 1.12.0).
+* un livre seul se génère en 8,2 s, et le benchmark ne montre aucun écart quand la mémoire suffit (section 1.11, 1.12.0).
 
 Les 250 refus à 500 sont des réponses HTTP 503 de la plateforme Toolforge, émises avant que la demande n'atteigne l'application, au-delà d'environ 240 connexions simultanées. La limite restante n'est donc plus la mémoire du conteneur.
 
@@ -902,9 +902,9 @@ Les 250 refus à 500 sont des réponses HTTP 503 de la plateforme Toolforge, ém
 * Préférer le disque temporaire à la mémoire, et des processus courts qui rendent leur mémoire en se terminant plutôt qu'un processus long qui la garde.
 * Fixer des limites douces sous les maximums mesurés, et découper plutôt que refuser (volumes).
 * Faire attendre plutôt qu'échouer : admettre à l'entrée, puis contrôler chaque étape d'après la taille réelle des fichiers, sans jamais bloquer une étape seule.
-* Rejouer le benchmark (section 13.11) et les tests de montée en charge (section 13.12) après chaque changement de ces mécanismes.
+* Rejouer le benchmark (section 1.11) et les tests de montée en charge (section 1.12) après chaque changement de ces mécanismes.
 
-## 14\. Sécurité et robustesse
+## 2\. Sécurité et robustesse
 
 Le logiciel met en œuvre aujourd'hui :
 
@@ -918,7 +918,7 @@ Le logiciel met en œuvre aujourd'hui :
 
 * Des délais d'attente bornés sur les appels réseau.
 
-* Une attente avant de réessayer, partagée et asynchrone, quand Wikimédia répond HTTP 429 ou 503 (au plus 4 nouvelles tentatives, section 7), en plus, hors Toolforge, des limites de la politique robots de Wikimédia (2 téléchargements de PDF simultanés pour tout le serveur, 25 Mbit/s sur 10 s, section 13.2).
+* Une attente avant de réessayer, partagée et asynchrone, quand Wikimédia répond HTTP 429 ou 503 (au plus 4 nouvelles tentatives, section 7 de la spécification fonctionnelle), en plus, hors Toolforge, des limites de la politique robots de Wikimédia (2 téléchargements de PDF simultanés pour tout le serveur, 25 Mbit/s sur 10 s, section 1.2).
 
 * **Protection contre une utilisation abusive** (`app/request_limits.py`, middleware `RequestGuard` placé devant toute l'application) :
   * **Taille des requêtes** : tout corps de requête est limité à 60 Mo (`MAX_BODY_BYTES`). Il est refusé d'emblée d'après l'en-tête `Content-Length`, ou dès que les données lues dépassent la limite : HTTP 413, `detail` = `{"code": "request_too_large", "limit", "message"}`, message traduit dans l'interface (clé `export.requestTooLarge`). Sans cette limite, un livre JSON contenant un Go de documents en base64 était lu en entier en mémoire avant tout contrôle.
@@ -934,10 +934,10 @@ Le logiciel met en œuvre aujourd'hui :
   * **Réponse en cas de refus** : HTTP 429 avec `Retry-After`, et `detail` = `{"code": "too_many_requests", "reason", "limit", "retry_after", "message"}`.
     * Délai : 10 s pour une limite de générations simultanées, le temps restant dans la minute pour une limite par minute, 30 s pour une file pleine.
     * `reason` : `client_concurrent`, `client_per_minute`, `total_concurrent`, `total_per_minute` ou `queue_full`.
-    * L'interface attend le délai en l'affichant (« Trop de demandes en ce moment : nouvel essai automatique dans 10 s… », clé `progress.limited`), puis redemande la génération, sans fin et sans compter ce refus comme un plantage. Le test aux limites redemande de la même façon (section 13.12).
+    * L'interface attend le délai en l'affichant (« Trop de demandes en ce moment : nouvel essai automatique dans 10 s… », clé `progress.limited`), puis redemande la génération, sans fin et sans compter ce refus comme un plantage. Le test aux limites redemande de la même façon (section 1.12).
     * Chaque valeur se règle par sa variable d'environnement, `0` = pas de limite ; une valeur invalide empêche le démarrage.
   * **Délai d'envoi** : un client qui ne lit plus le PDF ou le flux de progression pendant 20 s (`SEND_TIMEOUT_S`) est coupé. Sa génération est refermée aussitôt : dossier temporaire supprimé et réserves de mémoire rendues (`ClosingStreamingResponse`).
-  * **API MediaWiki** : au plus 10 requêtes par seconde pour tout le serveur (`wikipedia_api.ApiLimiter` : recherches, pages, liens, explorations) ; les suivantes attendent leur tour. Un utilisateur malveillant ne peut donc pas faire bloquer l'outil par Wikimédia sous son User-Agent. Les PDF suivent leurs propres limites (section 13.2).
+  * **API MediaWiki** : au plus 10 requêtes par seconde pour tout le serveur (`wikipedia_api.ApiLimiter` : recherches, pages, liens, explorations) ; les suivantes attendent leur tour. Un utilisateur malveillant ne peut donc pas faire bloquer l'outil par Wikimédia sous son User-Agent. Les PDF suivent leurs propres limites (section 1.2).
   * **Réseau interne** : un fichier donné par son adresse est téléchargé depuis l'adresse IP vérifiée ; le nom ne sert qu'à l'en-tête `Host` et au certificat. Un nom qui change d'adresse entre la vérification et la connexion (DNS rebinding) ne mène donc pas au réseau interne.
   * **Alertes** :
     * Types : `request_too_large`, `client_concurrent`, `client_per_minute`, `total_concurrent`, `total_per_minute`, `queue_full`, `send_timeout`, et `wikimedia_api_throttle` quand une requête à l'API MediaWiki attend au moins 10 s.
@@ -949,7 +949,7 @@ Le logiciel met en œuvre aujourd'hui :
         * le champ `alerts` donne, pour chaque type, le nombre de franchissements et la dernière heure (UTC) depuis le démarrage du serveur ;
         * `request_limits` donne les limites, les générations et les clients en cours ;
         * `started` donne l'heure du démarrage : les compteurs repartent de zéro à chaque redémarrage (déploiement, manque de mémoire).
-        * Exemple : `curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" <adresse>/api/health/details | jq '.started, .alerts, .request_limits'`. L'endpoint exige le jeton de supervision (`WIKIPEDIA2BOOK_MONITOR_TOKEN`, section 13.3) ; sans jeton, la page `/admin` montre les mêmes compteurs après connexion.
+        * Exemple : `curl -s -H "Authorization: Bearer $WIKIPEDIA2BOOK_MONITOR_TOKEN" <adresse>/api/health/details | jq '.started, .alerts, .request_limits'`. L'endpoint exige le jeton de supervision (`WIKIPEDIA2BOOK_MONITOR_TOKEN`, section 1.3) ; sans jeton, la page `/admin` montre les mêmes compteurs après connexion.
       * **Journal du serveur** (sortie standard) : une ligne JSON par franchissement, à filtrer sur `"alert"`, par exemple `{"alert": "client_per_minute", "at": "2026-11-17T07:12:03+00:00", "count": 3, "path": "/api/pdf/stream", "limit": 20}`. `count` est le nombre de franchissements de ce type depuis le démarrage.
       * **Par environnement** :
         * **Toolforge** : depuis n'importe quel poste pour les compteurs (bash avec `jq`, ou PowerShell) ; par SSH dans le compte de l'outil pour le journal (`toolforge webservice logs`, ou `kubectl logs` pour toutes les lignes avec leur heure et le nombre d'alertes par type). La dernière commande lit le journal sans session interactive. Le journal ne couvre que le conteneur en cours : un redémarrage l'efface, comme les compteurs. Le port SSH 22 peut être bloqué par certains réseaux d'entreprise.
@@ -1006,7 +1006,7 @@ Les URL externes ne sont jamais exécutées comme du code.
 
 Points non couverts par l'implémentation actuelle, à considérer pour une version ultérieure : journalisation structurée des erreurs, quotas explicites sur la taille des PDF d'articles téléchargés, limite du nombre total de pages d'un livre.
 
-## 17\. Structure du dépôt
+## 3\. Structure du dépôt
 
 ```text
 Wikipedia2Book/
@@ -1046,7 +1046,7 @@ Wikipedia2Book/
 │   ├── toolviews_stats.py
 │   ├── toolviews_chart.py
 │   ├── benchmark.py
-│   ├── benchmark_table.py      (tableau des résultats du benchmark, section 13.11)
+│   ├── benchmark_table.py      (tableau des résultats du benchmark, section 1.11)
 │   ├── limit_check.py
 │   └── perf/                  (scenarios.json, reference.json)
 │
@@ -1102,10 +1102,10 @@ Wikipedia2Book/
 └── docs/                         (source du site GitHub Pages)
     ├── fonctionnel.md, technique.md  (pages parentes du menu : parties « Fonctionnel » et « Technique »)
     ├── FunctionalSpec.fr.md, FunctionalSpec.en.md  (spécification fonctionnelle : sections 1 à 12, 15, 16, 18)
-    ├── TechnicalSpec.fr.md, TechnicalSpec.en.md    (spécification technique : sections 13, 14, 17)
+    ├── TechnicalSpec.fr.md, TechnicalSpec.en.md    (spécification technique : sections 1 à 3)
     ├── CHANGELOG.fr.md          (historique des versions : section 19)
     ├── _config.yml               (thème Just the Docs, ordre du menu)
-    ├── benchmark-results.csv     (résultats du benchmark, section 13.11)
+    ├── benchmark-results.csv     (résultats du benchmark, section 1.11)
     ├── toolviews.csv             (généré chaque jour)
     ├── toolforge_hourly.csv      (généré chaque jour et avant chaque déploiement)
     ├── toolforge_generations.csv (généré chaque jour et avant chaque déploiement)
