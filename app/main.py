@@ -1294,7 +1294,7 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
     status, details = "aborted", {}
     admitted: Reservation | None = None
     try:
-        # NE PAS charger les images ni télécharger quoi que ce soit avant cette admission : à 100 générations simultanées, les données gardées par chacune hors des étapes contrôlées faisaient déborder le serveur (section 13.12).
+        # NE PAS charger les images ni télécharger quoi que ce soit avant cette admission : à 100 générations simultanées, les données gardées par chacune hors des étapes contrôlées faisaient déborder le serveur (section 1.12 de la spécification technique).
         async for admission in _admitted(GENERATION_GATE, generation_reserve(project, selected)):
             if isinstance(admission, Reservation):
                 admitted = admission

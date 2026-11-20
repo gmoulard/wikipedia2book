@@ -83,7 +83,7 @@ As of 15 November 2026.
 
 ## 8. Performance
 
-Wikipedia2Book figures are measured on Toolforge (sections 13.11 and 13.12 of `docs/TechnicalSpec.en.md`, versions 1.9.5 to 1.11.0, 16 November 2026). mediawiki2latex figures come from its manual and the limits of its web service: they have not been measured.
+Wikipedia2Book figures are measured on Toolforge (sections 1.11 and 1.12 of `docs/TechnicalSpec.en.md`, versions 1.9.5 to 1.11.0, 16 November 2026). mediawiki2latex figures come from its manual and the limits of its web service: they have not been measured.
 
 | | Wikipedia2Book (measured on Toolforge) | mediawiki2latex (from its manual) |
 |---|---|---|

@@ -48,7 +48,7 @@ As of 17 November 2026.
 
 ## 5. Performance
 
-Wikipedia2Book figures are measured on Toolforge (sections 13.11 and 13.12 of `docs/TechnicalSpec.en.md`, versions 1.9.5 to 1.11.0, 16 November 2026). WS Export figures come from the Community Tech "Ebook Export Improvement" page on Meta-Wiki: they have not been measured on the same books.
+Wikipedia2Book figures are measured on Toolforge (sections 1.11 and 1.12 of `docs/TechnicalSpec.en.md`, versions 1.9.5 to 1.11.0, 16 November 2026). WS Export figures come from the Community Tech "Ebook Export Improvement" page on Meta-Wiki: they have not been measured on the same books.
 
 | | Wikipedia2Book (measured on Toolforge) | WS Export (published by Community Tech) |
 |---|---|---|
