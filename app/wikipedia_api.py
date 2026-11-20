@@ -53,6 +53,7 @@ on_api_throttle: Callable[[float], None] | None = None
 RETRY_STATUSES = {429, 503}
 RETRY_DELAYS_S = (2, 4, 8, 16)
 MAX_RETRY_WAIT_S = 20
+PDF_REDIRECTS = 3
 FULL_TEXT_PAGES = {
     "version imprimable", "print version", "printable version", "druckversion", "versione stampabile",
     "versión para imprimir", "versión imprimible", "versão para impressão", "versão para imprimir", "afdrukbare versie",
@@ -314,13 +315,24 @@ class MediaWikiClient:
 
     async def get_article_pdf(self, title: str, language: str, paper: str, site: str = "wikipedia") -> bytes:
         url = article_pdf_url(title, language, paper, site)
+        host = site_host(language, site)
         if self._client is None:
             raise RuntimeError("MediaWikiClient doit être utilisé dans un bloc async with.")
         try:
-            response = await self._send(url, media=True, timeout=120)
+            # NE PAS laisser httpx suivre les redirections lui-même : une page renommée (redirection) ou un titre que Wikipédia réécrit renvoie 301/302 vers le vrai titre, à suivre sur le même wiki seulement et en passant chaque fois par _send (politique Wikimédia, nouvelles tentatives).
+            for _ in range(PDF_REDIRECTS + 1):
+                response = await self._send(url, media=True, timeout=120)
+                if not response.is_redirect:
+                    break
+                target = str(httpx.URL(url).join(response.headers.get("location", "")))
+                if urlsplit(target).scheme != "https" or urlsplit(target).hostname != host:
+                    raise MediaWikiError(f"Wikipédia redirige le PDF de « {title} » hors de {host}.")
+                url = target
             if response.status_code == 404:
-                raise MediaWikiPageNotFound(f"La page « {title} » n’existe pas (ou plus) sur {site_host(language, site)}.")
+                raise MediaWikiPageNotFound(f"La page « {title} » n’existe pas (ou plus) sur {host}.")
             response.raise_for_status()
+        except httpx.HTTPStatusError as error:
+            raise MediaWikiError(f"Impossible de télécharger le PDF Wikipédia pour « {title} » (HTTP {error.response.status_code}).") from error
         except httpx.HTTPError as error:
             raise MediaWikiError(f"Impossible de télécharger le PDF Wikipédia pour « {title} ».") from error
         if response.content[:5] != b"%PDF-":
