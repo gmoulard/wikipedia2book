@@ -31,4 +31,6 @@ Une action réalisée est cochée (`[x]`) avec la version ou la date qui l'a fai
 
 ## 4. Probleme and bug 
 
-- [] regarder les issues dans github et chercher la les corriger.
+- [ ] creéer un type d'issues BUG dans github avec comme champs : platform, gravity, JSON file, text with a screenshot.
+- [ ] regarder les issues dans github et chercher la les corriger.
+
