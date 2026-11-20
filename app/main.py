@@ -1448,6 +1448,7 @@ async def _build_book_pdf(
     project = project.model_copy(update={field: None for field in background_files})
 
     fitted_items: dict[str, asyncio.Future[tuple[Path, int]]] = {}
+    missing: set[str] = set()
     paper = WIKIPEDIA_PDF_PAPERS.get(project.page_format, "a4")
     started: asyncio.Queue[dict] = asyncio.Queue()
     # NE PAS dépasser DOWNLOAD_CONCURRENCY : hors Toolforge, la politique robots de Wikimédia est respectée avec 2 téléchargements simultanés (MediaWikiClient l'impose aussi pour tout le serveur) ; sur Toolforge, exempté, 4 par livre.
@@ -1466,7 +1467,13 @@ async def _build_book_pdf(
                 if isinstance(item, Article):
                     await started.put(progress("fetch_article", title=item.title))
                     url = article_pdf_url(item.title, item.language, paper, item.site)
-                    data = await client.get_article_pdf(item.title, item.language, paper, item.site)
+                    try:
+                        data = await client.get_article_pdf(item.title, item.language, paper, item.site)
+                    except MediaWikiPageNotFound:
+                        missing.add(item.key)
+                        await started.put({"type": "missing", "title": item.title, "url": article_url(item.language, item.title, item.site)})
+                        record.stage("missing_article", "server", _memory_snapshot(), url=url)
+                        return
                     kind = "pdf"
                 else:
                     await started.put(progress("prepare_document", title=item.title))
@@ -1512,6 +1519,10 @@ async def _build_book_pdf(
             raise
 
     fitted = {key: task.result() for key, task in fitted_items.items()}
+    # NE PAS arrêter la génération pour une page supprimée de Wikipédia (404) : le livre se fait sans elle, le navigateur la signale (événement missing).
+    selected = [item for item in selected if item.key not in missing]
+    if not selected:
+        raise MediaWikiPageNotFound("Aucune page du livre n’existe sur Wikipédia : le PDF ne peut pas être généré.")
     record.stage("downloads_done", "server", _memory_snapshot(), article_pages=sum(count for _, count in fitted.values()))
     if ISOLATE_ASSEMBLY:
         preload(["app.main"])

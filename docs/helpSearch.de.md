@@ -12,6 +12,7 @@ Das Feld des ersten Schritts nimmt viel mehr an als einen Artikeltitel: eine Adr
 | eine bestimmte Seite | ihre Adresse | `https://fr.wikipedia.org/wiki/Épaves_de_la_rade_de_Saint-Pierre` |
 | einen Artikel in einer anderen Sprache | Sprachcode, Doppelpunkt, Titel | `nl:Rotterdam` |
 | eine Seite eines anderen Wikimedia-Projekts | das Projektpräfix, dann den Titel | `voy:en:Lyon` |
+| ein Bild, ein PDF oder eine Webseite einer anderen Website oder eine Datei von Wikimedia Commons | ihre Adresse: Sie wird zu einem Dokument des Buches, gekennzeichnet als „Internet-URL“ | `https://commons.wikimedia.org/wiki/File:Montagne_Pelée_1902.jpg` |
 | ein ganzes Buch | die Adresse seines Inhaltsverzeichnisses oder seiner Buchseite | `https://fr.wikibooks.org/wiki/Cosmologie` |
 | mehrere Seiten auf einmal | eine Seite pro Zeile | siehe „Mehrere Seiten auf einmal“ |
 | ein auf einer Seite „Buch:“ vorbereitetes Buch | den Text dieser Seite | siehe „Den Text einer Buchseite einfügen“ |
@@ -93,9 +94,7 @@ Der Text einer Wikibooks-Druckversion aus Einbindungen `{{:…}}` wird ebenso an
 
 ## Was das Feld ablehnt
 
-- Websites, die keine Wikimedia-Projekte sind;
 - Seiten, die keine Inhaltsseiten sind (Diskussionen, Hilfe- oder Gemeinschaftsseiten);
-- Dateien von Wikimedia Commons: Fügen Sie sie stattdessen im Schritt Organisation als Dokumente oder im Schritt Bearbeitung als Hintergrundbilder hinzu;
 - Seiten, die nicht existieren.
 
 Die Fehlermeldung erklärt, was nicht stimmt. Sie kommt vom Server und bleibt auf Französisch, unabhängig von der Sprache der Oberfläche.

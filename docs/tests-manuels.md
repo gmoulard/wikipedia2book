@@ -147,15 +147,17 @@ Pour lire seulement la structure, sans PDF : même corps sur `POST /api/books/fr
 
 | N° | Cas | Navigateur | API (champ du livre JSON) | Résultat attendu | Version |
 |---|---|---|---|---|---|
-| 7.1 | Image ou PDF depuis l'ordinateur | Étape Organisation, « Choisir un fichier + » | `uploaded_documents[]` avec `data_base64` | Document placé dans le livre comme un article, 15 Mo au plus | ≤ 1.9.7 |
-| 7.2 | Document par adresse | Étape Organisation, champ d'adresse : `https://upload.wikimedia.org/wikipedia/commons/1/16/La_Pel%C3%A9e_vue_du_Carbet.jpg` | `uploaded_documents[]` avec `"url": "https://upload.wikimedia.org/…"` | Seule l'adresse est enregistrée ; le serveur télécharge l'image à chaque génération | 1.10.0 |
+| 7.1 | Image ou PDF depuis l'ordinateur | Étape Sources, « Ajouter » avec le champ vide | `uploaded_documents[]` avec `data_base64` | Document placé dans le livre comme un article, 15 Mo au plus | ≤ 1.9.7 |
+| 7.2 | Document par adresse | Étape Sources, champ Sources : `https://upload.wikimedia.org/wikipedia/commons/1/16/La_Pel%C3%A9e_vue_du_Carbet.jpg` | `uploaded_documents[]` avec `"url": "https://upload.wikimedia.org/…"` | Seule l'adresse est enregistrée ; le serveur télécharge l'image à chaque génération | 1.10.0 |
 | 7.3 | Document par page de fichier Commons | `https://commons.wikimedia.org/wiki/File:La_Pelée_vue_du_Carbet.jpg` | `"url": "https://commons.wikimedia.org/wiki/File:La_Pel%C3%A9e_vue_du_Carbet.jpg"` | L'image (vignette de 2 000 px) est utilisée ; pour un PDF, l'original | 1.10.0 (navigateur), 1.12.0 (API) |
 | 7.4 | PDF par page de fichier | `https://commons.wikimedia.org/wiki/File:Interpersonal_communication_and_coordination_in_Wikipedia_Working_Paper_30_June_2020.pdf` | Même adresse dans `uploaded_documents[].url` | Le PDF original est intégré, pages recomposées au format du livre | 1.10.0 (navigateur), 1.12.0 (API) |
 | 7.5 | Image de fond de couverture | Étape Édition, « Image de fond de la couverture », fichier ou adresse (7.2 ou 7.3) | `cover_image` : `{"title": "…", "url": "…"}` ou `data_base64` | Fond de la couverture, sans déformation | 1.9.6 |
 | 7.6 | Image de dernière page | Étape Édition, « Image de fond de la dernière page » | `back_image` | Page à part après la licence | 1.9.6 |
 | 7.7 | Adresse inaccessible | Document `https://example.org/inexistant.png` | Même adresse | Génération arrêtée, l'adresse en cause est nommée ; 502 par l'API | 1.10.0 |
 | 7.8 | Titre d'un document | Étape Organisation, champ de titre du document importé | `uploaded_documents[].title` | Le titre saisi remplace le nom du fichier dans la table des matières, les signets et la licence ; à l'import, nom du fichier sans extension | 1.13.0 |
-| 7.9 | Page web | Étape Organisation, champ d'adresse : `https://www.gnu.org/licenses/agpl-3.0.html` | `uploaded_documents[]` avec `"kind": "html"` et `"url"` | Document « Page web convertie en PDF », texte et images de la page, sans scripts ; une page Wikimédia est renvoyée vers le champ Sources | 1.13.0 |
+| 7.9 | Page web | Étape Sources, champ Sources : `https://www.gnu.org/licenses/agpl-3.0.html` | `uploaded_documents[]` avec `"kind": "html"` et `"url"` | Document « Page web convertie en PDF », texte et images de la page, sans scripts ; une page Wikimédia de contenu reste un article | 1.13.0 |
+| 7.10 | Page d'un autre wiki | Étape Sources, champ Sources : `https://wingsoffirethehybridchronicles.miraheze.org/wiki/Night_Blooming_Aloe` | `uploaded_documents[]` avec `"kind": "html"` et `"url"` | Carte dans « Vos articles » avec « URL Internet » sous le nom ; page web convertie en PDF à la génération | 1.14.0 |
+| 7.11 | Page supprimée de Wikipédia | Livre avec l'article `Mots français d'origine amérindienne` (supprimé en 2011), puis « Générer le PDF » | `main_articles[]` avec ce titre ; `POST /api/pdf/stream` | Ligne `missing` dans le flux ; PDF généré sans cet article, message « PDF prêt, sans 1 page(s)… » | 1.14.0 |
 
 ## 8. Organisation et mise en page
 
@@ -187,11 +189,11 @@ Les messages d'erreur viennent du serveur et restent en français, quelle que so
 
 | N° | Saisie | Résultat attendu |
 |---|---|---|
-| 10.1 | `https://example.com/wiki/Chat` | « L'URL doit pointer vers une page HTTPS d'un projet Wikimédia… » ; 422 |
+| 10.1 | `https://example.com/wiki/Chat` | Par l'API (`/api/sources/resolve`) : « L'URL doit pointer vers une page HTTPS d'un projet Wikimédia… » ; 422. Dans le champ Sources, l'adresse devient un document (7.10) |
 | 10.2 | `https://fr.wikibooks.org/wiki/Wikilivres:Le_Bistro` | « Seules les pages de contenu de fr.wikibooks.org… » ; 422 |
-| 10.3 | `https://commons.wikimedia.org/wiki/File:La_Pelée_vue_du_Carbet.jpg` dans le champ Sources | Refusée comme source (Commons n'a pas d'adresse `<langue>.<projet>.org`) ; acceptée comme document ou image de fond (7.3) |
+| 10.3 | `https://commons.wikimedia.org/wiki/File:La_Pelée_vue_du_Carbet.jpg` dans le champ Sources | Ajoutée comme document (image, 7.3), « URL Internet » sous son nom ; refusée par `/api/sources/resolve` (Commons n'a pas d'adresse `<langue>.<projet>.org`) |
 | 10.4 | `https://fr.wikipedia.org/wiki/Page_qui_n_existe_pas` | « La page … est introuvable » ; 404 |
-| 10.5 | Champ vide | « Saisissez … » ; 422 |
+| 10.5 | Champ vide | Dans le navigateur, « Ajouter » ouvre le choix d'une image ou d'un PDF (7.1) ; par l'API, « Saisissez … » ; 422 |
 | 10.6 | Livre sans aucun article sélectionné, puis « Générer le PDF » | Message « Sélectionnez au moins un article » ; 400 |
 
 <!-- {% endraw %} -->

@@ -12,6 +12,7 @@ Het veld van de eerste stap accepteert veel meer dan een artikeltitel: een adres
 | een bepaalde pagina | het adres | `https://fr.wikipedia.org/wiki/Épaves_de_la_rade_de_Saint-Pierre` |
 | een artikel in een andere taal | de taalcode, een dubbele punt, de titel | `nl:Rotterdam` |
 | een pagina van een ander Wikimedia-project | het projectvoorvoegsel en dan de titel | `voy:en:Lyon` |
+| een afbeelding, een pdf of een webpagina van een andere site, of een bestand van Wikimedia Commons | het adres: het wordt een document van het boek, gemarkeerd als ‘Internet-URL’ | `https://commons.wikimedia.org/wiki/File:Montagne_Pelée_1902.jpg` |
 | een heel boek | het adres van de inhoudsopgave of de boekpagina | `https://fr.wikibooks.org/wiki/Cosmologie` |
 | meerdere pagina's tegelijk | één pagina per regel | zie „Meerdere pagina's tegelijk” |
 | een boek dat op een pagina „Boek:” is voorbereid | de tekst van die pagina | zie „De tekst van een boekpagina plakken” |
@@ -93,9 +94,7 @@ De tekst van een afdrukversie van Wikibooks, opgebouwd uit invoegingen `{{:…}}
 
 ## Wat het veld weigert
 
-- websites die geen Wikimedia-projecten zijn;
 - pagina's die geen inhoudspagina's zijn (overlegpagina's, hulp- of gemeenschapspagina's);
-- bestanden van Wikimedia Commons: voeg ze in plaats daarvan toe als documenten in de stap Ordening, of als achtergrondafbeeldingen in de stap Opmaak;
 - pagina's die niet bestaan.
 
 De foutmelding legt uit wat er mis is. Ze komt van de server en blijft in het Frans, ongeacht de taal van de interface.

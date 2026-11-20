@@ -41,7 +41,7 @@ import app.main as main
 
 # NE PAS laisser l'assemblage dans un processus séparé ici : ces tests remplacent generate_pdf et fit_pdf_to_format dans main, ce que le processus enfant ne verrait pas (tests/test_isolation.py couvre le processus séparé).
 main.ISOLATE_ASSEMBLY = False
-from app.wikipedia_api import MediaWikiError, WikipediaBook
+from app.wikipedia_api import MediaWikiError, MediaWikiPageNotFound, WikipediaBook
 
 
 def _parse_stream(content):
@@ -82,6 +82,7 @@ def _make_pdf(num_pages=1):
 class FakeClient:
     fail = False
     wait = None
+    missing = ()
 
     async def __aenter__(self):
         return self
@@ -97,6 +98,8 @@ class FakeClient:
             self.on_wait(FakeClient.wait)
         if FakeClient.fail:
             raise MediaWikiError(f"PDF indisponible pour {title}")
+        if title in FakeClient.missing:
+            raise MediaWikiPageNotFound(f"La page « {title} » n'existe pas (ou plus) sur fr.wikipedia.org.")
         return _make_pdf(2)
 
     book = WikipediaBook(subtitle="", chapters=[("", ["Chien", "Chat"])])
@@ -120,6 +123,7 @@ class PdfStreamTest(unittest.TestCase):
     def setUp(self):
         FakeClient.fail = False
         FakeClient.wait = None
+        FakeClient.missing = ()
         FakeClient.papers = []
         FakeClient.book =WikipediaBook(subtitle="", chapters=[("", ["Chien", "Chat"])])
         self.patches = [
@@ -175,6 +179,21 @@ class PdfStreamTest(unittest.TestCase):
         events = self._events(_project())
         self.assertEqual(events[-1], {"type": "error", "detail": "PDF indisponible pour Chat"})
         self.assertFalse(any(e["type"] == "done" for e in events))
+
+    def test_missing_wikipedia_page_is_skipped_and_reported(self):
+        FakeClient.missing = ("Chat",)
+        events = self._events(_project(page_numbers=False))
+        self.assertIn({"type": "missing", "title": "Chat", "url": "https://fr.wikipedia.org/wiki/Chat"}, events)
+        self.assertEqual(events[-1]["type"], "done")
+        pdf = PdfReader(BytesIO(events[-1]["pdf"]))
+        self.assertEqual(len(pdf.pages), 1 + 2 + 1)
+        self.assertNotIn("Chat", [item.title for item in pdf.outline[1] if not isinstance(item, list)])
+
+    def test_book_whose_pages_are_all_missing_is_an_error(self):
+        FakeClient.missing = ("Chat", "Chien")
+        events = self._events(_project())
+        self.assertEqual(events[-1]["type"], "error")
+        self.assertIn("Aucune page du livre", events[-1]["detail"])
 
     def test_empty_selection_is_refused_before_streaming(self):
         project = _project()
@@ -736,6 +755,7 @@ class ResourceGateGenerationTest(unittest.TestCase):
             p.start()
         FakeClient.fail = False
         FakeClient.wait = None
+        FakeClient.missing = ()
 
     def tearDown(self):
         for p in self.patches:
@@ -903,6 +923,7 @@ class RemoteFilesTest(unittest.TestCase):
             p.start()
         FakeClient.fail = False
         FakeClient.wait = None
+        FakeClient.missing = ()
         self.client = TestClient(main.app)
 
     def tearDown(self):

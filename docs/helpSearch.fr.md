@@ -12,6 +12,7 @@ Le champ de la première étape accepte bien plus qu'un titre d'article : une ad
 | une page précise | son adresse | `https://fr.wikipedia.org/wiki/Épaves_de_la_rade_de_Saint-Pierre` |
 | un article dans une autre langue | le code de la langue, deux-points, le titre | `nl:Rotterdam` |
 | une page d'un autre projet Wikimédia | le préfixe du projet, puis le titre | `voy:en:Lyon` |
+| une image, un PDF ou une page web d'un autre site, ou un fichier de Wikimedia Commons | son adresse : il devient un document du livre, signalé « URL Internet » | `https://commons.wikimedia.org/wiki/File:Montagne_Pelée_1902.jpg` |
 | un livre entier | l'adresse de son sommaire ou de sa page de livre | `https://fr.wikibooks.org/wiki/Cosmologie` |
 | plusieurs pages d'un coup | une page par ligne | voir « Plusieurs pages à la fois » |
 | un livre préparé sur une page « Livre: » | le texte de cette page | voir « Coller le texte d'une page de livre » |
@@ -93,9 +94,7 @@ Le texte d'une version imprimable de Wikilivres, fait d'inclusions `{{:…}}`, e
 
 ## Ce que le champ refuse
 
-- les sites qui ne sont pas des projets Wikimédia ;
 - les pages qui ne sont pas des pages de contenu (discussions, pages d'aide ou de communauté) ;
-- les fichiers de Wikimedia Commons : ajoutez-les plutôt comme documents à l'étape Organisation, ou comme images de fond à l'étape Édition ;
 - les pages qui n'existent pas.
 
 Le message d'erreur explique ce qui ne va pas. Il vient du serveur et reste en français, quelle que soit la langue de l'interface.

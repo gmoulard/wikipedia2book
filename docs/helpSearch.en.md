@@ -12,6 +12,7 @@ The field of the first step accepts much more than an article title: an address,
 | a specific page | its address | `https://fr.wikipedia.org/wiki/Épaves_de_la_rade_de_Saint-Pierre` |
 | an article in another language | the language code, a colon, the title | `nl:Rotterdam` |
 | a page from another Wikimedia project | the project prefix, then the title | `voy:en:Lyon` |
+| an image, a PDF or a web page from another site, or a Wikimedia Commons file | its address: it becomes a document of the book, marked "Internet URL" | `https://commons.wikimedia.org/wiki/File:Montagne_Pelée_1902.jpg` |
 | a whole book | the address of its contents page or book page | `https://fr.wikibooks.org/wiki/Cosmologie` |
 | several pages at once | one page per line | see "Several pages at once" |
 | a book prepared on a "Book:" page | the text of that page | see "Pasting the text of a book page" |
@@ -93,9 +94,7 @@ The text of a Wikibooks printable version, made of `{{:…}}` inclusions, is acc
 
 ## What the field refuses
 
-- sites that are not Wikimedia projects;
 - pages that are not content pages (talk pages, help or community pages);
-- Wikimedia Commons files: add them instead as documents in the Organization step, or as background images in the Editing step;
 - pages that do not exist.
 
 The error message explains what is wrong. It comes from the server and stays in French, whatever the interface language.

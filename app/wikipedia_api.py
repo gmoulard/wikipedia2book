@@ -318,6 +318,8 @@ class MediaWikiClient:
             raise RuntimeError("MediaWikiClient doit être utilisé dans un bloc async with.")
         try:
             response = await self._send(url, media=True, timeout=120)
+            if response.status_code == 404:
+                raise MediaWikiPageNotFound(f"La page « {title} » n’existe pas (ou plus) sur {site_host(language, site)}.")
             response.raise_for_status()
         except httpx.HTTPError as error:
             raise MediaWikiError(f"Impossible de télécharger le PDF Wikipédia pour « {title} ».") from error

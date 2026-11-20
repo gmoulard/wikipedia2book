@@ -23,6 +23,7 @@ const state = {
   suggestionSort: 'page',
   searchTimer: null,
   toastTimer: null,
+  missingPages: new Map(),
   isDirty: false,
   articleLimit: null,
 };
@@ -95,13 +96,13 @@ async function getJson(path, options) {
   return response.json();
 }
 
-function showToast(message, isError = false) {
+function showToast(message, isError = false, duration = 3600) {
   const toast = $('#toast');
   toast.textContent = message;
   toast.classList.toggle('error', isError);
   toast.classList.add('visible');
   clearTimeout(state.toastTimer);
-  state.toastTimer = setTimeout(() => toast.classList.remove('visible'), 3600);
+  state.toastTimer = setTimeout(() => toast.classList.remove('visible'), duration);
 }
 
 function setSaveState(value) { $('#saveState').textContent = value; }
@@ -161,7 +162,7 @@ function renderWorkspace() {
     button.querySelector('.step-footer-label').textContent = t('nav.next', { step: t(`tabs.${button.dataset.nextStep}`) });
   });
   if (!hasProject) return;
-  $('#sourceCount').textContent = activeArticles().length;
+  $('#sourceCount').textContent = activeArticles().length + (state.project.uploaded_documents || []).length;
   $('#selectedCount').textContent = selectedArticles().length;
   $('#organizationCount').textContent = selectedArticles().length;
   renderArticles();
@@ -177,10 +178,11 @@ function setView(view) {
 
 function renderArticles() {
   const project = state.project;
-  $('#mainArticleCount').textContent = project.main_articles.length;
+  const addressDocuments = project.uploaded_documents || [];
+  $('#mainArticleCount').textContent = project.main_articles.length + addressDocuments.length;
   $('#discoveredArticleCount').textContent = project.discovered_articles.length;
-  $('#mainArticles').innerHTML = project.main_articles.length
-    ? project.main_articles.map((a) => articleCard(a, true, a.title === suggestionSource())).join('')
+  $('#mainArticles').innerHTML = project.main_articles.length || addressDocuments.length
+    ? [...project.main_articles.map((a) => articleCard(a, true, a.title === suggestionSource())), ...addressDocuments.map(documentCard)].join('')
     : emptyList(t('main.emptyTitle'), t('main.emptyDesc'));
 
   const source = suggestionSource();
@@ -235,6 +237,18 @@ function articleCard(article, isMain, isSource = false) {
       <div class="article-title-wrap"><a class="article-title" href="${escapeHtml(safeUrl(article.url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(article.title)}</a><div class="article-meta">${meta.map((m) => `<span>${escapeHtml(m)}</span>`).join('')}</div></div>
       ${isMain ? `<button class="text-button explore-from${isSource ? ' active' : ''}" type="button" title="${escapeHtml(t('explore.fromArticleTitle', { title: article.title }))}"><span aria-hidden="true">↗</span> ${escapeHtml(t('explore.fromArticle'))}</button><button class="remove-article" type="button" title="${escapeHtml(t('meta.removeArticle'))}" aria-label="${escapeHtml(t('meta.removeArticle'))}">\u00d7</button>` : `<button class="button button-outline add-suggestion" type="button"><span aria-hidden="true">+</span> ${escapeHtml(t('suggestion.add'))}</button><button class="remove-article dismiss-suggestion" type="button" title="${escapeHtml(t('suggestion.dismiss'))}" aria-label="${escapeHtml(t('suggestion.dismiss'))} : ${escapeHtml(article.title)}">\u00d7</button>`}
     </div>${summary}</article>`;
+}
+
+function documentCard(document) {
+  const label = document.url ? t('meta.internetUrl') : document.kind === 'pdf' ? t('org.docPdf') : t('org.docImage');
+  const title = document.url
+    ? `<a class="article-title" href="${escapeHtml(safeUrl(document.url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(document.title)}</a>`
+    : `<span class="article-title">${escapeHtml(document.title)}</span>`;
+  return `<article class="article-card selected" data-article-key="${escapeHtml(articleKey(document))}">
+    <div class="article-card-top">
+      <div class="article-title-wrap">${title}<div class="article-meta"><span>${escapeHtml(label)}</span></div></div>
+      <button class="remove-article" type="button" title="${escapeHtml(t('org.docRemoveTitle'))}" aria-label="${escapeHtml(t('org.docRemoveTitle'))}">\u00d7</button>
+    </div></article>`;
 }
 
 function emptyList(title, description) {
@@ -597,16 +611,18 @@ const WIKIMEDIA_HOST = /(^|\.)(wikimedia|wikipedia|wikisource|wikibooks|wikivoya
 
 async function wikimediaFileUrl(address) {
   const match = address.hostname.match(WIKIMEDIA_HOST);
-  const page = decodeURIComponent(address.pathname).match(/^\/wiki\/[^:/]+:(.+)$/);
+  const page = decodeURIComponent(address.pathname).match(/^\/wiki\/([^:/]+:(.+))$/);
   if (!match || !page) return null;
   const api = new URL(`https://${address.hostname}/w/api.php`);
-  Object.entries({ action: 'query', format: 'json', formatversion: '2', prop: 'imageinfo', iiprop: 'url|mime', iiurlwidth: '2000', titles: `File:${page[1]}`, origin: '*' })
+  Object.entries({ action: 'query', format: 'json', formatversion: '2', prop: 'imageinfo', iiprop: 'url|mime', iiurlwidth: '2000', titles: page[1], origin: '*' })
     .forEach(([name, value]) => api.searchParams.set(name, value));
   const response = await fetch(api);
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  const info = (await response.json())?.query?.pages?.[0]?.imageinfo?.[0];
-  if (!info) throw new Error(page[1]);
-  return { thumb: withoutTracking(info.thumburl || info.url), original: withoutTracking(info.url), mime: info.mime, title: page[1] };
+  const found = (await response.json())?.query?.pages?.[0];
+  if (found?.ns !== 6) return null;
+  const info = found.imageinfo?.[0];
+  if (!info) throw new Error(page[2]);
+  return { thumb: withoutTracking(info.thumburl || info.url), original: withoutTracking(info.url), mime: info.mime, title: page[2] };
 }
 
 function withoutTracking(url) {
@@ -647,32 +663,43 @@ async function setBackgroundFromUrl(field, value) {
   }
 }
 
-async function addDocumentFromUrl(value) {
-  const text = value.trim();
-  if (!text) { showToast(t('edition.backgroundUrlEmpty'), true); return; }
-  if (!/^https:\/\//i.test(text)) { showToast(t('common.httpsOnly'), true); return; }
+const SOURCE_SITE_HOST = /^[a-z][a-z-]*\.(wikipedia|wikisource|wikibooks|wikivoyage|wikiversity|wikiquote|wiktionary|wikinews)\.org$/;
+
+// NE PAS envoyer à /api/sources/resolve une adresse hors des projets Wikimédia (autre wiki, fichier de Commons, PDF, image) : il la refuse ; elle devient un document importé, retéléchargé par le serveur à chaque génération.
+async function sourceDocument(source) {
+  if (!/^https:\/\//i.test(source.input)) return null;
+  const address = new URL(source.input);
   try {
-    const address = new URL(text);
-    const file = await wikimediaFileUrl(address);
+    const file = WIKIMEDIA_HOST.test(address.hostname) ? await wikimediaFileUrl(address) : null;
+    if (!file && SOURCE_SITE_HOST.test(address.hostname)) return null;
     const url = file ? (file.mime === 'application/pdf' ? file.original : file.thumb) : address.href;
     let kind = file ? (file.mime === 'application/pdf' ? 'pdf' : 'image') : /\.pdf$/i.test(address.pathname) ? 'pdf' : /\.(png|jpe?g|gif|webp)$/i.test(address.pathname) ? 'image' : null;
     if (!kind) {
-      // NE PAS accepter une page Wikimédia comme page web : le serveur la refuserait, elle s'ajoute par le champ Sources, qui reprend son PDF officiel.
-      if (WIKIMEDIA_HOST.test(address.hostname)) { showToast(t('org.docWikimediaPage'), true); return; }
+      // NE PAS accepter une page Wikimédia comme page web : le serveur la refuserait ; /api/sources/resolve explique pourquoi.
+      if (WIKIMEDIA_HOST.test(address.hostname)) return null;
       kind = await loadImage(url).then(() => 'image', () => 'html');
     }
     if (kind === 'image') await loadImage(url);
-    state.project.uploaded_documents = [
-      ...(state.project.uploaded_documents || []),
-      { id: crypto.randomUUID(), title: file ? file.title.slice(0, 300) : addressTitle(address), kind, mime_type: '', url, selected: true },
-    ];
-    queueSave({ uploaded_documents: state.project.uploaded_documents });
-    $('#documentUrl').value = '';
-    renderWorkspace();
-    showToast(t('org.docAddedToast', { n: 1 }));
+    return { id: crypto.randomUUID(), title: file ? file.title.slice(0, 300) : addressTitle(address), kind, mime_type: '', url, selected: true };
   } catch (error) {
-    showToast(t('org.docUrlError', { error: error.message }), true);
+    throw new Error(t('org.docUrlError', { error: error.message }));
   }
+}
+
+function pushDocument(document) {
+  if ((state.project.uploaded_documents || []).some((item) => item.url === document.url)) return false;
+  state.project.uploaded_documents = [...(state.project.uploaded_documents || []), document];
+  queueSave({ uploaded_documents: state.project.uploaded_documents });
+  renderWorkspace();
+  return true;
+}
+
+function addDocumentToBook(document) {
+  if (!pushDocument(document)) throw new Error(t('sources.alreadyInBook'));
+  setQuery('');
+  $('#searchResults').hidden = true;
+  $('#entryHint').textContent = t('sources.addedToMain');
+  showToast(t('org.docAddedToast', { n: 1 }));
 }
 
 function removeBackground(field) {
@@ -806,6 +833,8 @@ function addArticle(source) {
 function addSource(value) {
   return withAddButton(t('export.addingLabel'), async () => {
     const source = parseSourceLine(value, $('#articleLanguage').value);
+    const document = await sourceDocument(source);
+    if (document) { addDocumentToBook(document); return; }
     const resolved = await getJson('/api/sources/resolve', { method: 'POST', body: resolveBody(source) });
     if (resolved.kind === 'article') await addArticleToBook(resolved.article);
     else if (resolved.kind === 'book') await importBook(resolved.book, resolved.book_title, resolved.article);
@@ -963,6 +992,11 @@ async function addSourceList(lines) {
     for (const [index, { line, source }] of sources.entries()) {
       $('#entryHint').textContent = t('sources.listProgress', { n: index + 1, total: sources.length, title: source.label });
       try {
+        const document = await sourceDocument(source);
+        if (document) {
+          if (pushDocument(document)) added += 1; else already += 1;
+          continue;
+        }
         const resolved = await getJson('/api/sources/resolve', { method: 'POST', body: resolveBody(source) });
         if (resolved.kind === 'article') {
           if (await pushArticle(resolved.article)) added += 1; else already += 1;
@@ -1237,6 +1271,7 @@ function pdfStreamEvent(line) {
   if (event.type === 'progress') { showPdfProgress(event); return null; }
   if (event.type === 'wait') { showPdfWait(event.seconds); return null; }
   if (event.type === 'busy') { showPdfBusy(event.seconds); return null; }
+  if (event.type === 'missing') { state.missingPages.set(event.url, event.title); return null; }
   if (event.type === 'error') throw new Error(event.detail);
   if (event.type === 'done') return event;
   return null;
@@ -1381,6 +1416,7 @@ async function exportPdf() {
   buttons.forEach((b) => { b.disabled = true; });
   setSaveState(t('export.generating'));
   showPdfProgress(null);
+  state.missingPages = new Map();
   try {
     let volumes = bookVolumes();
     if (!volumes) {
@@ -1408,7 +1444,9 @@ async function exportPdf() {
       }
     }
     setSaveState(state.isDirty ? t('export.toDownload') : t('export.loadedInMemory'));
-    showToast(t('export.ready'));
+    const missing = [...state.missingPages.values()];
+    if (missing.length) showToast(t('export.readyWithoutMissing', { count: missing.length, titles: missing.join(', ') }), true, 15000);
+    else showToast(t('export.ready'));
   } catch (error) {
     setSaveState(t('export.error'));
     if (error.detail?.code === 'too_many_articles') {
@@ -1497,13 +1535,15 @@ document.addEventListener('click', async (event) => {
   if (event.target.closest('#addVolumeButton')) { addVolumeBreak(); return; }
   const volumeRow = event.target.closest('.org-volume');
   if (volumeRow && event.target.closest('.volume-remove')) { removeVolumeBreak(volumeRow.dataset.volumeAnchor); return; }
-  if (event.target.closest('#uploadDocumentButton')) { $('#documentFileInput').click(); return; }
-  if (event.target.closest('#addDocumentUrlButton')) { await addDocumentFromUrl($('#documentUrl').value); return; }
   if (event.target.closest('#importWorkspaceButton')) { $('#workspaceFileInput').click(); return; }
   if (event.target.closest('#saveWorkspaceButton')) { exportWorkspace(); return; }
   if (event.target.closest('#topExportButton, #exportButton')) { await exportPdf(); return; }
   const articleCardEl = event.target.closest('.article-card');
-  if (articleCardEl && event.target.closest('.remove-article')) { await removeArticle(articleCardEl); return; }
+  if (articleCardEl && event.target.closest('.remove-article')) {
+    const key = articleCardEl.dataset.articleKey;
+    if (key.startsWith('doc:')) removeUploadedDocument(key.slice(4)); else await removeArticle(articleCardEl);
+    return;
+  }
   const openDoc = event.target.closest('.doc-open');
   if (openDoc) {
     event.preventDefault();
@@ -1541,8 +1581,6 @@ document.addEventListener('change', async (event) => {
   if (numericSettings[event.target.id]?.startsWith('margin_')) $('#marginPreset').value = marginPresetOf(state.project);
 });
 
-$('#documentUrl').addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); addDocumentFromUrl(event.target.value); } });
-
 document.addEventListener('input', (event) => {
   if (event.target.matches('#articleQuery')) {
     if (event.target.value.includes('\n')) { $('#searchResults').hidden = true; setQuery(event.target.value); }
@@ -1568,7 +1606,8 @@ document.addEventListener('input', (event) => {
 $('#articleForm').addEventListener('submit', async (event) => {
   event.preventDefault();
   const value = $('#articleQuery').value.trim();
-  if (!value) { showToast(t('sources.emptyField'), true); return; }
+  // NE PAS afficher d'erreur pour un champ vide : « Ajouter » sans rien saisir ouvre le choix d'une image ou d'un PDF à importer.
+  if (!value) { $('#documentFileInput').click(); return; }
   clearTimeout(state.searchTimer);
   $('#searchResults').hidden = true;
   const lines = value.split(/\r?\n/).filter((line) => line.trim());

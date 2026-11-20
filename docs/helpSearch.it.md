@@ -12,6 +12,7 @@ Il campo del primo passo accetta molto più di un titolo di voce: un indirizzo, 
 | una pagina precisa | il suo indirizzo | `https://fr.wikipedia.org/wiki/Épaves_de_la_rade_de_Saint-Pierre` |
 | una voce in un'altra lingua | il codice della lingua, due punti, il titolo | `nl:Rotterdam` |
 | una pagina di un altro progetto Wikimedia | il prefisso del progetto, poi il titolo | `voy:en:Lyon` |
+| un'immagine, un PDF o una pagina web di un altro sito, o un file di Wikimedia Commons | il suo indirizzo: diventa un documento del libro, indicato come «URL Internet» | `https://commons.wikimedia.org/wiki/File:Montagne_Pelée_1902.jpg` |
 | un libro intero | l'indirizzo del suo indice o della sua pagina di libro | `https://fr.wikibooks.org/wiki/Cosmologie` |
 | più pagine insieme | una pagina per riga | vedi «Più pagine insieme» |
 | un libro preparato su una pagina «Libro:» | il testo di quella pagina | vedi «Incollare il testo di una pagina di libro» |
@@ -93,9 +94,7 @@ Il testo di una versione stampabile di Wikibooks, fatto di inclusioni `{{:…}}`
 
 ## Cosa il campo rifiuta
 
-- i siti che non sono progetti Wikimedia;
 - le pagine che non sono pagine di contenuto (discussioni, pagine di aiuto o della comunità);
-- i file di Wikimedia Commons: aggiungili invece come documenti nel passo Organizzazione, o come immagini di sfondo nel passo Modifica;
 - le pagine che non esistono.
 
 Il messaggio d'errore spiega cosa non va. Viene dal server e resta in francese, qualunque sia la lingua dell'interfaccia.

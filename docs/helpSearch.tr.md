@@ -12,6 +12,7 @@
 | belirli bir sayfa | adresi | `https://fr.wikipedia.org/wiki/Épaves_de_la_rade_de_Saint-Pierre` |
 | başka bir dildeki madde | dil kodu, iki nokta, başlık | `nl:Rotterdam` |
 | başka bir Wikimedia projesinin sayfası | proje öneki, ardından başlık | `voy:en:Lyon` |
+| başka bir sitedeki bir görsel, PDF ya da web sayfası veya bir Wikimedia Commons dosyası | adresi: kitabın bir belgesi olur ve «İnternet URL'si» olarak gösterilir | `https://commons.wikimedia.org/wiki/File:Montagne_Pelée_1902.jpg` |
 | bütün bir kitap | içindekiler sayfasının ya da kitap sayfasının adresi | `https://fr.wikibooks.org/wiki/Cosmologie` |
 | aynı anda birkaç sayfa | her satıra bir sayfa | bkz. «Aynı anda birkaç sayfa» |
 | bir «Kitap:» sayfasında hazırlanmış kitap | o sayfanın metni | bkz. «Bir kitap sayfasının metnini yapıştırma» |
@@ -93,9 +94,7 @@ Bir Vikipedi «Kitap:» sayfasının içeriğini yapıştırabilirsiniz: `== …
 
 ## Alanın reddettikleri
 
-- Wikimedia projesi olmayan siteler;
 - içerik sayfası olmayan sayfalar (tartışma, yardım ya da topluluk sayfaları);
-- Wikimedia Commons dosyaları: bunları Düzenleme adımında belge olarak ya da Yayın adımında arka plan görseli olarak ekleyin;
 - var olmayan sayfalar.
 
 Hata iletisi sorunun ne olduğunu açıklar. Sunucudan gelir ve arayüzün dili ne olursa olsun Fransızca kalır.
