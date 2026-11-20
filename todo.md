@@ -32,5 +32,5 @@ Une action réalisée est cochée (`[x]`) avec la version ou la date qui l'a fai
 ## 4. Probleme and bug 
 
 - [x] creéer un type d'issues BUG dans github avec comme champs : platform, gravity, JSON file, text with a screenshot. (formulaire `.github/ISSUE_TEMPLATE/bug.yml`, 20/11/2026)
-- [ ] regarder les issues dans github et chercher la les corriger.
+- [x] regarder les issues dans github et chercher la les corriger. Le 20/11/2026 : #2 (PDF d'une page renommée : redirection suivie), #3 (spécification technique numérotée à partir de 1), #4 (page web convertie : second rendu sans styles, erreur qui nomme le document) ; correctifs à publier dans une version, issues à fermer après le déploiement.
 
