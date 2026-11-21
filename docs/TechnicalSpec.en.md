@@ -721,6 +721,7 @@ Two series of measurements, in tables whose common columns are aligned (date, ve
   | 1.13.1+ | 2026-11-18 | workflow | min | ✅ | ✅ |  |  |  |  |  |  | ✅ |
   | 1.13.1+ | 2026-11-18 | workflow | min | ✅ | ✅ |  |  |  |  |  |  | ✅ |
   | 1.13.2+ | 2026-11-19 | workflow | min | ✅ | ✅ |  |  |  |  |  |  | ✅ |
+  | 1.14.1 | 2026-11-21 | workflow | min | ✅ | ✅ |  |  |  |  |  |  | ✅ |
 
   One row per run, one column per scenario. ✅ ok; <span class="bench-new">new</span>: first run of the scenario, no reference yet; ⚠️ to watch and ❌ regression, with in brackets the gap of the *application per page* time to the reference; ❌ failed: the generation did not complete; empty cell: scenario not run. Every measurement (pages, *Wikipedia*, *Application*, *Transfer*, *Total* phases, gap) is in [benchmark-results.csv](benchmark-results.csv), one row per scenario and per run.
   <!-- benchmark-table:end -->
@@ -748,6 +749,7 @@ Two series of measurements, in tables whose common columns are aligned (date, ve
   * Run of 2026-11-18 in the workflow, 1.13.1 and later changes without a version (commit `3d85213`: blue cover by default, gold text and choice of the cover font, three default administrators, Wikipedia2Book logo removed from the covers), minimal level before going to production on Toolforge: `ok` on all three scenarios, *application per page* time 40 to 43% below the reference (0.55 s, 1.2 s and 1.14 s of application), lower than in the earlier runs of the night without any change to the assembly: deviation attributed to the workflow machine. The *Wikipedia* time of `livre-reference-images` (13.9 s) is still long, as in the two previous runs.
   * Second run of 2026-11-18 in the workflow, 1.13.1 and later changes without a version (commit `aeaf152`: Editing step in four blocks, no more white band under the cover title, explained message when a site refuses the server's download), minimal level before going to production on Toolforge: `ok` on all three scenarios, *application per page* time 26 to 28% below the reference (0.66 s, 1.5 s and 1.43 s of application). The *Wikipedia* time of `livre-reference-images` (11 s) is still long, as in the previous runs.
   * Run of 2026-11-19 in the workflow, 1.13.2 and later changes without a version (commit `78634c7`: white cover in the style of Wikipedia headings, Wikipedia logo on the cover by default), minimal level before going to production on Toolforge: `ok` on all three scenarios, *application per page* time 1 to 4% above the reference (0.95 s, 2.05 s and 2.02 s of application), within measurement noise. The *Wikipedia* time of `livre-reference-images` drops back to 4.7 s.
+  * Run of 2026-11-21 in the workflow, version 1.14.1 (commit `c875528`: PDF of a renamed page followed, web page rendered without styles when needed), minimum level before the Toolforge release: `ok` on all three scenarios, *application per page* time 22 to 25 % below the reference (0.71 s, 1.55 s and 1.49 s of application). The *Wikipedia* time of `200-pages` (7.7 s) gives a +20 % total time and comes from Wikimedia's PDF service; the version's fixes do not affect the benchmark books.
 
 ### 1.12 Limit test
 
