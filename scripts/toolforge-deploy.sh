@@ -46,7 +46,7 @@ if ! build_once; then
   esac
   # NE PAS nettoyer avant chaque construction : sans image dans le registre, un pod redémarré par Toolforge ne repart pas. Seulement quand le quota d'images refuse la nouvelle, puis une seule nouvelle construction.
   echo "quota d'images atteint : toolforge build clean, puis nouvelle construction"
-  yes | toolforge build clean
+  printf 'y\n' | toolforge build clean
   if ! build_once; then
     toolforge build logs "$build" | tail -60
     exit 1
