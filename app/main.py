@@ -33,6 +33,7 @@ import subprocess
 import tempfile
 import threading
 import time
+import traceback
 from collections import deque
 from collections.abc import Mapping
 from datetime import datetime, timedelta, timezone
@@ -86,6 +87,7 @@ from app.admin import (
     wikimedia_username,
 )
 from app.explorer import discover_related_articles
+from app.issue_report import GenerationFailure, IssueReporter, issue_settings
 from app.isolation import WORKER_PROCESSES, IsolatedProcessDied, preload, run_in_thread, run_in_worker, run_isolated
 from app.resource_gate import Reservation, ResourceGate, release_memory
 from app.request_limits import Alerts, ClosingStreamingResponse, GenerationLimits, LimitRefused, RequestGuard, client_keys, count_setting
@@ -525,6 +527,7 @@ def _generation_entry(generation_id: int) -> dict:
 
 ADMIN = admin_settings(os.environ)
 MONITOR_TOKEN = monitor_token_setting(os.environ)
+ISSUES = IssueReporter(issue_settings(os.environ))
 # NE PAS desserrer ces limites ni les retirer : /admin/login et /admin/callback ne demandent aucune identification, et chaque retour fait deux requêtes vers Meta-Wiki.
 ADMIN_LOGIN_LIMITS = GenerationLimits(0, 10, 0, 30)
 
@@ -1303,6 +1306,7 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
     generations_in_progress += 1
     record = GenerationRecord(project, selected, language)
     status, details = "aborted", {}
+    failure: GenerationFailure | None = None
     admitted: Reservation | None = None
     try:
         # NE PAS charger les images ni télécharger quoi que ce soit avant cette admission : à 100 générations simultanées, les données gardées par chacune hors des étapes contrôlées faisaient déborder le serveur (section 1.12 de la spécification technique).
@@ -1324,13 +1328,35 @@ async def build_book_pdf(project: Project, selected: list[Article | UploadedDocu
                 await events.aclose()
     except Exception as error:
         status, details = "error", {"error": str(error) if isinstance(error, IsolatedProcessDied) else type(error).__name__}
+        failure = GenerationFailure(record.data, f"{type(error).__name__} : {_pdf_error_detail(error)}", "".join(traceback.format_exception(error)), None)
         raise
     finally:
         if admitted is not None:
             admitted.release()
         generations_in_progress -= 1
         record.finish(status, **details)
+        if failure is not None:
+            _report_failure(failure)
         release_memory()
+
+
+def _report_failure(failure: GenerationFailure) -> None:
+    # NE PAS appeler sans jeton GitHub ni y ajouter l'adresse IP ou le jeton du navigateur : la demande (livre JSON) part dans une issue GitHub, visible de tous si le dépôt est public (choix de l'utilisateur).
+    if not ISSUES.enabled:
+        return
+    failure.request = generation_requests.get(failure.generation["id"])
+    failure.debug = {
+        "version": _version_details(),
+        "system": system_info(),
+        "memory": _container_memory(),
+        "temporary": _temporary_space(),
+        "generations_in_progress": generations_in_progress,
+        "memory_gate": MEMORY_GATE.state(),
+        "disk_gate": DISK_GATE.state(),
+        "generation_gate": GENERATION_GATE.state(),
+        "settings": {"article_limit": ARTICLE_LIMIT, "downloads": DOWNLOAD_CONCURRENCY, "on_toolforge": ON_TOOLFORGE, "isolate_assembly": ISOLATE_ASSEMBLY},
+    }
+    ISSUES.report(failure)
 
 
 async def _admitted(gate: ResourceGate, amount: int):

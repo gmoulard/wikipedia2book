@@ -65,10 +65,11 @@ jobs:
           WIKIPEDIA2BOOK_MONITOR_TOKEN: ${{ secrets.WIKIPEDIA2BOOK_MONITOR_TOKEN }}
           WIKIPEDIA2BOOK_OAUTH_CLIENT_ID: ${{ secrets.WIKIPEDIA2BOOK_OAUTH_CLIENT_ID }}
           WIKIPEDIA2BOOK_OAUTH_CLIENT_SECRET: ${{ secrets.WIKIPEDIA2BOOK_OAUTH_CLIENT_SECRET }}
+          WIKIPEDIA2BOOK_GITHUB_TOKEN: ${{ secrets.WIKIPEDIA2BOOK_GITHUB_TOKEN }}
         run: |
           # NE PAS passer ces secrets en argument de ssh ni de toolforge : ils seraient visibles des autres utilisateurs du bastion ; ils voyagent dans le script lu sur l'entrée standard.
           {
-            for name in WIKIPEDIA2BOOK_MONITOR_TOKEN WIKIPEDIA2BOOK_OAUTH_CLIENT_ID WIKIPEDIA2BOOK_OAUTH_CLIENT_SECRET; do
+            for name in WIKIPEDIA2BOOK_MONITOR_TOKEN WIKIPEDIA2BOOK_OAUTH_CLIENT_ID WIKIPEDIA2BOOK_OAUTH_CLIENT_SECRET WIKIPEDIA2BOOK_GITHUB_TOKEN; do
               printf 'export %s=%q\n' "$name" "${!name}"
             done
             cat scripts/toolforge-deploy.sh

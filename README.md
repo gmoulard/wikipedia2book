@@ -85,6 +85,7 @@ wikipedia2book/
 │   ├── isolation.py             # Runs the book assembly in a separate process (memory given back after each book)
 │   ├── resource_gate.py           # Makes each generation stage wait while the server lacks memory or disk space
 │   ├── request_limits.py        # Abuse protection: request size, generations per client, send timeout, alerts
+│   ├── issue_report.py          # GitHub issue (label generationProbleme) for each failed generation
 │   └── static/                  # Single-page web interface (no framework)
 │       ├── index.html
 │       ├── app.js               # Front-end logic
@@ -195,6 +196,9 @@ Two settings control how heavy a generation can be. They are environment variabl
 | `WIKIPEDIA2BOOK_TOTAL_PER_MINUTE` | `0` (default; `200` on Toolforge) | Generations started per minute for the whole server. `0` lifts the limit. |
 | `WIKIPEDIA2BOOK_WAITING_GENERATIONS` | `100` (default) | Generations waiting for admission at the same time; further ones get HTTP 429. `0` lifts the limit. |
 | `WIKIPEDIA2BOOK_GENERATION_LOG_DIR` | empty (default) | Persistent folder where the generation journal (stages and status, nothing identifying) is also written, one file per UTC day, 30 days kept. Its parent folder must already exist. Empty: nothing is written to disk. |
+| `WIKIPEDIA2BOOK_GITHUB_TOKEN` | empty (default) | GitHub token (fine-grained, *Issues* write on the repository) used to open an issue labelled `generationProbleme` for each failed generation, with the error and traceback, debugging information, the generation journal and the requested book JSON (imported file contents removed). Empty: no issue. On a public repository, the requested book becomes public. |
+| `WIKIPEDIA2BOOK_ISSUE_REPOSITORY` | `gmoulard/wikipedia2book` (default) | `owner/repository` receiving these issues. |
+| `WIKIPEDIA2BOOK_ISSUES_PER_DAY` | `20` (default) | Maximum issues per UTC day. `0` removes the limit. |
 | `WIKIPEDIA2BOOK_CLIENT_IP_HEADER` | empty (default) | Header holding the visitor's address when the container runs behind a trusted proxy, for example `x-forwarded-for` (its last value is used). Leave it empty without a proxy: a client could write the header itself. |
 | `WIKIPEDIA2BOOK_DISK_RATIO` | `0.95` (default, not set in the `Dockerfile`) | Share of the temporary disk that generations may fill. An article download (30 MB reserved) and the book assembly (50 MB + twice the size of the articles) wait, showing "Server busy", while the used disk space plus the running reserves plus their estimate would exceed this share. `0` disables the check. |
 
