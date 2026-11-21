@@ -302,7 +302,6 @@ function renderGeneration(entry) {
     ['admin.pageNumbers', yesNo(generation.page_numbers)],
     ['admin.toc', yesNo(generation.table_of_contents)],
     ...(generation.error ? [['admin.error', generation.error]] : []),
-    ...(generation.issue ? [['admin.issue', generation.issue]] : []),
   ]);
 
   const downloads = generation.stages.filter((stage) => stage.stage === 'download' || stage.stage === 'fetch_image');

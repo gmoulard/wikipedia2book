@@ -56,7 +56,7 @@ fi
 toolforge envvars create FONTCONFIG_FILE /workspace/toolforge-fonts.conf >/dev/null
 toolforge envvars create GIT_COMMIT "$commit" >/dev/null
 # NE PAS passer ces valeurs en argument de toolforge envvars create : les autres utilisateurs du bastion les verraient ; elles sont lues sur l'entrée standard. Une variable absente des secrets GitHub garde sa valeur sur Toolforge.
-for name in WIKIPEDIA2BOOK_MONITOR_TOKEN WIKIPEDIA2BOOK_OAUTH_CLIENT_ID WIKIPEDIA2BOOK_OAUTH_CLIENT_SECRET WIKIPEDIA2BOOK_GITHUB_TOKEN; do
+for name in WIKIPEDIA2BOOK_MONITOR_TOKEN WIKIPEDIA2BOOK_OAUTH_CLIENT_ID WIKIPEDIA2BOOK_OAUTH_CLIENT_SECRET; do
   if [ -n "${!name:-}" ]; then
     printf '%s' "${!name}" | toolforge envvars create "$name" >/dev/null
     echo "variable posée : $name"
