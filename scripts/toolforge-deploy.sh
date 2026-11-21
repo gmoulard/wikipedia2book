@@ -19,24 +19,38 @@ set -euo pipefail
 repo="https://github.com/gmoulard/wikipedia2book"
 json_field() { python3 -c "import json,sys; d=json.load(sys.stdin); print(d$1)"; }
 
-started=$(toolforge build start --detach --json --use-latest-versions --ref production-toolforge "$repo")
-build=$(echo "$started" | json_field '["new_build"]["name"]')
-commit=$(echo "$started" | json_field '["new_build"]["resolved_ref"]')
-echo "build $build, commit $commit"
+build_once() {
+  started=$(toolforge build start --detach --json --use-latest-versions --ref production-toolforge "$repo")
+  build=$(echo "$started" | json_field '["new_build"]["name"]')
+  commit=$(echo "$started" | json_field '["new_build"]["resolved_ref"]')
+  echo "build $build, commit $commit"
+  status=unknown
+  for _ in $(seq 1 60); do
+    sleep 15
+    status=$(toolforge build show "$build" --json | json_field '["build"]["status"]')
+    echo "build: $status"
+    case "$status" in
+      running|pending|unknown) ;;
+      *) break ;;
+    esac
+  done
+  [ "$status" = ok ]
+}
 
-status=unknown
-for _ in $(seq 1 60); do
-  sleep 15
-  status=$(toolforge build show "$build" --json | json_field '["build"]["status"]')
-  echo "build: $status"
-  case "$status" in
-    running|pending|unknown) ;;
-    *) break ;;
+if ! build_once; then
+  logs=$(toolforge build logs "$build" | tail -60)
+  echo "$logs"
+  case "$logs" in
+    *"exceed the configured upper limit"*) ;;
+    *) exit 1 ;;
   esac
-done
-if [ "$status" != ok ]; then
-  toolforge build logs "$build" | tail -60
-  exit 1
+  # NE PAS nettoyer avant chaque construction : sans image dans le registre, un pod redémarré par Toolforge ne repart pas. Seulement quand le quota d'images refuse la nouvelle, puis une seule nouvelle construction.
+  echo "quota d'images atteint : toolforge build clean, puis nouvelle construction"
+  yes | toolforge build clean
+  if ! build_once; then
+    toolforge build logs "$build" | tail -60
+    exit 1
+  fi
 fi
 
 toolforge envvars create FONTCONFIG_FILE /workspace/toolforge-fonts.conf >/dev/null
