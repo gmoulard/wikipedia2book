@@ -146,6 +146,54 @@ class IssueReportTest(unittest.TestCase):
         self.assertIsNone(disabled.sender)
 
 
+class AnonymizedIssueTest(unittest.TestCase):
+    def request(self):
+        project = {
+            "name": "Livre de Jeanne", "book_title": "Mon livre", "book_subtitle": "", "book_author": "Jeanne Dupont 1975",
+            "introduction": "Écrit par Jeanne pour Paul.", "conclusion": "Fin.", "description": "Notes",
+            "chapters": [{"id": "c1", "title": "Souvenirs de Jeanne", "article_keys": ["fr:1"]}],
+            "main_articles": [{"title": "Chat", "language": "fr", "url": "https://fr.wikipedia.org/wiki/Chat", "summary": "Le chat"}],
+            "uploaded_documents": [{"id": "d", "title": "photo-jeanne.png", "kind": "image", "url": "https://perso.example.org/jeanne/photo-jeanne.png?cle=42"}],
+            "cover_image": {"title": "Jeanne", "data_base64": None, "removed_base64_chars": 10},
+        }
+        return json.dumps({"format": "wikipedia2book-workspace", "version": 1, "projects": [project]}, ensure_ascii=False).encode()
+
+    def test_user_texts_and_private_paths_are_masked_with_lengths_kept(self):
+        item = failure(request=self.request())
+        item.generation["stages"] = [{"stage": "download", "url": "https://perso.example.org/jeanne/photo-jeanne.png?cle=42"}, {"stage": "download", "url": "https://fr.wikipedia.org/api/rest_v1/page/pdf/Chat/a4"}]
+        item.error = "RemoteFileError : Le document « photo-jeanne.png » n’a pas pu être intégré"
+        item.traceback = "Traceback\nRemoteFileError: Le document « photo-jeanne.png »"
+        public = issue_report.anonymized(item)
+        body, comments = issue_report.issue_texts(public)
+        text = body + "".join(comments) + issue_report.issue_title(public)
+        for secret in ("Jeanne", "jeanne", "Paul", "Dupont", "1975", "Notes", "Souvenirs", "cle=42"):
+            self.assertNotIn(secret, text)
+        project = json.loads(public.request)["projects"][0]
+        self.assertEqual(project["book_author"], "Xxxxxx Xxxxxx 0000")
+        self.assertEqual(len(project["introduction"]), len("Écrit par Jeanne pour Paul."))
+        self.assertEqual(project["main_articles"][0]["title"], "Chat")
+        self.assertEqual(project["main_articles"][0]["url"], "https://fr.wikipedia.org/wiki/Chat")
+        self.assertEqual(project["uploaded_documents"][0]["url"], "https://perso.example.org/xxxxxx/xxxxx-xxxxxx.png?xxx=00")
+        self.assertEqual(public.generation["stages"][1]["url"], "https://fr.wikipedia.org/api/rest_v1/page/pdf/Chat/a4")
+        self.assertIn("xxxxx-xxxxxx.png", public.error)
+        self.assertIn("jeanne", item.generation["stages"][0]["url"])
+
+    def test_sent_issue_is_anonymized(self):
+        github = FakeGitHub()
+        with patch.object(issue_report, "issue_transport", httpx.MockTransport(github.handler)), contextlib.redirect_stdout(io.StringIO()):
+            item = failure(request=self.request())
+            item.error = "Erreur sur photo-jeanne.png"
+            issue_report.IssueReporter(issue_report.IssueSettings(TOKEN, "o/r", 0)).send(item)
+        payload = github.requests[0].content.decode()
+        self.assertNotIn("jeanne", payload.lower())
+        self.assertIn("anonymis", json.loads(payload)["body"])
+        self.assertEqual(item.generation["issue"], "https://github.com/o/r/issues/42")
+
+    def test_unreadable_request_is_not_sent(self):
+        public = issue_report.anonymized(failure(request=b"pas du json Jeanne"))
+        self.assertNotIn(b"Jeanne", public.request)
+
+
 class GenerationIssueTest(unittest.TestCase):
     def setUp(self):
         main.generation_log.clear()

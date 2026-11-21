@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import copy
 import json
 import queue
 import re
@@ -21,6 +22,7 @@ import threading
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -37,6 +39,9 @@ GITHUB_TEXT_MAX = 60_000
 MAX_COMMENTS = 25
 REPOSITORY_NAME = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 issue_transport: httpx.BaseTransport | None = None
+PUBLIC_HOST = re.compile(r"(^|\.)(wikipedia|wikisource|wikibooks|wikivoyage|wikiversity|wikiquote|wiktionary|wikinews|wikimedia|mediawiki|wikidata)\.org$")
+PROJECT_TEXTS = ("name", "description", "book_title", "book_subtitle", "book_author", "introduction", "conclusion")
+EXTENSION = re.compile(r"\.[A-Za-z0-9]{1,5}$")
 
 
 @dataclass
@@ -64,6 +69,84 @@ def issue_settings(environ: Mapping[str, str]) -> IssueSettings:
         repository,
         count_setting(environ, "WIKIPEDIA2BOOK_ISSUES_PER_DAY", DEFAULT_ISSUES_PER_DAY),
     )
+
+
+def mask_text(text: str) -> str:
+    return "".join("0" if char.isdigit() else ("X" if char.isupper() else "x") if char.isalpha() else char for char in text)
+
+
+def mask_name(name: str) -> str:
+    extension = EXTENSION.search(name)
+    return mask_text(name[:extension.start()]) + extension.group(0) if extension else mask_text(name)
+
+
+def mask_url(url: str) -> str:
+    parts = urlsplit(url)
+    host = (parts.hostname or "").lower()
+    if PUBLIC_HOST.search(host):
+        return url
+    masked = mask_name(parts.path)
+    rest = ("?" + mask_text(parts.query) if parts.query else "") + ("#" + mask_text(parts.fragment) if parts.fragment else "")
+    return f"{parts.scheme}://{parts.netloc}{masked}{rest}"
+
+
+class _Masker:
+    def __init__(self) -> None:
+        self.replacements: dict[str, str] = {}
+
+    def text(self, value, mask=mask_text):
+        if not isinstance(value, str) or not value:
+            return value
+        masked = mask(value)
+        if len(value) >= 3 and masked != value:
+            self.replacements[value] = masked
+        return masked
+
+    def url(self, value):
+        if not isinstance(value, str) or not value:
+            return value
+        masked = mask_url(value)
+        if masked != value:
+            self.replacements[value] = masked
+        return masked
+
+    def project(self, project: dict) -> None:
+        for key in PROJECT_TEXTS:
+            if key in project:
+                project[key] = self.text(project[key])
+        for chapter in project.get("chapters") or []:
+            chapter["title"] = self.text(chapter.get("title"))
+        for item in [*(project.get("uploaded_documents") or []), project.get("cover_image"), project.get("back_image")]:
+            if isinstance(item, dict):
+                item["title"] = self.text(item.get("title"), mask_name)
+                item["url"] = self.url(item.get("url"))
+        for article in [*(project.get("main_articles") or []), *(project.get("discovered_articles") or [])]:
+            article["url"] = self.url(article.get("url"))
+
+    def apply(self, text: str) -> str:
+        for original in sorted(self.replacements, key=len, reverse=True):
+            text = text.replace(original, self.replacements[original])
+        return text
+
+
+# NE PAS envoyer la demande telle quelle : l'issue est publique ; textes écrits par l'utilisateur (titre, auteur, introduction, conclusion, chapitres, noms de fichiers) et chemins des adresses hors Wikimédia masqués, longueurs gardées (choix de l'utilisateur, « en anonyme »). Les titres d'articles et adresses Wikimédia restent : contenu public, nécessaire pour reproduire.
+def anonymized(failure: GenerationFailure) -> GenerationFailure:
+    masker = _Masker()
+    request = None
+    if failure.request is not None:
+        try:
+            workspace = json.loads(failure.request)
+        except ValueError:
+            workspace = {"unreadable": len(failure.request)}
+        for project in (workspace.get("projects") or []) if isinstance(workspace, dict) else []:
+            if isinstance(project, dict):
+                masker.project(project)
+        request = json.dumps(workspace, ensure_ascii=False).encode("utf-8")
+    generation = copy.deepcopy(failure.generation)
+    for stage in generation.get("stages", []):
+        if "url" in stage:
+            stage["url"] = masker.url(stage["url"])
+    return GenerationFailure(generation, masker.apply(failure.error), masker.apply(failure.traceback), request, failure.debug)
 
 
 def _block(text: str, language: str) -> str:
@@ -106,7 +189,7 @@ def issue_texts(failure: GenerationFailure, limit: int = GITHUB_TEXT_MAX) -> tup
         "",
         f"Version {generation.get('version')}, langue `{generation.get('language')}`, {generation.get('articles')} articles, {generation.get('documents')} documents, {generation.get('chapters')} chapitres, format {generation.get('page_format')} {generation.get('orientation')}.",
         "",
-        "Issue créée automatiquement par le serveur. La demande ci-dessous est le livre JSON à importer dans Wikipedia2Book pour reproduire l’erreur (contenu des fichiers importés retiré).",
+        "Issue créée automatiquement par le serveur, anonymisée : les textes écrits par l’utilisateur (titre, auteur, introduction, conclusion, chapitres, noms de fichiers) et les chemins des adresses hors Wikimédia sont masqués (lettres en x, chiffres en 0, longueurs gardées), le contenu des fichiers importés est retiré. La demande ci-dessous est le livre JSON à importer dans Wikipedia2Book pour reproduire l’erreur ; la demande complète reste sur la page d’admin tant qu’elle est en mémoire.",
     ])
     body = intro
     comments: list[str] = []
@@ -171,7 +254,8 @@ class IssueReporter:
 
     def send(self, failure: GenerationFailure) -> str | None:
         generation = failure.generation
-        body, comments = issue_texts(failure)
+        public = anonymized(failure)
+        body, comments = issue_texts(public)
         headers = {
             "Authorization": f"Bearer {self.settings.token}",
             "Accept": "application/vnd.github+json",
@@ -181,7 +265,7 @@ class IssueReporter:
         issues = f"{GITHUB_API}/repos/{self.settings.repository}/issues"
         try:
             with httpx.Client(transport=issue_transport, timeout=GITHUB_TIMEOUT_S, headers=headers) as client:
-                response = client.post(issues, json={"title": issue_title(failure), "body": body, "labels": [ISSUE_LABEL]})
+                response = client.post(issues, json={"title": issue_title(public), "body": body, "labels": [ISSUE_LABEL]})
                 response.raise_for_status()
                 issue = response.json()
                 for comment in comments:

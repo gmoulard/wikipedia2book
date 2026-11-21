@@ -536,7 +536,7 @@ On failure, the software shows an explicit message. Possible errors are:
 
 * Unexpected failure while assembling the PDF.
 
-When the server is configured for it (section 1.3 of the technical specification), each failed generation also opens, without changing anything for the user, a `generationProbleme` GitHub issue for the maintainers, with the error, the generation journal, debugging information and the requested book in JSON format (without the content of imported files).
+When the server is configured for it (section 1.3 of the technical specification), each failed generation also opens, without changing anything for the user, a `generationProbleme` GitHub issue for the maintainers, with the error, the generation journal, debugging information and the requested book in JSON format, anonymized: without the content of imported files, and with texts written by the user (title, author, introduction, conclusion, chapters, file names) and the paths of addresses outside Wikimedia masked.
 
 ## 12\. User interface
 

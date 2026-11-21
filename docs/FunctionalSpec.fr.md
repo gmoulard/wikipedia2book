@@ -536,7 +536,7 @@ En cas d'échec, le logiciel affiche un message explicite. Les erreurs possibles
 
 * Échec inattendu pendant l'assemblage du PDF.
 
-Quand le serveur est configuré pour cela (section 1.3 de la spécification technique), chaque génération en échec ouvre aussi, sans rien changer pour l'utilisateur, une issue GitHub `generationProbleme` pour les mainteneurs, avec l'erreur, le journal de la génération, les informations de débogage et le livre demandé au format JSON (sans le contenu des fichiers importés).
+Quand le serveur est configuré pour cela (section 1.3 de la spécification technique), chaque génération en échec ouvre aussi, sans rien changer pour l'utilisateur, une issue GitHub `generationProbleme` pour les mainteneurs, avec l'erreur, le journal de la génération, les informations de débogage et le livre demandé au format JSON, anonymisé : sans le contenu des fichiers importés, et avec les textes écrits par l'utilisateur (titre, auteur, introduction, conclusion, chapitres, noms de fichiers) et les chemins des adresses hors Wikimédia masqués.
 
 ## 12\. Interface utilisateur
 
