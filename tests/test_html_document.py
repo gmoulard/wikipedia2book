@@ -15,6 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import asyncio
+import io
 import json
 import sys
 import types
@@ -30,6 +31,7 @@ except Exception:
 
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
+from pypdf import PdfReader
 
 import app.main as main
 from app.html_document import html_for_print
@@ -162,12 +164,42 @@ class HtmlDocumentGenerationTest(unittest.TestCase):
         self.assertIn("Enregistrer au format PDF", detail)
         self.assertIn(self.PAGE_URL, detail)
 
-    def test_a_file_that_is_not_html_is_refused(self):
-        project = _project(uploaded_documents=[{"title": "Image", "kind": "html", "url": "https://example.org/dossier/images/photo.png", "selected": True}])
-        events = _parse_stream(self.client.post("/api/pdf/stream", json=project).content)
-        self.assertEqual(events[-1]["type"], "error")
-        self.assertIn("n’est pas une page HTML", events[-1]["detail"])
+    def test_a_pdf_or_an_image_behind_a_web_page_address_is_kept_as_it_is(self):
+        files = {"https://example.org/rapport.pdf/": (_make_pdf(3), "application/pdf"), "https://example.org/dossier/images/photo.png": (_png(), "image/png")}
 
+        async def typed_download(url, max_bytes, label):
+            self.assertEqual(max_bytes, main.REMOTE_FILE_BYTES)
+            return files[url]
+
+        documents = [{"title": title, "kind": "html", "url": url, "selected": True} for title, url in zip(("Rapport", "Image"), files)]
+        with patch.object(main, "download", typed_download):
+            response = self.client.post("/api/pdf", json=_project(page_numbers=False, table_of_contents=False, uploaded_documents=documents))
+        self.assertEqual(response.status_code, 200)
+        fetched = [(stage["pdf"], stage["html"]) for stage in main.generation_log[-1]["stages"] if stage["stage"] == "fetch_document"]
+        self.assertEqual(sorted(fetched), [(False, False), (True, False)])
+        self.assertGreaterEqual(len(PdfReader(io.BytesIO(response.content)).pages), 3 + 1)
+        self.assertFalse(any("%PDF" in html for html in self.htmls))
+
+    def test_a_file_that_is_neither_html_nor_a_document_is_refused(self):
+        async def zip_download(url, max_bytes, label):
+            return b"PK", "application/zip"
+
+        project = _project(uploaded_documents=[{"title": "Archive", "kind": "html", "url": self.PAGE_URL, "selected": True}])
+        with patch.object(main, "download", zip_download):
+            events = _parse_stream(self.client.post("/api/pdf/stream", json=project).content)
+        self.assertEqual(events[-1]["type"], "error")
+        self.assertIn("n’est pas une page HTML (application/zip)", events[-1]["detail"])
+
+    def test_a_web_page_over_the_page_limit_is_refused(self):
+        async def big_download(url, max_bytes, label):
+            return b"<html>" + b" " * main.HTML_PAGE_BYTES + b"</html>", "text/html"
+
+        project = _project(uploaded_documents=[{"title": "Lourde", "kind": "html", "url": self.PAGE_URL, "selected": True}])
+        with patch.object(main, "download", big_download):
+            events = _parse_stream(self.client.post("/api/pdf/stream", json=project).content)
+        self.assertEqual(events[-1]["type"], "error")
+        self.assertIn("trop volumineuse", events[-1]["detail"])
+        self.assertIn(self.PAGE_URL, events[-1]["detail"])
 
 if __name__ == "__main__":
     unittest.main()

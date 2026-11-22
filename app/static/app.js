@@ -673,7 +673,7 @@ async function sourceDocument(source) {
     const file = WIKIMEDIA_HOST.test(address.hostname) ? await wikimediaFileUrl(address) : null;
     if (!file && SOURCE_SITE_HOST.test(address.hostname)) return null;
     const url = file ? (file.mime === 'application/pdf' ? file.original : file.thumb) : address.href;
-    let kind = file ? (file.mime === 'application/pdf' ? 'pdf' : 'image') : /\.pdf$/i.test(address.pathname) ? 'pdf' : /\.(png|jpe?g|gif|webp)$/i.test(address.pathname) ? 'image' : null;
+    let kind = file ? (file.mime === 'application/pdf' ? 'pdf' : 'image') : /\.pdf\/?$/i.test(address.pathname) ? 'pdf' : /\.(png|jpe?g|gif|webp)$/i.test(address.pathname) ? 'image' : null;
     if (!kind) {
       // NE PAS accepter une page Wikimédia comme page web : le serveur la refuserait ; /api/sources/resolve explique pourquoi.
       if (WIKIMEDIA_HOST.test(address.hostname)) return null;

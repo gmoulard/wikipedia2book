@@ -1397,26 +1397,31 @@ async def _build_book_pdf(
             return base64.b64decode(document.data_base64), document.kind
         started_at = time.monotonic()
         if document.kind == "html":
-            data, kind = await html_page(document), "html"
+            data, kind = await html_page(document)
         else:
             data, content_type = await fetch_remote_file(document.url, DOCUMENT_TYPES, f"le document « {document.title} »")
             kind = "pdf" if content_type == "application/pdf" else "image"
         record.stage("fetch_document", "server", _memory_snapshot(), url=document.url, duration_s=round(time.monotonic() - started_at, 2), size_bytes=len(data), pdf=kind == "pdf", html=kind == "html")
         return data, kind
 
-    async def html_page(document: UploadedDocument) -> bytes:
+    async def html_page(document: UploadedDocument) -> tuple[bytes, str]:
         label = f"la page web « {document.title} »"
         # NE PAS télécharger une page Wikimédia par ce chemin : tout appel à Wikimédia passe par MediaWikiClient (User-Agent, limites de la politique robots) ; ces pages s'ajoutent par le champ Sources.
         if WIKIMEDIA_HOST.match(urlsplit(document.url).hostname or ""):
             raise RemoteFileError(f"{label[0].upper()}{label[1:]} est une page Wikimédia : ajoutez-la par le champ Sources, qui reprend son PDF officiel : {document.url}")
         try:
-            page, content_type = await download(document.url, HTML_PAGE_BYTES, label)
+            page, content_type = await download(document.url, REMOTE_FILE_BYTES, label)
         except JsonSourceError as error:
             raise RemoteFileError(f"{error}{SAVE_AS_PDF_ADVICE if error.refused else ''}") from error
+        # NE PAS se fier au type choisi par le navigateur : il le devine d'après la fin de l'adresse (« ….pdf/ », sans extension), seul le Content-Type de la réponse dit ce que le site envoie.
+        if content_type in DOCUMENT_TYPES:
+            return page, "pdf" if content_type == "application/pdf" else "image"
         if content_type not in HTML_TYPES:
             raise RemoteFileError(f"{label[0].upper()}{label[1:]} n’est pas une page HTML ({content_type or 'type inconnu'}) : {document.url}")
+        if len(page) > HTML_PAGE_BYTES:
+            raise RemoteFileError(f"{label[0].upper()}{label[1:]} est trop volumineuse ({HTML_PAGE_BYTES // 1_000_000} Mo au plus) : {document.url}")
         html = await html_for_print(page, document.url, lambda address, size, what: download(address, size, what), page_width_mm, page_height_mm)
-        return html.encode("utf-8")
+        return html.encode("utf-8"), "html"
 
     async def render_html(html: str) -> bytes:
         if not ISOLATE_ASSEMBLY:
