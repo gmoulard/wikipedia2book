@@ -33,4 +33,5 @@ Une action réalisée est cochée (`[x]`) avec la version ou la date qui l'a fai
 
 - [x] creéer un type d'issues BUG dans github avec comme champs : platform, gravity, JSON file, text with a screenshot. (formulaire `.github/ISSUE_TEMPLATE/bug.yml`, 20/11/2026)
 - [x] regarder les issues dans github et chercher la les corriger. Le 20/11/2026 : #2 (PDF d'une page renommée : redirection suivie), #3 (spécification technique numérotée à partir de 1), #4 (page web convertie : second rendu sans styles, erreur qui nomme le document) ; correctifs à publier dans une version, issues à fermer après le déploiement.
-
+- [ ] faire une homepage au site. elle doit comporter le logo, un diagramme simple sur les fonctionnalités en trois étapes étape une les différentes sources rentrent dans la machine. les sources sont des pages wikipédia des boucs wikipédia des textes des images des PDF des pages Web. l'état de l'organisation des PDF il faut reprendre un peu un logo avec les cartes que l'on déplace de haut en bas l'étape 3 c'est la génération du PDF avec quelques réglages. un gros bouton de lien pour dire créer gratuitement votre premier Pdf. un peu en dessous un lien vers la FAQ qu'il faut créer.
+dans la FAQ il faut répondre aux questions combien ça coûte, est-ce que je peux garder mon PDF. peut-être toi claudz,tu as d'autres idées 
