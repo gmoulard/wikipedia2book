@@ -165,7 +165,7 @@ class WikimediaFilePageTest(unittest.TestCase):
 
         download = AsyncMock(return_value=(b"image", "image/jpeg"))
         with patch.object(main, "MediaWikiClient", Client), patch.object(main, "download", download):
-            data = main.asyncio.run(main.fetch_remote_file("https://commons.wikimedia.org/wiki/File:x.jpg", {"image/jpeg"}, "l’image"))
+            data = main.asyncio.run(main.fetch_remote_file("https://commons.wikimedia.org/wiki/File:x.jpg", {"image/jpeg"}, main.BACKGROUND_FILE_BYTES, "l’image"))
         self.assertEqual(data, (b"image", "image/jpeg"))
         self.assertEqual(download.await_args.args[0], "https://upload.wikimedia.org/wikipedia/commons/1/16/x.jpg")
 

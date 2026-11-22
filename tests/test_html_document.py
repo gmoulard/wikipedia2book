@@ -168,7 +168,7 @@ class HtmlDocumentGenerationTest(unittest.TestCase):
         files = {"https://example.org/rapport.pdf/": (_make_pdf(3), "application/pdf"), "https://example.org/dossier/images/photo.png": (_png(), "image/png")}
 
         async def typed_download(url, max_bytes, label):
-            self.assertEqual(max_bytes, main.REMOTE_FILE_BYTES)
+            self.assertEqual(max_bytes, max(main.DOCUMENT_FILE_BYTES, main.HTML_PAGE_BYTES))
             return files[url]
 
         documents = [{"title": title, "kind": "html", "url": url, "selected": True} for title, url in zip(("Rapport", "Image"), files)]

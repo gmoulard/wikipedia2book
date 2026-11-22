@@ -91,7 +91,7 @@ from app.resource_gate import Reservation, ResourceGate, release_memory
 from app.request_limits import Alerts, ClosingStreamingResponse, GenerationLimits, LimitRefused, RequestGuard, client_keys, count_setting
 from app import wikipedia_api
 from app.json_source import JsonSourceError, download, fetch_project, project_from_payload
-from app.html_document import HTML_PAGE_BYTES, HTML_TYPES, html_for_print, without_styles
+from app.html_document import HTML_TYPES, html_for_print, without_styles
 from app.volumes import book_volumes, volume_project
 from app.models import (
     Article,
@@ -175,6 +175,19 @@ def deployment_settings(environ: Mapping[str, str], on_toolforge: bool) -> tuple
 
 ARTICLE_LIMIT, DOWNLOAD_CONCURRENCY = deployment_settings(os.environ, ON_TOOLFORGE)
 MEGABYTE = 1_000_000
+
+
+def megabytes_setting(environ: Mapping[str, str], name: str, default_mb: int) -> int:
+    text = environ.get(name, "").strip()
+    if not text:
+        return default_mb * MEGABYTE
+    if not text.isdigit() or int(text) == 0:
+        raise ValueError(f"{name} doit être un nombre entier de Mo, au moins 1 (reçu : {text!r}).")
+    return int(text) * MEGABYTE
+
+
+DOCUMENT_FILE_BYTES = megabytes_setting(os.environ, "WIKIPEDIA2BOOK_DOCUMENT_MB", 100)
+HTML_PAGE_BYTES = megabytes_setting(os.environ, "WIKIPEDIA2BOOK_HTML_PAGE_MB", 15)
 # NE PAS baisser ces estimations sans nouvelles mesures : recomposition d'un article environ 25 fois la taille de son PDF (6 Mo pour 0,2 Mo, 281 Mo pour 13,4 Mo), assemblage 92 Mo au départ puis environ 2,3 fois la taille des articles (+58 Mo pour 25,6 Mo, 253 pages), réduction d'une image de fond environ 35 fois sa taille (5,2 Mo de JPEG), mesurés le 2026-11-17 ; trop basses, elles laissent repasser la mémoire au-dessus de la limite.
 DOWNLOAD_RESERVE_BYTES = 10 * MEGABYTE
 # NE PAS descendre sous la taille d'un gros PDF recomposé (le fichier écrit dans le dossier temporaire fait environ 1,1 fois le PDF téléchargé, jusqu'à une vingtaine de Mo pour les plus gros articles) : sa taille n'est pas connue avant le téléchargement.
@@ -219,7 +232,7 @@ def generation_reserve(project: Project, selected: list) -> int:
         if image is not None:
             inline += len(image.data_base64 or "")
             remote_images += image.url is not None
-    return GENERATION_BASE_BYTES + INLINE_FACTOR * inline + remote_images * REMOTE_FILE_BYTES
+    return GENERATION_BASE_BYTES + INLINE_FACTOR * inline + remote_images * BACKGROUND_FILE_BYTES
 
 
 def assembly_disk_reserve(article_bytes: int) -> int:
@@ -228,7 +241,7 @@ def assembly_disk_reserve(article_bytes: int) -> int:
 
 def busy_event(waited_s: float) -> dict:
     return {"type": "busy", "seconds": math.floor(waited_s)}
-REMOTE_FILE_BYTES = 15 * 1024 * 1024
+BACKGROUND_FILE_BYTES = 15 * MEGABYTE
 BACKGROUND_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml"}
 DOCUMENT_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp", "application/pdf"}
 
@@ -237,7 +250,7 @@ class RemoteFileError(ValueError):
     pass
 
 
-async def fetch_remote_file(url: str, accepted: set[str], label: str) -> tuple[bytes, str]:
+async def fetch_remote_file(url: str, accepted: set[str], max_bytes: int, label: str) -> tuple[bytes, str]:
     file_page = wikimedia_file_page(url)
     if file_page is not None:
         try:
@@ -246,7 +259,7 @@ async def fetch_remote_file(url: str, accepted: set[str], label: str) -> tuple[b
         except MediaWikiError as error:
             raise RemoteFileError(f"{label[0].upper()}{label[1:]} n’a pas pu être trouvé ({error}) : {url}") from error
     try:
-        data, content_type = await download(url, REMOTE_FILE_BYTES, label)
+        data, content_type = await download(url, max_bytes, label)
     except JsonSourceError as error:
         advice = " Téléchargez le fichier depuis votre navigateur, puis importez-le." if error.refused else ""
         raise RemoteFileError(f"{error}{advice}") from error
@@ -1399,7 +1412,7 @@ async def _build_book_pdf(
         if document.kind == "html":
             data, kind = await html_page(document)
         else:
-            data, content_type = await fetch_remote_file(document.url, DOCUMENT_TYPES, f"le document « {document.title} »")
+            data, content_type = await fetch_remote_file(document.url, DOCUMENT_TYPES, DOCUMENT_FILE_BYTES, f"le document « {document.title} »")
             kind = "pdf" if content_type == "application/pdf" else "image"
         record.stage("fetch_document", "server", _memory_snapshot(), url=document.url, duration_s=round(time.monotonic() - started_at, 2), size_bytes=len(data), pdf=kind == "pdf", html=kind == "html")
         return data, kind
@@ -1410,7 +1423,7 @@ async def _build_book_pdf(
         if WIKIMEDIA_HOST.match(urlsplit(document.url).hostname or ""):
             raise RemoteFileError(f"{label[0].upper()}{label[1:]} est une page Wikimédia : ajoutez-la par le champ Sources, qui reprend son PDF officiel : {document.url}")
         try:
-            page, content_type = await download(document.url, REMOTE_FILE_BYTES, label)
+            page, content_type = await download(document.url, max(DOCUMENT_FILE_BYTES, HTML_PAGE_BYTES), label)
         except JsonSourceError as error:
             raise RemoteFileError(f"{error}{SAVE_AS_PDF_ADVICE if error.refused else ''}") from error
         # NE PAS se fier au type choisi par le navigateur : il le devine d'après la fin de l'adresse (« ….pdf/ », sans extension), seul le Content-Type de la réponse dit ce que le site envoie.
@@ -1419,7 +1432,7 @@ async def _build_book_pdf(
         if content_type not in HTML_TYPES:
             raise RemoteFileError(f"{label[0].upper()}{label[1:]} n’est pas une page HTML ({content_type or 'type inconnu'}) : {document.url}")
         if len(page) > HTML_PAGE_BYTES:
-            raise RemoteFileError(f"{label[0].upper()}{label[1:]} est trop volumineuse ({HTML_PAGE_BYTES // 1_000_000} Mo au plus) : {document.url}")
+            raise RemoteFileError(f"{label[0].upper()}{label[1:]} est trop volumineuse ({HTML_PAGE_BYTES // MEGABYTE} Mo au plus) : {document.url}")
         html = await html_for_print(page, document.url, lambda address, size, what: download(address, size, what), page_width_mm, page_height_mm)
         return html.encode("utf-8"), "html"
 
@@ -1460,7 +1473,7 @@ async def _build_book_pdf(
             note_wait(reservation, "fetch_image")
             started_at = time.monotonic()
             try:
-                data, content_type = await fetch_remote_file(image.url, BACKGROUND_TYPES, f"l’image « {image.title or image.url} »")
+                data, content_type = await fetch_remote_file(image.url, BACKGROUND_TYPES, BACKGROUND_FILE_BYTES, f"l’image « {image.title or image.url} »")
             finally:
                 reservation.release()
             record.stage("fetch_image", "server", _memory_snapshot(), url=image.url, image=field, duration_s=round(time.monotonic() - started_at, 2), size_bytes=len(data))

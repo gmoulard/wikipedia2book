@@ -635,6 +635,16 @@ class PdfStreamTest(unittest.TestCase):
             with self.assertRaises(ValueError, msg=environ):
                 settings(environ, on_toolforge)
 
+    def test_downloaded_file_limits_default_to_100_and_15_megabytes(self):
+        setting = main.megabytes_setting
+        self.assertEqual(main.DOCUMENT_FILE_BYTES, setting({}, "WIKIPEDIA2BOOK_DOCUMENT_MB", 100))
+        self.assertEqual(setting({}, "WIKIPEDIA2BOOK_DOCUMENT_MB", 100), 100_000_000)
+        self.assertEqual(setting({}, "WIKIPEDIA2BOOK_HTML_PAGE_MB", 15), 15_000_000)
+        self.assertEqual(setting({"WIKIPEDIA2BOOK_HTML_PAGE_MB": " 40 "}, "WIKIPEDIA2BOOK_HTML_PAGE_MB", 15), 40_000_000)
+        for text in ("0", "-5", "1.5", "beaucoup"):
+            with self.assertRaises(ValueError, msg=text):
+                setting({"WIKIPEDIA2BOOK_DOCUMENT_MB": text}, "WIKIPEDIA2BOOK_DOCUMENT_MB", 100)
+
     def test_dockerfile_sets_both_settings_within_the_policy(self):
         dockerfile = (Path(main.__file__).resolve().parent.parent / "Dockerfile").read_text(encoding="utf-8")
         self.assertIn("WIKIPEDIA2BOOK_ARTICLE_LIMIT=300", dockerfile)
@@ -873,7 +883,7 @@ class ResourceGateGenerationTest(unittest.TestCase):
         from app.models import BookImage, Project, UploadedDocument
         document = UploadedDocument(title="Plan", kind="image", mime_type="image/png", data_base64="A" * 1000)
         project = Project(name="Livre", cover_image=BookImage(title="Couverture", url="https://example.org/c.jpg"), back_image=BookImage(mime_type="image/png", data_base64="QUFB" * 250))
-        self.assertEqual(main.generation_reserve(project, [document]), main.GENERATION_BASE_BYTES + main.INLINE_FACTOR * (1000 + 1000) + main.REMOTE_FILE_BYTES)
+        self.assertEqual(main.generation_reserve(project, [document]), main.GENERATION_BASE_BYTES + main.INLINE_FACTOR * (1000 + 1000) + main.BACKGROUND_FILE_BYTES)
         self.assertEqual(main.ratio_setting({}, "WIKIPEDIA2BOOK_GENERATIONS_RATIO", 0.5), 0.5)
 
     def test_estimates_follow_the_file_sizes(self):

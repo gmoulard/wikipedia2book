@@ -24,7 +24,6 @@ from bs4 import BeautifulSoup
 from app.json_source import JsonSourceError
 
 HTML_TYPES = {"text/html", "application/xhtml+xml"}
-HTML_PAGE_BYTES = 5 * 1024 * 1024
 RESOURCE_BYTES = 5 * 1024 * 1024
 RESOURCES_TOTAL_BYTES = 20 * 1024 * 1024
 MAX_IMAGES = 40
