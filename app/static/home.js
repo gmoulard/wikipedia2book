@@ -18,27 +18,37 @@
 
 let installPrompt = null;
 
-function installable() {
-  return window.matchMedia('(pointer: coarse)').matches && !window.matchMedia('(display-mode: standalone)').matches && !navigator.standalone;
-}
-
 function isIos() {
   return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
 
+function onMobile() {
+  return window.matchMedia('(pointer: coarse)').matches || isIos() || /android|mobile/i.test(navigator.userAgent);
+}
+
+function installed() {
+  return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+}
+
+// NE PAS attendre DOMContentLoaded pour écouter beforeinstallprompt : Chrome peut l'envoyer avant, et l'installation directe serait alors perdue.
+window.addEventListener('beforeinstallprompt', (event) => {
+  if (!onMobile()) return;
+  event.preventDefault();
+  installPrompt = event;
+});
+
 function setupInstallLink() {
   const button = document.getElementById('installButton');
   const hint = document.getElementById('installHint');
-  if (!button || !installable()) return;
-  window.addEventListener('beforeinstallprompt', (event) => {
-    event.preventDefault();
-    installPrompt = event;
-    button.hidden = false;
-  });
+  if (!button || !onMobile() || installed()) return;
+  button.hidden = false;
   window.addEventListener('appinstalled', () => { button.hidden = true; hint.hidden = true; });
-  if (isIos()) button.hidden = false;
   button.addEventListener('click', async () => {
-    if (!installPrompt) { hint.hidden = !hint.hidden; return; }
+    if (!installPrompt) {
+      hint.textContent = t(isIos() ? 'home.installIos' : 'home.installAndroid');
+      hint.hidden = !hint.hidden;
+      return;
+    }
     installPrompt.prompt();
     const choice = await installPrompt.userChoice;
     installPrompt = null;

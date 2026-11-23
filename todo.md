@@ -1,6 +1,6 @@
 # À faire
 
-État au 23/11/2026. Production Toolforge : **1.16.1**.
+État au 23/11/2026. Production Toolforge : **1.16.2**.
 
 Une action réalisée est cochée (`[x]`) avec la version ou la date qui l'a faite ; les actions à faire restent en `[ ]`.
 
