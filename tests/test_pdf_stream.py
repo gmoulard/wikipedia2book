@@ -406,6 +406,7 @@ class PdfStreamTest(unittest.TestCase):
         self.assertIn('id="articleQuery"', pages["/app"])
         self.assertNotIn('id="articleQuery"', pages["/"])
         self.assertIn('data-i18n="faq.q1"', pages["/faq"])
+        self.assertIn('href="https://gmoulard.github.io/wikipedia2book/static/Wrecks-of-Saint-Pierre-harbor.pdf"', pages["/"])
 
     def test_the_site_is_an_installable_app_that_opens_the_home_page(self):
         manifest = self.client.get("/static/manifest.webmanifest")
