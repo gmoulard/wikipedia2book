@@ -731,6 +731,7 @@ Two series of measurements, in tables whose common columns are aligned (date, ve
   | 1.15.0 | 2026-11-23 | workflow | max | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |  | ✅ |
   | 1.16.0 | 2026-11-23 | workflow | max | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |  | ✅ |
   | 1.16.1 | 2026-11-23 | workflow | min | ✅ | ✅ |  |  |  |  |  |  | ✅ |
+  | 1.16.2 | 2026-11-23 | workflow | min | ✅ | ✅ |  |  |  |  |  |  | ✅ |
 
   One row per run, one column per scenario. ✅ ok; <span class="bench-new">new</span>: first run of the scenario, no reference yet; ⚠️ to watch and ❌ regression, with in brackets the gap of the *application per page* time to the reference; ❌ failed: the generation did not complete; empty cell: scenario not run. Every measurement (pages, *Wikipedia*, *Application*, *Transfer*, *Total* phases, gap) is in [benchmark-results.csv](benchmark-results.csv), one row per scenario and per run.
   <!-- benchmark-table:end -->
@@ -763,6 +764,7 @@ Two series of measurements, in tables whose common columns are aligned (date, ve
   * Run of 2026-11-23 in the workflow, version 1.15.0 (commit `7e5ac7c`: home page at `/`, FAQ at `/faq`, application at `/app`), maximum level before the Toolforge release (minor version): `ok` on all eight scenarios, *application per page* time 12 to 25 % below the reference. The total time gaps (up to +271 % for `50-pages`) come from the *Wikipedia* time, Wikimedia's PDF service being slow for the first generations; the version does not touch PDF generation.
   * Second run of 2026-11-23 in the workflow, version 1.16.0 (commit `59401f2`: installable application, PWA, and "Wikipedia2Book on mobile" link), maximum level before the Toolforge release (minor version): `ok` on all eight scenarios, *application per page* time +1 to +14 % compared with the reference, above the morning run (slower workflow machine, the version does not touch PDF generation). The total time gaps come from the *Wikipedia* time.
   * Third run of 2026-11-23 in the workflow, version 1.16.1 (commit `fff7571`: "See an example book" opens the GitHub Pages example PDF), minimum level before the Toolforge release: `ok` on all three scenarios, *application per page* time 34 to 39 % below the reference. The *Wikipedia* time of `200-pages` (20.6 s, total time +185 %) comes from Wikimedia's PDF service; the version does not touch PDF generation.
+  * Fourth run of 2026-11-23 in the workflow, version 1.16.2 (commit `7f1174e`: "Wikipedia2Book on mobile" link always shown on phones and tablets), minimum level before the Toolforge release: `ok` on all three scenarios, *application per page* time 22 to 27 % below the reference; the version does not touch PDF generation.
 
 ### 1.12 Limit test
 
