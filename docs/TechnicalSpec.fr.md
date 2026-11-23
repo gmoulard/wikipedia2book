@@ -730,6 +730,7 @@ Deux séries de mesures, dans des tableaux aux colonnes communes alignées (date
   | 1.14.2 | 2026-11-22 | workflow | min | ✅ | ✅ |  |  |  |  |  |  | ✅ |
   | 1.15.0 | 2026-11-23 | workflow | max | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |  | ✅ |
   | 1.16.0 | 2026-11-23 | workflow | max | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |  | ✅ |
+  | 1.16.1 | 2026-11-23 | workflow | min | ✅ | ✅ |  |  |  |  |  |  | ✅ |
 
   Une ligne par passage, une colonne par scénario. ✅ ok ; <span class="bench-new">nouveau</span> : premier passage du scénario, pas encore de référence ; ⚠️ à surveiller et ❌ régression, avec entre parenthèses l'écart du temps *application par page* à la référence ; ❌ échec : la génération n'a pas abouti ; case vide : scénario non joué. Toutes les mesures (pages, phases *Wikipédia*, *Application*, *Transfert*, *Total*, écart) sont dans [benchmark-results.csv](benchmark-results.csv), une ligne par scénario et par passage.
   <!-- benchmark-table:end -->
@@ -761,6 +762,7 @@ Deux séries de mesures, dans des tableaux aux colonnes communes alignées (date
   * Passage du 2026-11-22 dans le workflow, version 1.14.2 (commit `22248f3` : page web qui renvoie un PDF ou une image reprise telle quelle, tailles maximales des documents et pages web réglables), niveau minimal avant la mise en production sur Toolforge : `ok` sur les trois scénarios, temps *application par page* 8 à 13 % sous la référence (0,84 s, 1,81 s et 1,74 s d'application). Le temps *Wikipédia* de `50-pages` (13,9 s, temps total +351 %) vient du service PDF de Wikimédia, lent pour les premières générations ; les changements de la version ne touchent pas les livres du benchmark (aucune page web).
   * Passage du 2026-11-23 dans le workflow, version 1.15.0 (commit `7e5ac7c` : page d'accueil à `/`, FAQ à `/faq`, application à `/app`), niveau maximal avant la mise en production sur Toolforge (version mineure) : `ok` sur les huit scénarios, temps *application par page* 12 à 25 % sous la référence. Les écarts de temps total (jusqu'à +271 % pour `50-pages`) viennent du temps *Wikipédia*, le service PDF de Wikimédia étant lent pour les premières générations ; la version ne touche pas la génération du PDF.
   * Second passage du 2026-11-23 dans le workflow, version 1.16.0 (commit `59401f2` : application installable, PWA, et lien « Wikipedia2Book sur mobile »), niveau maximal avant la mise en production sur Toolforge (version mineure) : `ok` sur les huit scénarios, temps *application par page* de +1 à +14 % par rapport à la référence, au-dessus du passage du matin (machine du workflow plus lente, la version ne touchant pas la génération du PDF). Les écarts de temps total viennent du temps *Wikipédia*.
+  * Troisième passage du 2026-11-23 dans le workflow, version 1.16.1 (commit `fff7571` : « Voir un exemple de livre » ouvre le PDF d'exemple de GitHub Pages), niveau minimal avant la mise en production sur Toolforge : `ok` sur les trois scénarios, temps *application par page* 34 à 39 % sous la référence. Le temps *Wikipédia* de `200-pages` (20,6 s, temps total +185 %) vient du service PDF de Wikimédia ; la version ne touche pas la génération du PDF.
 
 ### 1.12 Test aux limites
 
