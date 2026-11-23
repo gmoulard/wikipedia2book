@@ -16,4 +16,38 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-document.addEventListener('DOMContentLoaded', applyTranslations);
+let installPrompt = null;
+
+function installable() {
+  return window.matchMedia('(pointer: coarse)').matches && !window.matchMedia('(display-mode: standalone)').matches && !navigator.standalone;
+}
+
+function isIos() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function setupInstallLink() {
+  const button = document.getElementById('installButton');
+  const hint = document.getElementById('installHint');
+  if (!button || !installable()) return;
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    installPrompt = event;
+    button.hidden = false;
+  });
+  window.addEventListener('appinstalled', () => { button.hidden = true; hint.hidden = true; });
+  if (isIos()) button.hidden = false;
+  button.addEventListener('click', async () => {
+    if (!installPrompt) { hint.hidden = !hint.hidden; return; }
+    installPrompt.prompt();
+    const choice = await installPrompt.userChoice;
+    installPrompt = null;
+    if (choice.outcome === 'accepted') button.hidden = true;
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  applyTranslations();
+  setupInstallLink();
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch((error) => console.error('Service worker', error));
+});

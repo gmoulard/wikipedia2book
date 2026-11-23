@@ -88,6 +88,7 @@ wikipedia2book/
 │   └── static/                  # Single-page web interface (no framework)
 │       ├── index.html           # Application, served at /app
 │       ├── home.html, faq.html, home.css, home.js   # Home page (/) and FAQ (/faq), 12 languages
+│       ├── manifest.webmanifest, sw.js, icon-*.png   # Installable app (PWA): a link to the site, served at /sw.js, no offline cache
 │       ├── app.js               # Front-end logic
 │       ├── i18n.js              # Interface translations (12 languages)
 │       ├── admin.html, admin.js, admin.css   # Administration page (/admin)

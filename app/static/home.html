@@ -24,6 +24,8 @@
   <meta name="theme-color" content="#ffffff">
   <title data-i18n="home.pageTitle">Wikipedia2Book · Créez un livre PDF à partir de Wikipédia</title>
   <link rel="icon" href="/static/Wikipedia2bookLogo.png">
+  <link rel="manifest" href="/static/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
   <link rel="stylesheet" href="/static/styles.css">
   <link rel="stylesheet" href="/static/home.css">
   <script src="/static/i18n.js" defer></script>
@@ -92,6 +94,8 @@
       <a class="button button-dark home-cta" href="/app" data-i18n="home.cta">Créer gratuitement votre premier PDF</a>
       <a class="home-example" href="/app?json=/static/testPerformanceReference.json" data-i18n="home.example">Voir un exemple de livre</a>
       <a class="home-faq-link" href="/faq" data-i18n="home.faqLink">Des questions ? Consultez la FAQ</a>
+      <button class="text-button home-install" id="installButton" type="button" data-i18n="home.install" hidden>Wikipedia2Book sur mobile</button>
+      <p class="home-install-hint" id="installHint" data-i18n="home.installIos" hidden>Sur iPhone ou iPad : touchez « Partager », puis « Sur l'écran d'accueil ».</p>
     </section>
   </main>
 </body>

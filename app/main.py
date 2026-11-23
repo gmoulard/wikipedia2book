@@ -22,6 +22,7 @@ import importlib.metadata
 import itertools
 import json
 import math
+import mimetypes
 import os
 import platform
 import queue
@@ -294,6 +295,7 @@ class ContentStaticFiles(StaticFiles):
         return response
 
 
+mimetypes.add_type("application/manifest+json", ".webmanifest")
 app.mount("/static", ContentStaticFiles(directory=static_directory), name="static")
 HOURLY_STATS_PATH = "/api/stats/hourly"
 HEALTH_DETAILS_PATH = "/api/health/details"
@@ -350,7 +352,8 @@ async def revalidate_web_app_files(request: Request, call_next):
 
 APP_PATH = "/app"
 FAQ_PATH = "/faq"
-WEB_PAGES = {"/", APP_PATH, FAQ_PATH, ADMIN_PATH, ADMIN_PATH + "/generation"}
+SERVICE_WORKER_PATH = "/sw.js"
+WEB_PAGES = {"/", APP_PATH, FAQ_PATH, SERVICE_WORKER_PATH, ADMIN_PATH, ADMIN_PATH + "/generation"}
 APP_LINK_PARAMETERS = {"json", "source", "wiki"}
 
 
@@ -365,6 +368,12 @@ def home_page(request: Request) -> Response:
 @app.get(APP_PATH, include_in_schema=False)
 def web_app() -> FileResponse:
     return FileResponse(static_directory / "index.html", media_type="text/html")
+
+
+# NE PAS déplacer ce fichier sous /static : un service worker ne contrôle que les pages sous son adresse, et l'application installée démarre à /.
+@app.get(SERVICE_WORKER_PATH, include_in_schema=False)
+def service_worker() -> FileResponse:
+    return FileResponse(static_directory / "sw.js", media_type="text/javascript")
 
 
 @app.get(FAQ_PATH, include_in_schema=False)

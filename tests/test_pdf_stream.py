@@ -407,6 +407,21 @@ class PdfStreamTest(unittest.TestCase):
         self.assertNotIn('id="articleQuery"', pages["/"])
         self.assertIn('data-i18n="faq.q1"', pages["/faq"])
 
+    def test_the_site_is_an_installable_app_that_opens_the_home_page(self):
+        manifest = self.client.get("/static/manifest.webmanifest")
+        self.assertEqual(manifest.headers["content-type"], "application/manifest+json")
+        data = manifest.json()
+        self.assertEqual((data["name"], data["start_url"], data["scope"], data["display"]), ("Wikipedia2Book", "/", "/", "standalone"))
+        for icon in data["icons"]:
+            self.assertEqual(self.client.get(icon["src"]).status_code, 200)
+        worker = self.client.get("/sw.js")
+        self.assertEqual(worker.status_code, 200)
+        self.assertIn("javascript", worker.headers["content-type"])
+        self.assertEqual(worker.headers["cache-control"], "no-cache")
+        self.assertNotIn("caches.", worker.text)
+        for path in ("/", "/app", "/faq"):
+            self.assertIn('rel="manifest" href="/static/manifest.webmanifest"', self.client.get(path).text)
+
     def test_old_links_to_the_home_page_open_the_app(self):
         for query in ("json=https://example.org/livre.json", "source=Chat&source=Chien", "wiki=nl&source=Kat"):
             response = self.client.get(f"/?{query}", follow_redirects=False)

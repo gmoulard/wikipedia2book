@@ -50,6 +50,8 @@
 .home-cta { min-height: 56px; padding: 0 32px; font-size: 20px; font-weight: 700; text-decoration: none; }
 .home-example { font-size: 16px; font-weight: 700; }
 .home-faq-link { margin-top: 12px; font-size: 15px; }
+.home-install { font-size: 14px; font-weight: 400; }
+.home-install-hint { max-width: 420px; margin: 0; color: var(--ink-soft); font-size: 14px; text-align: center; }
 .faq-main { max-width: 820px; }
 .faq-main h1 { text-align: center; }
 .faq-list { margin-top: 32px; border-top: 1px solid var(--line); }
