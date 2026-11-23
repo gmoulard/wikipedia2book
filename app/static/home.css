@@ -38,6 +38,7 @@
 .art-line { fill: none; stroke: var(--ink-soft); stroke-width: 2; stroke-linecap: round; }
 .art-fill { fill: var(--accent); }
 .art-letter { fill: var(--ink); font-family: var(--serif); font-size: 22px; text-anchor: middle; }
+.art-label { fill: var(--ink-soft); font-family: var(--sans); font-size: 11px; text-anchor: middle; }
 .art-small { fill: var(--danger); font-family: var(--sans); font-size: 12px; font-weight: 700; text-anchor: middle; }
 .art-machine { fill: var(--interactive); stroke: var(--ink-soft); stroke-width: 2; stroke-linejoin: round; }
 .art-machine-line, .art-page-fold { fill: none; stroke: var(--ink-soft); stroke-width: 2; }
