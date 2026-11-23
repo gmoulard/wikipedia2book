@@ -31,7 +31,9 @@ Wikipedia2Book turns a selection of Wikimedia pages into one printable book. It 
 
 | What | Address |
 | --- | --- |
-| Application (production, Toolforge) | <https://wikipedia2book.toolforge.org/> |
+| Home page (production, Toolforge) | <https://wikipedia2book.toolforge.org/> |
+| Application | <https://wikipedia2book.toolforge.org/app> |
+| Frequently asked questions | <https://wikipedia2book.toolforge.org/faq> |
 | Pre-production (Northflank, follows `main`) | <https://prod--wikipedia2book--wkvpbnfj6h4v.code.run/> |
 | Example book opened in the application | <https://wikipedia2book.toolforge.org/?json=https://gmoulard.github.io/wikipedia2book/static/Wrecks-of-Saint-Pierre-harbor.json> |
 | Example PDF generated on request | <https://wikipedia2book.toolforge.org/api/pdf/from-json?url=https%3A%2F%2Fgmoulard.github.io%2Fwikipedia2book%2Fstatic%2FWrecks-of-Saint-Pierre-harbor.json&language=en> |

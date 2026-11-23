@@ -86,7 +86,8 @@ wikipedia2book/
 │   ├── resource_gate.py           # Makes each generation stage wait while the server lacks memory or disk space
 │   ├── request_limits.py        # Abuse protection: request size, generations per client, send timeout, alerts
 │   └── static/                  # Single-page web interface (no framework)
-│       ├── index.html
+│       ├── index.html           # Application, served at /app
+│       ├── home.html, faq.html, home.css, home.js   # Home page (/) and FAQ (/faq), 12 languages
 │       ├── app.js               # Front-end logic
 │       ├── i18n.js              # Interface translations (12 languages)
 │       ├── admin.html, admin.js, admin.css   # Administration page (/admin)

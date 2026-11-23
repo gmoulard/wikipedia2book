@@ -8,7 +8,7 @@ Le comportement de référence est décrit dans la [spécification fonctionnelle
 
 ## Comment s'en servir
 
-- **Navigateur** : ouvrir https://wikipedia2book.toolforge.org/, coller l'exemple dans le champ de l'étape « Construire le livre », puis cliquer sur « Ajouter ». Une adresse commençant par `https://wikipedia2book.toolforge.org/?` s'ouvre telle quelle.
+- **Navigateur** : ouvrir https://wikipedia2book.toolforge.org/app, coller l'exemple dans le champ de l'étape « Construire le livre », puis cliquer sur « Ajouter ». Une adresse commençant par `https://wikipedia2book.toolforge.org/?` s'ouvre telle quelle.
 - **API** : ouvrir l'adresse dans le navigateur (le PDF se télécharge) ou la passer à `curl -OJ`. Les appels `POST` sont donnés en `curl`.
 - **Version** : version de l'application à partir de laquelle le cas fonctionne. Vérifier la version en service avec https://wikipedia2book.toolforge.org/api/version. « À venir » : écrit sur `main`, pas encore publié.
 - La colonne « Version » vaut pour le navigateur. Côté API, `GET /api/pdf/from-source` (sections 1 à 4) et le paramètre `?source=` de la page existent depuis la 1.12.0 (en production dès le 16 novembre 2026 au soir, avant de recevoir ce numéro) : avec une version plus ancienne, envoyer le livre en JSON à `POST /api/pdf` (9.3), après avoir reconnu chaque saisie avec `POST /api/sources/resolve` (9.1).

@@ -89,6 +89,15 @@ class HelpPagesTest(unittest.TestCase):
         self.assertIn('data-i18n-href="https://gmoulard.github.io/wikipedia2book/helpSearch.{lang}.html"', html)
         self.assertIn('el.dataset.i18nHref.replace("{lang}", state_i18n.lang)', I18N_PATH.read_text(encoding="utf-8"))
 
+    def test_home_and_faq_pages_only_use_defined_keys(self):
+        french = set(_extract_blocks(I18N_PATH.read_text(encoding="utf-8"))["fr"])
+        for page in ("home.html", "faq.html"):
+            html = (I18N_PATH.parent / page).read_text(encoding="utf-8")
+            keys = set(re.findall(r'data-i18n(?:-aria-label)?="([^"]+)"', html))
+            with self.subTest(page=page):
+                self.assertTrue(keys)
+                self.assertEqual(keys - french, set())
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,0 +1,89 @@
+<!doctype html>
+<!--
+  This file is part of Wikipedia2Book
+  <https://github.com/gmoulard/wikipedia2book>.
+  Copyright (c) 2026 Guillaume Moulard.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License as published
+  by the Free Software Foundation, version 3.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-->
+
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <title data-i18n="faq.pageTitle">Wikipedia2Book · Questions fréquentes</title>
+  <link rel="icon" href="/static/Wikipedia2bookLogo.png">
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/home.css">
+  <script src="/static/i18n.js" defer></script>
+  <script src="/static/home.js" defer></script>
+</head>
+<body class="home-page">
+  <header class="topbar">
+    <a class="brand" href="/" data-i18n-aria-label="home.brandAria" aria-label="Wikipedia2Book, accueil">
+      <img class="brand-logo" src="/static/Wikipedia2bookLogo.png" width="28" height="28" alt="" aria-hidden="true">
+      <span>Wikipedia<span class="brand-light">2Book</span></span>
+    </a>
+    <nav class="home-nav">
+      <a href="/faq" data-i18n="home.faqNav">FAQ</a>
+      <a class="button button-dark" href="/app" data-i18n="home.openApp">Ouvrir l'application</a>
+    </nav>
+  </header>
+  <main class="home-main faq-main">
+    <h1 data-i18n="faq.title">Questions fréquentes</h1>
+    <div class="faq-list">
+      <details class="faq-item">
+        <summary data-i18n="faq.q1">Combien ça coûte ?</summary>
+        <p data-i18n="faq.a1">Rien. Wikipedia2Book est gratuit, sans inscription, sans compte et sans publicité. C'est un logiciel libre (licence AGPL-3.0), hébergé par Wikimedia Cloud (Toolforge).</p>
+      </details>
+      <details class="faq-item">
+        <summary data-i18n="faq.q2">Est-ce que je peux garder mon PDF ?</summary>
+        <p data-i18n="faq.a2">Oui. Le PDF est téléchargé sur votre appareil et vous appartient : vous pouvez le garder, l'imprimer et le partager aussi longtemps que vous voulez. Le serveur n'en garde aucune copie : pour l'avoir à nouveau, il suffit de le générer encore.</p>
+      </details>
+      <details class="faq-item">
+        <summary data-i18n="faq.q3">Mes données sont-elles enregistrées ?</summary>
+        <p data-i18n="faq.a3">Non. Le livre vit seulement dans votre navigateur. Le serveur ne garde ni le livre, ni le PDF, ni votre adresse IP : il fabrique le PDF, vous l'envoie et oublie tout.</p>
+      </details>
+      <details class="faq-item">
+        <summary data-i18n="faq.q4">Comment reprendre mon livre plus tard ?</summary>
+        <p data-i18n="faq.a4">Avec le bouton « Enregistrer », le livre est enregistré sur votre ordinateur dans un fichier JSON. Le bouton « Ouvrir » le recharge plus tard, sur n'importe quel appareil. Fermer la page sans enregistrer perd le livre.</p>
+      </details>
+      <details class="faq-item">
+        <summary data-i18n="faq.q5">Y a-t-il une limite de taille ?</summary>
+        <p data-i18n="faq.a5">Un livre peut contenir jusqu'à 300 articles. Au-delà, l'application le découpe d'elle-même en plusieurs volumes, entre deux chapitres, et génère un PDF par volume. Chaque image ou PDF importé peut peser jusqu'à 15 Mo.</p>
+      </details>
+      <details class="faq-item">
+        <summary data-i18n="faq.q6">Sous quelle licence est mon livre ?</summary>
+        <p data-i18n="faq.a6">Les textes de Wikipédia sont sous licence Creative Commons CC BY-SA 4.0. Une page « Licence » est ajoutée à la fin du livre, et chaque article garde le lien vers sa source, qui crédite ses auteurs. Les images gardent leur propre licence, indiquée par Wikipédia.</p>
+      </details>
+      <details class="faq-item">
+        <summary data-i18n="faq.q7">Puis-je imprimer, partager ou vendre le livre ?</summary>
+        <p data-i18n="faq.a7">Oui, la licence CC BY-SA le permet, même pour un usage commercial, à condition de garder la page de licence et les crédits, et de partager toute version modifiée sous la même licence. Le livre n'est pas une publication officielle de Wikipédia.</p>
+      </details>
+      <details class="faq-item">
+        <summary data-i18n="faq.q8">Quelles sources puis-je utiliser ?</summary>
+        <p data-i18n="faq.a8">Les pages de Wikipédia, Wikisource, Wikilivres, Wikivoyage, Wikiversité, Wikiquote, Wiktionnaire et Wikinews, dans toutes leurs langues, ainsi que les livres Wikipédia, vos propres images et PDF, et n'importe quelle page web, que le serveur convertit en PDF.</p>
+      </details>
+      <details class="faq-item">
+        <summary data-i18n="faq.q9">Que faire si la génération échoue ?</summary>
+        <p data-i18n="faq.a9">Si Wikipédia est surchargé, l'application attend puis réessaie d'elle-même, et relance la génération si le serveur a été interrompu. Si l'erreur persiste, réessayez un peu plus tard ou découpez le livre en volumes. Vous pouvez aussi signaler le problème sur GitHub, en joignant le fichier JSON du livre.</p>
+        <p><a href="https://github.com/gmoulard/wikipedia2book/issues/new?template=bug.yml" target="_blank" rel="noopener" data-i18n="faq.bugLink">Signaler un problème sur GitHub</a></p>
+      </details>
+    </div>
+    <section class="home-actions">
+      <a class="button button-dark home-cta" href="/app" data-i18n="home.cta">Créer gratuitement votre premier PDF</a>
+    </section>
+  </main>
+</body>
+</html>

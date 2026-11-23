@@ -341,16 +341,35 @@ async def count_hourly_hits(request: Request, call_next):
 @app.middleware("http")
 async def revalidate_web_app_files(request: Request, call_next):
     response = await call_next(request)
-    if request.url.path in ("/", ADMIN_PATH, ADMIN_PATH + "/generation") or request.url.path.startswith("/static/"):
+    if request.url.path in WEB_PAGES or request.url.path.startswith("/static/"):
         response.headers["Cache-Control"] = "no-cache"
     if request.url.path == ADMIN_PATH or request.url.path.startswith((ADMIN_PATH + "/", "/api/health/")):
         response.headers.update(SECURITY_HEADERS)
     return response
 
 
+APP_PATH = "/app"
+FAQ_PATH = "/faq"
+WEB_PAGES = {"/", APP_PATH, FAQ_PATH, ADMIN_PATH, ADMIN_PATH + "/generation"}
+APP_LINK_PARAMETERS = {"json", "source", "wiki"}
+
+
 @app.get("/", include_in_schema=False)
+def home_page(request: Request) -> Response:
+    # NE PAS retirer cette redirection : les liens publiés avant la 1.15.0 (/?json=, /?source=, /?wiki=) doivent toujours ouvrir le livre dans l'application.
+    if APP_LINK_PARAMETERS & set(request.query_params):
+        return RedirectResponse(f"{APP_PATH}?{request.url.query}", status_code=307)
+    return FileResponse(static_directory / "home.html", media_type="text/html")
+
+
+@app.get(APP_PATH, include_in_schema=False)
 def web_app() -> FileResponse:
     return FileResponse(static_directory / "index.html", media_type="text/html")
+
+
+@app.get(FAQ_PATH, include_in_schema=False)
+def faq_page() -> FileResponse:
+    return FileResponse(static_directory / "faq.html", media_type="text/html")
 
 
 def _mediawiki_error(error: Exception) -> HTTPException:

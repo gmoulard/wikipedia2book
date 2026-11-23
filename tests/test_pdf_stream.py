@@ -393,11 +393,26 @@ class PdfStreamTest(unittest.TestCase):
             self.assertEqual(FakeClient.papers, [paper, paper])
 
     def test_web_app_files_are_revalidated_by_the_browser(self):
-        for path in ("/", "/static/app.js", "/static/i18n.js", "/static/styles.css"):
+        for path in ("/", "/app", "/faq", "/static/app.js", "/static/i18n.js", "/static/styles.css", "/static/home.css", "/static/home.js"):
             response = self.client.get(path)
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.headers["cache-control"], "no-cache")
         self.assertNotIn("cache-control", self.client.get("/api/version").headers)
+
+    def test_home_page_app_and_faq_are_separate_pages(self):
+        pages = {path: self.client.get(path).text for path in ("/", "/app", "/faq")}
+        self.assertIn('href="/app"', pages["/"])
+        self.assertIn('href="/faq"', pages["/"])
+        self.assertIn('id="articleQuery"', pages["/app"])
+        self.assertNotIn('id="articleQuery"', pages["/"])
+        self.assertIn('data-i18n="faq.q1"', pages["/faq"])
+
+    def test_old_links_to_the_home_page_open_the_app(self):
+        for query in ("json=https://example.org/livre.json", "source=Chat&source=Chien", "wiki=nl&source=Kat"):
+            response = self.client.get(f"/?{query}", follow_redirects=False)
+            self.assertEqual(response.status_code, 307)
+            self.assertEqual(response.headers["location"], f"/app?{query}")
+        self.assertEqual(self.client.get("/?utm_source=x", follow_redirects=False).status_code, 200)
 
     def test_explicit_subtitle_replaces_the_book_subtitle(self):
         FakeClient.book = WikipediaBook(subtitle="Petit guide", chapters=[("", ["Chien"])])

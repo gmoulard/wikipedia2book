@@ -226,7 +226,7 @@ uvicorn app.main:app --reload
 
 The application is served at the same address.
 
-The application page (`/`) and its files (`/static/…`) are served with `Cache-Control: no-cache`: the browser revalidates each file on every load (304 response if unchanged), which avoids mixing, after a deployment, a new page with old scripts or translations still in cache. Files under `/static/` carry a fingerprint (`ETag`) computed from their content, and no modification date (`Last-Modified`) (`main.ContentStaticFiles`): on Toolforge, every built file is dated 1980; with Starlette's fingerprint (date and size) and that date, a browser revalidating by date got 304 on every version and kept an old `i18n.js` (labels shown as keys, for example `admin.limits`). Tests: `tests/test_static_cache.py`.
+The home page (`/`, `home.html`), the application (`/app`, `index.html`), the FAQ (`/faq`, `faq.html`) and their files (`/static/…`) are served with `Cache-Control: no-cache`: the browser revalidates each file on every load (304 response if unchanged), which avoids mixing, after a deployment, a new page with old scripts or translations still in cache. Files under `/static/` carry a fingerprint (`ETag`) computed from their content, and no modification date (`Last-Modified`) (`main.ContentStaticFiles`): on Toolforge, every built file is dated 1980; with Starlette's fingerprint (date and size) and that date, a browser revalidating by date got 304 on every version and kept an old `i18n.js` (labels shown as keys, for example `admin.limits`). Tests: `tests/test_static_cache.py`.
 
 The server stores no book or PDF on disk; all the state is kept in the browser and exchanged through JSON. Deployment therefore needs neither a database nor a persistent volume, on any platform. Only a temporary folder (the system temporary directory) is used during each PDF generation, and it is deleted at the end (section 11.1 of the functional specification): the platform must offer temporary space of about twice the size of the largest book generated.
 
@@ -572,7 +572,10 @@ flowchart TB
         I18N["i18n.js<br/>translations, lang/dir"]
         APP["app.js<br/>Sources · Organization · Editing steps"]
         FILE[(".json file<br/>Save / Open")]
+        HOME["home.html · faq.html<br/>home page (/) and FAQ (/faq)"]
         I18N --> APP
+        I18N --> HOME
+        HOME --> APP
         APP <--> FILE
     end
 
@@ -1033,7 +1036,8 @@ Wikipedia2Book/
 │   ├── request_limits.py
 │   │
 │   └── static/
-│       ├── index.html
+│       ├── index.html   (application, served at /app)
+│       ├── home.html, faq.html, home.css, home.js   (home page at / and FAQ at /faq)
 │       ├── styles.css
 │       ├── app.js
 │       ├── i18n.js

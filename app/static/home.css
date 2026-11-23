@@ -1,0 +1,67 @@
+/*
+  This file is part of Wikipedia2Book
+  <https://github.com/gmoulard/wikipedia2book>.
+  Copyright (c) 2026 Guillaume Moulard.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License as published
+  by the Free Software Foundation, version 3.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+.home-page { display: flex; flex-direction: column; }
+.home-nav { display: flex; align-items: center; gap: 16px; font-weight: 700; }
+.home-nav a { text-decoration: none; }
+.home-main { width: min(1100px, 100%); margin: 0 auto; padding: 40px 32px 72px; }
+.home-hero { text-align: center; }
+.home-logo { width: 140px; height: 140px; object-fit: contain; }
+.home-hero h1, .faq-main h1 { margin: 12px 0 8px; font-family: var(--serif); font-size: 44px; font-weight: 400; }
+.home-tagline { margin: 0 auto; max-width: 640px; color: var(--ink-soft); font-size: 20px; }
+.home-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin: 48px 0 0; padding: 0; list-style: none; }
+.home-step { position: relative; text-align: center; }
+.home-step + .home-step::before { position: absolute; top: 70px; inset-inline-start: -32px; color: var(--line-strong); content: '\2192'; font-size: 28px; line-height: 1; }
+[dir="rtl"] .home-step + .home-step::before { content: '\2190'; }
+.home-step h2 { margin: 16px 0 6px; font-family: var(--serif); font-size: 22px; font-weight: 400; }
+.home-step p { margin: 0; color: var(--ink-soft); font-size: 15px; }
+.step-number { display: inline-flex; width: 28px; height: 28px; align-items: center; justify-content: center; border-radius: 50%; background: var(--accent); color: var(--paper); font-family: var(--sans); font-size: 15px; font-weight: 700; vertical-align: 3px; }
+.step-art { width: 100%; max-width: 260px; height: auto; }
+.step-art rect, .art-page { fill: var(--paper); stroke: var(--line-strong); stroke-width: 2; }
+.art-tile rect { fill: var(--accent-pale); stroke: var(--accent); }
+.art-card-moving rect { fill: var(--accent-pale); stroke: var(--accent); filter: drop-shadow(0 3px 4px rgb(0 0 0 / 25%)); }
+.art-line { fill: none; stroke: var(--ink-soft); stroke-width: 2; stroke-linecap: round; }
+.art-fill { fill: var(--accent); }
+.art-letter { fill: var(--ink); font-family: var(--serif); font-size: 22px; text-anchor: middle; }
+.art-small { fill: var(--danger); font-family: var(--sans); font-size: 12px; font-weight: 700; text-anchor: middle; }
+.art-machine { fill: var(--interactive); stroke: var(--ink-soft); stroke-width: 2; stroke-linejoin: round; }
+.art-machine-line, .art-page-fold { fill: none; stroke: var(--ink-soft); stroke-width: 2; }
+.art-arrow { fill: none; stroke: var(--accent); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.art-pdf { fill: var(--danger); font-family: var(--sans); font-size: 26px; font-weight: 700; text-anchor: middle; }
+.art-slider { stroke: var(--line-strong); stroke-width: 4; stroke-linecap: round; }
+.art-knob { fill: var(--accent); stroke: var(--paper); stroke-width: 2; }
+.home-actions { display: flex; flex-direction: column; align-items: center; gap: 14px; margin-top: 56px; }
+.home-cta { min-height: 56px; padding: 0 32px; font-size: 20px; font-weight: 700; text-decoration: none; }
+.home-example { font-size: 16px; font-weight: 700; }
+.home-faq-link { margin-top: 12px; font-size: 15px; }
+.faq-main { max-width: 820px; }
+.faq-main h1 { text-align: center; }
+.faq-list { margin-top: 32px; border-top: 1px solid var(--line); }
+.faq-item { border-bottom: 1px solid var(--line); }
+.faq-item summary { padding: 16px 4px; cursor: pointer; font-family: var(--serif); font-size: 20px; }
+.faq-item summary:hover { color: var(--accent-hover); }
+.faq-item p { margin: 0 4px 16px; color: var(--ink-soft); font-size: 16px; }
+@media (max-width: 760px) {
+  .topbar { padding: 8px 16px; }
+  .home-main { padding: 28px 16px 56px; }
+  .home-hero h1, .faq-main h1 { font-size: 34px; }
+  .home-steps { grid-template-columns: 1fr; gap: 36px; }
+  .home-step + .home-step::before { top: -32px; inset-inline-start: calc(50% - 8px); content: '\2193'; }
+  [dir="rtl"] .home-step + .home-step::before { content: '\2193'; }
+  .home-cta { min-height: 48px; padding: 0 20px; font-size: 17px; text-align: center; }
+}

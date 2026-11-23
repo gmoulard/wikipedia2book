@@ -1,0 +1,98 @@
+<!doctype html>
+<!--
+  This file is part of Wikipedia2Book
+  <https://github.com/gmoulard/wikipedia2book>.
+  Copyright (c) 2026 Guillaume Moulard.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License as published
+  by the Free Software Foundation, version 3.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-->
+
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <title data-i18n="home.pageTitle">Wikipedia2Book · Créez un livre PDF à partir de Wikipédia</title>
+  <link rel="icon" href="/static/Wikipedia2bookLogo.png">
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/home.css">
+  <script src="/static/i18n.js" defer></script>
+  <script src="/static/home.js" defer></script>
+</head>
+<body class="home-page">
+  <header class="topbar">
+    <a class="brand" href="/" data-i18n-aria-label="home.brandAria" aria-label="Wikipedia2Book, accueil">
+      <img class="brand-logo" src="/static/Wikipedia2bookLogo.png" width="28" height="28" alt="" aria-hidden="true">
+      <span>Wikipedia<span class="brand-light">2Book</span></span>
+    </a>
+    <nav class="home-nav">
+      <a href="/faq" data-i18n="home.faqNav">FAQ</a>
+      <a class="button button-dark" href="/app" data-i18n="home.openApp">Ouvrir l'application</a>
+    </nav>
+  </header>
+  <main class="home-main">
+    <section class="home-hero">
+      <img class="home-logo" src="/static/Wikipedia2bookLogo.png" width="140" height="140" alt="Wikipedia2Book">
+      <h1>Wikipedia<span class="brand-light">2Book</span></h1>
+      <p class="home-tagline" data-i18n="home.tagline">Transformez des pages Wikipédia en un livre PDF prêt à imprimer.</p>
+    </section>
+    <ol class="home-steps">
+      <li class="home-step">
+        <svg class="step-art" viewBox="0 0 240 170" role="img" aria-hidden="true">
+            <g class="art-tile"><rect x="14" y="10" width="40" height="34" rx="3"/><text x="34" y="34" class="art-letter">W</text></g>
+            <g class="art-tile"><rect x="64" y="4" width="40" height="34" rx="3"/><path d="M72 13h11v18H72zM85 13h11v18H85z" class="art-line"/></g>
+            <g class="art-tile"><rect x="114" y="10" width="40" height="34" rx="3"/><path d="M122 19h24M122 25h24M122 31h16" class="art-line"/></g>
+            <g class="art-tile"><rect x="164" y="4" width="40" height="34" rx="3"/><path d="M170 32l10-12 8 8 5-5 7 9z" class="art-fill"/><circle cx="192" cy="14" r="3" class="art-fill"/></g>
+            <g class="art-tile"><rect x="186" y="46" width="40" height="34" rx="3"/><text x="206" y="68" class="art-small">PDF</text></g>
+            <g class="art-tile"><rect x="12" y="50" width="40" height="34" rx="3"/><circle cx="32" cy="67" r="10" class="art-line"/><path d="M22 67h20M32 57c-6 6-6 14 0 20M32 57c6 6 6 14 0 20" class="art-line"/></g>
+            <path d="M56 92h128l-34 38v20H90v-20z" class="art-machine"/>
+            <path d="M100 146h40v18h-40z" class="art-machine"/>
+            <path d="M70 100h100" class="art-machine-line"/>
+          </svg>
+        <h2><span class="step-number">1</span> <span data-i18n="home.step1Title">Ajoutez vos sources</span></h2>
+        <p data-i18n="home.step1Text">Pages et livres Wikipédia, textes, images, PDF ou pages web : tout entre dans la machine.</p>
+      </li>
+      <li class="home-step">
+        <svg class="step-art" viewBox="0 0 240 170" role="img" aria-hidden="true">
+            <g class="art-card"><rect x="40" y="14" width="150" height="28" rx="3"/><path d="M52 24h10M52 28h10M52 32h10M74 28h90" class="art-line"/></g>
+            <g class="art-card art-card-moving"><rect x="56" y="52" width="150" height="28" rx="3"/><path d="M68 62h10M68 66h10M68 70h10M90 66h90" class="art-line"/></g>
+            <g class="art-card"><rect x="40" y="90" width="150" height="28" rx="3"/><path d="M52 100h10M52 104h10M52 108h10M74 104h70" class="art-line"/></g>
+            <g class="art-card"><rect x="40" y="128" width="150" height="28" rx="3"/><path d="M52 138h10M52 142h10M52 146h10M74 142h80" class="art-line"/></g>
+            <path d="M222 50l-8-10-8 10M214 40v42M222 72l-8 10-8-10" class="art-arrow"/>
+          </svg>
+        <h2><span class="step-number">2</span> <span data-i18n="home.step2Title">Organisez le livre</span></h2>
+        <p data-i18n="home.step2Text">Déplacez les cartes de haut en bas, créez des chapitres et des volumes.</p>
+      </li>
+      <li class="home-step">
+        <svg class="step-art" viewBox="0 0 240 170" role="img" aria-hidden="true">
+            <path d="M30 10h70l22 22v124H30z" class="art-page"/>
+            <path d="M100 10v22h22" class="art-page-fold"/>
+            <text x="76" y="80" class="art-pdf">PDF</text>
+            <path d="M44 100h64M44 110h64M44 120h46" class="art-line"/>
+            <path d="M142 46h76M142 86h76M142 126h76" class="art-slider"/>
+            <circle cx="170" cy="46" r="7" class="art-knob"/>
+            <circle cx="200" cy="86" r="7" class="art-knob"/>
+            <circle cx="156" cy="126" r="7" class="art-knob"/>
+          </svg>
+        <h2><span class="step-number">3</span> <span data-i18n="home.step3Title">Générez le PDF</span></h2>
+        <p data-i18n="home.step3Text">Choisissez la couverture, le format du papier et les marges, puis téléchargez votre livre.</p>
+      </li>
+    </ol>
+    <section class="home-actions">
+      <a class="button button-dark home-cta" href="/app" data-i18n="home.cta">Créer gratuitement votre premier PDF</a>
+      <a class="home-example" href="/app?json=/static/testPerformanceReference.json" data-i18n="home.example">Voir un exemple de livre</a>
+      <a class="home-faq-link" href="/faq" data-i18n="home.faqLink">Des questions ? Consultez la FAQ</a>
+    </section>
+  </main>
+</body>
+</html>

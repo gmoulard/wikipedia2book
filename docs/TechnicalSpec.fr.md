@@ -226,7 +226,7 @@ uvicorn app.main:app --reload
 
 L'application est servie à la même adresse.
 
-La page de l'application (`/`) et ses fichiers (`/static/…`) sont servis avec `Cache-Control: no-cache` : le navigateur revérifie chaque fichier à chaque chargement (réponse 304 s'il n'a pas changé), ce qui évite de mélanger, après un déploiement, une nouvelle page avec d'anciens scripts ou traductions restés en cache. Les fichiers de `/static/` portent une empreinte (`ETag`) calculée sur leur contenu, et aucune date de modification (`Last-Modified`) (`main.ContentStaticFiles`) : sur Toolforge, tous les fichiers construits sont datés de 1980 ; avec l'empreinte de Starlette (date et taille) et cette date, un navigateur qui revalidait par la date recevait 304 à chaque version et gardait un ancien `i18n.js` (libellés affichés sous forme de clé, par exemple `admin.limits`). Tests : `tests/test_static_cache.py`.
+La page d'accueil (`/`, `home.html`), l'application (`/app`, `index.html`), la FAQ (`/faq`, `faq.html`) et leurs fichiers (`/static/…`) sont servis avec `Cache-Control: no-cache` : le navigateur revérifie chaque fichier à chaque chargement (réponse 304 s'il n'a pas changé), ce qui évite de mélanger, après un déploiement, une nouvelle page avec d'anciens scripts ou traductions restés en cache. Les fichiers de `/static/` portent une empreinte (`ETag`) calculée sur leur contenu, et aucune date de modification (`Last-Modified`) (`main.ContentStaticFiles`) : sur Toolforge, tous les fichiers construits sont datés de 1980 ; avec l'empreinte de Starlette (date et taille) et cette date, un navigateur qui revalidait par la date recevait 304 à chaque version et gardait un ancien `i18n.js` (libellés affichés sous forme de clé, par exemple `admin.limits`). Tests : `tests/test_static_cache.py`.
 
 Le serveur ne stocke aucun livre ni PDF sur disque; tout l'état est conservé dans le navigateur et échangé via JSON. Le déploiement ne demande donc ni base de données ni volume persistant, sur aucune plateforme. Seul un dossier temporaire (répertoire temporaire du système) sert pendant chaque génération de PDF, et il est supprimé à la fin (section 11.1 de la spécification fonctionnelle) : la plateforme doit offrir un espace temporaire d'environ deux fois la taille du plus gros livre généré.
 
@@ -572,7 +572,10 @@ flowchart TB
         I18N["i18n.js<br/>traductions, lang/dir"]
         APP["app.js<br/>étapes Sources · Organisation · Édition"]
         FILE[("fichier .json<br/>Enregistrer / Ouvrir")]
+        HOME["home.html · faq.html<br/>accueil (/) et FAQ (/faq)"]
         I18N --> APP
+        I18N --> HOME
+        HOME --> APP
         APP <--> FILE
     end
 
@@ -1033,7 +1036,8 @@ Wikipedia2Book/
 │   ├── request_limits.py
 │   │
 │   └── static/
-│       ├── index.html
+│       ├── index.html   (application, servie à /app)
+│       ├── home.html, faq.html, home.css, home.js   (page d'accueil à / et FAQ à /faq)
 │       ├── styles.css
 │       ├── app.js
 │       ├── i18n.js
